@@ -458,8 +458,11 @@ class Renderer(object):
 
     def __handle_function (self, node):
         out = ""
+        param_names = []
+        for param in node.all_parameters:
+            param_names.append (param.argname)
         try:
-            out += self._start_function (get_full_node_name (node))
+            out += self._start_function (get_full_node_name (node), param_names)
         except AttributeError:
             pass
 
@@ -534,8 +537,14 @@ class MarkdownRenderer (Renderer):
     def _end_parameters (self):
         return self._render_new_line ()
 
-    def _start_function (self, function_name):
-        return self.__render_title (function_name, level=3)
+    def _start_function (self, function_name, param_names):
+        prototype = "%s (" % function_name
+        for i, param_name in enumerate (param_names):
+            if (i != 0):
+                prototype += ", "
+            prototype += param_name
+        prototype += ")"
+        return self.__render_title (prototype, level=3)
 
     def _end_function (self):
         return self._render_new_paragraph ()
