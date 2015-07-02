@@ -1,11 +1,12 @@
 import argparse, os, re
 
+from xml.etree import ElementTree as ET
 from giscanner.transformer import Transformer
 from giscanner import ast
 import logging
 
 def get_full_node_name(node):
-    if isinstance(node, ast.Namespace):
+    if type(node) in [ast.Namespace, ast.DocSection]:
         return node.name
 
     if hasattr(node, '_chain') and node._chain:
@@ -114,13 +115,19 @@ class Renderer(object):
     def __init__ (self, transformer, include_directories):
         self.__transformer = transformer
         self.__include_directories = include_directories
+
         self.__handlers = self.__create_handlers ()
         self.__doc_renderers = self.__create_doc_renderers ()
         self.__doc_scanner = DocScanner()
 
+        # Used to avoid parsing code as doc
         self.__processing_code = False
 
-    def start (self, output):
+        # Used to create the index file if required
+        self.__created_pages = {}
+ 
+
+    def render (self, output):
         self.__walk_node(output, self.__transformer.namespace, [])
         self.__transformer.namespace.walk(lambda node, chain: self.__walk_node(output, node, chain))
 
@@ -466,6 +473,7 @@ class Renderer(object):
             pass
         return out
 
+
 class MarkdownRenderer (Renderer):
     def __render_local_link (self, name):
         return "#%s" % name
@@ -563,6 +571,71 @@ class MarkdownRenderer (Renderer):
     def _render_heading (self, node, title, level):
         print "rendering heading"
 
+class SectionsGenerator(object):
+    def __init__ (self, transformer):
+        self.__transformer = transformer
+
+        # Used to close the previous section if necessary
+        self.__opened_section = False
+
+    def generate (self, output):
+        # Three passes but who cares
+        filename = os.path.join (output, "%s-sections.txt" %
+                self.__transformer.namespace.name)
+        with open (filename, 'w') as f:
+            f.write ("<SECTIONS>")
+            self.__walk_node(output, self.__transformer.namespace, [], f)
+            self.__transformer.namespace.walk(lambda node, chain:
+                    self.__walk_node(output, node, chain, f))
+            if self.__opened_section:
+                f.write ("</SYMBOLS>")
+                f.write ("</SECTION>")
+            f.write ("</SECTIONS>")
+
+        with open (filename, 'r') as f:
+            contents = f.read ()
+            root = ET.fromstring(contents)
+            self.__indent(root)
+
+        with open (filename, 'w') as f:
+            f.write(ET.tostring(root))
+    
+    def __walk_node(self, output, node, chain, f):
+        if type (node) in [ast.Alias, ast.Record]:
+            return False
+
+        name = get_full_node_name (node)
+
+        if type (node) in [ast.Namespace, ast.DocSection, ast.Class,
+                ast.Interface]:
+            if self.__opened_section:
+                f.write ("</SYMBOLS>")
+                f.write ("</SECTION>")
+
+            f.write ("<SECTION>")
+            f.write ("<SYMBOL>%s</SYMBOL>" % name)
+            f.write ("<SYMBOLS>")
+            self.__opened_section = True
+        else:
+            f.write ("<SYMBOL>%s</SYMBOL>" % name)
+
+        return True
+
+    def __indent (self, elem, level=0):
+        i = "\n" + level * "  "
+        if len(elem):
+            if not elem.text or not elem.text.strip():
+                elem.text = i + "  "
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+            for elem in elem:
+                self.__indent(elem, level + 1)
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+        else:
+            if level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = i
+
 
 def doc_main (args):
     try:
@@ -626,5 +699,8 @@ def doc_main (args):
     extra_include_dirs.extend(args.include_paths)
     transformer = Transformer.parse_from_gir(args.girfile, extra_include_dirs)
 
-    renderer = MarkdownRenderer (transformer, args.markdown_include_paths)
-    renderer.start (args.output)
+    sections_generator = SectionsGenerator (transformer)
+    sections_generator.generate (args.output)
+
+    #renderer = MarkdownRenderer (transformer, args.markdown_include_paths)
+    #renderer.render (args.output)
