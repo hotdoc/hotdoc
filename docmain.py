@@ -124,12 +124,35 @@ class Renderer(object):
         self.__processing_code = False
 
         # Used to create the index file if required
-        self.__created_pages = {}
- 
+        self.__created_pages = []
 
     def render (self, output):
         self.__walk_node(output, self.__transformer.namespace, [])
         self.__transformer.namespace.walk(lambda node, chain: self.__walk_node(output, node, chain))
+
+    def render_index (self, output, sections):
+        extension = self._get_extension ()
+        filename = os.path.join (output, "index.%s" % extension)
+        with open (filename, 'w') as f:
+            out = ""
+
+            try:
+                out += self._start_index (self.__transformer.namespace.name)
+            except AttributeError:
+                pass
+
+            filenames = [os.path.splitext(os.path.basename (filename))[0] for
+                    filename in self.__created_pages]
+            try:
+                out += self._render_index (filenames, sections)
+            except AttributeError:
+                pass
+
+            try:
+                out += self._end_index ()
+            except AttributeError:
+                pass
+            f.write (out)
 
     def __create_handlers (self):
         return {
@@ -324,15 +347,16 @@ class Renderer(object):
         name = get_full_node_name (node)
 
         filename = os.path.join (output, "%s.%s" % (name, extension))
-        with open (filename, 'w') as f:
-            try:
-                handler = self.__handlers[type (node)]
-            except KeyError:
-                print type (node), node.name
-                return True
+        try:
+            handler = self.__handlers[type (node)]
+        except KeyError:
+            print type (node), node.name
+            return True
 
+        with open (filename, 'w') as f:
             f.write (handler (node))
 
+        self.__created_pages.append (filename)
         return True
 
     def _get_extension (self):
@@ -481,8 +505,21 @@ class MarkdownRenderer (Renderer):
     def __render_title (self, title, level=1):
         return "%s%s%s" % ("#" * level, title, self._render_new_paragraph ())
 
+    def __render_line (self, line):
+        return "%s%s" % (line, self._render_new_line ())
+
+    def __render_paragraph (self, paragraph):
+        return "%s%s" % (paragraph, self._render_new_paragraph ())
+
+    # Long name is long
+    def __get_sorted_symbols_from_sections (self, sections, symbols):
+        for element in sections:
+            if element.tag == "SYMBOL":
+                symbols.append (element.text)
+            self.__get_sorted_symbols_from_sections (element, symbols)
+
     def _get_extension (self):
-        return "markdown"
+        return "md"
 
     def _start_parameter (self, param_name):
         return "+ %s: " % param_name
@@ -522,6 +559,36 @@ class MarkdownRenderer (Renderer):
 
     def _end_doc_section (self):
         return self._render_new_paragraph ()
+
+    def _start_index (self, libname):
+        out = ""
+        out += self.__render_line ("---")
+        out += self.__render_paragraph ("title: %s" % libname)
+        out += self.__render_line ("language_tabs:")
+        out += self.__render_paragraph ("  - c")
+        out += self.__render_line ("toc_footers:")
+        out += self.__render_paragraph ("""  - <a href='http://github.com/tripit/slate'>Documentation Powered by Slate</a>""")
+        out += self.__render_line ("includes:")
+
+        return out
+
+    def _end_index (self):
+        out = ""
+        out += self.__render_line ("")
+        out += self.__render_line ("search: true")
+        out += self.__render_line ("---")
+        return out
+
+    def _render_index (self, filenames, sections):
+        out = ""
+        print filenames
+        symbols = []
+        self.__get_sorted_symbols_from_sections (sections, symbols)
+        print symbols
+        for symbol in symbols:
+            if symbol in filenames:
+                out += self.__render_line ("  - %s" % symbol)
+        return out
 
     def _render_other (self, node, other):
         return other
@@ -599,6 +666,8 @@ class SectionsGenerator(object):
 
         with open (filename, 'w') as f:
             f.write(ET.tostring(root))
+
+        return root
     
     def __walk_node(self, output, node, chain, f):
         if type (node) in [ast.Alias, ast.Record]:
@@ -699,8 +768,12 @@ def doc_main (args):
     extra_include_dirs.extend(args.include_paths)
     transformer = Transformer.parse_from_gir(args.girfile, extra_include_dirs)
 
-    sections_generator = SectionsGenerator (transformer)
-    sections_generator.generate (args.output)
+    if not args.sections_file:
+        sections_generator = SectionsGenerator (transformer)
+        sections = sections_generator.generate (args.output)
+    else:
+        sections = ET.parse (args.sections_file)
 
-    #renderer = MarkdownRenderer (transformer, args.markdown_include_paths)
-    #renderer.render (args.output)
+    renderer = MarkdownRenderer (transformer, args.markdown_include_paths)
+    renderer.render (args.output)
+    renderer.render_index (args.output, sections)
