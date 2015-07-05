@@ -27,6 +27,31 @@ def get_full_node_name(node):
     else:
         return '%s.%s' % (get_full_node_name(parent), node.name)
 
+
+class NameFormatter(object):
+    def get_full_node_name(self, node):
+        if type(node) in [ast.Namespace, ast.DocSection]:
+            return node.name
+
+        if hasattr(node, '_chain') and node._chain:
+            parent = node._chain[-1]
+        else:
+            parent = getattr(node, 'parent', None)
+
+        if parent is None:
+            if isinstance(node, ast.Function) and node.shadows:
+                return '%s.%s' % (node.namespace.name, node.shadows)
+            else:
+                return '%s.%s' % (node.namespace.name, node.name)
+
+        if isinstance(node, (ast.Property, ast.Signal, ast.VFunction, ast.Field)):
+            return '%s-%s' % (self.get_full_node_name(parent), node.name)
+        elif isinstance(node, ast.Function) and node.shadows:
+            return '%s.%s' % (self.get_full_node_name(parent), node.shadows)
+        else:
+            return '%s.%s' % (self.get_full_node_name(parent), node.name)
+
+
 class DocScanner(object):
     def __init__(self):
         specs = [
@@ -200,7 +225,7 @@ class Renderer(object):
             return ""
 
     def __render_property (self, node, match, props):
-        type_node = self._resolve_type(props['type_name'])
+        type_node = self.__resolve_type(props['type_name'])
         if type_node is None:
             return match
 
@@ -356,12 +381,12 @@ class Renderer(object):
     def __walk_node(self, output, node, chain):
         extension = self._get_extension ()
         name = get_full_node_name (node)
+        print name
 
         filename = os.path.join (output, "%s.%s" % (name, extension))
         try:
             handler = self.__handlers[type (node)]
         except KeyError:
-            print type (node), node.name
             return True
 
         with open (filename, 'w') as f:
@@ -374,8 +399,11 @@ class Renderer(object):
         raise NotImplementedError
 
     def __render_doc_string (self, node, docstring):
-        tokens = self.__doc_scanner.scan (docstring)
+        if not docstring:
+            return ""
+
         out = ""
+        tokens = self.__doc_scanner.scan (docstring)
         for tok in tokens:
             kind, match, props = tok
             rendered_token = self.__doc_renderers[kind](node, match, props)
@@ -384,6 +412,7 @@ class Renderer(object):
         return out
 
     def __render_doc (self, node):
+        print node.doc
         return self.__render_doc_string (node, node.doc)
 
     def __handle_parameter (self, node):
@@ -568,7 +597,7 @@ class MarkdownRenderer (Renderer):
         return self._render_new_paragraph ()
 
     def _start_doc_section (self, doc_section_name):
-        return self.__render_title (doc_section_name, level=2)
+        return self.__render_title (doc_section_name, level=1)
 
     def _end_doc_section (self):
         return self._render_new_paragraph ()
@@ -787,7 +816,7 @@ def doc_main (args):
         sections_generator = SectionsGenerator (transformer)
         sections = sections_generator.generate (args.output)
     else:
-        sections = ET.parse (args.sections_file)
+        sections = ET.parse (args.sections_file).getroot ()
 
     renderer = SlateMarkdownRenderer (transformer, args.markdown_include_paths)
     renderer.render (args.output)
