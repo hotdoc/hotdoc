@@ -388,9 +388,14 @@ class Renderer(object):
             parameter = node.get_parameter(props['param_name'])
         except (AttributeError, ValueError):
             return self.__render_other (node, match, props)
+ 
+        if isinstance(parameter.type, ast.Varargs):
+            param_name = "..."
+        else:
+            param_name = parameter.argname
 
         try:
-            return self._render_parameter (node, parameter)
+            return self._render_parameter (param_name)
         except AttributeError:
             return ""
 
@@ -675,147 +680,6 @@ class Renderer(object):
         return out
 
 
-class MarkdownRenderer (Renderer):
-    def __render_local_link (self, name):
-        return "#%s" % name
-
-    def __render_title (self, title, level=1):
-        return "%s%s%s" % ("#" * level, title, self._render_new_paragraph ())
-
-    def _render_line (self, line):
-        return "%s%s" % (line, self._render_new_line ())
-
-    def _render_paragraph (self, paragraph):
-        return "%s%s" % (paragraph, self._render_new_paragraph ())
-
-    def _get_extension (self):
-        return "md"
-
-    def _start_parameter (self, param_name):
-        return "+ %s: " % param_name
-
-    def _end_parameter (self):
-        return self._render_new_line ()
-
-    def _end_parameters (self):
-        return self._render_new_line ()
-
-    def _start_function (self, function_name, param_names):
-        prototype = "%s (" % function_name
-        for i, param_name in enumerate (param_names):
-            if (i != 0):
-                prototype += ", "
-            prototype += param_name
-        prototype += ")"
-        return self.__render_title (prototype, level=3)
-
-    def _render_section (self, section_name):
-        return self.__render_title ("%s:" % section_name, level=2)
-
-    def _end_function (self):
-        return self._render_new_paragraph ()
-
-    def _start_virtual_function (self, function_name):
-        return self.__render_title (function_name, level=3)
-
-    def _end_virtual_function (self):
-        return self._render_new_paragraph ()
-
-    def _start_signal (self, signal_name):
-        return self.__render_title (signal_name, level=3)
-
-    def _end_signal (self):
-        return self._render_new_paragraph ()
-
-    def _start_class (self, class_name):
-        return self.__render_title (class_name, level=2)
-
-    def _end_class (self):
-        return self._render_new_paragraph ()
-
-    def _start_doc_section (self, doc_section_name):
-        return self.__render_title (doc_section_name, level=1)
-
-    def _end_doc_section (self):
-        return self._render_new_paragraph ()
-
-    def _render_other (self, node, other):
-        return other
-
-    def _render_property (self, node, prop):
-        print "rendering property"
-
-    def _render_signal (self, node, signal):
-        print "rendering signal"
-
-    def _render_type_name (self, type_name):
-        return "[%s](%s)" % (type_name, self.__render_local_link (type_name))
-
-    def _render_enum_value (self, node, enum):
-        print "rendering enum value"
-
-    def _render_parameter (self, node, parameter):
-        if isinstance(parameter.type, ast.Varargs):
-            return "*...*"
-        else:
-            return "*%s*" % parameter.argname
-
-    def _render_function_call (self, function_name):
-        return "[%s](%s)" % (function_name, self.__render_local_link (function_name))
-
-    def _render_code_start (self):
-        return "```%s" % self._render_new_line ()
-
-    def _render_code_start_with_language (self, language):
-        return "```%s%s" % (language, self._render_new_line ())
-
-    def _render_code_end (self):
-        return "```%s" % self._render_new_line ()
-
-    def _render_new_line (self):
-        return "\n"
-
-    def _render_new_paragraph (self):
-        return "\n\n"
-
-    def _render_note (self, note):
-        return "> %s%s" % (note, self._render_new_paragraph ())
-
-    def _render_heading (self, node, title, level):
-        print "rendering heading"
-
-
-# Input format for https://github.com/tripit/slate
-class SlateMarkdownRenderer (MarkdownRenderer):
-    def _start_index (self, libname):
-        out = ""
-        out += self._render_line ("---")
-        out += self._render_paragraph ("title: %s" % libname)
-        out += self._render_line ("language_tabs:")
-        out += self._render_paragraph ("  - c")
-        out += self._render_line ("toc_footers:")
-        out += self._render_paragraph ("""  - <a href='http://github.com/tripit/slate'>Documentation Powered by Slate</a>""")
-        out += self._render_line ("includes:")
-
-        return out
-
-    def _end_index (self):
-        out = ""
-        out += self._render_line ("")
-        out += self._render_line ("search: true")
-        out += self._render_line ("---")
-        return out
-
-    def _render_index (self, filenames, sections):
-        out = ""
-        symbols = []
-        get_sorted_symbols_from_sections (sections, symbols)
-        for symbol in symbols:
-            if symbol in filenames:
-                out += self._render_line ("  - %s" % symbol)
-        return out
-
-
 class SectionsGenerator(object):
     def __init__ (self, transformer):
         self.__transformer = transformer
@@ -954,6 +818,7 @@ def doc_main (args):
     else:
         sections = ET.parse (args.sections_file).getroot ()
 
+    from slate_markdown_renderer import SlateMarkdownRenderer
     renderer = SlateMarkdownRenderer (transformer, args.markdown_include_paths,
             sections, do_class_aggregation=True)
     renderer.render (args.output)
