@@ -5,51 +5,39 @@ from giscanner.transformer import Transformer
 from giscanner import ast
 import logging
 
-def get_full_node_name(node):
-    if type(node) in [ast.Namespace, ast.DocSection]:
-        return node.name
-
-    if hasattr(node, '_chain') and node._chain:
-        parent = node._chain[-1]
-    else:
-        parent = getattr(node, 'parent', None)
-
-    if parent is None:
-        if isinstance(node, ast.Function) and node.shadows:
-            return '%s.%s' % (node.namespace.name, node.shadows)
-        else:
-            return '%s.%s' % (node.namespace.name, node.name)
-
-    if isinstance(node, (ast.Property, ast.Signal, ast.VFunction, ast.Field)):
-        return '%s-%s' % (get_full_node_name(parent), node.name)
-    elif isinstance(node, ast.Function) and node.shadows:
-        return '%s.%s' % (get_full_node_name(parent), node.shadows)
-    else:
-        return '%s.%s' % (get_full_node_name(parent), node.name)
-
-
 class NameFormatter(object):
+    def __init__(self, language='C'):
+        if language == 'C':
+            self.__make_node_name = self.__make_c_node_name
+
     def get_full_node_name(self, node):
-        if type(node) in [ast.Namespace, ast.DocSection]:
+        return self.__make_node_name (node)
+
+    def __make_c_node_name (self, node):
+        out = ""
+        if type (node) in (ast.Namespace, ast.DocSection):
             return node.name
 
-        if hasattr(node, '_chain') and node._chain:
-            parent = node._chain[-1]
-        else:
-            parent = getattr(node, 'parent', None)
+        if type (node) in (ast.Signal, ast.VFunction, ast.Property, ast.Field):
+            out = "%s%s-%s" % (node.namespace.name, node.parent.name,
+                    node.name)
 
-        if parent is None:
-            if isinstance(node, ast.Function) and node.shadows:
-                return '%s.%s' % (node.namespace.name, node.shadows)
-            else:
-                return '%s.%s' % (node.namespace.name, node.name)
+        if type (node) == ast.Function:
+            while node:
+                if out:
+                    out = "%s_%s" % (node.name.lower(), out)
+                else:
+                    out = node.name
 
-        if isinstance(node, (ast.Property, ast.Signal, ast.VFunction, ast.Field)):
-            return '%s-%s' % (self.get_full_node_name(parent), node.name)
-        elif isinstance(node, ast.Function) and node.shadows:
-            return '%s.%s' % (self.get_full_node_name(parent), node.shadows)
-        else:
-            return '%s.%s' % (self.get_full_node_name(parent), node.name)
+                if hasattr (node, "parent"):
+                    node = node.parent
+                else:
+                    node = None
+
+        elif type (node) in (ast.Class, ast.Enum):
+            out = "%s%s" % (node.namespace.name, node.name)
+
+        return out
 
 
 class DocScanner(object):
@@ -153,6 +141,7 @@ class Renderer(object):
         self.__handlers = self.__create_handlers ()
         self.__doc_renderers = self.__create_doc_renderers ()
         self.__doc_scanner = DocScanner()
+        self.__name_formatter = NameFormatter()
 
         # Used to avoid parsing code as doc
         self.__processing_code = False
@@ -277,9 +266,10 @@ class Renderer(object):
         type_ = self.__resolve_type(ident)
         if not type_:
             return self.__render_other (node, match, props)
- 
+
+        type_name = self.__name_formatter.get_full_node_name (type_)
         try:
-            return self._render_type_name (node, type_)
+            return self._render_type_name (type_name)
         except AttributeError:
             return ""
 
@@ -302,8 +292,9 @@ class Renderer(object):
         if func is None:
             return self.__render_other (node, match, props)
 
+        function_name = self.__name_formatter.get_full_node_name (func)
         try:
-            return self._render_function_call (node, func)
+            return self._render_function_call (name)
         except AttributeError:
             return ""
 
@@ -380,14 +371,15 @@ class Renderer(object):
 
     def __walk_node(self, output, node, chain):
         extension = self._get_extension ()
-        name = get_full_node_name (node)
-        print name
+        name = self.__name_formatter.get_full_node_name (node)
 
         filename = os.path.join (output, "%s.%s" % (name, extension))
         try:
             handler = self.__handlers[type (node)]
         except KeyError:
             return True
+
+        print name
 
         with open (filename, 'w') as f:
             f.write (handler (node))
@@ -412,7 +404,6 @@ class Renderer(object):
         return out
 
     def __render_doc (self, node):
-        print node.doc
         return self.__render_doc_string (node, node.doc)
 
     def __handle_parameter (self, node):
@@ -435,11 +426,11 @@ class Renderer(object):
     def __handle_class (self, node):
         out = ""
         try:
-            out += self._start_class (get_full_node_name (node))
+            out += self._start_class (self.__name_formatter.get_full_node_name (node))
         except AttributeError:
             pass
 
-        logging.debug ("handling class %s" % get_full_node_name (node))
+        logging.debug ("handling class %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__render_doc (node)
 
         try:
@@ -469,13 +460,13 @@ class Renderer(object):
     def __handle_signal (self, node):
         out = ""
         try:
-            out += self._start_signal (get_full_node_name (node))
+            out += self._start_signal (self.__name_formatter.get_full_node_name (node))
         except AttributeError:
             pass
 
         out += self.__handle_parameters (node)
 
-        logging.debug ("handling signal %s" % get_full_node_name (node))
+        logging.debug ("handling signal %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__render_doc (node)
 
         try:
@@ -491,13 +482,13 @@ class Renderer(object):
         for param in node.all_parameters:
             param_names.append (param.argname)
         try:
-            out += self._start_function (get_full_node_name (node), param_names)
+            out += self._start_function (self.__name_formatter.get_full_node_name (node), param_names)
         except AttributeError:
             pass
 
         out += self.__handle_parameters (node)
 
-        logging.debug ("handling function %s" % get_full_node_name (node))
+        logging.debug ("handling function %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__render_doc (node)
 
         try:
@@ -509,13 +500,13 @@ class Renderer(object):
     def __handle_virtual_function (self, node):
         out = ""
         try:
-            out += self._start_virtual_function (get_full_node_name (node))
+            out += self._start_virtual_function (self.__name_formatter.get_full_node_name (node))
         except AttributeError:
             pass
 
         out += self.__handle_parameters (node)
 
-        logging.debug ("handling virtual function %s" % get_full_node_name (node))
+        logging.debug ("handling virtual function %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__render_doc (node)
 
         try:
@@ -611,10 +602,8 @@ class MarkdownRenderer (Renderer):
     def _render_signal (self, node, signal):
         print "rendering signal"
 
-    def _render_type_name (self, node, type_):
-        name = get_full_node_name (type_)
-        return "[%s](%s)" % (name, self.__render_local_link (name))
-        print "rendering type name"
+    def _render_type_name (self, type_name):
+        return "[%s](%s)" % (type_name, self.__render_local_link (type_name))
 
     def _render_enum_value (self, node, enum):
         print "rendering enum value"
@@ -625,9 +614,8 @@ class MarkdownRenderer (Renderer):
         else:
             return "*%s*" % parameter.argname
 
-    def _render_function_call (self, node, function):
-        name = get_full_node_name (function)
-        return "[%s](%s)" % (name, self.__render_local_link (name))
+    def _render_function_call (self, function_name):
+        return "[%s](%s)" % (function_name, self.__render_local_link (function_name))
 
     def _render_code_start (self):
         return "```%s" % self._render_new_line ()
@@ -686,6 +674,8 @@ class SectionsGenerator(object):
     def __init__ (self, transformer):
         self.__transformer = transformer
 
+        self.__name_formatter = NameFormatter ()
+
         # Used to close the previous section if necessary
         self.__opened_section = False
 
@@ -717,7 +707,7 @@ class SectionsGenerator(object):
         if type (node) in [ast.Alias, ast.Record]:
             return False
 
-        name = get_full_node_name (node)
+        name = self.__name_formatter.get_full_node_name (node)
 
         if type (node) in [ast.Namespace, ast.DocSection, ast.Class,
                 ast.Interface]:
