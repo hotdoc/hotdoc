@@ -81,6 +81,6 @@ def doc_main (args):
     from slate_markdown_formatter import SlateMarkdownFormatter
     from html_formatter import HtmlFormatter
     formatter = HtmlFormatter (transformer, args.markdown_include_paths,
-            sections, do_class_aggregation=True)
+            sections, args.output, do_class_aggregation=True)
     formatter.format (args.output)
     formatter.format_index (args.output)

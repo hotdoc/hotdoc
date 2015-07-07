@@ -299,7 +299,9 @@ class PrototypeFormatter(object):
 
 
 class Link (object):
-    pass
+    def get_link (self):
+        raise NotImplementedError
+
 
 class ExternalLink (Link):
     def __init__ (self, symbol, local_prefix, remote_prefix, filename):
@@ -308,11 +310,16 @@ class ExternalLink (Link):
         self.remote_prefix = remote_prefix
         self.filename = filename
 
+    def get_link (self):
+        return "%s/%s" % (self.remote_prefix, self.filename)
 
 class LocalLink (Link):
-    def __init__(self, symbol):
+    def __init__(self, symbol, pagename):
         self.__symbol = symbol
- 
+        self.__pagename = pagename
+
+    def get_link (self):
+        return "%s#%s" % (self.__pagename, self.__symbol)
 
 class LinkResolver(object):
     def __init__(self, transformer):
@@ -353,9 +360,6 @@ class LinkResolver(object):
         return symbol_map
 
     def get_link (self, node):
-        if node.namespace == self.__transformer.namespace:
-            return LocalLink (node.name)
-
         gtk_doc_identifier = self.__name_formatter.make_gtkdoc_id(node)
         if isinstance(node, (ast.Constant, ast.Member)):
             gtk_doc_identifier = gtk_doc_identifier.upper() + ":CAPS"
@@ -379,12 +383,13 @@ class LinkResolver(object):
         return link
 
 class Formatter(object):
-    def __init__ (self, transformer, include_directories, sections,
+    def __init__ (self, transformer, include_directories, sections, output,
             do_class_aggregation=False):
         self.__transformer = transformer
         self.__include_directories = include_directories
         self.__sections = sections
         self.__do_class_aggregation = do_class_aggregation
+        self.__output = output
 
         self.__handlers = self.__create_handlers ()
         self.__doc_formatters = self.__create_doc_formatters ()
@@ -422,7 +427,7 @@ class Formatter(object):
         out += self._format_section (name)
 
         for elem in elements:
-            with open (self.__make_file_name (output, elem), 'r') as f:
+            with open (self.__make_file_name (elem), 'r') as f:
                 out += f.read()
 
         return out
@@ -430,7 +435,7 @@ class Formatter(object):
     def __aggregate_classes (self, output):
         for klass in self.__aggregated_classes:
             klass.sort()
-            filename = self.__make_file_name (output, klass.class_node)
+            filename = self.__make_file_name (klass.class_node)
             with open (filename, 'a') as f:
                 out = ""
                 out += self.__format_section ('Properties', output,
@@ -505,6 +510,23 @@ class Formatter(object):
     def __format_signal (self, node, match, props):
         raise NotImplementedError
 
+    def __get_link (self, node):
+        link = None
+        if node.namespace == self.__transformer.namespace:
+            if self.__do_class_aggregation and type (node.parent) == ast.Class:
+                pagename = self.__make_file_name (node.parent)
+            else:
+                pagename = self.__make_file_name (node)
+
+            if pagename:
+                pagename = os.path.abspath (pagename)
+                link = LocalLink (self.__name_formatter.get_full_node_name
+                        (node), pagename)
+        else:
+            link = self.__link_resolver.get_link (node)
+
+        return link
+
     def __format_type_name (self, node, match, props):
         ident = props['type_name']
         type_ = self.__symbol_resolver.resolve_type(ident)
@@ -512,19 +534,11 @@ class Formatter(object):
         if not type_:
             return self.__format_other (node, match, props)
 
-        link = self.__link_resolver.get_link (type_)
-        if type_.namespace == self.__transformer.namespace:
-            pass
-        else:
-            link = self.__link_resolver.get_link (type_)
-            if link:
-                pass
-            else:
-                print "failure to link ", ident, type_.namespace.name
+        link = self.__get_link (type_)
 
         type_name = self.__name_formatter.get_full_node_name (type_)
 
-        return self._format_type_name (type_name)
+        return self._format_type_name (type_name, link)
 
     def __format_enum_value (self, node, match, props):
         raise NotImplementedError
@@ -548,8 +562,9 @@ class Formatter(object):
             return self.__format_other (node, match, props)
 
         function_name = self.__name_formatter.get_full_node_name (func)
+        link = self.__get_link (func)
 
-        return self._format_function_call (function_name)
+        return self._format_function_call (function_name, link)
 
     def __format_code_start (self, node, match, props):
         self.__processing_code = True
@@ -640,13 +655,15 @@ class Formatter(object):
             self.__current_class = None
             return False
 
-    def __make_file_name (self, output, node):
+    def __make_file_name (self, node):
         extension = self._get_extension ()
         name = self.__name_formatter.get_full_node_name (node)
-        return os.path.join (output, "%s.%s" % (name, extension))
+        if not name:
+            return ""
+        return os.path.join (self.__output, "%s.%s" % (name, extension))
 
     def __walk_node(self, output, node, chain):
-        filename = self.__make_file_name (output, node)
+        filename = self.__make_file_name (node)
 
         try:
             handler = self.__handlers[type (node)]
@@ -986,9 +1003,10 @@ class Formatter(object):
         self.__warn_not_implemented (self._format_other)
         return ""
 
-    def _format_type_name (self, type_name):
+    def _format_type_name (self, type_name, link):
         """
         @type_name: the name of a type to link to
+        @link: the prepared link
         """
         self.__warn_not_implemented (self._format_type_name)
         return ""
@@ -1007,9 +1025,10 @@ class Formatter(object):
         self.__warn_not_implemented (self._format_new_paragraph)
         return ""
 
-    def _format_function_call (self, function_name):
+    def _format_function_call (self, function_name, link):
         """
         @function_name: A function name to link to
+        @link: the prepared link
         """
         self.__warn_not_implemented (self._format_function_call)
         return ""

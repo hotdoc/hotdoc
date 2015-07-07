@@ -1,4 +1,4 @@
-from base_formatter import Formatter
+from base_formatter import Formatter, LocalLink, ExternalLink
 from yattag import Doc
 
 class HtmlFormatter (Formatter):
@@ -45,6 +45,8 @@ class HtmlFormatter (Formatter):
 
     def _start_function (self, function_name, param_names):
         doc, tag, text = Doc().tagtext()
+        with tag('a', name=function_name):
+            pass
         with tag('h2', klass = 'method'):
             with tag ('span', klass = 'entry', id = "%s" %
                     function_name):
@@ -105,15 +107,23 @@ class HtmlFormatter (Formatter):
         self.__paragraph_opened = True
         return out
 
-    def _format_type_name (self, type_name):
+    def _format_type_name (self, type_name, link):
         doc, tag, text = Doc().tagtext()
-        with tag('a', href = type_name):
+        if link:
+            href = link.get_link()
+        else:
+            href = ""
+        with tag('a', href=href):
             text(type_name)
         return doc.getvalue()
 
-    def _format_function_call (self, function_name):
+    def _format_function_call (self, function_name, link):
         doc, tag, text = Doc().tagtext()
-        with tag('a', href = function_name):
+        if link:
+            href = link.get_link()
+        else:
+            href = ""
+        with tag('a', href = href):
             text(function_name)
         return doc.getvalue()
 
