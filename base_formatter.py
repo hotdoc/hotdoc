@@ -857,7 +857,7 @@ class Formatter(object):
     def _end_doc (self):
         """
         Notifies the subclass that the symbol's documentation
-        has been parsed, it is safe to assume no _render_
+        has been parsed, it is safe to assume no _format_
         virtual methods will be called until the next call
         to _start_doc or _start_short_description
         """
@@ -875,7 +875,7 @@ class Formatter(object):
     def _end_short_description (self):
         """
         Notifies the subclass that the symbol's short description
-        has been parsed, it is safe to assume no _render_
+        has been parsed, it is safe to assume no _format_
         virtual methods will be called until the next call
         to _start_doc or _start_short_description
         """
@@ -1053,7 +1053,7 @@ class Formatter(object):
 
     def _format_code_start (self):
         """
-        Called when the parsed markup contains code to render,
+        Called when the parsed markup contains code to format,
         with no specified language
         """
         self.__warn_not_implemented (self._format_code_start)
@@ -1061,7 +1061,7 @@ class Formatter(object):
 
     def _format_code_start_with_language (self, language):
         """
-        Called when the parsed markup contains code to render
+        Called when the parsed markup contains code to format
         @language: the language of the code
         """
         self.__warn_not_implemented (self._format_code_start_with_language)
@@ -1085,7 +1085,7 @@ class Formatter(object):
 
     def _format_index (self, filenames, sections):
         """
-        Called to render an index
+        Called to format an index
         @filenames: the files that have been produced by the parsing
         @sections: The root of an element tree representing the sections file
         """
