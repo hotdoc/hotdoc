@@ -1,11 +1,9 @@
-from docmain import Renderer
+from docmain import Formatter
 from yattag import Doc
 
-class HtmlRenderer (Renderer):
-    def __init__(self, transformer, include_dirs, sections,
-            do_class_aggregation=True):
-        Renderer.__init__(self, transformer, include_dirs, sections,
-                do_class_aggregation=do_class_aggregation)
+class HtmlFormatter (Formatter):
+    def __init__(self, *args, **kwargs):
+        Formatter.__init__(self, *args, **kwargs)
         self.__paragraph_opened = False
 
     def __maybe_close_paragraph (self):
@@ -14,7 +12,7 @@ class HtmlRenderer (Renderer):
             return "</p>"
         return ""
 
-    def __render_title (self, title, level=1):
+    def __format_title (self, title, level=1):
         return "<h%d>%s</h%d>" % (level, title, level)
 
     def _get_extension (self):
@@ -57,15 +55,15 @@ class HtmlRenderer (Renderer):
     def _end_doc (self):
         return self.__maybe_close_paragraph ()
 
-    def _render_parameter (self, param_name):
+    def _format_parameter (self, param_name):
         return "<strong>%s</strong>" % param_name
 
-    def _render_other (self, other):
+    def _format_other (self, other):
         doc, tag, text = Doc().tagtext()
         text (other)
         return doc.getvalue()
 
-    def _render_note (self, other):
+    def _format_note (self, other):
         out = ""
         out += self.__maybe_close_paragraph()
         doc, tag, text = Doc().tagtext()
@@ -75,36 +73,36 @@ class HtmlRenderer (Renderer):
         out += doc.getvalue()
         return out
 
-    def _render_new_line (self):
+    def _format_new_line (self):
         return " "
 
-    def _render_new_paragraph (self):
+    def _format_new_paragraph (self):
         out = ""
         out += self.__maybe_close_paragraph ()
         out += "<p>"
         self.__paragraph_opened = True
         return out
 
-    def _render_type_name (self, type_name):
+    def _format_type_name (self, type_name):
         doc, tag, text = Doc().tagtext()
         with tag('a', href = type_name):
             text(type_name)
         return doc.getvalue()
 
-    def _render_function_call (self, function_name):
+    def _format_function_call (self, function_name):
         doc, tag, text = Doc().tagtext()
         with tag('a', href = function_name):
             text(function_name)
         return doc.getvalue()
 
-    def _render_code_start (self):
+    def _format_code_start (self):
         return "<pre>"
 
-    def _render_code_start_with_language (self, language):
+    def _format_code_start_with_language (self, language):
         if language == 'c':
             language = 'source-c'
 
         return "<pre class=\"%s\">" % language
 
-    def _render_code_end (self):
+    def _format_code_end (self):
         return "</pre>"

@@ -164,7 +164,7 @@ def get_sorted_symbols_from_sections (sections, symbols):
 class AggregatedClass(object):
     def __init__(self, class_node, section_node):
         self.class_node = class_node
-        self.__formatter = NameFormatter()
+        self.__formatter = NameFormatter(language='python')
         self.__section_node = section_node
         self.signals = {}
         self.methods = {}
@@ -200,7 +200,7 @@ class AggregatedClass(object):
         self.properties = self.__sort_symbols (self.properties)
         self.virtual_functions = self.__sort_symbols (self.virtual_functions)
 
-class Renderer(object):
+class Formatter(object):
     def __init__ (self, transformer, include_directories, sections,
             do_class_aggregation=False):
         self.__transformer = transformer
@@ -209,9 +209,9 @@ class Renderer(object):
         self.__do_class_aggregation = do_class_aggregation
 
         self.__handlers = self.__create_handlers ()
-        self.__doc_renderers = self.__create_doc_renderers ()
+        self.__doc_formatters = self.__create_doc_formatters ()
         self.__doc_scanner = DocScanner()
-        self.__name_formatter = NameFormatter()
+        self.__name_formatter = NameFormatter(language='C')
 
         # Used to aggregate the class with its members
         self.__current_class = None
@@ -223,20 +223,20 @@ class Renderer(object):
         # Used to create the index file if required
         self.__created_pages = []
 
-    def render (self, output):
+    def format (self, output):
         self.__walk_node(output, self.__transformer.namespace, [])
         self.__transformer.namespace.walk(lambda node, chain:
                 self.__walk_node(output, node, chain))
         if self.__do_class_aggregation:
             self.__aggregate_classes (output)
 
-    def __render_section (self, name, output, elements):
+    def __format_section (self, name, output, elements):
         if not elements:
             return ""
 
         out = ""
         try:
-            out += self._render_section (name)
+            out += self._format_section (name)
         except AttributeError:
             pass
 
@@ -252,15 +252,15 @@ class Renderer(object):
             filename = self.__make_file_name (output, klass.class_node)
             with open (filename, 'a') as f:
                 out = ""
-                out += self.__render_section ('Properties', output,
+                out += self.__format_section ('Properties', output,
                         klass.properties)
-                out += self.__render_section ('Methods', output, klass.methods)
-                out += self.__render_section ('Signals', output, klass.signals)
-                out += self.__render_section ('Virtual Functions', output,
+                out += self.__format_section ('Methods', output, klass.methods)
+                out += self.__format_section ('Signals', output, klass.signals)
+                out += self.__format_section ('Virtual Functions', output,
                         klass.virtual_functions)
                 f.write (out)
 
-    def render_index (self, output):
+    def format_index (self, output):
         out = ""
 
         try:
@@ -271,7 +271,7 @@ class Renderer(object):
         filenames = [os.path.splitext(os.path.basename (filename))[0] for
                 filename in self.__created_pages]
         try:
-            out += self._render_index (filenames, self.__sections)
+            out += self._format_index (filenames, self.__sections)
         except AttributeError:
             pass
 
@@ -295,32 +295,32 @@ class Renderer(object):
                 ast.DocSection: self.__handle_doc_section,
                }
 
-    def __create_doc_renderers (self):
+    def __create_doc_formatters (self):
         return {
-            'other': self.__render_other,
-            'property': self.__render_property,
-            'signal': self.__render_signal,
-            'type_name': self.__render_type_name,
-            'enum_value': self.__render_enum_value,
-            'parameter': self.__render_parameter,
-            'function_call': self.__render_function_call,
-            'code_start': self.__render_code_start,
-            'code_start_with_language': self.__render_code_start_with_language,
-            'code_end': self.__render_code_end,
-            'new_line': self.__render_new_line,
-            'new_paragraph': self.__render_new_paragraph,
-            'include': self.__render_include,
-            'note': self.__render_note,
-            'heading': self.__render_heading
+            'other': self.__format_other,
+            'property': self.__format_property,
+            'signal': self.__format_signal,
+            'type_name': self.__format_type_name,
+            'enum_value': self.__format_enum_value,
+            'parameter': self.__format_parameter,
+            'function_call': self.__format_function_call,
+            'code_start': self.__format_code_start,
+            'code_start_with_language': self.__format_code_start_with_language,
+            'code_end': self.__format_code_end,
+            'new_line': self.__format_new_line,
+            'new_paragraph': self.__format_new_paragraph,
+            'include': self.__format_include,
+            'note': self.__format_note,
+            'heading': self.__format_heading
         }
 
-    def __render_other (self, node, match, props):
+    def __format_other (self, node, match, props):
         try:
-            return self._render_other (match)
+            return self._format_other (match)
         except AttributeError:
             return ""
 
-    def __render_property (self, node, match, props):
+    def __format_property (self, node, match, props):
         type_node = self.__resolve_type(props['type_name'])
         if type_node is None:
             return match
@@ -328,10 +328,10 @@ class Renderer(object):
         try:
             prop = self._find_thing(type_node.properties, props['property_name'])
         except (AttributeError, KeyError):
-            return self.__render_other (node, match, props)
+            return self.__format_other (node, match, props)
 
         try:
-            return self._render_property (node, prop)
+            return self._format_property (node, prop)
         except AttributeError:
             return ""
 
@@ -365,29 +365,29 @@ class Renderer(object):
                     return node
         return None
 
-    def __render_signal (self, node, match, props):
+    def __format_signal (self, node, match, props):
         raise NotImplementedError
 
-    def __render_type_name (self, node, match, props):
+    def __format_type_name (self, node, match, props):
         ident = props['type_name']
         type_ = self.__resolve_type(ident)
         if not type_:
-            return self.__render_other (node, match, props)
+            return self.__format_other (node, match, props)
 
         type_name = self.__name_formatter.get_full_node_name (type_)
         try:
-            return self._render_type_name (type_name)
+            return self._format_type_name (type_name)
         except AttributeError:
             return ""
 
-    def __render_enum_value (self, node, match, props):
+    def __format_enum_value (self, node, match, props):
         raise NotImplementedError
 
-    def __render_parameter (self, node, match, props):
+    def __format_parameter (self, node, match, props):
         try:
             parameter = node.get_parameter(props['param_name'])
         except (AttributeError, ValueError):
-            return self.__render_other (node, match, props)
+            return self.__format_other (node, match, props)
  
         if isinstance(parameter.type, ast.Varargs):
             param_name = "..."
@@ -395,58 +395,58 @@ class Renderer(object):
             param_name = parameter.argname
 
         try:
-            return self._render_parameter (param_name)
+            return self._format_parameter (param_name)
         except AttributeError:
             return ""
 
-    def __render_function_call (self, node, match, props):
+    def __format_function_call (self, node, match, props):
         func = self.__resolve_symbol(props['symbol_name'])
         if func is None:
-            return self.__render_other (node, match, props)
+            return self.__format_other (node, match, props)
 
         function_name = self.__name_formatter.get_full_node_name (func)
         try:
-            return self._render_function_call (function_name)
+            return self._format_function_call (function_name)
         except AttributeError:
             return ""
 
-    def __render_code_start (self, node, match, props):
+    def __format_code_start (self, node, match, props):
         self.__processing_code = True
         try:
-            return self._render_code_start ()
+            return self._format_code_start ()
         except AttributeError:
             return ""
 
-    def __render_code_start_with_language (self, node, match, props):
+    def __format_code_start_with_language (self, node, match, props):
         self.__processing_code = True
         try:
-            return self._render_code_start_with_language (props["language_name"])
+            return self._format_code_start_with_language (props["language_name"])
         except AttributeError:
             return ""
 
-    def __render_code_end (self, node, match, props):
+    def __format_code_end (self, node, match, props):
         self.__processing_code = False
         try:
-            return self._render_code_end ()
+            return self._format_code_end ()
         except AttributeError:
             return ""
 
-    def __render_new_line (self, node, match, props):
+    def __format_new_line (self, node, match, props):
         if self.__processing_code:
             return ""
 
         try:
-            return self._render_new_line ()
+            return self._format_new_line ()
         except AttributeError:
             return ""
 
-    def __render_new_paragraph (self, node, match, props):
+    def __format_new_paragraph (self, node, match, props):
         try:
-            return self._render_new_paragraph ()
+            return self._format_new_paragraph ()
         except AttributeError:
             return ""
 
-    def __render_include (self, node, match, props):
+    def __format_include (self, node, match, props):
         filename = props["include_name"].strip()
         f = None
 
@@ -462,9 +462,9 @@ class Renderer(object):
         if f:
             contents = f.read()
             if self.__processing_code:
-                return self._render_other (contents)
+                return self._format_other (contents)
             else:
-                out = self.__render_doc_string(node, contents)
+                out = self.__format_doc_string(node, contents)
             f.close()
         else:
             logging.warning("Could not find file %s" % (props["include_name"], ))
@@ -472,20 +472,20 @@ class Renderer(object):
 
         return out
 
-    def __render_note (self, node, match, props):
+    def __format_note (self, node, match, props):
         if self.__processing_code:
-            return self.__render_other (node, match, props)
+            return self.__format_other (node, match, props)
 
         try:
-            return self._render_note (props["note_contents"])
+            return self._format_note (props["note_contents"])
         except AttributeError:
             return ""
 
-    def __render_heading (self, node, match, props):
+    def __format_heading (self, node, match, props):
         raise NotImplementedError
 
     def __get_class_symbols (self, root, node):
-        formatter = NameFormatter ()
+        formatter = NameFormatter (language='python')
         node_name = formatter.get_full_node_name (node)
         return_next = False
         for element in root:
@@ -545,7 +545,7 @@ class Renderer(object):
     def _get_extension (self):
         raise NotImplementedError
 
-    def __render_doc_string (self, node, docstring):
+    def __format_doc_string (self, node, docstring):
         if not docstring:
             return ""
 
@@ -555,17 +555,17 @@ class Renderer(object):
         for tok in tokens:
             kind, match, props = tok
             try:
-                rendered_token = self.__doc_renderers[kind](node, match, props)
-                if rendered_token:
-                    out += rendered_token
+                formated_token = self.__doc_formatters[kind](node, match, props)
+                if formated_token:
+                    out += formated_token
             except NotImplementedError:
                 continue
 
         self._end_doc ()
         return out
 
-    def __render_doc (self, node):
-        return self.__render_doc_string (node, node.doc)
+    def __format_doc (self, node):
+        return self.__format_doc_string (node, node.doc)
 
     def __handle_parameter (self, node):
         out = ""
@@ -575,7 +575,7 @@ class Renderer(object):
             pass
 
         logging.debug ("handling parameter %s" % node.argname)
-        out += self.__render_doc (node)
+        out += self.__format_doc (node)
 
         try:
             out += self._end_parameter ()
@@ -592,7 +592,7 @@ class Renderer(object):
             pass
 
         logging.debug ("handling class %s" % self.__name_formatter.get_full_node_name (node))
-        out += self.__render_doc (node)
+        out += self.__format_doc (node)
 
         try:
             out += self._end_class ()
@@ -628,7 +628,7 @@ class Renderer(object):
         out += self.__handle_parameters (node)
 
         logging.debug ("handling signal %s" % self.__name_formatter.get_full_node_name (node))
-        out += self.__render_doc (node)
+        out += self.__format_doc (node)
 
         try:
             out += self._end_signal ()
@@ -650,7 +650,7 @@ class Renderer(object):
         out += self.__handle_parameters (node)
 
         logging.debug ("handling function %s" % self.__name_formatter.get_full_node_name (node))
-        out += self.__render_doc (node)
+        out += self.__format_doc (node)
 
         try:
             out += self._end_function ()
@@ -668,7 +668,7 @@ class Renderer(object):
         out += self.__handle_parameters (node)
 
         logging.debug ("handling virtual function %s" % self.__name_formatter.get_full_node_name (node))
-        out += self.__render_doc (node)
+        out += self.__format_doc (node)
 
         try:
             out += self._end_virtual_function ()
@@ -684,7 +684,7 @@ class Renderer(object):
             pass
 
         logging.debug ("handling doc section %s" % node.name)
-        out += self.__render_doc (node)
+        out += self.__format_doc (node)
 
         try:
             out += self._end_doc_section ()
@@ -709,7 +709,7 @@ class SectionsGenerator(object):
     def __init__ (self, transformer):
         self.__transformer = transformer
 
-        self.__name_formatter = NameFormatter ()
+        self.__name_formatter = NameFormatter (language='python')
 
         # Used to close the previous section if necessary
         self.__opened_section = False
@@ -843,9 +843,9 @@ def doc_main (args):
     else:
         sections = ET.parse (args.sections_file).getroot ()
 
-    from slate_markdown_renderer import SlateMarkdownRenderer
-    from html_renderer import HtmlRenderer
-    renderer = HtmlRenderer (transformer, args.markdown_include_paths,
+    from slate_markdown_formatter import SlateMarkdownFormatter
+    from html_formatter import HtmlFormatter
+    formatter = HtmlFormatter (transformer, args.markdown_include_paths,
             sections, do_class_aggregation=True)
-    renderer.render (args.output)
-    renderer.render_index (args.output)
+    formatter.format (args.output)
+    formatter.format_index (args.output)
