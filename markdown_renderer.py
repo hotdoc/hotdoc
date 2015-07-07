@@ -64,7 +64,7 @@ class MarkdownRenderer (Renderer):
     def _end_doc_section (self):
         return self._render_new_paragraph ()
 
-    def _render_other (self, node, other):
+    def _render_other (self, other):
         return other
 
     def _render_property (self, node, prop):

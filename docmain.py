@@ -316,7 +316,7 @@ class Renderer(object):
 
     def __render_other (self, node, match, props):
         try:
-            return self._render_other (node, match)
+            return self._render_other (match)
         except AttributeError:
             return ""
 
@@ -432,6 +432,9 @@ class Renderer(object):
             return ""
 
     def __render_new_line (self, node, match, props):
+        if self.__processing_code:
+            return ""
+
         try:
             return self._render_new_line ()
         except AttributeError:
@@ -459,7 +462,7 @@ class Renderer(object):
         if f:
             contents = f.read()
             if self.__processing_code:
-                return contents
+                return self._render_other (contents)
             else:
                 out = self.__render_doc_string(node, contents)
             f.close()
@@ -528,7 +531,11 @@ class Renderer(object):
             return True
 
         with open (filename, 'w') as f:
-            f.write (handler (node))
+            out = ""
+            out += self._start_page ()
+            out += handler (node)
+            out += self._end_page ()
+            f.write (out)
 
         if not self.__do_aggregation (node):
             self.__created_pages.append (filename)
@@ -543,12 +550,14 @@ class Renderer(object):
             return ""
 
         out = ""
+        self._start_doc ()
         tokens = self.__doc_scanner.scan (docstring)
         for tok in tokens:
             kind, match, props = tok
             rendered_token = self.__doc_renderers[kind](node, match, props)
             if rendered_token:
                 out += rendered_token
+        self._end_doc ()
         return out
 
     def __render_doc (self, node):
@@ -678,6 +687,18 @@ class Renderer(object):
         except AttributeError:
             pass
         return out
+
+    def _start_doc (self):
+        return ""
+
+    def _end_doc (self):
+        return ""
+
+    def _start_page (self):
+        return ""
+
+    def _end_page (self):
+        return ""
 
 
 class SectionsGenerator(object):
@@ -819,7 +840,8 @@ def doc_main (args):
         sections = ET.parse (args.sections_file).getroot ()
 
     from slate_markdown_renderer import SlateMarkdownRenderer
-    renderer = SlateMarkdownRenderer (transformer, args.markdown_include_paths,
+    from html_renderer import HtmlRenderer
+    renderer = HtmlRenderer (transformer, args.markdown_include_paths,
             sections, do_class_aggregation=True)
     renderer.render (args.output)
     renderer.render_index (args.output)
