@@ -61,8 +61,11 @@ class NameFormatter(object):
                 else:
                     node = None
 
-        elif type (node) in (ast.Class, ast.Enum):
-            out = "%s%s" % (node.namespace.name, node.name)
+        elif type (node) in (ast.Class, ast.Enum, ast.Alias, ast.Record):
+            if node.namespace:
+                out = "%s%s" % (node.namespace.name, node.name)
+            else:
+                out = node.name
 
         return out
 
@@ -353,8 +356,9 @@ class LinkResolver(object):
                     remote_prefix = l.split('"')[1]
                 elif l.startswith("<ANCHOR"):
                     split_line = l.split('"')
+                    filename = split_line[3].split('/', 1)[-1]
                     link = ExternalLink (split_line[1], dir_, remote_prefix,
-                            split_line[3])
+                            filename)
                     symbol_map[split_line[1]] = link
 
         return symbol_map
