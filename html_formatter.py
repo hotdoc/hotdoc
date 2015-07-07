@@ -5,6 +5,7 @@ class HtmlFormatter (Formatter):
     def __init__(self, *args, **kwargs):
         Formatter.__init__(self, *args, **kwargs)
         self.__paragraph_opened = False
+        self.__formatting_class = False
 
     def __maybe_close_paragraph (self):
         if self.__paragraph_opened:
@@ -26,6 +27,22 @@ class HtmlFormatter (Formatter):
     def _end_page (self):
         return "</section>"
 
+    def _start_doc (self):
+        if not self.__formatting_class:
+            return ""
+
+        doc, tag, text = Doc().tagtext()
+        with tag('h2'):
+            text ("Description")
+        return doc.getvalue()
+
+    def _start_short_description (self):
+        self.__paragraph_opened = True
+        return "<p>"
+
+    def _end_short_description (self):
+        return self.__maybe_close_paragraph ()
+
     def _start_function (self, function_name, param_names):
         doc, tag, text = Doc().tagtext()
         with tag('h2', klass = 'method'):
@@ -35,10 +52,15 @@ class HtmlFormatter (Formatter):
         return doc.getvalue()
 
     def _start_class (self, class_name):
+        self.__formatting_class = True
         doc, tag, text = Doc().tagtext()
         with tag('h1', klass = 'class'):
             text (class_name)
         return doc.getvalue()
+
+    def _end_class (self):
+        self.__formatting_class = False
+        return ""
 
     def _start_parameters (self):
         return "<dl><dt>Parameters:</dt><ul>"

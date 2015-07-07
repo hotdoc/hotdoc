@@ -216,6 +216,9 @@ class Formatter(object):
         self.__current_class = None
         self.__aggregated_classes = []
 
+        # Used to warn subclasses a method isn't implemented
+        self.__not_implemented_methods = {}
+
         # Used to avoid parsing code as doc
         self.__processing_code = False
 
@@ -234,10 +237,7 @@ class Formatter(object):
             return ""
 
         out = ""
-        try:
-            out += self._format_section (name)
-        except AttributeError:
-            pass
+        out += self._format_section (name)
 
         for elem in elements:
             with open (self.__make_file_name (output, elem), 'r') as f:
@@ -262,22 +262,14 @@ class Formatter(object):
     def format_index (self, output):
         out = ""
 
-        try:
-            out += self._start_index (self.__transformer.namespace.name)
-        except AttributeError:
-            pass
+        out += self._start_index (self.__transformer.namespace.name)
 
         filenames = [os.path.splitext(os.path.basename (filename))[0] for
                 filename in self.__created_pages]
-        try:
-            out += self._format_index (filenames, self.__sections)
-        except AttributeError:
-            pass
 
-        try:
-            out += self._end_index ()
-        except AttributeError:
-            pass
+        out += self._format_index (filenames, self.__sections)
+
+        out += self._end_index ()
 
         extension = self._get_extension ()
         filename = os.path.join (output, "index.%s" % extension)
@@ -314,10 +306,7 @@ class Formatter(object):
         }
 
     def __format_other (self, node, match, props):
-        try:
-            return self._format_other (match)
-        except AttributeError:
-            return ""
+        return self._format_other (match)
 
     def __format_property (self, node, match, props):
         type_node = self.__resolve_type(props['type_name'])
@@ -329,10 +318,7 @@ class Formatter(object):
         except (AttributeError, KeyError):
             return self.__format_other (node, match, props)
 
-        try:
-            return self._format_property (node, prop)
-        except AttributeError:
-            return ""
+        return self._format_property (node, prop)
 
     def __resolve_type(self, ident):
         try:
@@ -370,14 +356,13 @@ class Formatter(object):
     def __format_type_name (self, node, match, props):
         ident = props['type_name']
         type_ = self.__resolve_type(ident)
+
         if not type_:
             return self.__format_other (node, match, props)
 
         type_name = self.__name_formatter.get_full_node_name (type_)
-        try:
-            return self._format_type_name (type_name)
-        except AttributeError:
-            return ""
+
+        return self._format_type_name (type_name)
 
     def __format_enum_value (self, node, match, props):
         raise NotImplementedError
@@ -393,10 +378,7 @@ class Formatter(object):
         else:
             param_name = parameter.argname
 
-        try:
-            return self._format_parameter (param_name)
-        except AttributeError:
-            return ""
+        return self._format_parameter (param_name)
 
     def __format_function_call (self, node, match, props):
         func = self.__resolve_symbol(props['symbol_name'])
@@ -404,46 +386,29 @@ class Formatter(object):
             return self.__format_other (node, match, props)
 
         function_name = self.__name_formatter.get_full_node_name (func)
-        try:
-            return self._format_function_call (function_name)
-        except AttributeError:
-            return ""
+
+        return self._format_function_call (function_name)
 
     def __format_code_start (self, node, match, props):
         self.__processing_code = True
-        try:
-            return self._format_code_start ()
-        except AttributeError:
-            return ""
+        return self._format_code_start ()
 
     def __format_code_start_with_language (self, node, match, props):
         self.__processing_code = True
-        try:
-            return self._format_code_start_with_language (props["language_name"])
-        except AttributeError:
-            return ""
+        return self._format_code_start_with_language (props["language_name"])
 
     def __format_code_end (self, node, match, props):
         self.__processing_code = False
-        try:
-            return self._format_code_end ()
-        except AttributeError:
-            return ""
+        return self._format_code_end ()
 
     def __format_new_line (self, node, match, props):
         if self.__processing_code:
             return ""
 
-        try:
-            return self._format_new_line ()
-        except AttributeError:
-            return ""
+        return self._format_new_line ()
 
     def __format_new_paragraph (self, node, match, props):
-        try:
-            return self._format_new_paragraph ()
-        except AttributeError:
-            return ""
+        return self._format_new_paragraph ()
 
     def __format_include (self, node, match, props):
         filename = props["include_name"].strip()
@@ -475,13 +440,10 @@ class Formatter(object):
         if self.__processing_code:
             return self.__format_other (node, match, props)
 
-        try:
-            return self._format_note (props["note_contents"])
-        except AttributeError:
-            return ""
+        return self._format_note (props["note_contents"])
 
     def __format_heading (self, node, match, props):
-        raise NotImplementedError
+        return self._format_heading ()
 
     def __get_class_symbols (self, root, node):
         formatter = NameFormatter (language='python')
@@ -541,15 +503,11 @@ class Formatter(object):
 
         return True
 
-    def _get_extension (self):
-        raise NotImplementedError
-
     def __format_doc_string (self, node, docstring):
         if not docstring:
             return ""
 
         out = ""
-        self._start_doc ()
         tokens = self.__doc_scanner.scan (docstring)
         for tok in tokens:
             kind, match, props = tok
@@ -560,215 +518,379 @@ class Formatter(object):
             except NotImplementedError:
                 continue
 
-        self._end_doc ()
         return out
 
     def __format_doc (self, node):
-        return self.__format_doc_string (node, node.doc)
+        out = ""
+        out += self._start_doc ()
+        out += self.__format_doc_string (node, node.doc)
+        out += self._end_doc ()
+        return out
+
+    def __format_short_description (self, node):
+        if not node.short_description:
+            return ""
+
+        out = ""
+        out += self._start_short_description ()
+        out += self.__format_doc_string (node, node.short_description)
+        out += self._end_short_description ()
+        return out
 
     def __handle_parameter (self, node):
         out = ""
-        try:
-            out += self._start_parameter (node.argname)
-        except AttributeError:
-            pass
+        out += self._start_parameter (node.argname)
 
         logging.debug ("handling parameter %s" % node.argname)
         out += self.__format_doc (node)
 
-        try:
-            out += self._end_parameter ()
-        except AttributeError:
-            pass
+        out += self._end_parameter ()
 
         return out
 
     def __handle_class (self, node):
         out = ""
-        try:
-            out += self._start_class (self.__name_formatter.get_full_node_name (node))
-        except AttributeError:
-            pass
+        out += self._start_class (self.__name_formatter.get_full_node_name (node))
 
+        out += self.__format_short_description (node)
         logging.debug ("handling class %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__format_doc (node)
 
-        try:
-            out += self._end_class ()
-        except AttributeError:
-            pass
+        out += self._end_class ()
+
         return out
 
     def __handle_parameters (self, node):
         out = ""
         if node.all_parameters:
-            try:
-                out += self._start_parameters ()
-            except AttributeError:
-                pass
+            out += self._start_parameters ()
 
             for param in node.all_parameters:
                 out += self.__handle_parameter (param)
 
-            try:
-                out += self._end_parameters ()
-            except AttributeError:
-                pass
+            out += self._end_parameters ()
 
         return out
 
     def __handle_signal (self, node):
         out = ""
-        try:
-            out += self._start_signal (self.__name_formatter.get_full_node_name (node))
-        except AttributeError:
-            pass
+        out += self._start_signal (self.__name_formatter.get_full_node_name (node))
 
         out += self.__handle_parameters (node)
 
         logging.debug ("handling signal %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__format_doc (node)
 
-        try:
-            out += self._end_signal ()
-        except AttributeError:
-            pass
+        out += self._end_signal ()
 
         return out
 
     def __handle_function (self, node):
         out = ""
         param_names = []
+
         for param in node.all_parameters:
             param_names.append (param.argname)
-        try:
-            out += self._start_function (self.__name_formatter.get_full_node_name (node), param_names)
-        except AttributeError:
-            pass
+
+        out += self._start_function (self.__name_formatter.get_full_node_name (node), param_names)
 
         out += self.__handle_parameters (node)
 
         logging.debug ("handling function %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__format_doc (node)
 
-        try:
-            out += self._end_function ()
-        except AttributeError:
-            pass
+        out += self._end_function ()
         return out
 
     def __handle_virtual_function (self, node):
         out = ""
-        try:
-            out += self._start_virtual_function (self.__name_formatter.get_full_node_name (node))
-        except AttributeError:
-            pass
+
+        out += self._start_virtual_function (self.__name_formatter.get_full_node_name (node))
 
         out += self.__handle_parameters (node)
 
         logging.debug ("handling virtual function %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__format_doc (node)
 
-        try:
-            out += self._end_virtual_function ()
-        except AttributeError:
-            pass
+        out += self._end_virtual_function ()
+
         return out
 
     def __handle_doc_section (self, node):
         out = ""
-        try:
-            out += self._start_doc_section (node.name)
-        except AttributeError:
-            pass
+
+        out += self._start_doc_section (node.name)
 
         logging.debug ("handling doc section %s" % node.name)
         out += self.__format_doc (node)
 
-        try:
-            out += self._end_doc_section ()
-        except AttributeError:
-            pass
+        out += self._end_doc_section ()
+
         return out
 
+    def __warn_not_implemented (self, func):
+        if func in self.__not_implemented_methods:
+            return
+        self.__not_implemented_methods [func] = True
+        logging.warning ("%s not implemented !" % func) 
+
+    # Virtual methods
+
+    def _get_extension (self):
+        """
+        The extension to append to the filename
+        ('markdown', 'html')
+        """
+        self.__warn_not_implemented (self._get_extension)
+        return ""
+
+    def _start_index (self, namespace_name):
+        self.__warn_not_implemented (self._start_index)
+        return ""
+
+    def _end_index (self):
+        self.__warn_not_implemented (self._end_index)
+        return ""
+
     def _start_doc (self):
+        """
+        Notifies the subclass that the symbol's documentation
+        is going to be parsed
+        """
+        self.__warn_not_implemented (self._start_doc)
         return ""
 
     def _end_doc (self):
+        """
+        Notifies the subclass that the symbol's documentation
+        has been parsed, it is safe to assume no _render_
+        virtual methods will be called until the next call
+        to _start_doc or _start_short_description
+        """
+        self.__warn_not_implemented (self._end_doc)
+        return ""
+
+    def _start_short_description (self):
+        """
+        Notifies the subclass that the symbol's short description
+        is going to be parsed
+        """
+        self.__warn_not_implemented (self._start_short_description)
+        return ""
+
+    def _end_short_description (self):
+        """
+        Notifies the subclass that the symbol's short description
+        has been parsed, it is safe to assume no _render_
+        virtual methods will be called until the next call
+        to _start_doc or _start_short_description
+        """
+        self.__warn_not_implemented (self._end_short_description)
         return ""
 
     def _start_page (self):
+        """
+        Notifies the subclass that an empty page has been
+        started.
+        """
+        self.__warn_not_implemented (self._start_page)
         return ""
 
     def _end_page (self):
+        """
+        Notifies the subclass that the current page is
+        finished
+        """
+        self.__warn_not_implemented (self._end_page)
         return ""
 
+    def _start_doc_section (self, section_name):
+        """
+        Notifies the subclass that a standalone doc section
+        is being parsed
+        """
+        self.__warn_not_implemented (self._start_doc_section)
+        return ""
 
-class SectionsGenerator(object):
-    def __init__ (self, transformer):
-        self.__transformer = transformer
+    def _end_doc_section (self):
+        """
+        Notifies the subclass that a standalone doc section
+        is done being parsed
+        """
+        self.__warn_not_implemented (self._end_doc_section)
+        return ""
 
-        self.__name_formatter = NameFormatter (language='python')
+    def _start_class (self, class_name):
+        """
+        Notifies the subclass that a class is being
+        parsed
+        """
+        self.__warn_not_implemented (self._start_class)
+        return ""
 
-        # Used to close the previous section if necessary
-        self.__opened_section = False
+    def _end_class (self):
+        """
+        Notifies the subclass that a class is done being parsed
+        """
+        self.__warn_not_implemented (self._end_class)
+        return ""
 
-    def generate (self, output):
-        # Three passes but who cares
-        filename = os.path.join (output, "%s-sections.txt" %
-                self.__transformer.namespace.name)
-        with open (filename, 'w') as f:
-            f.write ("<SECTIONS>")
-            self.__walk_node(output, self.__transformer.namespace, [], f)
-            self.__transformer.namespace.walk(lambda node, chain:
-                    self.__walk_node(output, node, chain, f))
-            if self.__opened_section:
-                f.write ("</SYMBOLS>")
-                f.write ("</SECTION>")
-            f.write ("</SECTIONS>")
+    def _start_function (self, function_name, params):
+        """
+        Notifies the subclass that a function is being parsed
+        """
+        self.__warn_not_implemented (self._start_function)
+        return ""
 
-        with open (filename, 'r') as f:
-            contents = f.read ()
-            root = ET.fromstring(contents)
-            self.__indent(root)
+    def _end_function (self):
+        """
+        Notifies the subclass that a function is done being parsed
+        """
+        self.__warn_not_implemented (self._end_function)
+        return ""
 
-        with open (filename, 'w') as f:
-            f.write(ET.tostring(root))
+    def _start_virtual_function (self, function_name):
+        """
+        Notifies the subclass that a virtual function is being parsed
+        """
+        self.__warn_not_implemented (self._start_virtual_function)
+        return ""
 
-        return root
-    
-    def __walk_node(self, output, node, chain, f):
-        if type (node) in [ast.Alias, ast.Record]:
-            return False
+    def _end_virtual_function (self):
+        """
+        Notifies the subclass that a virtual function is done being parsed
+        """
+        self.__warn_not_implemented (self._end_virtual_function)
+        return ""
 
-        name = self.__name_formatter.get_full_node_name (node)
+    def _start_signal (self, signal_name):
+        """
+        Notifies the subclass that a signal is being parsed
+        """
+        self.__warn_not_implemented (self._start_signal)
+        return ""
 
-        if type (node) in [ast.Namespace, ast.DocSection, ast.Class,
-                ast.Interface]:
-            if self.__opened_section:
-                f.write ("</SYMBOLS>")
-                f.write ("</SECTION>")
+    def _end_signal (self):
+        """
+        Notifies the subclass that a signal is done being parsed
+        """
+        self.__warn_not_implemented (self._end_signal)
+        return ""
 
-            f.write ("<SECTION>")
-            f.write ("<SYMBOL>%s</SYMBOL>" % name)
-            f.write ("<SYMBOLS>")
-            self.__opened_section = True
-        else:
-            f.write ("<SYMBOL>%s</SYMBOL>" % name)
+    def _start_parameters (self):
+        """
+        Notifies the subclass that parameters are being parsed
+        """
+        self.__warn_not_implemented (self._start_parameters)
+        return ""
 
-        return True
+    def _end_parameters (self):
+        """
+        Notifies the subclass that parameters are done being parsed
+        """
+        self.__warn_not_implemented (self._end_parameters)
+        return ""
 
-    def __indent (self, elem, level=0):
-        i = "\n" + level * "  "
-        if len(elem):
-            if not elem.text or not elem.text.strip():
-                elem.text = i + "  "
-            if not elem.tail or not elem.tail.strip():
-                elem.tail = i
-            for elem in elem:
-                self.__indent(elem, level + 1)
-            if not elem.tail or not elem.tail.strip():
-                elem.tail = i
-        else:
-            if level and (not elem.tail or not elem.tail.strip()):
-                elem.tail = i
+    def _start_parameter (self, param_name):
+        """
+        Notifies the subclass that a parameter is being parsed
+        """
+        self.__warn_not_implemented (self._start_parameter)
+        return ""
+
+    def _end_parameter (self):
+        """
+        Notifies the subclass that a parameter is done being parsed
+        """
+        self.__warn_not_implemented (self._end_parameter)
+        return ""
+
+    def _format_other (self, other):
+        """
+        @other: A string that doesn't contain any GNOME markup
+        """
+        self.__warn_not_implemented (self._format_other)
+        return ""
+
+    def _format_type_name (self, type_name):
+        """
+        @type_name: the name of a type to link to
+        """
+        self.__warn_not_implemented (self._format_type_name)
+        return ""
+
+    def _format_parameter (self, param_name):
+        """
+        @param_name: the name of a parameter referred to
+        """
+        self.__warn_not_implemented (self._format_parameter)
+        return ""
+
+    def _format_new_paragraph (self):
+        """
+        Called when the parsed markup contained a new paragraph
+        """
+        self.__warn_not_implemented (self._format_new_paragraph)
+        return ""
+
+    def _format_function_call (self, function_name):
+        """
+        @function_name: A function name to link to
+        """
+        self.__warn_not_implemented (self._format_function_call)
+        return ""
+
+    def _format_new_line (self):
+        """
+        Called when the parsed markup contained a new line
+        """
+        self.__warn_not_implemented (self._format_new_line)
+        return ""
+
+    def _format_note (self, note):
+        """
+        @note: A note to format, eg an informational hint
+        """
+        self.__warn_not_implemented (self._format_note)
+        return ""
+
+    def _format_code_start (self):
+        """
+        Called when the parsed markup contains code to render,
+        with no specified language
+        """
+        self.__warn_not_implemented (self._format_code_start)
+        return ""
+
+    def _format_code_start_with_language (self, language):
+        """
+        Called when the parsed markup contains code to render
+        @language: the language of the code
+        """
+        self.__warn_not_implemented (self._format_code_start_with_language)
+        return ""
+
+    def _format_code_end (self):
+        """
+        Called when a code block is finished
+        """
+        self.__warn_not_implemented (self._format_code_end)
+        return ""
+
+    def _format_section (self, section_name):
+        """
+        Called when aggregating signals, properties, virtual functions
+        and functions to their parent class
+        @section_name: the name of the section (Signals, Methods ...)
+        """
+        self.__warn_not_implemented (self._format_section)
+        return ""
+
+    def _format_index (self, filenames, sections):
+        """
+        Called to render an index
+        @filenames: the files that have been produced by the parsing
+        @sections: The root of an element tree representing the sections file
+        """
+        self.__warn_not_implemented (self._format_index)
+        return ""

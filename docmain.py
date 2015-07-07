@@ -4,6 +4,12 @@ from xml.etree import ElementTree as ET
 from giscanner.transformer import Transformer
 import logging
 
+from base_formatter import Formatter
+from sections import SectionsGenerator
+
+class StupidFormatter (Formatter):
+    pass
+
 def doc_main (args):
     try:
         debug_level = os.environ["DOCTOOL_DEBUG"]
