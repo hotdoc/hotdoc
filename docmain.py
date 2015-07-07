@@ -554,9 +554,13 @@ class Renderer(object):
         tokens = self.__doc_scanner.scan (docstring)
         for tok in tokens:
             kind, match, props = tok
-            rendered_token = self.__doc_renderers[kind](node, match, props)
-            if rendered_token:
-                out += rendered_token
+            try:
+                rendered_token = self.__doc_renderers[kind](node, match, props)
+                if rendered_token:
+                    out += rendered_token
+            except NotImplementedError:
+                continue
+
         self._end_doc ()
         return out
 
