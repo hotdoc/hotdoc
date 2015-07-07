@@ -1,4 +1,4 @@
-from docmain import Formatter
+from base_formatter import Formatter
 from yattag import Doc
 
 class HtmlFormatter (Formatter):

@@ -1,4 +1,4 @@
-from docmain import get_sorted_symbols_from_sections
+from base_formatter import get_sorted_symbols_from_sections
 from markdown_formatter import MarkdownFormatter
 
 # Input format for https://github.com/tripit/slate

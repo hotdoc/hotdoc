@@ -1,4 +1,4 @@
-from docmain import Formatter
+from base_formatter import Formatter
 
 class MarkdownFormatter (Formatter):
     def __format_local_link (self, name):
