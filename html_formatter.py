@@ -51,7 +51,7 @@ class HtmlFormatter (Formatter):
                 text (function_name)
         return doc.getvalue()
 
-    def _start_class (self, class_name):
+    def _start_class (self, class_name, prototypes):
         self.__formatting_class = True
         doc, tag, text = Doc().tagtext()
         with tag('h1', klass = 'class'):

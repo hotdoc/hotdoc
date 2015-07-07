@@ -66,6 +66,46 @@ class NameFormatter(object):
 
         return out
 
+    def make_gtkdoc_id(self, node, separator=None, formatter=None):
+        def class_style(name):
+            return name
+
+        def function_style(name):
+            snake_case = re.sub('(.)([A-Z][a-z]+)', r'\1_\2',
+                    name)
+            snake_case = re.sub('([a-z0-9])([A-Z])', r'\1_\2', snake_case).lower()
+            return snake_case.replace("_", "-")
+
+        if separator is None:
+            separator = "-"
+            formatter = function_style
+            if isinstance(node, (ast.Class, ast.Union, ast.Enum, ast.Record, ast.Interface,
+                                ast.Callback, ast.Alias)):
+                separator = ""
+                formatter = class_style
+
+        if isinstance(node, ast.Namespace):
+            return formatter(node.identifier_prefixes[0])
+
+        if hasattr(node, '_chain') and node._chain:
+            parent = node._chain[-1]
+        else:
+            parent = getattr(node, 'parent', None)
+
+        if parent is None:
+            if isinstance(node, ast.Function) and node.shadows:
+                return '%s%s%s' % (formatter(node.namespace.name), separator,
+                        formatter(node.shadows))
+            else:
+                return '%s%s%s' % (formatter(node.namespace.name), separator,
+                        formatter(node.name))
+
+        if isinstance(node, ast.Function) and node.shadows:
+            return '%s%s%s' % (self.make_gtkdoc_id(parent, separator=separator,
+                formatter=formatter), separator, formatter(node.shadows))
+        else:
+            return '%s%s%s' % (self.make_gtkdoc_id(parent, separator=separator,
+                formatter=formatter), separator, formatter(node.name))
 
 class DocScanner(object):
     def __init__(self):
@@ -151,7 +191,6 @@ class DocScanner(object):
             yield ('other', text[pos:], None)
 
 
-
 # Long name is long
 def get_sorted_symbols_from_sections (sections, symbols):
     for element in sections:
@@ -199,6 +238,146 @@ class AggregatedClass(object):
         self.properties = self.__sort_symbols (self.properties)
         self.virtual_functions = self.__sort_symbols (self.virtual_functions)
 
+
+class SymbolResolver(object):
+    def __init__(self, transformer):
+        self.__transformer = transformer
+
+    def resolve_type(self, ident):
+        try:
+            matches = self.__transformer.split_ctype_namespaces(ident)
+        except ValueError:
+            return None
+
+        best_node = None
+        for namespace, name in matches:
+            node = namespace.get(name)
+            if node:
+                if best_node is None:
+                    best_node = node
+                elif node.doc and not best_node.doc:
+                    best_node = node
+
+        return best_node
+
+    def resolve_symbol(self, symbol):
+        try:
+            matches = self.__transformer.split_csymbol_namespaces(symbol)
+        except ValueError:
+            return None
+        for namespace, name in matches:
+            node = namespace.get_by_symbol(symbol)
+            if node:
+                return node
+
+        if not node:
+            for namespace, name in matches:
+                node = namespace.get(name)
+                if node:
+                    return node
+        return None
+
+
+class PrototypeFormatter(object):
+    def __init__ (self, symbol_resolver, language='C'):
+        self.__name_formatter = NameFormatter (language=language)
+        self.__symbol_resolver = symbol_resolver
+        if language == 'C':
+            self.make_prototype = self.__make_c_prototype
+
+    def __make_c_prototype (self, node):
+        out = ""
+        out += "%s " % node.retval.type.ctype
+        out += "%s " % self.__name_formatter.get_full_node_name (node)
+        out += "("
+        for param in node.parameters:
+            if out [-1] != "(":
+                out += ", "
+            out += "%s %s" % (param.type.ctype, param.argname)
+        out += ")"
+        return out
+
+
+class Link (object):
+    pass
+
+class ExternalLink (Link):
+    def __init__ (self, symbol, local_prefix, remote_prefix, filename):
+        self.symbol = symbol
+        self.local_prefix = local_prefix
+        self.remote_prefix = remote_prefix
+        self.filename = filename
+
+
+class LocalLink (Link):
+    def __init__(self, symbol):
+        self.__symbol = symbol
+ 
+
+class LinkResolver(object):
+    def __init__(self, transformer):
+        self.__transformer = transformer
+        self.__name_formatter = NameFormatter ()
+        self.__gtk_doc_links = self.__gather_gtk_doc_links ()
+
+    def __gather_gtk_doc_links (self):
+        links = dict ({})
+
+        if not os.path.exists(os.path.join("/usr/share/gtk-doc/html")):
+            print "no gtk doc to look at"
+            return
+
+        for node in os.listdir(os.path.join(DATADIR, "gtk-doc", "html")):
+            dir_ = os.path.join(DATADIR, "gtk-doc/html", node)
+            if os.path.isdir(dir_):
+                try:
+                    links[node] = self.__parse_sgml_index(dir_)
+                except IOError:
+                    pass
+
+        return links
+
+    def __parse_sgml_index(self, dir_):
+        symbol_map = dict({})
+        remote_prefix = ""
+        with open(os.path.join(dir_, "index.sgml"), 'r') as f:
+            for l in f:
+                if l.startswith("<ONLINE"):
+                    remote_prefix = l.split('"')[1]
+                elif l.startswith("<ANCHOR"):
+                    split_line = l.split('"')
+                    link = ExternalLink (split_line[1], dir_, remote_prefix,
+                            split_line[3])
+                    symbol_map[split_line[1]] = link
+
+        return symbol_map
+
+    def get_link (self, node):
+        if node.namespace == self.__transformer.namespace:
+            return LocalLink (node.name)
+
+        gtk_doc_identifier = self.__name_formatter.make_gtkdoc_id(node)
+        if isinstance(node, (ast.Constant, ast.Member)):
+            gtk_doc_identifier = gtk_doc_identifier.upper() + ":CAPS"
+
+        package_links = None
+        for package in node.namespace.exported_packages:
+            try:
+                package_links = self.__gtk_doc_links[package]
+            except KeyError:
+                package = re.sub(r'\-[0-9]+\.[0-9]+$', '', package)
+                try:
+                    package_links = self.__gtk_doc_links[package]
+                except KeyError:
+                    return None
+
+        try:
+            link = package_links[gtk_doc_identifier]
+        except KeyError:
+            return None
+
+        return link
+
 class Formatter(object):
     def __init__ (self, transformer, include_directories, sections,
             do_class_aggregation=False):
@@ -210,7 +389,10 @@ class Formatter(object):
         self.__handlers = self.__create_handlers ()
         self.__doc_formatters = self.__create_doc_formatters ()
         self.__doc_scanner = DocScanner()
+        self.__link_resolver = LinkResolver (transformer)
+        self.__symbol_resolver = SymbolResolver (self.__transformer)
         self.__name_formatter = NameFormatter(language='C')
+        self.__prototype_formatter = PrototypeFormatter(self.__symbol_resolver, language='C')
 
         # Used to aggregate the class with its members
         self.__current_class = None
@@ -224,7 +406,7 @@ class Formatter(object):
 
         # Used to create the index file if required
         self.__created_pages = []
-
+ 
     def format (self, output):
         self.__walk_node(output, self.__transformer.namespace, [])
         self.__transformer.namespace.walk(lambda node, chain:
@@ -309,7 +491,7 @@ class Formatter(object):
         return self._format_other (match)
 
     def __format_property (self, node, match, props):
-        type_node = self.__resolve_type(props['type_name'])
+        type_node = self.__symbol_resolver.resolve_type(props['type_name'])
         if type_node is None:
             return match
 
@@ -320,45 +502,25 @@ class Formatter(object):
 
         return self._format_property (node, prop)
 
-    def __resolve_type(self, ident):
-        try:
-            matches = self.__transformer.split_ctype_namespaces(ident)
-        except ValueError:
-            return None
-
-        for namespace, name in matches:
-            node = namespace.get(name)
-            if node:
-                return node
-
-        return None
-
-    def __resolve_symbol(self, symbol):
-        try:
-            matches = self.__transformer.split_csymbol_namespaces(symbol)
-        except ValueError:
-            return None
-        for namespace, name in matches:
-            node = namespace.get_by_symbol(symbol)
-            if node:
-                return node
-
-        if not node:
-            for namespace, name in matches:
-                node = namespace.get(name)
-                if node:
-                    return node
-        return None
-
     def __format_signal (self, node, match, props):
         raise NotImplementedError
 
     def __format_type_name (self, node, match, props):
         ident = props['type_name']
-        type_ = self.__resolve_type(ident)
+        type_ = self.__symbol_resolver.resolve_type(ident)
 
         if not type_:
             return self.__format_other (node, match, props)
+
+        link = self.__link_resolver.get_link (type_)
+        if type_.namespace == self.__transformer.namespace:
+            pass
+        else:
+            link = self.__link_resolver.get_link (type_)
+            if link:
+                pass
+            else:
+                print "failure to link ", ident, type_.namespace.name
 
         type_name = self.__name_formatter.get_full_node_name (type_)
 
@@ -381,7 +543,7 @@ class Formatter(object):
         return self._format_parameter (param_name)
 
     def __format_function_call (self, node, match, props):
-        func = self.__resolve_symbol(props['symbol_name'])
+        func = self.__symbol_resolver.resolve_symbol(props['symbol_name'])
         if func is None:
             return self.__format_other (node, match, props)
 
@@ -548,9 +710,20 @@ class Formatter(object):
 
         return out
 
+    def __make_prototypes_for_class (self, node):
+        prototypes = []
+        for method in node.methods:
+            prototypes.append (self.__prototype_formatter.make_prototype
+                    (method))
+        for method in node.constructors:
+            prototypes.append (self.__prototype_formatter.make_prototype
+                    (method))
+
     def __handle_class (self, node):
         out = ""
-        out += self._start_class (self.__name_formatter.get_full_node_name (node))
+        prototypes = self.__make_prototypes_for_class (node)
+        out += self._start_class (self.__name_formatter.get_full_node_name
+                (node), prototypes)
 
         out += self.__format_short_description (node)
         logging.debug ("handling class %s" % self.__name_formatter.get_full_node_name (node))
@@ -720,10 +893,11 @@ class Formatter(object):
         self.__warn_not_implemented (self._end_doc_section)
         return ""
 
-    def _start_class (self, class_name):
+    def _start_class (self, class_name, prototypes):
         """
         Notifies the subclass that a class is being
         parsed
+        @prototypes: Prototypes of the methods of the class as a list of strings
         """
         self.__warn_not_implemented (self._start_class)
         return ""
