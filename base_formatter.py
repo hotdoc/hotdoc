@@ -281,26 +281,6 @@ class SymbolResolver(object):
         return None
 
 
-class PrototypeFormatter(object):
-    def __init__ (self, symbol_resolver, language='C'):
-        self.__name_formatter = NameFormatter (language=language)
-        self.__symbol_resolver = symbol_resolver
-        if language == 'C':
-            self.make_prototype = self.__make_c_prototype
-
-    def __make_c_prototype (self, node):
-        out = ""
-        out += "%s " % node.retval.type.ctype
-        out += "%s " % self.__name_formatter.get_full_node_name (node)
-        out += "("
-        for param in node.parameters:
-            if out [-1] != "(":
-                out += ", "
-            out += "%s %s" % (param.type.ctype, param.argname)
-        out += ")"
-        return out
-
-
 class Link (object):
     def get_link (self):
         raise NotImplementedError
@@ -316,6 +296,7 @@ class ExternalLink (Link):
     def get_link (self):
         return "%s/%s" % (self.remote_prefix, self.filename)
 
+
 class LocalLink (Link):
     def __init__(self, symbol, pagename):
         self.__symbol = symbol
@@ -323,6 +304,31 @@ class LocalLink (Link):
 
     def get_link (self):
         return "%s#%s" % (self.__pagename, self.__symbol)
+
+
+class LinkedReturnValue (object):
+    def __init__(self, type_, link):
+        self.indirection_level = type_.count ('*')
+        self.type_ = type_.rstrip().rstrip('*')
+        self.link = link
+
+    def format_type (self):
+        return self.type_
+
+class LinkedParameter (object):
+    def __init__(self, type_, argname, link):
+        self.indirection_level = type_.count ('*')
+        self.type_ = type_.rstrip('*')
+        self.link = link
+        self.argname = argname
+
+class Prototype (object):
+    def __init__(self, name, params, retval, link):
+        self.name = name
+        self.params = params
+        self.retval = retval
+        self.link = link
+
 
 class LinkResolver(object):
     def __init__(self, transformer):
@@ -364,6 +370,14 @@ class LinkResolver(object):
         return symbol_map
 
     def get_link (self, node):
+        # Kind of a hack
+        if hasattr (node, "target_fundamental") and node.target_fundamental:
+            try:
+                link = self.__gtk_doc_links['glib'][node.ctype.rstrip('*')]
+            except KeyError:
+                link = None
+            return link
+
         gtk_doc_identifier = self.__name_formatter.make_gtkdoc_id(node)
         if isinstance(node, (ast.Constant, ast.Member)):
             gtk_doc_identifier = gtk_doc_identifier.upper() + ":CAPS"
@@ -401,7 +415,6 @@ class Formatter(object):
         self.__link_resolver = LinkResolver (transformer)
         self.__symbol_resolver = SymbolResolver (self.__transformer)
         self.__name_formatter = NameFormatter(language='C')
-        self.__prototype_formatter = PrototypeFormatter(self.__symbol_resolver, language='C')
 
         # Used to aggregate the class with its members
         self.__current_class = None
@@ -428,11 +441,15 @@ class Formatter(object):
             return ""
 
         out = ""
-        out += self._format_section (name)
+        out += self._start_section (name)
 
         for elem in elements:
+            out += self._start_section_block ()
             with open (self.__make_file_name (elem), 'r') as f:
                 out += f.read()
+            out += self._end_section_block ()
+
+        out += self._end_section ()
 
         return out
 
@@ -516,7 +533,7 @@ class Formatter(object):
 
     def __get_link (self, node):
         link = None
-        if node.namespace == self.__transformer.namespace:
+        if hasattr (node, "namespace") and node.namespace == self.__transformer.namespace:
             if self.__do_class_aggregation and type (node.parent) == ast.Class:
                 pagename = self.__make_file_name (node.parent)
             else:
@@ -731,22 +748,63 @@ class Formatter(object):
 
         return out
 
+    def __make_return_value(self, node):
+        type_ = node.retval.type
+        if type_.target_fundamental:
+            link = self.__get_link (type_)
+            return LinkedReturnValue (type_.ctype, link)
+        if type_.ctype is not None:
+            ret_type_node = self.__symbol_resolver.resolve_type (type_.ctype.strip
+                    ('*'))
+            link = None
+            if ret_type_node:
+                link = self.__get_link (ret_type_node)
+            return LinkedReturnValue (type_.ctype, link)
+
+    def __make_parameter(self, node):
+        type_ = node.type
+        if type_.target_fundamental:
+            link = self.__get_link (type_)
+            return LinkedParameter (type_.ctype, node.argname, link)
+        if type_.ctype is not None:
+            ret_type_node = self.__symbol_resolver.resolve_type (type_.ctype.strip
+                    ('*'))
+            link = None
+            if ret_type_node:
+                link = self.__get_link (ret_type_node)
+            return LinkedParameter (type_.ctype, node.argname, link)
+
+    def __make_prototype (self, node):
+        retval = self.__make_return_value (node)
+        parameters = []
+        for param in node.all_parameters:
+            parameters.append (self.__make_parameter(param))
+        link = self.__get_link(node)
+        prototype = Prototype (self.__name_formatter.get_full_node_name (node),
+                parameters, retval, link)
+        return prototype
+
     def __make_prototypes_for_class (self, node):
         prototypes = []
         for method in node.methods:
-            prototypes.append (self.__prototype_formatter.make_prototype
-                    (method))
+            prototypes.append (self.__make_prototype(method))
         for method in node.constructors:
-            prototypes.append (self.__prototype_formatter.make_prototype
-                    (method))
+            prototypes.append (self.__make_prototype(method))
+        return prototypes
 
     def __handle_class (self, node):
         out = ""
         prototypes = self.__make_prototypes_for_class (node)
         out += self._start_class (self.__name_formatter.get_full_node_name
-                (node), prototypes)
+                (node))
 
         out += self.__format_short_description (node)
+        if prototypes:
+            out += self._start_prototypes()
+            for prototype in prototypes:
+                out += self._format_prototype (prototype)
+            out += self._end_prototypes()
+
         logging.debug ("handling class %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__format_doc (node)
 
@@ -786,12 +844,14 @@ class Formatter(object):
         for param in node.all_parameters:
             param_names.append (param.argname)
 
-        out += self._start_function (self.__name_formatter.get_full_node_name (node), param_names)
-
-        out += self.__handle_parameters (node)
+        out += self._start_function (self.__name_formatter.get_full_node_name
+                (node), param_names)
+        out += self._format_prototype (self.__make_prototype (node))
 
         logging.debug ("handling function %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__format_doc (node)
+
+        out += self.__handle_parameters (node)
 
         out += self._end_function ()
         return out
@@ -930,6 +990,20 @@ class Formatter(object):
         self.__warn_not_implemented (self._end_class)
         return ""
 
+    def _start_prototypes (self):
+        """
+        Notifies the subclass that prototypes will now be rendered
+        """
+        self.__warn_not_implemented (self._start_prototypes)
+        return ""
+
+    def _end_prototypes (self):
+        """
+        Notifies the subclass that prototypes are done rendering
+        """
+        self.__warn_not_implemented (self._end_prototypes)
+        return ""
+
     def _start_function (self, function_name, params):
         """
         Notifies the subclass that a function is being parsed
@@ -998,6 +1072,13 @@ class Formatter(object):
         Notifies the subclass that a parameter is done being parsed
         """
         self.__warn_not_implemented (self._end_parameter)
+        return ""
+
+    def _format_prototype (self, prototype):
+        """
+        @prototype: A class containing linked parameters and return values
+        """
+        self.__warn_not_implemented (self._format_prototype)
         return ""
 
     def _format_other (self, other):
@@ -1074,13 +1155,34 @@ class Formatter(object):
         self.__warn_not_implemented (self._format_code_end)
         return ""
 
-    def _format_section (self, section_name):
+    def _start_section (self, section_name):
         """
         Called when aggregating signals, properties, virtual functions
         and functions to their parent class
         @section_name: the name of the section (Signals, Methods ...)
         """
-        self.__warn_not_implemented (self._format_section)
+        self.__warn_not_implemented (self._start_section)
+        return ""
+
+    def _end_section (self):
+        """
+        Called when a section is finished
+        """
+        self.__warn_not_implemented (self._end_section)
+        return ""
+
+    def _start_section_block (self, section__block_name):
+        """
+        Called when aggregating one symbol in a section
+        """
+        self.__warn_not_implemented (self._start_section_block)
+        return ""
+
+    def _end_section_block (self):
+        """
+        Called when aggregation of a symbol in a section is finished
+        """
+        self.__warn_not_implemented (self._end_section_block)
         return ""
 
     def _format_index (self, filenames, sections):
