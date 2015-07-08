@@ -16,6 +16,7 @@ class HtmlFormatter (Formatter):
         self.__paragraph_opened = False
         self.__formatting_class = False
         self.__prototype_context = None
+        self.__prototypes_type = None
 
         # Used to decide whether to render a separator
         self.__first_in_section = False
@@ -103,26 +104,27 @@ class HtmlFormatter (Formatter):
         self.__formatting_class = False
         return ""
 
-    def _start_prototypes (self):
+    def _start_prototypes (self, type_):
+        self.__prototypes_type = type_.rstrip('s').lower()
         doc, tag, text = Doc().tagtext()
         with tag('h2'):
-            text ("Functions")
+            text (type_)
         doc.asis ('<div class="informaltable">')
         doc.asis ("<table>")
         with tag('colgroup'):
-            with tag('col', klass='functions_return', width='150px'):
+            with tag('col', klass='%ss_return' % self.__prototypes_type, width='150px'):
                 pass
-            with tag('col', klass='functions_name'):
+            with tag('col', klass='%ss_name' % self.__prototypes_type):
                 pass
         
         self.__prototype_context = (doc, tag, text)
         return ""
 
-    def __format_prototype_summary(self, prototype):
+    def __format_prototype_summary(self, prototype, is_callable):
         doc, tag, text = self.__prototype_context
         first = True
         with tag('tr'):
-            with tag ('td', klass='function_type'):
+            with tag ('td', klass='%s_type' % self.__prototypes_type):
                 if prototype.retval.link:
                     with tag ('a', klass='link',
                             title=prototype.retval.format_type(),
@@ -133,12 +135,13 @@ class HtmlFormatter (Formatter):
                     with tag ('span', klass='returnvalue'):
                         text(prototype.retval.format_type())
                 text ('*' * prototype.retval.indirection_level)
-            with tag ('td', klass='function_name'):
+            with tag ('td', klass='%s_name' % self.__prototypes_type):
                 with tag ('a', klass='link', title=prototype.name,
                         href=prototype.link.get_link()):
                     text (prototype.name)
-                with tag ('span', klass='c_punctuation'):
-                    text ("()")
+                if is_callable:
+                    with tag ('span', klass='c_punctuation'):
+                        text ("()")
 
         return ""
 
@@ -180,9 +183,9 @@ class HtmlFormatter (Formatter):
         ret = doc.getvalue ()
         return ret
 
-    def _format_prototype(self, prototype):
+    def _format_prototype(self, prototype, is_callable):
         if self.__prototype_context:
-            return self.__format_prototype_summary (prototype)
+            return self.__format_prototype_summary (prototype, is_callable)
         return self.__format_full_prototype (prototype)
 
     def _end_prototypes(self):

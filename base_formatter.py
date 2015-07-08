@@ -799,11 +799,16 @@ class Formatter(object):
         for param in node.all_parameters:
             parameters.append (self.__make_parameter(param))
         link = self.__get_link(node)
-        prototype = Prototype (self.__name_formatter.get_full_node_name (node),
-                parameters, retval, link)
+
+        if type (node) == ast.Signal:
+            name = node.name
+        else:
+            name = self.__name_formatter.get_full_node_name (node)
+
+        prototype = Prototype (name, parameters, retval, link)
         return prototype
 
-    def __make_prototypes_for_class (self, node):
+    def __make_method_prototypes (self, node):
         prototypes = []
         for method in node.methods:
             prototypes.append (self.__make_prototype(method))
@@ -811,18 +816,33 @@ class Formatter(object):
             prototypes.append (self.__make_prototype(method))
         return prototypes
 
+    def __make_signal_prototypes (self, node):
+        prototypes = []
+        for method in node.signals:
+            prototypes.append (self.__make_prototype(method))
+        return prototypes
+
+    def __format_prototypes (self, prototypes, type_, is_callable):
+        out = ""
+        if prototypes:
+            out += self._start_prototypes(type_)
+            for prototype in prototypes:
+                out += self._format_prototype (prototype, is_callable)
+            out += self._end_prototypes()
+        return out
+
     def __handle_class (self, node):
         out = ""
-        prototypes = self.__make_prototypes_for_class (node)
         out += self._start_class (self.__name_formatter.get_full_node_name
                 (node))
 
         out += self.__format_short_description (node)
-        if prototypes:
-            out += self._start_prototypes()
-            for prototype in prototypes:
-                out += self._format_prototype (prototype)
-            out += self._end_prototypes()
+
+        prototypes = self.__make_method_prototypes (node)
+        out += self.__format_prototypes (prototypes, 'Functions', True)
+
+        prototypes = self.__make_signal_prototypes (node)
+        out += self.__format_prototypes (prototypes, 'Signals', False)
 
         logging.debug ("handling class %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__format_doc (node)
@@ -878,7 +898,7 @@ class Formatter(object):
 
         out += self._start_function (self.__name_formatter.get_full_node_name
                 (node), param_names)
-        out += self._format_prototype (self.__make_prototype (node))
+        out += self._format_prototype (self.__make_prototype (node), True)
 
         logging.debug ("handling function %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__format_doc (node)
@@ -1032,9 +1052,10 @@ class Formatter(object):
         self.__warn_not_implemented (self._end_class)
         return ""
 
-    def _start_prototypes (self):
+    def _start_prototypes (self, type_):
         """
         Notifies the subclass that prototypes will now be rendered
+        @type: the type of the prototypes (Signals, Methods ...)
         """
         self.__warn_not_implemented (self._start_prototypes)
         return ""
@@ -1130,7 +1151,7 @@ class Formatter(object):
         self.__warn_not_implemented (self._end_return_value)
         return ""
 
-    def _format_prototype (self, prototype):
+    def _format_prototype (self, prototype, is_callable):
         """
         @prototype: A class containing linked parameters and return values
         """
