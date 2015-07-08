@@ -19,8 +19,12 @@ class NameFormatter(object):
         if type (node) in (ast.Namespace, ast.DocSection):
             return node.name
 
-        if type (node) in (ast.Signal, ast.VFunction, ast.Property, ast.Field):
+        if type (node) in (ast.Signal, ast.Property, ast.Field):
             out = "%s.%s-%s" % (node.namespace.name, node.parent.name,
+                    node.name)
+
+        if type (node) == ast.VFunction:
+            out = "%s.%s.do_%s" % (node.namespace.name, node.parent.name,
                     node.name)
 
         if type (node) == ast.Function:
@@ -45,8 +49,12 @@ class NameFormatter(object):
         if type (node) in (ast.Namespace, ast.DocSection):
             return node.name
 
-        if type (node) in (ast.Signal, ast.VFunction, ast.Property, ast.Field):
+        if type (node) in (ast.Signal, ast.Property, ast.Field):
             out = "%s%s-%s" % (node.namespace.name, node.parent.name,
+                    node.name)
+
+        if type (node) == ast.VFunction:
+            out = "%s%s--%s" % (node.namespace.name, node.parent.name,
                     node.name)
 
         if type (node) == ast.Function:
@@ -445,9 +453,11 @@ class Formatter(object):
 
         for elem in elements:
             out += self._start_section_block ()
-            with open (self.__make_file_name (elem), 'r') as f:
+            filename = self.__make_file_name (elem)
+            with open (filename, 'r') as f:
                 out += f.read()
             out += self._end_section_block ()
+            os.unlink (os.path.abspath (filename))
 
         out += self._end_section ()
 
@@ -465,6 +475,7 @@ class Formatter(object):
                 out += self.__format_section ('Signals', output, klass.signals)
                 out += self.__format_section ('Virtual Functions', output,
                         klass.virtual_functions)
+                out += self._end_page (False)
                 f.write (out)
 
     def format_index (self, output):
@@ -693,9 +704,17 @@ class Formatter(object):
 
         with open (filename, 'w') as f:
             out = ""
-            out += self._start_page ()
+
+            to_be_aggregated = False
+            if self.__do_class_aggregation and type (node.parent) == ast.Class:
+                to_be_aggregated = True
+
+            out += self._start_page (to_be_aggregated)
             out += handler (node)
-            out += self._end_page ()
+
+            # We will call _end_page at aggregation time otherwise
+            if not self.__do_class_aggregation or type (node) != ast.Class:
+                out += self._end_page (to_be_aggregated)
             f.write (out)
 
         if not self.__do_aggregation (node):
@@ -824,6 +843,19 @@ class Formatter(object):
 
         return out
 
+    def __handle_return_value (self, node):
+        if node.retval.type.ctype == 'void':
+            return ""
+
+        out = ""
+        out += self._start_return_value ()
+
+        out += self.__format_doc (node.retval)
+
+        out += self._end_return_value ()
+
+        return out
+
     def __handle_signal (self, node):
         out = ""
         out += self._start_signal (self.__name_formatter.get_full_node_name (node))
@@ -852,6 +884,8 @@ class Formatter(object):
         out += self.__format_doc (node)
 
         out += self.__handle_parameters (node)
+
+        out += self.__handle_return_value (node)
 
         out += self._end_function ()
         return out
@@ -942,18 +976,26 @@ class Formatter(object):
         self.__warn_not_implemented (self._end_short_description)
         return ""
 
-    def _start_page (self):
+    def _start_page (self, to_be_aggregated):
         """
         Notifies the subclass that an empty page has been
         started.
+        @to_be_aggregated: whether that page will be appended to
+        a potential parent class.
+        Useful to avoid including css multiple times in the
+        same page for example
         """
         self.__warn_not_implemented (self._start_page)
         return ""
 
-    def _end_page (self):
+    def _end_page (self, to_be_aggregated):
         """
         Notifies the subclass that the current page is
         finished
+        @to_be_aggregated: whether that page will be appended to
+        a potential parent class.
+        Useful to avoid including css multiple times in the
+        same page for example
         """
         self.__warn_not_implemented (self._end_page)
         return ""
@@ -1072,6 +1114,20 @@ class Formatter(object):
         Notifies the subclass that a parameter is done being parsed
         """
         self.__warn_not_implemented (self._end_parameter)
+        return ""
+
+    def _start_return_value (self):
+        """
+        Notifies the subclass that a return value is being parsed
+        """
+        self.__warn_not_implemented (self._start_return_value)
+        return ""
+
+    def _end_return_value (self):
+        """
+        Notifies the subclass that a return value is done being parsed
+        """
+        self.__warn_not_implemented (self._end_return_value)
         return ""
 
     def _format_prototype (self, prototype):
