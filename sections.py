@@ -12,10 +12,11 @@ class SectionsGenerator(object):
         self.__name_formatter = NameFormatter (language='python')
 
         # Used to close the previous section if necessary
-        self.__opened_section = False
+        self.__opened_section = None
 
     def generate (self, output):
         # Three passes but who cares
+        self.__unsorted_symbols = ""
         filename = os.path.join (output, "%s-sections.txt" %
                 self.__transformer.namespace.name)
         with open (filename, 'w') as f:
@@ -26,6 +27,7 @@ class SectionsGenerator(object):
             if self.__opened_section:
                 f.write ("</SYMBOLS>")
                 f.write ("</SECTION>")
+            f.write (self.__unsorted_symbols)
             f.write ("</SECTIONS>")
 
         with open (filename, 'r') as f:
@@ -34,6 +36,7 @@ class SectionsGenerator(object):
             self.__indent(root)
 
         with open (filename, 'w') as f:
+            f.write ('<?xml version="1.0"?>\n')
             f.write(ET.tostring(root))
 
         return root
@@ -53,9 +56,17 @@ class SectionsGenerator(object):
             f.write ("<SECTION>")
             f.write ("<SYMBOL>%s</SYMBOL>" % name)
             f.write ("<SYMBOLS>")
-            self.__opened_section = True
-        else:
+            self.__opened_section = node
+        elif hasattr (node, "parent") and self.__opened_section and \
+                node.parent is not self.__opened_section:
+            f.write ("</SYMBOLS>")
+            f.write ("</SECTION>")
+            self.__unsorted_symbols += "<SYMBOL>%s</SYMBOL>\n" % name
+            self.__opened_section = None
+        elif self.__opened_section:
             f.write ("<SYMBOL>%s</SYMBOL>" % name)
+        else:
+            self.__unsorted_symbols += "<SYMBOL>%s</SYMBOL>\n" % name
 
         return True
 
