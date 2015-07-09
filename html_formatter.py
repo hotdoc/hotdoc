@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from base_formatter import Formatter, LocalLink, ExternalLink
 from yattag import Doc, indent
 
@@ -36,6 +38,7 @@ class HtmlFormatter (Formatter):
 
         doc, tag, text = Doc().tagtext()
         with tag ('head'):
+            doc.asis ('<meta http-equiv="Content-Type" content="text/html; charset=utf-8">')
             with tag ('meta', content='text/html; charset=UTF-8'):
                 pass
             with tag ('link', rel='stylesheet', href='../style.css',
@@ -249,6 +252,22 @@ class HtmlFormatter (Formatter):
         doc, tag, text = Doc().tagtext()
         doc.asis ('</div>')
         return do_indent (doc.getvalue())
+
+    def _format_index (self, pages):
+        doc, tag, text = Doc().tagtext()
+        out = ""
+        out += self._start_page (False)
+        with tag('div', klass='toc'):
+            for page in pages:
+                with tag ('dt'):
+                    with tag ('span', klass='refentrytitle'):
+                        with tag ('a', href=page.link.get_link()):
+                            text (page.ident)
+                    with tag ('span', klass='refpurpose'):
+                        doc.asis (u' — %s' % page.get_short_description())
+        out += do_indent (doc.getvalue ())
+        out += self._end_page (False)
+        return out
 
     def _format_parameter (self, param_name):
         doc, tag, text = Doc().tagtext()

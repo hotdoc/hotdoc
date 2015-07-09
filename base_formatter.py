@@ -1,8 +1,11 @@
+# -*- coding: utf-8 -*-
+
 import os, re
 
 from xml.etree import ElementTree as ET
 from giscanner import ast
 import logging
+from lxml import etree
 
 class NameFormatter(object):
     def __init__(self, language='python'):
@@ -23,11 +26,14 @@ class NameFormatter(object):
             out = "%s.%s-%s" % (node.namespace.name, node.parent.name,
                     node.name)
 
+
         if type (node) == ast.VFunction:
             out = "%s.%s.do_%s" % (node.namespace.name, node.parent.name,
                     node.name)
 
-        if type (node) == ast.Function:
+        if type (node) in (ast.Function, ast.Class, ast.Enum, ast.Alias,
+                ast.Record, ast.Bitfield, ast.Callback,
+                ast.Constant, ast.Interface):
             while node:
                 if out:
                     out = "%s.%s" % (node.name, out)
@@ -38,9 +44,6 @@ class NameFormatter(object):
                     node = node.parent
                 else:
                     node = None
-
-        elif type (node) in (ast.Class, ast.Enum):
-            out = "%s.%s" % (node.namespace.name, node.name)
 
         return out
 
@@ -60,7 +63,10 @@ class NameFormatter(object):
         if type (node) == ast.Function:
             while node:
                 if out:
-                    out = "%s_%s" % (node.name.lower(), out)
+                    c_name = re.sub('([a-z0-9])([A-Z])', r'\1_\2',
+                        node.name).lower()
+                    c_name = re.sub('__', r'_', c_name)
+                    out = "%s_%s" % (c_name, out)
                 else:
                     out = node.name
 
@@ -69,7 +75,8 @@ class NameFormatter(object):
                 else:
                     node = None
 
-        elif type (node) in (ast.Class, ast.Enum, ast.Alias, ast.Record):
+        elif type (node) in (ast.Class, ast.Enum, ast.Alias, ast.Record,
+                ast.Callback, ast.Constant, ast.Bitfield, ast.Interface):
             if node.namespace:
                 out = "%s%s" % (node.namespace.name, node.name)
             else:
@@ -96,7 +103,9 @@ class NameFormatter(object):
                 formatter = class_style
 
         if isinstance(node, ast.Namespace):
-            return formatter(node.identifier_prefixes[0])
+            if node.identifier_prefixes:
+                return formatter(node.identifier_prefixes[0])
+            return node.name
 
         if hasattr(node, '_chain') and node._chain:
             parent = node._chain[-1]
@@ -117,6 +126,9 @@ class NameFormatter(object):
         else:
             return '%s%s%s' % (self.make_gtkdoc_id(parent, separator=separator,
                 formatter=formatter), separator, formatter(node.name))
+
+    def make_page_name (self, node):
+        return self.__make_c_node_name (node)
 
 class DocScanner(object):
     def __init__(self):
@@ -211,44 +223,27 @@ def get_sorted_symbols_from_sections (sections, symbols):
 
 
 class AggregatedClass(object):
-    def __init__(self, class_node, section_node):
-        self.class_node = class_node
-        self.__formatter = NameFormatter(language='python')
-        self.__section_node = section_node
-        self.signals = {}
-        self.methods = {}
-        self.properties = {}
-        self.virtual_functions = {}
+    def __init__(self):
+        self.__formatter = NameFormatter(language='C')
+        self.signals = []
+        self.methods = []
+        self.properties = []
+        self.virtual_functions = []
+        self.__class_node = None
 
-    def add_aggregated_node (self, node):
-        name = self.__formatter.get_full_node_name (node)
-        if type (node) == ast.Signal:
-            self.signals[name] = node
-        elif type (node) == ast.Function:
-            self.methods[name] = node
-        elif type (node) == ast.VFunction:
-            self.virtual_functions[name] = node
-        elif type (node) == ast.Property:
-            self.properties[name] = node
+    def add_aggregated_page (self, page):
+        name = self.__formatter.get_full_node_name (page.node)
+        if type (page.node) == ast.Signal:
+            self.signals.append(page)
+        elif type (page.node) == ast.Function:
+            self.methods.append (page)
+        elif type (page.node) == ast.VFunction:
+            self.virtual_functions.append(page)
+        elif type (page.node) == ast.Property:
+            self.properties.append(page)
         else:
-            raise NotImplementedError
-
-    def __sort_symbols (self, nodes):
-        sorted_symbols = []
-        for symbol in self.__section_node:
-            try:
-                node = nodes.pop (symbol.text)
-                sorted_symbols.append (node)
-            except KeyError:
-                continue
-        return sorted_symbols
-
-    def sort (self):
-        self.methods = self.__sort_symbols (self.methods)
-        self.signals = self.__sort_symbols (self.signals)
-        self.properties = self.__sort_symbols (self.properties)
-        self.virtual_functions = self.__sort_symbols (self.virtual_functions)
-
+            #FIXME
+            pass
 
 class SymbolResolver(object):
     def __init__(self, transformer):
@@ -311,7 +306,10 @@ class LocalLink (Link):
         self.__pagename = pagename
 
     def get_link (self):
-        return "%s#%s" % (self.__pagename, self.__symbol)
+        if (self.__symbol):
+            return "%s#%s" % (self.__pagename, self.__symbol)
+        else:
+            return self.__pagename
 
 
 class LinkedReturnValue (object):
@@ -399,7 +397,10 @@ class LinkResolver(object):
                 try:
                     package_links = self.__gtk_doc_links[package]
                 except KeyError:
-                    return None
+                    continue
+
+        if not package_links:
+            return None
 
         try:
             link = package_links[gtk_doc_identifier]
@@ -407,6 +408,72 @@ class LinkResolver(object):
             return None
 
         return link
+
+
+class SectionsParser(object):
+    def __init__(self, symbol_resolver):
+        self.__symbol_resolver = symbol_resolver
+        self.__root = etree.parse ('tmpsections.xml')
+        self.__name_formatter = NameFormatter (language='C')
+        self.__symbols = {}
+        self.__create_symbols ()
+        self.__sections = self.__root.findall('.//SECTION')
+        self.__class_sections = {}
+        self.__find_class_sections ()
+
+    def __find_class_sections (self):
+        for section in self.__sections:
+            name = section.find('SYMBOL').text
+            if type (self.__symbol_resolver.resolve_type (name)) == ast.Class:
+                self.__class_sections[name] = section
+
+    def symbol_is_in_class_section (self, symbol):
+        parent = symbol.getparent().getparent()
+        name_node = parent.find ('SYMBOL')
+        if name_node is None:
+            return False
+
+        # FIXME special case for simple translation script
+        if name_node.text == symbol.text:
+            return False
+        return name_node.text in self.__class_sections
+
+    def __create_symbols (self):
+        for symbol in self.__root.findall('.//SYMBOL'):
+            self.__symbols[symbol.text] = symbol
+
+    def find_symbol (self, symbol):
+        name = self.__name_formatter.get_full_node_name (symbol)
+        try:
+            return self.__symbols[name]
+        except KeyError:
+            return None
+
+    def get_sections (self, parent=None):
+        if not parent:
+            return self.__root.findall('SECTION')
+        else:
+            return parent.findall('SECTION')
+
+    def get_class_section (self, class_node):
+        node_name = self.__name_formatter.get_full_node_name (class_node)
+        try:
+            return self.__class_sections[node_name]
+        except KeyError:
+            return None
+
+    def get_all_sections (self):
+        return self.__sections
+
+class Page (object):
+    def __init__(self, ident, link, node, filename):
+        self.ident = ident
+        self.link = link
+        self.node = node
+        self.filename = filename
+
+    def get_short_description (self):
+        return self.node.short_description
 
 class Formatter(object):
     def __init__ (self, transformer, include_directories, sections, output,
@@ -423,10 +490,7 @@ class Formatter(object):
         self.__link_resolver = LinkResolver (transformer)
         self.__symbol_resolver = SymbolResolver (self.__transformer)
         self.__name_formatter = NameFormatter(language='C')
-
-        # Used to aggregate the class with its members
-        self.__current_class = None
-        self.__aggregated_classes = []
+        self.__sections_parser = SectionsParser (self.__symbol_resolver)
 
         # Used to warn subclasses a method isn't implemented
         self.__not_implemented_methods = {}
@@ -434,8 +498,8 @@ class Formatter(object):
         # Used to avoid parsing code as doc
         self.__processing_code = False
 
-        # Used to create the index file if required
-        self.__created_pages = []
+        # Used to create the index file and aggregate pages  if required
+        self.__created_pages = {}
  
     def format (self, output):
         self.__walk_node(output, self.__transformer.namespace, [])
@@ -444,29 +508,43 @@ class Formatter(object):
         if self.__do_class_aggregation:
             self.__aggregate_classes (output)
 
-    def __format_section (self, name, output, elements):
-        if not elements:
+    def __format_section (self, name, output, pages):
+        if not pages:
             return ""
 
         out = ""
         out += self._start_section (name)
 
-        for elem in elements:
+        for page in pages:
             out += self._start_section_block ()
-            filename = self.__make_file_name (elem)
+            filename = page.filename
             with open (filename, 'r') as f:
                 out += f.read()
             out += self._end_section_block ()
-            os.unlink (os.path.abspath (filename))
+            #os.unlink (os.path.abspath (filename))
 
         out += self._end_section ()
 
         return out
 
     def __aggregate_classes (self, output):
-        for klass in self.__aggregated_classes:
-            klass.sort()
-            filename = self.__make_file_name (klass.class_node)
+        for section in self.__sections_parser.get_all_sections ():
+            name = section.find ('SYMBOL').text
+            node = self.__symbol_resolver.resolve_type (name)
+            if not node or type (node) not in [ast.Class]:
+                continue
+
+            klass = AggregatedClass ()
+
+            symbols = section.find ('SYMBOLS')
+            for symbol in symbols.findall('SYMBOL'):
+                try:
+                    symbol_page = self.__created_pages[symbol.text]
+                except KeyError:
+                    continue
+                klass.add_aggregated_page (symbol_page)
+
+            filename = self.__make_file_name (node)
             with open (filename, 'a') as f:
                 out = ""
                 out += self.__format_section ('Properties', output,
@@ -476,25 +554,28 @@ class Formatter(object):
                 out += self.__format_section ('Virtual Functions', output,
                         klass.virtual_functions)
                 out += self._end_page (False)
-                f.write (out)
+                f.write (unicode(out, 'utf-8').encode('utf-8'))
 
     def format_index (self, output):
         out = ""
 
-        out += self._start_index (self.__transformer.namespace.name)
+        sections = self.__sections_parser.get_sections ()
+        pages = []
+        for section in sections:
+            try:
+                page = self.__created_pages[section.find ('SYMBOL').text]
+            except KeyError:
+                #print "%s didn't work" % section.find ('SYMBOL').text
+                continue
+            pages.append (page)
 
-        filenames = [os.path.splitext(os.path.basename (filename))[0] for
-                filename in self.__created_pages]
-
-        out += self._format_index (filenames, self.__sections)
-
-        out += self._end_index ()
+        out += self._format_index (pages)
 
         extension = self._get_extension ()
         filename = os.path.join (output, "index.%s" % extension)
         if out:
             with open (filename, 'w') as f:
-                f.write (out)
+                f.write (unicode(out).encode('utf-8'))
 
     def __create_handlers (self):
         return {
@@ -551,7 +632,7 @@ class Formatter(object):
                 pagename = self.__make_file_name (node)
 
             if pagename:
-                pagename = os.path.abspath (pagename)
+                pagename = os.path.basename (pagename)
                 link = LocalLink (self.__name_formatter.get_full_node_name
                         (node), pagename)
         else:
@@ -655,7 +736,7 @@ class Formatter(object):
         return self._format_heading ()
 
     def __get_class_symbols (self, root, node):
-        formatter = NameFormatter (language='python')
+        formatter = NameFormatter (language='C')
         node_name = formatter.get_full_node_name (node)
         return_next = False
         for element in root:
@@ -689,7 +770,7 @@ class Formatter(object):
 
     def __make_file_name (self, node):
         extension = self._get_extension ()
-        name = self.__name_formatter.get_full_node_name (node)
+        name = self.__name_formatter.make_page_name (node)
         if not name:
             return ""
         return os.path.join (self.__output, "%s.%s" % (name, extension))
@@ -702,23 +783,34 @@ class Formatter(object):
         except KeyError:
             return True
 
+        section_symbol = self.__sections_parser.find_symbol (node)
+        if section_symbol is None:
+            #FIXME
+            #print "Warning : ", self.__name_formatter.get_full_node_name (node)
+            return True
+
         with open (filename, 'w') as f:
             out = ""
 
             to_be_aggregated = False
-            if self.__do_class_aggregation and type (node.parent) == ast.Class:
-                to_be_aggregated = True
+            if self.__do_class_aggregation:
+                to_be_aggregated = \
+                self.__sections_parser.symbol_is_in_class_section (section_symbol)
 
             out += self._start_page (to_be_aggregated)
             out += handler (node)
 
             # We will call _end_page at aggregation time otherwise
-            if not self.__do_class_aggregation or type (node) != ast.Class:
+            if not self.__do_class_aggregation or type (node) not in [ast.Class]:
                 out += self._end_page (to_be_aggregated)
-            f.write (out)
 
-        if not self.__do_aggregation (node):
-            self.__created_pages.append (filename)
+            ident = self.__name_formatter.get_full_node_name (node)
+            page = Page (ident, LocalLink (None, os.path.basename (filename)),
+                    node, filename)
+
+            self.__created_pages[section_symbol.text] = page
+
+            f.write (unicode(out).encode('utf-8'))
 
         return True
 
@@ -779,6 +871,13 @@ class Formatter(object):
             if ret_type_node:
                 link = self.__get_link (ret_type_node)
             return LinkedReturnValue (type_.ctype, link)
+        if type_.target_giname is not None:
+            ret_type_node = self.__transformer.lookup_giname (type_.target_giname)
+            link = None
+            if ret_type_node:
+                link = self.__get_link (ret_type_node)
+            return LinkedReturnValue (type_.target_giname, link)
+        return None
 
     def __make_parameter(self, node):
         type_ = node.type
@@ -808,18 +907,24 @@ class Formatter(object):
         prototype = Prototype (name, parameters, retval, link)
         return prototype
 
-    def __make_method_prototypes (self, node):
+    def __make_method_prototypes (self, node, class_section):
         prototypes = []
-        for method in node.methods:
-            prototypes.append (self.__make_prototype(method))
-        for method in node.constructors:
-            prototypes.append (self.__make_prototype(method))
+        symbols = class_section.find('SYMBOLS')
+        for symbol in symbols:
+            node = self.__symbol_resolver.resolve_symbol (symbol.text)
+            if node is None or type (node) != ast.Function:
+                continue
+            prototypes.append (self.__make_prototype (node))
         return prototypes
 
-    def __make_signal_prototypes (self, node):
+    def __make_signal_prototypes (self, node, class_section):
         prototypes = []
-        for method in node.signals:
-            prototypes.append (self.__make_prototype(method))
+        symbols = class_section.find('SYMBOLS')
+        for symbol in symbols:
+            node = self.__symbol_resolver.resolve_symbol (symbol.text)
+            if node is None or type (node) != ast.Signal:
+                continue
+            prototypes.append (self.__make_prototype (node))
         return prototypes
 
     def __format_prototypes (self, prototypes, type_, is_callable):
@@ -833,15 +938,20 @@ class Formatter(object):
 
     def __handle_class (self, node):
         out = ""
+
+        class_section = self.__sections_parser.get_class_section(node)
+        if class_section is None:
+            return ""
+
         out += self._start_class (self.__name_formatter.get_full_node_name
                 (node))
 
         out += self.__format_short_description (node)
 
-        prototypes = self.__make_method_prototypes (node)
+        prototypes = self.__make_method_prototypes (node, class_section)
         out += self.__format_prototypes (prototypes, 'Functions', True)
 
-        prototypes = self.__make_signal_prototypes (node)
+        prototypes = self.__make_signal_prototypes (node, class_section)
         out += self.__format_prototypes (prototypes, 'Signals', False)
 
         logging.debug ("handling class %s" % self.__name_formatter.get_full_node_name (node))
@@ -1187,6 +1297,12 @@ class Formatter(object):
         self.__warn_not_implemented (self._format_new_paragraph)
         return ""
 
+    def _format_heading (self):
+        """
+        """
+        self.__warn_not_implemented (self._format_heading)
+        return ""
+
     def _format_function_call (self, function_name, link):
         """
         @function_name: A function name to link to
@@ -1262,11 +1378,11 @@ class Formatter(object):
         self.__warn_not_implemented (self._end_section_block)
         return ""
 
-    def _format_index (self, filenames, sections):
+    def _format_index (self, pages):
         """
         Called to format an index
         @filenames: the files that have been produced by the parsing
-        @sections: The root of an element tree representing the sections file
+        @pages: The different pages for the underlying sections
         """
         self.__warn_not_implemented (self._format_index)
         return ""

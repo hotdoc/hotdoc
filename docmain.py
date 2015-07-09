@@ -78,6 +78,9 @@ def doc_main (args):
     else:
         sections = ET.parse (args.sections_file).getroot ()
 
+    with open ('tmpsections.xml', 'w') as f:
+        f.write (ET.tostring (sections))
+
     from slate_markdown_formatter import SlateMarkdownFormatter
     from html_formatter import HtmlFormatter
     formatter = HtmlFormatter (transformer, args.markdown_include_paths,

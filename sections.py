@@ -9,7 +9,7 @@ class SectionsGenerator(object):
     def __init__ (self, transformer):
         self.__transformer = transformer
 
-        self.__name_formatter = NameFormatter (language='python')
+        self.__name_formatter = NameFormatter (language='C')
 
         # Used to close the previous section if necessary
         self.__opened_section = None
@@ -27,7 +27,9 @@ class SectionsGenerator(object):
             if self.__opened_section:
                 f.write ("</SYMBOLS>")
                 f.write ("</SECTION>")
+            f.write ('<SYMBOLS>')
             f.write (self.__unsorted_symbols)
+            f.write ('</SYMBOLS>')
             f.write ("</SECTIONS>")
 
         with open (filename, 'r') as f:
@@ -42,9 +44,6 @@ class SectionsGenerator(object):
         return root
     
     def __walk_node(self, output, node, chain, f):
-        if type (node) in [ast.Alias, ast.Record]:
-            return False
-
         name = self.__name_formatter.get_full_node_name (node)
 
         if type (node) in [ast.Namespace, ast.DocSection, ast.Class,

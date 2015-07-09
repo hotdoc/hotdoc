@@ -50,6 +50,8 @@ else:
         path = os.path.join('/usr/lib64', 'gobject-introspection')
 sys.path.insert(0, path)
 
+sys.path = [p for p in sys.path if not "python3" in p]
+
 from docmain import doc_main
 
 sys.exit(doc_main(sys.argv))
