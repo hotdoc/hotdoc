@@ -424,7 +424,8 @@ class SectionsParser(object):
     def __find_class_sections (self):
         for section in self.__sections:
             name = section.find('SYMBOL').text
-            if type (self.__symbol_resolver.resolve_type (name)) == ast.Class:
+            if type (self.__symbol_resolver.resolve_type (name)) in [ast.Class,
+                    ast.Record]:
                 self.__class_sections[name] = section
 
     def symbol_is_in_class_section (self, symbol):
@@ -531,7 +532,7 @@ class Formatter(object):
         for section in self.__sections_parser.get_all_sections ():
             name = section.find ('SYMBOL').text
             node = self.__symbol_resolver.resolve_type (name)
-            if not node or type (node) not in [ast.Class]:
+            if not node or type (node) not in [ast.Class, ast.Record]:
                 continue
 
             klass = AggregatedClass ()
@@ -565,7 +566,7 @@ class Formatter(object):
             try:
                 page = self.__created_pages[section.find ('SYMBOL').text]
             except KeyError:
-                #print "%s didn't work" % section.find ('SYMBOL').text
+                print "%s didn't work" % section.find ('SYMBOL').text
                 continue
             pages.append (page)
 
@@ -581,6 +582,7 @@ class Formatter(object):
         return {
                 ast.Function: self.__handle_function,
                 ast.Class: self.__handle_class,
+                ast.Record: self.__handle_record,
                 ast.Signal: self.__handle_signal,
                 ast.VFunction: self.__handle_virtual_function,
                 ast.DocSection: self.__handle_doc_section,
@@ -626,7 +628,8 @@ class Formatter(object):
     def __get_link (self, node):
         link = None
         if hasattr (node, "namespace") and node.namespace == self.__transformer.namespace:
-            if self.__do_class_aggregation and type (node.parent) == ast.Class:
+            if self.__do_class_aggregation and type (node.parent) in [ast.Class,
+                    ast.Record]:
                 pagename = self.__make_file_name (node.parent)
             else:
                 pagename = self.__make_file_name (node)
@@ -752,22 +755,6 @@ class Formatter(object):
                 return res
         return None
 
-    def __do_aggregation (self, node):
-        if type(node) == ast.Namespace:
-            return False
-
-        if type (node) == ast.Class:
-            symbol = self.__get_class_symbols (self.__sections, node)
-            self.__current_class = AggregatedClass (node, symbol)
-            self.__aggregated_classes.append (self.__current_class)
-            return False
-        elif self.__current_class and node.parent is self.__current_class.class_node:
-            self.__current_class.add_aggregated_node (node)
-            return True
-        else:
-            self.__current_class = None
-            return False
-
     def __make_file_name (self, node):
         extension = self._get_extension ()
         name = self.__name_formatter.make_page_name (node)
@@ -801,7 +788,8 @@ class Formatter(object):
             out += handler (node)
 
             # We will call _end_page at aggregation time otherwise
-            if not self.__do_class_aggregation or type (node) not in [ast.Class]:
+            if not self.__do_class_aggregation or type (node) not in [ast.Class,
+                    ast.Record]:
                 out += self._end_page (to_be_aggregated)
 
             ident = self.__name_formatter.get_full_node_name (node)
@@ -960,6 +948,9 @@ class Formatter(object):
         out += self._end_class ()
 
         return out
+
+    def __handle_record (self, node):
+        return self.__handle_class (node)
 
     def __handle_parameters (self, node):
         out = ""
