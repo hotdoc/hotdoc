@@ -7,6 +7,8 @@ from giscanner import ast
 import logging
 from lxml import etree
 
+from datetime import datetime
+
 class NameFormatter(object):
     def __init__(self, language='python'):
         if language == 'C':
@@ -23,8 +25,9 @@ class NameFormatter(object):
             return node.name
 
         if type (node) in (ast.Signal, ast.Property, ast.Field):
-            out = "%s.%s-%s" % (node.namespace.name, node.parent.name,
-                    node.name)
+            qualifier = str (type (node)).split ('.')[-1].split ("'")[0]
+            out = "%s.%s::%s---%s" % (node.namespace.name, node.parent.name,
+                    qualifier)
 
 
         if type (node) == ast.VFunction:
@@ -52,13 +55,10 @@ class NameFormatter(object):
         if type (node) in (ast.Namespace, ast.DocSection):
             return node.name
 
-        if type (node) in (ast.Signal, ast.Property, ast.Field):
-            out = "%s%s-%s" % (node.namespace.name, node.parent.name,
-                    node.name)
-
-        if type (node) == ast.VFunction:
-            out = "%s%s--%s" % (node.namespace.name, node.parent.name,
-                    node.name)
+        if type (node) in (ast.Signal, ast.Property, ast.Field, ast.VFunction):
+            qualifier = str (type (node)).split ('.')[-1].split ("'")[0]
+            out = "%s%s::%s---%s" % (node.namespace.name, node.parent.name,
+                    node.name, qualifier)
 
         if type (node) == ast.Function:
             while node:
@@ -266,7 +266,36 @@ class SymbolResolver(object):
 
         return best_node
 
+    def __resolve_qualified_symbol (self, parent, symbol):
+        split = symbol.split ('---')
+        symbol = split[0]
+        qualifier = split[1]
+        if qualifier == 'Property':
+            for prop in parent.properties:
+                if prop.name == symbol:
+                    return prop
+        elif qualifier == 'VFunction':
+            for meth in parent.virtual_methods:
+                if meth.name == symbol:
+                    return meth
+        elif qualifier == 'Field':
+            for field in parent.fields:
+                if field.name == symbol:
+                    return field
+        elif qualifier == 'Signal':
+            for signal in parent.signals:
+                if signal.name == symbol:
+                    return signal
+
+        return None
+
     def resolve_symbol(self, symbol):
+        split = None
+        if "::" in symbol:
+            split = symbol.split ('::')
+            parent = self.resolve_type (split[0])
+            return self.__resolve_qualified_symbol (parent, split[1])
+
         try:
             matches = self.__transformer.split_csymbol_namespaces(symbol)
         except ValueError:
@@ -379,7 +408,9 @@ class LinkResolver(object):
         # Kind of a hack
         if hasattr (node, "target_fundamental") and node.target_fundamental:
             try:
-                link = self.__gtk_doc_links['glib'][node.ctype.rstrip('*')]
+                stripped_name = re.sub('const', '', node.ctype)
+                stripped_name = re.sub('\*', '', stripped_name).strip()
+                link = self.__gtk_doc_links['glib'][stripped_name]
             except KeyError:
                 link = None
             return link
@@ -413,7 +444,8 @@ class LinkResolver(object):
 class SectionsParser(object):
     def __init__(self, symbol_resolver):
         self.__symbol_resolver = symbol_resolver
-        self.__root = etree.parse ('tmpsections.xml')
+        parser = etree.XMLParser(remove_blank_text=True)
+        self.__root = etree.parse ('tmpsections.xml', parser)
         self.__name_formatter = NameFormatter (language='C')
         self.__symbols = {}
         self.__create_symbols ()
@@ -425,7 +457,7 @@ class SectionsParser(object):
         for section in self.__sections:
             name = section.find('SYMBOL').text
             if type (self.__symbol_resolver.resolve_type (name)) in [ast.Class,
-                    ast.Record]:
+                    ast.Record, ast.Interface]:
                 self.__class_sections[name] = section
 
     def symbol_is_in_class_section (self, symbol):
@@ -463,8 +495,54 @@ class SectionsParser(object):
         except KeyError:
             return None
 
+    def get_class_sections (self):
+        return self.__class_sections
+
     def get_all_sections (self):
         return self.__sections
+
+    def write (self, filename):
+        self.__root.write (filename, pretty_print=True, xml_declaration=True)
+
+def __add_symbols (symbols_node, type_name, class_node, name_formatter):
+    added_symbols = 0
+    if hasattr (class_node, type_name):
+        for symbol in getattr (class_node, type_name):
+            name = name_formatter.get_full_node_name (symbol)
+            existing = symbols_node.xpath('SYMBOL[text()="%s"]' % name)
+            if existing:
+                continue
+            new_element = etree.Element ('SYMBOL')
+            new_element.text = name
+            symbols_node.append (new_element)
+            added_symbols += 1
+
+    return added_symbols
+
+
+def add_missing_symbols (transformer):
+    name_formatter = NameFormatter(language='C')
+    symbol_resolver = SymbolResolver (transformer)
+    sections_parser = SectionsParser (symbol_resolver)
+    added_signals = 0
+    added_properties = 0
+    added_virtual_methods = 0
+    added_fields = 0
+    for name, section in sections_parser.get_class_sections ().iteritems():
+        class_node = symbol_resolver.resolve_type (section.find ('SYMBOL').text)
+        symbols_node = section.find ('SYMBOLS')
+        added_signals += __add_symbols (symbols_node, 'signals', class_node, name_formatter)
+        added_properties += __add_symbols (symbols_node, 'properties', class_node, name_formatter)
+        added_virtual_methods += __add_symbols (symbols_node, 'virtual_methods',
+                class_node, name_formatter)
+        added_fields += __add_symbols (symbols_node, 'fields',
+                class_node, name_formatter)
+
+    print "added %d signals" % added_signals
+    print "added %d properties" % added_properties
+    print "added %d virtual" % added_virtual_methods
+    print "added %d fields" % added_fields
+    sections_parser.write ('fixed.xml')
 
 class Page (object):
     def __init__(self, ident, link, node, filename):
@@ -503,9 +581,17 @@ class Formatter(object):
         self.__created_pages = {}
  
     def format (self, output):
-        self.__walk_node(output, self.__transformer.namespace, [])
-        self.__transformer.namespace.walk(lambda node, chain:
-                self.__walk_node(output, node, chain))
+        for section in self.__sections_parser.get_all_sections ():
+            name = section.find ('SYMBOL').text
+            node = self.__symbol_resolver.resolve_type (name)
+            self.__current_section_node = node
+            self.__handle_node (output, node)
+            for symbol in section.find('SYMBOLS').findall ('SYMBOL'):
+                node = self.__symbol_resolver.resolve_symbol (symbol.text)
+                if not node:
+                    node = self.__symbol_resolver.resolve_type (symbol.text)
+                self.__handle_node (output, node)
+
         if self.__do_class_aggregation:
             self.__aggregate_classes (output)
 
@@ -532,7 +618,8 @@ class Formatter(object):
         for section in self.__sections_parser.get_all_sections ():
             name = section.find ('SYMBOL').text
             node = self.__symbol_resolver.resolve_type (name)
-            if not node or type (node) not in [ast.Class, ast.Record]:
+            if not node or type (node) not in [ast.Class, ast.Record,
+                    ast.Interface, ast.Interface]:
                 continue
 
             klass = AggregatedClass ()
@@ -583,6 +670,7 @@ class Formatter(object):
                 ast.Function: self.__handle_function,
                 ast.Class: self.__handle_class,
                 ast.Record: self.__handle_record,
+                ast.Interface: self.__handle_class,
                 ast.Signal: self.__handle_signal,
                 ast.VFunction: self.__handle_virtual_function,
                 ast.DocSection: self.__handle_doc_section,
@@ -625,12 +713,11 @@ class Formatter(object):
     def __format_signal (self, node, match, props):
         raise NotImplementedError
 
-    def __get_link (self, node):
+    def __get_link (self, node, is_aggregated=False):
         link = None
         if hasattr (node, "namespace") and node.namespace == self.__transformer.namespace:
-            if self.__do_class_aggregation and type (node.parent) in [ast.Class,
-                    ast.Record]:
-                pagename = self.__make_file_name (node.parent)
+            if self.__do_class_aggregation and is_aggregated:
+                pagename = self.__make_file_name (self.__current_section_node)
             else:
                 pagename = self.__make_file_name (node)
 
@@ -762,7 +849,7 @@ class Formatter(object):
             return ""
         return os.path.join (self.__output, "%s.%s" % (name, extension))
 
-    def __walk_node(self, output, node, chain):
+    def __handle_node(self, output, node):
         filename = self.__make_file_name (node)
 
         try:
@@ -772,9 +859,11 @@ class Formatter(object):
 
         section_symbol = self.__sections_parser.find_symbol (node)
         if section_symbol is None:
-            #FIXME
-            #print "Warning : ", self.__name_formatter.get_full_node_name (node)
+            print "Warning : ", self.__name_formatter.get_full_node_name (node)
             return True
+
+        if node.name == "ElementClass":
+            print "handling element class"
 
         with open (filename, 'w') as f:
             out = ""
@@ -789,7 +878,7 @@ class Formatter(object):
 
             # We will call _end_page at aggregation time otherwise
             if not self.__do_class_aggregation or type (node) not in [ast.Class,
-                    ast.Record]:
+                    ast.Record, ast.Interface]:
                 out += self._end_page (to_be_aggregated)
 
             ident = self.__name_formatter.get_full_node_name (node)
@@ -859,12 +948,14 @@ class Formatter(object):
             if ret_type_node:
                 link = self.__get_link (ret_type_node)
             return LinkedReturnValue (type_.ctype, link)
-        if type_.target_giname is not None:
-            ret_type_node = self.__transformer.lookup_giname (type_.target_giname)
-            link = None
-            if ret_type_node:
-                link = self.__get_link (ret_type_node)
-            return LinkedReturnValue (type_.target_giname, link)
+
+        ret_type_node = self.__transformer.lookup_giname (type_.target_giname)
+        link = None
+        if ret_type_node:
+            link = self.__get_link (ret_type_node)
+        type_ = self.__transformer.lookup_typenode (type_)
+        if type_:
+            return LinkedReturnValue (type_.ctype + "*", link)
         return None
 
     def __make_parameter(self, node):
@@ -880,12 +971,22 @@ class Formatter(object):
                 link = self.__get_link (ret_type_node)
             return LinkedParameter (type_.ctype, node.argname, link)
 
+        ret_type_node = self.__transformer.lookup_giname (type_.target_giname)
+        link = None
+        if ret_type_node:
+            link = self.__get_link (ret_type_node)
+        type_ = self.__transformer.lookup_typenode (type_)
+        if type_:
+            return LinkedParameter (type_.ctype + "*", node.argname, link)
+
+        return None
+
     def __make_prototype (self, node):
         retval = self.__make_return_value (node)
         parameters = []
         for param in node.all_parameters:
             parameters.append (self.__make_parameter(param))
-        link = self.__get_link(node)
+        link = self.__get_link(node, is_aggregated=True)
 
         if type (node) == ast.Signal:
             name = node.name
@@ -905,6 +1006,19 @@ class Formatter(object):
             prototypes.append (self.__make_prototype (node))
         return prototypes
 
+    #FIXME ...
+    def __add_missing_signal_parameters (self, node):
+        if node.instance_parameter:
+            return
+
+        node.instance_parameter = ast.Parameter ("self",
+                node.parent.create_type())
+        node.instance_parameter.doc = "the object which received the signal."
+        user_data_param = ast.Parameter ("user_data", ast.Type
+                (target_fundamental = "gpointer", ctype="gpointer"))
+        user_data_param.doc = "user data set when the signal handler was connected."
+        node.parameters.append (user_data_param)
+
     def __make_signal_prototypes (self, node, class_section):
         prototypes = []
         symbols = class_section.find('SYMBOLS')
@@ -912,6 +1026,9 @@ class Formatter(object):
             node = self.__symbol_resolver.resolve_symbol (symbol.text)
             if node is None or type (node) != ast.Signal:
                 continue
+
+            self.__add_missing_signal_parameters (node)
+
             prototypes.append (self.__make_prototype (node))
         return prototypes
 
@@ -924,23 +1041,28 @@ class Formatter(object):
             out += self._end_prototypes()
         return out
 
+    def __handle_prototypes (self, node):
+        out = ""
+        class_section = self.__sections_parser.get_class_section(node)
+
+        if class_section is not None:
+            prototypes = self.__make_method_prototypes (node, class_section)
+            out += self.__format_prototypes (prototypes, 'Functions', True)
+
+            prototypes = self.__make_signal_prototypes (node, class_section)
+            out += self.__format_prototypes (prototypes, 'Signals', False)
+
+        return out
+
     def __handle_class (self, node):
         out = ""
-
-        class_section = self.__sections_parser.get_class_section(node)
-        if class_section is None:
-            return ""
 
         out += self._start_class (self.__name_formatter.get_full_node_name
                 (node))
 
         out += self.__format_short_description (node)
 
-        prototypes = self.__make_method_prototypes (node, class_section)
-        out += self.__format_prototypes (prototypes, 'Functions', True)
-
-        prototypes = self.__make_signal_prototypes (node, class_section)
-        out += self.__format_prototypes (prototypes, 'Signals', False)
+        out += self.__handle_prototypes (node)
 
         logging.debug ("handling class %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__format_doc (node)
@@ -950,7 +1072,25 @@ class Formatter(object):
         return out
 
     def __handle_record (self, node):
-        return self.__handle_class (node)
+        out = ""
+
+        if node.is_gtype_struct_for and node.is_gtype_struct_for.target_giname == "Gst.Elementshit":
+            for field in node.fields:
+                print field, type (field), field.doc
+
+        out += self._start_class (self.__name_formatter.get_full_node_name
+                (node))
+
+        out += self.__format_short_description (node)
+
+        out += self.__handle_prototypes (node)
+
+        logging.debug ("handling class %s" % self.__name_formatter.get_full_node_name (node))
+        out += self.__format_doc (node)
+
+        out += self._end_class ()
+
+        return out
 
     def __handle_parameters (self, node):
         out = ""
@@ -979,7 +1119,9 @@ class Formatter(object):
 
     def __handle_signal (self, node):
         out = ""
-        out += self._start_signal (self.__name_formatter.get_full_node_name (node))
+        out += self._start_signal (node.name)
+
+        out += self._format_prototype (self.__make_prototype (node), True)
 
         out += self.__handle_parameters (node)
 

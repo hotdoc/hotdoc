@@ -89,6 +89,17 @@ class HtmlFormatter (Formatter):
                 text ('%s ()' % function_name)
         return do_indent (doc.getvalue())
 
+    def _start_signal (self, signal_name):
+        doc, tag, text = Doc().tagtext()
+        doc.asis ('<div class="refsect2">')
+        with tag('a', name=signal_name):
+            pass
+        with tag('h3'):
+            text ("The ")
+            with tag ('code', klass='literal'):
+                text (u'“%s” signal' % signal_name)
+        return do_indent (doc.getvalue())
+
     def _end_function (self):
         doc, tag, text = Doc().tagtext()
         doc.asis ('</div>')
@@ -137,7 +148,7 @@ class HtmlFormatter (Formatter):
                 else:
                     with tag ('span', klass='returnvalue'):
                         text(prototype.retval.format_type())
-                text ('*' * prototype.retval.indirection_level)
+                text (' %s' % '*' * prototype.retval.indirection_level)
             with tag ('td', klass='%s_name' % self.__prototypes_type):
                 with tag ('a', klass='link', title=prototype.name,
                         href=prototype.link.get_link()):

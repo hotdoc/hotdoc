@@ -4,8 +4,9 @@ from xml.etree import ElementTree as ET
 from giscanner.transformer import Transformer
 import logging
 
-from base_formatter import Formatter
+from base_formatter import Formatter, add_missing_symbols
 from sections import SectionsGenerator
+from datetime import datetime
 
 class StupidFormatter (Formatter):
     pass
@@ -85,5 +86,8 @@ def doc_main (args):
     from html_formatter import HtmlFormatter
     formatter = HtmlFormatter (transformer, args.markdown_include_paths,
             sections, args.output, do_class_aggregation=True)
+    print ("Actually starting work")
+    n = datetime.now()
     formatter.format (args.output)
     formatter.format_index (args.output)
+    print "done", datetime.now() - n
