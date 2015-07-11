@@ -78,7 +78,7 @@ class HtmlFormatter (Formatter):
         doc.asis (self.__maybe_close_paragraph ())
         return do_indent (doc.getvalue())
 
-    def _start_function (self, function_name, param_names):
+    def _start_function (self, function_name):
         doc, tag, text = Doc().tagtext()
         doc.asis ('<div class="refsect2">')
         with tag('a', name=function_name):
@@ -89,15 +89,36 @@ class HtmlFormatter (Formatter):
                 text ('%s ()' % function_name)
         return do_indent (doc.getvalue())
 
-    def _start_signal (self, signal_name):
+    def _start_signal (self, signal_name, link_name):
         doc, tag, text = Doc().tagtext()
         doc.asis ('<div class="refsect2">')
-        with tag('a', name=signal_name):
+        with tag('a', name=link_name):
             pass
         with tag('h3'):
             text ("The ")
             with tag ('code', klass='literal'):
                 text (u'“%s” signal' % signal_name)
+        return do_indent (doc.getvalue())
+
+    def _end_signal (self):
+        doc, tag, text = Doc().tagtext()
+        doc.asis ('</div>')
+        return do_indent (doc.getvalue())
+
+    def _start_virtual_function (self, vfunc_name, link_name):
+        doc, tag, text = Doc().tagtext()
+        doc.asis ('<div class="refsect2">')
+        with tag('a', name=link_name):
+            pass
+        with tag('h3'):
+            text ("The ")
+            with tag ('code', klass='literal'):
+                text (u'“%s” virtual function' % vfunc_name)
+        return do_indent (doc.getvalue())
+
+    def _end_virtual_function (self):
+        doc, tag, text = Doc().tagtext()
+        doc.asis ('</div>')
         return do_indent (doc.getvalue())
 
     def _end_function (self):

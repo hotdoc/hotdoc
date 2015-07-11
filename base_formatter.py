@@ -988,7 +988,7 @@ class Formatter(object):
             parameters.append (self.__make_parameter(param))
         link = self.__get_link(node, is_aggregated=True)
 
-        if type (node) == ast.Signal:
+        if type (node) in [ast.Signal, ast.VFunction]:
             name = node.name
         else:
             name = self.__name_formatter.get_full_node_name (node)
@@ -1002,6 +1002,16 @@ class Formatter(object):
         for symbol in symbols:
             node = self.__symbol_resolver.resolve_symbol (symbol.text)
             if node is None or type (node) != ast.Function:
+                continue
+            prototypes.append (self.__make_prototype (node))
+        return prototypes
+
+    def __make_vfunc_prototypes (self, node, class_section):
+        prototypes = []
+        symbols = class_section.find('SYMBOLS')
+        for symbol in symbols:
+            node = self.__symbol_resolver.resolve_symbol (symbol.text)
+            if node is None or type (node) != ast.VFunction:
                 continue
             prototypes.append (self.__make_prototype (node))
         return prototypes
@@ -1052,6 +1062,8 @@ class Formatter(object):
             prototypes = self.__make_signal_prototypes (node, class_section)
             out += self.__format_prototypes (prototypes, 'Signals', False)
 
+            prototypes = self.__make_vfunc_prototypes (node, class_section)
+            out += self.__format_prototypes (prototypes, 'VFunctions', False)
         return out
 
     def __handle_class (self, node):
@@ -1119,14 +1131,13 @@ class Formatter(object):
 
     def __handle_signal (self, node):
         out = ""
-        out += self._start_signal (node.name)
+        out += self._start_signal (node.name, self.__name_formatter.get_full_node_name (node))
 
         out += self._format_prototype (self.__make_prototype (node), True)
 
-        out += self.__handle_parameters (node)
-
-        logging.debug ("handling signal %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__format_doc (node)
+
+        out += self.__handle_parameters (node)
 
         out += self._end_signal ()
 
@@ -1134,16 +1145,10 @@ class Formatter(object):
 
     def __handle_function (self, node):
         out = ""
-        param_names = []
-
-        for param in node.all_parameters:
-            param_names.append (param.argname)
-
         out += self._start_function (self.__name_formatter.get_full_node_name
-                (node), param_names)
+                (node))
         out += self._format_prototype (self.__make_prototype (node), True)
 
-        logging.debug ("handling function %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__format_doc (node)
 
         out += self.__handle_parameters (node)
@@ -1155,13 +1160,14 @@ class Formatter(object):
 
     def __handle_virtual_function (self, node):
         out = ""
+        out += self._start_virtual_function (node.name, self.__name_formatter.get_full_node_name (node))
 
-        out += self._start_virtual_function (self.__name_formatter.get_full_node_name (node))
+        out += self._format_prototype (self.__make_prototype (node), True)
 
-        out += self.__handle_parameters (node)
-
-        logging.debug ("handling virtual function %s" % self.__name_formatter.get_full_node_name (node))
         out += self.__format_doc (node)
+
+        #FIXME: ideally parameters for vfunc should be documented !
+        #out += self.__handle_parameters (node)
 
         out += self._end_virtual_function ()
 
@@ -1310,7 +1316,7 @@ class Formatter(object):
         self.__warn_not_implemented (self._end_prototypes)
         return ""
 
-    def _start_function (self, function_name, params):
+    def _start_function (self, function_name):
         """
         Notifies the subclass that a function is being parsed
         """
@@ -1324,7 +1330,7 @@ class Formatter(object):
         self.__warn_not_implemented (self._end_function)
         return ""
 
-    def _start_virtual_function (self, function_name):
+    def _start_virtual_function (self, function_name, link_name):
         """
         Notifies the subclass that a virtual function is being parsed
         """
@@ -1338,7 +1344,7 @@ class Formatter(object):
         self.__warn_not_implemented (self._end_virtual_function)
         return ""
 
-    def _start_signal (self, signal_name):
+    def _start_signal (self, signal_name, link_name):
         """
         Notifies the subclass that a signal is being parsed
         """
