@@ -148,7 +148,7 @@ class DocScanner(object):
             ('type_name', r'#(<<type_name:alpha>>)'),
             ('enum_value', r'%(<<member_name:alpha>>)'),
             ('parameter', r'@<<param_name:alpha>>'),
-            ('function_call', r'<<symbol_name:alpha>>\(\)'),
+            ('function_call', r'<<symbol_name:alpha>>\s*\(\)'),
             ('include', r'{{\s*<<include_name:anything>>\s*}}'),
             ('heading', r'#+\s+<<heading:anything>>'),
         ]
@@ -229,6 +229,7 @@ class AggregatedClass(object):
         self.methods = []
         self.properties = []
         self.virtual_functions = []
+        self.fields = []
         self.__class_node = None
 
     def add_aggregated_page (self, page):
@@ -241,6 +242,8 @@ class AggregatedClass(object):
             self.virtual_functions.append(page)
         elif type (page.node) == ast.Property:
             self.properties.append(page)
+        elif type (page.node) == ast.Field:
+            self.fields.append(page)
         else:
             #FIXME
             pass
@@ -341,6 +344,17 @@ class LocalLink (Link):
             return self.__pagename
 
 
+class LinkedSymbol (object):
+    def __init__(self, type_, argname, link):
+        self.indirection_level = type_.count ('*')
+        self.type_ = type_.rstrip('*')
+        self.link = link
+        self.argname = argname
+
+    def format_type (self):
+        return self.type_
+
+
 class LinkedReturnValue (object):
     def __init__(self, type_, link):
         self.indirection_level = type_.count ('*')
@@ -364,6 +378,11 @@ class Prototype (object):
         self.retval = retval
         self.link = link
 
+class Field (object):
+    def __init__(self, name, type_, link):
+        self.name = name
+        self.type_ = type_
+        self.link = link
 
 class LinkResolver(object):
     def __init__(self, transformer):
@@ -641,6 +660,8 @@ class Formatter(object):
                 out += self.__format_section ('Signals', output, klass.signals)
                 out += self.__format_section ('Virtual Functions', output,
                         klass.virtual_functions)
+                out += self.__format_section ('Fields', output,
+                        klass.fields)
                 out += self._end_page (False)
                 f.write (unicode(out, 'utf-8').encode('utf-8'))
 
@@ -672,6 +693,7 @@ class Formatter(object):
                 ast.Record: self.__handle_record,
                 ast.Interface: self.__handle_class,
                 ast.Signal: self.__handle_signal,
+                ast.Field: self.__handle_field,
                 ast.VFunction: self.__handle_virtual_function,
                 ast.DocSection: self.__handle_doc_section,
                }
@@ -696,6 +718,8 @@ class Formatter(object):
         }
 
     def __format_other (self, node, match, props):
+        if self.__processing_code:
+            match += '\n'
         return self._format_other (match)
 
     def __format_property (self, node, match, props):
@@ -936,18 +960,17 @@ class Formatter(object):
 
         return out
 
-    def __make_return_value(self, node):
-        type_ = node.retval.type
+    def __make_linked_symbol(self, type_, argname):
         if type_.target_fundamental:
             link = self.__get_link (type_)
-            return LinkedReturnValue (type_.ctype, link)
+            return LinkedSymbol (type_.ctype, argname, link)
         if type_.ctype is not None:
             ret_type_node = self.__symbol_resolver.resolve_type (type_.ctype.strip
                     ('*'))
             link = None
             if ret_type_node:
                 link = self.__get_link (ret_type_node)
-            return LinkedReturnValue (type_.ctype, link)
+            return LinkedSymbol (type_.ctype, argname, link)
 
         ret_type_node = self.__transformer.lookup_giname (type_.target_giname)
         link = None
@@ -955,31 +978,17 @@ class Formatter(object):
             link = self.__get_link (ret_type_node)
         type_ = self.__transformer.lookup_typenode (type_)
         if type_:
-            return LinkedReturnValue (type_.ctype + "*", link)
+            return LinkedSymbol (type_.ctype + "*", argname, link)
         return None
+
+
+    def __make_return_value(self, node):
+        type_ = node.retval.type
+        return self.__make_linked_symbol (type_, "")
 
     def __make_parameter(self, node):
         type_ = node.type
-        if type_.target_fundamental:
-            link = self.__get_link (type_)
-            return LinkedParameter (type_.ctype, node.argname, link)
-        if type_.ctype is not None:
-            ret_type_node = self.__symbol_resolver.resolve_type (type_.ctype.strip
-                    ('*'))
-            link = None
-            if ret_type_node:
-                link = self.__get_link (ret_type_node)
-            return LinkedParameter (type_.ctype, node.argname, link)
-
-        ret_type_node = self.__transformer.lookup_giname (type_.target_giname)
-        link = None
-        if ret_type_node:
-            link = self.__get_link (ret_type_node)
-        type_ = self.__transformer.lookup_typenode (type_)
-        if type_:
-            return LinkedParameter (type_.ctype + "*", node.argname, link)
-
-        return None
+        return self.__make_linked_symbol (type_, node.argname)
 
     def __make_prototype (self, node):
         retval = self.__make_return_value (node)
@@ -1042,6 +1051,46 @@ class Formatter(object):
             prototypes.append (self.__make_prototype (node))
         return prototypes
 
+    def __make_field (self, field):
+        type_ = field.type
+        link = self.__get_link (field, is_aggregated=True)
+        return Field (field.name, self.__make_linked_symbol (type_, ""),
+                link)
+
+    def __make_constant (self, constant):
+        print dir (constant)
+        print constant.create_type()
+        link = self.__get_link (constant, is_aggregated=True)
+        print link.get_link()
+
+    def __make_fields (self, node, class_section):
+        fields = []
+        symbols = class_section.find('SYMBOLS')
+        for symbol in symbols:
+            node = self.__symbol_resolver.resolve_symbol (symbol.text)
+            if node is None or type (node) != ast.Field:
+                continue
+
+            if node.type is None or node.private:
+                continue
+
+            fields.append (self.__make_field (node))
+
+        return fields
+
+    def __make_types (self, node, class_section):
+        types = []
+        symbols = class_section.find('SYMBOLS')
+        for symbol in symbols:
+            node = self.__symbol_resolver.resolve_symbol (symbol.text)
+            if node is None or type (node) != ast.Constant:
+                continue
+
+            types.append (self.__make_constant (node))
+
+        return types
+
+
     def __format_prototypes (self, prototypes, type_, is_callable):
         out = ""
         if prototypes:
@@ -1049,6 +1098,15 @@ class Formatter(object):
             for prototype in prototypes:
                 out += self._format_prototype (prototype, is_callable)
             out += self._end_prototypes()
+        return out
+
+    def __format_fields (self, fields):
+        out = ""
+        if fields:
+            out += self._start_fields()
+            for field in fields:
+                out += self._format_field (field, True)
+            out += self._end_fields()
         return out
 
     def __handle_prototypes (self, node):
@@ -1064,6 +1122,11 @@ class Formatter(object):
 
             prototypes = self.__make_vfunc_prototypes (node, class_section)
             out += self.__format_prototypes (prototypes, 'VFunctions', False)
+
+            fields = self.__make_fields (node, class_section)
+            out += self.__format_fields (fields)
+
+            types = self.__make_types (node, class_section)
         return out
 
     def __handle_class (self, node):
@@ -1140,6 +1203,22 @@ class Formatter(object):
         out += self.__handle_parameters (node)
 
         out += self._end_signal ()
+
+        return out
+
+    def __handle_field (self, node):
+        out = ""
+
+        if node.type is None or node.private:
+            return out
+
+        out += self._start_field (node.name, self.__name_formatter.get_full_node_name (node))
+
+        out += self._format_field (self.__make_field (node), False)
+
+        out += self.__format_doc (node)
+
+        out += self._end_field ()
 
         return out
 

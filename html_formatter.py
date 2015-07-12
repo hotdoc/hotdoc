@@ -105,6 +105,22 @@ class HtmlFormatter (Formatter):
         doc.asis ('</div>')
         return do_indent (doc.getvalue())
 
+    def _start_field (self, field_name, link_name):
+        doc, tag, text = Doc().tagtext()
+        doc.asis ('<div class="refsect2">')
+        with tag('a', name=link_name):
+            pass
+        with tag('h3'):
+            text ("The ")
+            with tag ('code', klass='literal'):
+                text (u'“%s” field' % field_name)
+        return do_indent (doc.getvalue())
+
+    def _end_field (self):
+        doc, tag, text = Doc().tagtext()
+        doc.asis ('</div>')
+        return do_indent (doc.getvalue())
+
     def _start_virtual_function (self, vfunc_name, link_name):
         doc, tag, text = Doc().tagtext()
         doc.asis ('<div class="refsect2">')
@@ -154,6 +170,71 @@ class HtmlFormatter (Formatter):
         
         self.__prototype_context = (doc, tag, text)
         return ""
+
+    def _start_fields (self):
+        doc, tag, text = Doc().tagtext()
+        with tag('h2'):
+            text ("Fields")
+        doc.asis ('<div class="informaltable">')
+        doc.asis ("<table>")
+        doc.asis ("<colgroup>")
+        with tag('col', klass='fields_type', width='150px'):
+            pass
+        with tag('col', klass='fields_name'):
+            pass
+
+        return do_indent (doc.getvalue ())
+
+    def __format_field_summary (self, field):
+        doc, tag, text = Doc().tagtext()
+        first = True
+        with tag('tr'):
+            with tag ('td', klass='field_type'):
+                if field.type_.link:
+                    with tag ('a', klass='link',
+                            title=field.type_.format_type(),
+                            href=field.type_.link.get_link()):
+                        with tag ('span'):
+                            text(field.type_.format_type())
+                else:
+                    with tag ('span'):
+                        text(field.type_.format_type())
+                text (' %s' % '*' * field.type_.indirection_level)
+            with tag ('td', klass='field_name'):
+                with tag ('a', klass='link', title=field.name,
+                        href=field.link.get_link()):
+                    text (field.name)
+
+        return do_indent (doc.getvalue ())
+
+    def __format_field_full (self, field):
+        doc, tag, text = Doc().tagtext()
+        with tag ('pre', klass='programlisting'):
+            if field.type_.link:
+                with tag ('a',
+                        href=field.type_.link.get_link()):
+                    with tag ('span'):
+                        text(field.type_.format_type())
+            else:
+                with tag ('span'):
+                    text(field.type_.format_type())
+            text ('*' * field.type_.indirection_level)
+
+            text (' %s' % field.name)
+        return do_indent (doc.getvalue())
+
+    def _format_field(self, field, is_summary):
+        if is_summary:
+            return self.__format_field_summary (field)
+        return self.__format_field_full (field)
+
+    def _end_fields(self):
+        doc, tag, text = Doc().tagtext ()
+        doc.asis ("</colgroup>")
+        doc.asis ("</table>")
+        doc.asis ("</div>")
+        ret = do_indent (doc.getvalue())
+        return ret
 
     def __format_prototype_summary(self, prototype, is_callable):
         doc, tag, text = self.__prototype_context
@@ -353,7 +434,7 @@ class HtmlFormatter (Formatter):
 
     def _format_code_start (self):
         doc, tag, text = Doc().tagtext()
-        doc.asis ('</pre>')
+        doc.asis ('<pre class="programlisting">')
         return do_indent (doc.getvalue())
 
     def _format_code_start_with_language (self, language):
@@ -361,7 +442,7 @@ class HtmlFormatter (Formatter):
         if language == 'c':
             language = 'source-c'
 
-        doc.asis ("<pre class=\"%s\">" % language)
+        doc.asis ("<pre class=\"%s programlisting\">" % language)
         return do_indent (doc.getvalue())
 
     def _format_code_end (self):
