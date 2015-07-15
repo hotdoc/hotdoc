@@ -1,0 +1,32 @@
+@require(enum)
+<div class="refsect2">
+	<a name="#@enum.type_name"></a>
+	<h3 class="method">
+		<span class="entry" id="@enum.type_name">enum @enum.type_name</span>
+	</h3>
+	<p>
+	@enum.formatted_doc
+	</p>
+	@if enum.members:
+		<div class="refsect3">
+			<h4>Members</h4>
+			<div class="informaltable">
+				<table width="100%" border="0">
+					<colgroup>
+						<col class="enum_members_name" width="300px" />
+						<col class="enum_members_description">
+					</colgroup>
+					<tbody>
+						@for member in enum.members:
+						<tr>
+							<td class="enum_member_name">
+								<p>@member.type_name:</p>
+							</td>
+							<td class="enum_member_description">@member.formatted_doc</td>
+						</tr>
+						@end
+					</tbody>
+				</table>
+			</div>
+		</div>
+</div>

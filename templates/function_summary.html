@@ -1,0 +1,21 @@
+@require(return_value, function_name, is_callable, is_pointer)
+<tr>
+    <td class="function_type">
+	    <span>@return_value</span>
+    </td>
+    <td class="function_name">
+	    <span>\
+@if is_pointer:
+<span class="c_punctuation">(*</span>\
+@end
+@function_name\
+@if is_pointer:
+<span class="c_punctuation">)</span>\
+@end
+
+@if is_callable:
+<span class="c_punctuation">()</span>\
+@end
+</span>
+</td>
+</tr>

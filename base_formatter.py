@@ -7,6 +7,8 @@ from giscanner import ast
 import logging
 from lxml import etree
 
+from xml.sax.saxutils import unescape
+
 from datetime import datetime
 
 class NameFormatter(object):
@@ -53,14 +55,14 @@ class NameFormatter(object):
     def __make_c_node_name (self, node):
         out = ""
         if type (node) in (ast.Namespace, ast.DocSection):
-            return node.name
+            out = node.name
 
-        if type (node) in (ast.Signal, ast.Property, ast.Field, ast.VFunction):
+        elif type (node) in (ast.Signal, ast.Property, ast.Field, ast.VFunction):
             qualifier = str (type (node)).split ('.')[-1].split ("'")[0]
             out = "%s%s::%s---%s" % (node.namespace.name, node.parent.name,
                     node.name, qualifier)
 
-        if type (node) == ast.Function:
+        elif type (node) == ast.Function:
             while node:
                 if out:
                     c_name = re.sub('([a-z0-9])([A-Z])', r'\1_\2',
@@ -74,6 +76,9 @@ class NameFormatter(object):
                     node = node.parent
                 else:
                     node = None
+
+        elif type (node) == ast.FunctionMacro:
+            out = node.symbol
 
         elif type (node) in (ast.Class, ast.Enum, ast.Alias, ast.Record,
                 ast.Callback, ast.Constant, ast.Bitfield, ast.Interface):
@@ -460,20 +465,169 @@ class LinkResolver(object):
         return link
 
 
+class Symbol (object):
+    def __init__(self, type_name, qualifiers, indirection, argname, link, ast_node, formatted_doc):
+        self.type_name = type_name
+        self.argname = argname
+        self.qualifiers = qualifiers
+        self.indirection = indirection
+        self.link = link
+        self.ast_node = ast_node
+        self.formatted_doc = formatted_doc
+
+    def __repr__(self):
+        res = "%s\n" % object.__repr__(self)
+        res += "%s %s %s %s\n" % (self.qualifiers, self.type_name,
+                self.indirection, self.argname)
+        if self.link:
+            res += "[%s]\n" % self.link.get_link ()
+        else:
+            res += "No link !"
+        res += "Description : \n%s\n" % self.formatted_doc
+        return res
+
+
+class EnumSymbol (Symbol):
+    def __init__(self, *args):
+        Symbol.__init__(self, *args)
+        self.members = []
+
+    def add_member (self, member):
+        self.members.append (member)
+
+
+class PropertySymbol (Symbol):
+    def __init__(self, *args):
+        Symbol.__init__(self, *args)
+        self.type_ = None
+
+    def set_type (self, type_):
+        self.type_ = type_
+
+class AliasSymbol (PropertySymbol):
+    pass
+
+class FieldSymbol (Symbol):
+    def __init__(self, *args):
+        Symbol.__init__(self, *args)
+        self.type_ = None
+
+    def set_type (self, type_):
+        self.type_ = type_
+
+class ConstantSymbol (Symbol):
+    def __init__(self, *args):
+        Symbol.__init__(self, *args)
+        self.value = None
+
+    def set_value (self, value):
+        self.value = value
+
+class FunctionSymbol (Symbol):
+    def __init__(self, *args):
+        Symbol.__init__(self, *args)
+        self.parameters = []
+        self.return_value = None
+
+    def add_parameter (self, parameter):
+        self.parameters.append (parameter)
+
+    def __repr__ (self):
+        res = "%s\n" % Symbol.__repr__(self)
+        res += "===\nParameters :\n"
+        for param in self.parameters:
+            res += param.__repr__() + "\n"
+        if self.return_value:
+            res += "===\nReturn value :\n%s" % self.return_value.__repr__()
+
+        return res
+
+class FunctionMacroSymbol (Symbol):
+    def __init__(self, *args):
+        Symbol.__init__(self, *args)
+        self.parameters = []
+
+    def add_parameter (self, parameter):
+        self.parameters.append (parameter)
+
+class ClassSymbol (Symbol):
+    def __init__(self, *args):
+        Symbol.__init__(self, *args)
+        self.functions = []
+        self.signals = []
+        self.vfunctions = []
+        self.properties = []
+        self.fields = []
+        self.constants = []
+        self.function_macros = []
+        self.enums = []
+        self.callbacks = []
+        self.aliases = []
+        self.class_doc = None
+
+    def add_function (self, func):
+        self.functions.append (func)
+
+    def add_signal (self, signal):
+        self.signals.append (signal)
+
+    def add_vfunction (self, vfunction):
+        self.vfunctions.append (vfunction)
+
+    def add_callback (self, callback):
+        self.callbacks.append (callback)
+
+    def add_property (self, prop):
+        self.properties.append (prop)
+
+    def add_alias (self, alias):
+        self.aliases.append (alias)
+
+    def add_constant (self, constant):
+        self.constants.append (constant)
+
+    def add_field (self, field):
+        self.fields.append (field)
+
+    def add_function_macro (self, func):
+        self.function_macros.append (func)
+
+    def add_enum (self, enum):
+        self.enums.append (enum)
+
+    def get_short_description (self):
+        if not self.ast_node.short_description:
+            return ""
+        return self.ast_node.short_description
+
+    def __repr__(self):
+        res = "%s\n" % Symbol.__repr__(self)
+        res += "===\nFunctions :\n"
+        for func in self.functions:
+            res += func.__repr__()
+
+        res += "\n"
+        return res
+
+class Parameter (Symbol):
+    def __init__(self, *args):
+        Symbol.__init__(self, *args)
+
 class SectionsParser(object):
     def __init__(self, symbol_resolver):
+        n = datetime.now()
         self.__symbol_resolver = symbol_resolver
         parser = etree.XMLParser(remove_blank_text=True)
         self.__root = etree.parse ('tmpsections.xml', parser)
         self.__name_formatter = NameFormatter (language='C')
         self.__symbols = {}
-        self.__create_symbols ()
-        self.__sections = self.__root.findall('.//SECTION')
+        #self.__create_symbols ()
+        #self.__sections = self.__root.findall('.//SECTION')
         self.__class_sections = {}
-        self.__find_class_sections ()
+        print "section parsing : ", datetime.now() - n
 
     def __find_class_sections (self):
-        for section in self.__sections:
+        for section in self.__root.findall ('.//SECTION'):
             name = section.find('SYMBOL').text
             if type (self.__symbol_resolver.resolve_type (name)) in [ast.Class,
                     ast.Record, ast.Interface]:
@@ -491,8 +645,20 @@ class SectionsParser(object):
         return name_node.text in self.__class_sections
 
     def __create_symbols (self):
-        for symbol in self.__root.findall('.//SYMBOL'):
-            self.__symbols[symbol.text] = symbol
+        for symbol_node in self.__root.findall('.//SYMBOL'):
+            section_node = symbol_node.getparent().getparent()
+            ast_node = self.__symbol_resolver.resolve_symbol (symbol_node.text)
+            if not ast_node:
+                ast_node = self.__symbol_resolver.resolve_type (symbol_node.text)
+
+            symbol = None
+            if type (ast_node) == ast.Function:
+                symbol = FunctionSymbol (symbol_node.text, section_node, ast_node)
+            if symbol:
+                self.__symbols[symbol_node.text] = symbol
+
+    def get_all_symbols (self):
+        return self.__symbols
 
     def find_symbol (self, symbol):
         name = self.__name_formatter.get_full_node_name (symbol)
@@ -515,6 +681,8 @@ class SectionsParser(object):
             return None
 
     def get_class_sections (self):
+        if not self.__class_sections:
+            self.__find_class_sections ()
         return self.__class_sections
 
     def get_all_sections (self):
@@ -533,6 +701,7 @@ def __add_symbols (symbols_node, type_name, class_node, name_formatter):
                 continue
             new_element = etree.Element ('SYMBOL')
             new_element.text = name
+            print "new element :", name
             symbols_node.append (new_element)
             added_symbols += 1
 
@@ -547,20 +716,32 @@ def add_missing_symbols (transformer):
     added_properties = 0
     added_virtual_methods = 0
     added_fields = 0
+    added_functions = 0
     for name, section in sections_parser.get_class_sections ().iteritems():
         class_node = symbol_resolver.resolve_type (section.find ('SYMBOL').text)
+        print section.find ('SYMBOL').text
         symbols_node = section.find ('SYMBOLS')
+        added_functions += __add_symbols (symbols_node, 'methods', class_node, name_formatter)
         added_signals += __add_symbols (symbols_node, 'signals', class_node, name_formatter)
         added_properties += __add_symbols (symbols_node, 'properties', class_node, name_formatter)
         added_virtual_methods += __add_symbols (symbols_node, 'virtual_methods',
                 class_node, name_formatter)
         added_fields += __add_symbols (symbols_node, 'fields',
                 class_node, name_formatter)
+        for symbol_node in symbols_node.findall('SYMBOL'):
+            node = symbol_resolver.resolve_type (symbol_node.text)
+            if type(node) == ast.Record:
+                gtype_struct_for = str (node.is_gtype_struct_for)
+                giname = str (class_node.gi_name)
+                if gtype_struct_for == giname:
+                    added_fields += __add_symbols (symbols_node, 'fields',
+                        node, name_formatter)
 
     print "added %d signals" % added_signals
     print "added %d properties" % added_properties
     print "added %d virtual" % added_virtual_methods
     print "added %d fields" % added_fields
+    print "added %d functions" % added_functions
     sections_parser.write ('fixed.xml')
 
 class Page (object):
@@ -600,6 +781,47 @@ class Formatter(object):
         self.__created_pages = {}
  
     def format (self, output):
+        n = datetime.now ()
+        sections = self.__sections_parser.get_sections ()
+        for section_node in sections:
+            section_name = section_node.find ('SYMBOL').text
+            class_node = self.__symbol_resolver.resolve_type (section_name)
+            self.__current_section_node = class_node
+
+            if type (class_node) not in [ast.Class, ast.Record, ast.Interface]:
+                #FIXME
+                #print "didn't handle %s" % str(type (class_node))
+                continue
+
+            doc = self.__format_doc (class_node)
+            klass = ClassSymbol ('', '', '', section_name, self.__get_link
+                    (class_node), class_node, doc)
+            symbols = section_node.find ('SYMBOLS').findall ('SYMBOL')
+            for symbol_node in symbols:
+                ast_node = self.__symbol_resolver.resolve_symbol (symbol_node.text)
+                if not ast_node:
+                    ast_node = self.__symbol_resolver.resolve_type (symbol_node.text)
+
+                if not ast_node:
+                    #FIXME
+                    continue
+
+                try:
+                    handler = self.__handlers [type (ast_node)]
+                except KeyError:
+                    #FIXME
+                    #print "didn't handle symbol %s" % symbol_node.text
+                    print type (ast_node), symbol_node.text, section_name
+                    continue
+
+                handler (klass, symbol_node, ast_node)
+
+            filename = self.__make_file_name (class_node)
+            with open (filename, 'w') as f:
+                out = self._format_class (klass, True)
+                f.write (out.encode('utf-8'))
+
+        return
         for section in self.__sections_parser.get_all_sections ():
             name = section.find ('SYMBOL').text
             node = self.__symbol_resolver.resolve_type (name)
@@ -674,7 +896,7 @@ class Formatter(object):
             try:
                 page = self.__created_pages[section.find ('SYMBOL').text]
             except KeyError:
-                print "%s didn't work" % section.find ('SYMBOL').text
+                #FIXME
                 continue
             pages.append (page)
 
@@ -689,13 +911,17 @@ class Formatter(object):
     def __create_handlers (self):
         return {
                 ast.Function: self.__handle_function,
-                ast.Class: self.__handle_class,
-                ast.Record: self.__handle_record,
-                ast.Interface: self.__handle_class,
+                ast.VFunction: self.__handle_vfunction,
+                ast.FunctionMacro: self.__handle_function_macro,
                 ast.Signal: self.__handle_signal,
+                ast.Property: self.__handle_property,
                 ast.Field: self.__handle_field,
-                ast.VFunction: self.__handle_virtual_function,
-                ast.DocSection: self.__handle_doc_section,
+                ast.Constant: self.__handle_constant,
+                ast.Record: self.__handle_record,
+                ast.Enum: self.__handle_enum,
+                ast.Bitfield: self.__handle_enum,
+                ast.Callback: self.__handle_callback,
+                ast.Alias: self.__handle_alias,
                }
 
     def __create_doc_formatters (self):
@@ -873,7 +1099,13 @@ class Formatter(object):
             return ""
         return os.path.join (self.__output, "%s.%s" % (name, extension))
 
-    def __handle_node(self, output, node):
+    def __handle_symbol(self, symbol):
+        try:
+            handler = self.__handlers[type (symbol.ast_node)]
+        except KeyError:
+            return
+
+        return
         filename = self.__make_file_name (node)
 
         try:
@@ -920,6 +1152,7 @@ class Formatter(object):
             return ""
 
         out = ""
+        docstring = unescape (docstring)
         tokens = self.__doc_scanner.scan (docstring)
         for tok in tokens:
             kind, match, props = tok
@@ -981,6 +1214,63 @@ class Formatter(object):
             return LinkedSymbol (type_.ctype + "*", argname, link)
         return None
 
+    def __split_ctype (self, ctype):
+        qualifiers = ""
+        type_name = ""
+        indirection = ""
+        indirection = ctype.count ('*') * '*'
+        qualified_type = ctype.strip ('*')
+        for token in qualified_type.split ():
+            if token in ["const"]:
+                if qualifiers:
+                    qualifiers += " %s" % token
+                else:
+                    qualifiers += token
+            else:
+                type_name += token
+
+        return (qualifiers, type_name, indirection)
+
+    def __create_linked_symbol (self, node):
+        if not hasattr (node, "type"): # Aliases
+            type_ = node.target
+        else:
+            type_ = node.type
+        res = None
+
+        qualifiers = ""
+        type_name = ""
+        indirection = ""
+        link = ""
+
+        if type_.target_fundamental:
+            qualifiers, type_name, indirection = self.__split_ctype (type_.ctype)
+            link = self.__get_link (type_)
+        elif type_.ctype is not None:
+            qualifiers, type_name, indirection = self.__split_ctype (type_.ctype)
+            type_node = self.__symbol_resolver.resolve_type (type_name)
+            if type_node:
+                link = self.__get_link (type_node)
+        else:
+            type_node = self.__transformer.lookup_giname (type_.target_giname)
+            type_name = type_node.ctype
+            if type_node:
+                link = self.__get_link (type_node)
+            indirection = '*'
+
+        if not type_name:
+            #FIXME
+            print "lol", node
+            return None
+
+        doc = self.__format_doc (node)
+
+        if type (node) == ast.Parameter:
+            argname = node.argname
+        else:
+            argname = None
+
+        return Symbol (type_name, qualifiers, indirection, argname, link, node, doc)
 
     def __make_return_value(self, node):
         type_ = node.retval.type
@@ -1058,10 +1348,7 @@ class Formatter(object):
                 link)
 
     def __make_constant (self, constant):
-        print dir (constant)
-        print constant.create_type()
         link = self.__get_link (constant, is_aggregated=True)
-        print link.get_link()
 
     def __make_fields (self, node, class_section):
         fields = []
@@ -1100,15 +1387,6 @@ class Formatter(object):
             out += self._end_prototypes()
         return out
 
-    def __format_fields (self, fields):
-        out = ""
-        if fields:
-            out += self._start_fields()
-            for field in fields:
-                out += self._format_field (field, True)
-            out += self._end_fields()
-        return out
-
     def __handle_prototypes (self, node):
         out = ""
         class_section = self.__sections_parser.get_class_section(node)
@@ -1131,27 +1409,6 @@ class Formatter(object):
 
     def __handle_class (self, node):
         out = ""
-
-        out += self._start_class (self.__name_formatter.get_full_node_name
-                (node))
-
-        out += self.__format_short_description (node)
-
-        out += self.__handle_prototypes (node)
-
-        logging.debug ("handling class %s" % self.__name_formatter.get_full_node_name (node))
-        out += self.__format_doc (node)
-
-        out += self._end_class ()
-
-        return out
-
-    def __handle_record (self, node):
-        out = ""
-
-        if node.is_gtype_struct_for and node.is_gtype_struct_for.target_giname == "Gst.Elementshit":
-            for field in node.fields:
-                print field, type (field), field.doc
 
         out += self._start_class (self.__name_formatter.get_full_node_name
                 (node))
@@ -1192,50 +1449,91 @@ class Formatter(object):
 
         return out
 
-    def __handle_signal (self, node):
-        out = ""
-        out += self._start_signal (node.name, self.__name_formatter.get_full_node_name (node))
+    def __handle_callable (self, symbol_node, actual_name, ast_node):
+        doc = self.__format_doc (ast_node)
+        func = FunctionSymbol (actual_name, '', '', '', self.__get_link
+                (ast_node, True), ast_node, doc)
 
-        out += self._format_prototype (self.__make_prototype (node), True)
+        func.return_value = self.__create_linked_symbol (ast_node.retval)
+        for parameter in ast_node.all_parameters:
+            param = self.__create_linked_symbol (parameter)
+            func.add_parameter (param)
 
-        out += self.__format_doc (node)
+        return func
 
-        out += self.__handle_parameters (node)
+    def __handle_function (self, klass, symbol_node, ast_node):
+        klass.add_function (self.__handle_callable (symbol_node,
+            symbol_node.text, ast_node))
 
-        out += self._end_signal ()
+    def __handle_function_macro (self, klass, symbol_node, ast_node):
+        doc = self.__format_doc (ast_node)
+        func = FunctionMacroSymbol (symbol_node.text, '', '', '',
+                self.__get_link (ast_node, True), ast_node, doc)
+        for parameter in ast_node.parameters:
+            doc = self.__format_doc (parameter)
+            param = Symbol (parameter.argname, '', '', '',
+                    '', parameter, doc)
+            func.add_parameter (param)
+        klass.add_function_macro (func)
 
-        return out
+    def __handle_record (self, klass, symbol_node, ast_node):
+        if str(ast_node.is_gtype_struct_for) == klass.ast_node.gi_name:
+            klass.class_doc = self.__format_doc (ast_node)
 
-    def __handle_field (self, node):
-        out = ""
+    def __handle_alias (self, klass, symbol_node, ast_node):
+        doc = self.__format_doc (ast_node)
+        alias = AliasSymbol (symbol_node.text, '', '', '',
+                self.__get_link (ast_node, True), ast_node, doc)
+        type_ = self.__create_linked_symbol (ast_node)
+        alias.set_type (type_)
+        klass.add_alias (alias)
 
-        if node.type is None or node.private:
-            return out
+    def __handle_enum (self, klass, symbol_node, ast_node):
+        doc = self.__format_doc (ast_node)
+        enum = EnumSymbol (symbol_node.text, '', '', '',
+                self.__get_link (ast_node, True), ast_node, doc)
+        for member in ast_node.members:
+            doc = self.__format_doc (member)
+            member_ = Symbol (member.symbol, '', '', '', '', member, doc)
+            enum.add_member (member_)
+        klass.add_enum (enum)
 
-        out += self._start_field (node.name, self.__name_formatter.get_full_node_name (node))
+    def __handle_callback (self, klass, symbol_node, ast_node):
+        klass.add_callback (self.__handle_callable (symbol_node, symbol_node.text, ast_node))
 
-        out += self._format_field (self.__make_field (node), False)
+    def __handle_vfunction (self, klass, symbol_node, ast_node):
+        klass.add_vfunction (self.__handle_callable (symbol_node, ast_node.name, ast_node))
 
-        out += self.__format_doc (node)
+    def __handle_signal (self, klass, symbol_node, ast_node):
+        self.__add_missing_signal_parameters (ast_node)
 
-        out += self._end_field ()
+        klass.add_signal (self.__handle_callable (symbol_node, ast_node.name, ast_node))
 
-        return out
+    def __handle_property (self, klass, symbol_node, ast_node):
+        doc = self.__format_doc (ast_node)
+        type_ = self.__create_linked_symbol (ast_node)
+        prop = PropertySymbol (ast_node.name, '', '', '', self.__get_link
+                (ast_node, True), ast_node, doc)
+        prop.set_type (type_)
+        klass.add_property (prop)
 
-    def __handle_function (self, node):
-        out = ""
-        out += self._start_function (self.__name_formatter.get_full_node_name
-                (node))
-        out += self._format_prototype (self.__make_prototype (node), True)
+    def __handle_constant (self, klass, symbol_node, ast_node):
+        doc = self.__format_doc (ast_node)
+        constant = ConstantSymbol (ast_node.ctype, '', '', '', self.__get_link
+                (ast_node, True), ast_node, doc)
+        constant.set_value (ast_node.value)
+        klass.add_constant (constant)
 
-        out += self.__format_doc (node)
+    def __handle_field (self, klass, symbol_node, ast_node):
+        if ast_node.type is None or ast_node.private:
+            return
 
-        out += self.__handle_parameters (node)
-
-        out += self.__handle_return_value (node)
-
-        out += self._end_function ()
-        return out
+        doc = self.__format_doc (ast_node)
+        type_ = self.__create_linked_symbol (ast_node)
+        field = FieldSymbol (ast_node.name, '', '', '', self.__get_link
+                (ast_node, True), ast_node, doc)
+        field.set_type (type_)
+        klass.add_field (field)
 
     def __handle_virtual_function (self, node):
         out = ""

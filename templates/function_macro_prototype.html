@@ -1,0 +1,12 @@
+@require(macro)
+
+<pre class="programlisting">
+#define @macro.type_name (\
+@for i, parameter in enumerate (macro.parameters):
+@if i != 0:
+, \
+@end
+@parameter.type_name\
+@end
+)
+</pre>

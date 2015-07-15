@@ -1,0 +1,15 @@
+@require(qualifiers, type, indirection, type_link, name)
+@if qualifiers:
+@qualifiers \
+@end
+@if type_link:
+<a class="link" title=@type href=@type_link.get_link()>@type</a>\
+@else:
+@type\
+@end
+@if indirection:
+ @indirection\
+@end
+@if name:
+ @name\
+@end

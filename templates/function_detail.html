@@ -1,0 +1,22 @@
+@require(callable, param_offset, is_pointer)
+<pre class="programlisting">
+@callable.return_value
+@if is_pointer:
+(*\
+@end
+@callable.name\
+@if is_pointer:
+)\
+@end
+ (\
+@if callable.parameters:
+\
+@for i, parameter in enumerate (callable.parameters):
+@if i != 0:
+,
+@param_offset\
+@end
+@parameter\
+@end
+@end
+)</pre>
