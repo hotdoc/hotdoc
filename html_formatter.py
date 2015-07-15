@@ -43,7 +43,7 @@ class HtmlFormatter (Formatter):
     def _get_extension (self):
         return "html"
 
-    def _format_linked_symbol (self, symbol):
+    def _priv_format_linked_symbol (self, symbol):
         template = self.engine.get_template('linked_symbol.html')
         if hasattr (symbol, 'qualifiers'):
             return template.render ({'qualifiers': symbol.qualifiers,
@@ -59,7 +59,7 @@ class HtmlFormatter (Formatter):
                                  'name': '',
                                  })
 
-    def _format_callable_prototype (self, return_value, function_name,
+    def _priv_format_callable_prototype (self, return_value, function_name,
             parameters, is_pointer):
         template = self.engine.get_template('callable_prototype.html')
         param_offset = ' ' * (len (function_name) + 2)
@@ -71,26 +71,26 @@ class HtmlFormatter (Formatter):
                                  'is_pointer': is_pointer,
                                 })
 
-    def _format_type_prototype (self, directive, type_name, name):
+    def _priv_format_type_prototype (self, directive, type_name, name):
         template = self.engine.get_template('type_prototype.html')
         return template.render ({'directive': directive,
                                  'type_name': type_name,
                                  'name': name,
                                 })
 
-    def _format_macro_prototype (self, macro, is_callable):
+    def _priv_format_macro_prototype (self, macro, is_callable):
         template = self.engine.get_template('macro_prototype.html')
         return template.render ({'macro': macro,
                                  'is_callable': is_callable,
                                 })
 
-    def _format_parameter_detail (self, parameter_name, parameter_detail):
+    def _priv_format_parameter_detail (self, parameter_name, parameter_detail):
         template = self.engine.get_template('parameter_detail.html')
         return template.render ({'param_name': parameter_name,
                                  'param_detail': parameter_detail,
                                 })
 
-    def _format_symbol_detail (self, name, symbol_type, linkname, prototype, doc, param_docs):
+    def _priv_format_symbol_detail (self, name, symbol_type, linkname, prototype, doc, param_docs):
         template = self.engine.get_template('symbol_detail.html')
         return template.render ({'name': name,
                                  'symbol_type': symbol_type,
@@ -100,11 +100,11 @@ class HtmlFormatter (Formatter):
                                  'param_docs': param_docs,
                                 })
 
-    def _format_enum_detail (self, enum):
+    def _priv_format_enum_detail (self, enum):
         template = self.engine.get_template('enum_detail.html')
         return template.render ({'enum': enum})
 
-    def _format_callable_summary (self, return_value, function_name,
+    def _priv_format_callable_summary (self, return_value, function_name,
             is_callable, is_pointer):
         template = self.engine.get_template('callable_summary.html')
 
@@ -114,14 +114,14 @@ class HtmlFormatter (Formatter):
                                 'is_pointer': is_pointer,
                                })
 
-    def _format_type_summary (self, type_type, type_name): 
+    def _priv_format_type_summary (self, type_type, type_name): 
         template = self.engine.get_template('type_summary.html')
 
         return template.render({'type_type': type_type,
                                 'type_name': type_name,
                                })
 
-    def _format_macro_summary (self, macro_link, is_callable):
+    def _priv_format_macro_summary (self, macro_link, is_callable):
         template = self.engine.get_template('macro_summary.html')
 
         return template.render({'macro': macro_link,
@@ -130,66 +130,66 @@ class HtmlFormatter (Formatter):
 
     def __format_callable (self, callable_, name, symbol_type, is_callable=True,
             is_pointer=False):
-        return_value = self._format_linked_symbol (callable_.return_value)
-        callable_link = self._format_linked_symbol (callable_)
+        return_value = self._priv_format_linked_symbol (callable_.return_value)
+        callable_link = self._priv_format_linked_symbol (callable_)
 
         parameters = []
         param_docs = []
 
         for param in callable_.parameters:
-            parameters.append (self._format_linked_symbol(param))
-            param_docs.append (self._format_parameter_detail (param.argname,
+            parameters.append (self._priv_format_linked_symbol(param))
+            param_docs.append (self._priv_format_parameter_detail (param.argname,
                 param.formatted_doc))
-        prototype = self._format_callable_prototype (return_value,
+        prototype = self._priv_format_callable_prototype (return_value,
                 callable_.type_name, parameters, is_pointer)
-        detail = self._format_symbol_detail (name, symbol_type,
+        detail = self._priv_format_symbol_detail (name, symbol_type,
                 callable_.link.get_link().split('#')[-1], prototype,
                 callable_.formatted_doc, param_docs)
-        summary = self._format_callable_summary (return_value, callable_link,
+        summary = self._priv_format_callable_summary (return_value, callable_link,
                 is_callable, is_pointer)
 
         return detail, summary
 
-    def _format_function (self, func):
+    def _priv_format_function (self, func):
         return self.__format_callable (func, func.type_name, "method")
 
-    def _format_signal (self, signal):
+    def _priv_format_signal (self, signal):
         return self.__format_callable (signal,
                 signal.type_name, "signal", is_callable=False)
 
-    def _format_vfunction (self, func):
+    def _priv_format_vfunction (self, func):
         return self.__format_callable (func, func.type_name, "virtual function")
 
-    def _format_callback (self, func):
+    def _priv_format_callback (self, func):
         return self.__format_callable (func, func.type_name, "callback", is_pointer=True)
 
-    def _format_type (self, directive, type_, member_type):
-        type_type = self._format_linked_symbol (type_.type_)
-        type_name = self._format_linked_symbol (type_)
+    def _priv_format_type (self, directive, type_, member_type):
+        type_type = self._priv_format_linked_symbol (type_.type_)
+        type_name = self._priv_format_linked_symbol (type_)
         name = type_.type_name
 
         if directive:
-            summary = self._format_type_summary (directive, type_name)
+            summary = self._priv_format_type_summary (directive, type_name)
         else:
-            summary = self._format_type_summary (type_type, type_name)
+            summary = self._priv_format_type_summary (type_type, type_name)
 
-        prototype = self._format_type_prototype (directive, type_type,
+        prototype = self._priv_format_type_prototype (directive, type_type,
                 type_.type_name)
-        detail = self._format_symbol_detail (name, member_type,
+        detail = self._priv_format_symbol_detail (name, member_type,
                 type_.link.get_link().split('#')[-1], prototype,
                 type_.formatted_doc, None)
         return detail, summary
 
-    def _format_property (self, prop):
-        return self._format_type (None, prop, "property")
+    def _priv_format_property (self, prop):
+        return self._priv_format_type (None, prop, "property")
 
-    def _format_alias (self, alias):
-        return self._format_type ("typedef", alias, "alias")
+    def _priv_format_alias (self, alias):
+        return self._priv_format_type ("typedef", alias, "alias")
 
-    def _format_field (self, field):
-        return self._format_type (None, field, "field")
+    def _priv_format_field (self, field):
+        return self._priv_format_type (None, field, "field")
 
-    def _format_summary (self, summaries, summary_type):
+    def _priv_format_summary (self, summaries, summary_type):
         if not summaries:
             return None
         template = self.engine.get_template('summary.html')
@@ -197,45 +197,45 @@ class HtmlFormatter (Formatter):
                                 'summaries': summaries
                             })
 
-    def _format_macro (self, macro, is_callable=False):
-        macro_link = self._format_linked_symbol (macro)
-        summary = self._format_macro_summary (macro_link, is_callable)
+    def _priv_format_macro (self, macro, is_callable=False):
+        macro_link = self._priv_format_linked_symbol (macro)
+        summary = self._priv_format_macro_summary (macro_link, is_callable)
         param_docs = []
 
         if is_callable:
             for param in macro.parameters:
-                param_docs.append (self._format_parameter_detail (param.type_name,
+                param_docs.append (self._priv_format_parameter_detail (param.type_name,
                     param.formatted_doc))
 
-        prototype = self._format_macro_prototype (macro, is_callable)
-        detail = self._format_symbol_detail (macro.type_name, "macro",
+        prototype = self._priv_format_macro_prototype (macro, is_callable)
+        detail = self._priv_format_symbol_detail (macro.type_name, "macro",
                 macro.link.get_link().split ('#')[-1],
                 prototype, macro.formatted_doc, param_docs) 
         return detail, summary
 
-    def _format_constant (self, constant): 
-        return self._format_macro (constant)
+    def _priv_format_constant (self, constant): 
+        return self._priv_format_macro (constant)
 
-    def _format_enum (self, enum):
-        enum_link = self._format_linked_symbol (enum)
-        summary = self._format_type_summary ("enum", enum_link)
+    def _priv_format_enum (self, enum):
+        enum_link = self._priv_format_linked_symbol (enum)
+        summary = self._priv_format_type_summary ("enum", enum_link)
         enum.parameters = enum.members
-        detail = self._format_enum_detail (enum)
+        detail = self._priv_format_enum_detail (enum)
         return detail, summary
 
-    def _format_function_macro (self, macro):
-        return self._format_macro (macro, is_callable=True)
+    def _priv_format_function_macro (self, macro):
+        return self._priv_format_macro (macro, is_callable=True)
 
     def _fill_class_template_dict (self, klass, dict_, singular, plural, summary_name):
         details = []
         summaries = []
         for element in getattr (klass, "%s" % plural):
-            detail, summary = getattr (self, "_format_%s" % singular)(element)
+            detail, summary = getattr (self, "_priv_format_%s" % singular)(element)
             if detail:
                 details.append (detail)
             if summary:
                 summaries.append (summary)
-        summary = self._format_summary (summaries, summary_name)
+        summary = self._priv_format_summary (summaries, summary_name)
         dict_["%s_summary" % plural] = summary
         dict_["%s_details" % plural] = details
 
@@ -282,6 +282,17 @@ class HtmlFormatter (Formatter):
         with tag ('em', klass='parameter'):
             with tag ('code'):
                 text (param_name)
+        return do_indent (doc.getvalue())
+
+    def _format_property (self, prop_name, link):
+        doc, tag, text = Doc().tagtext()
+        if link:
+            href = link.get_link()
+        else:
+            href = ""
+        with tag('a', href = href):
+            with tag ('span', klass="type"):
+                text(u'“%s”' % prop_name)
         return do_indent (doc.getvalue())
 
     def _format_other (self, other):

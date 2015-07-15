@@ -844,14 +844,13 @@ class Formatter(object):
                     #FIXME
                     continue
 
-                link = self.__create_local_link (pagename, symbol.type_name)
+                link = self.__create_local_link (pagename, symbol_node.text)
                 symbol.set_link (link)
+                self.__local_links[symbol_node.text] = link
                 for linkname in symbol.get_extra_links():
                     link = self.__create_local_link (pagename, linkname)
                     self.__local_links[linkname] = link
-
                 section.add_symbol (symbol)
-                self.__local_links[symbol.type_name] = link
             sections.append (section)
 
         return sections
@@ -913,16 +912,16 @@ class Formatter(object):
         return self._format_other (match)
 
     def __format_property (self, node, match, props):
-        type_node = self.__symbol_resolver.resolve_type(props['type_name'])
-        if type_node is None:
-            return match
+        type_name = props['type_name']
 
-        try:
-            prop = self._find_thing(type_node.properties, props['property_name'])
-        except (AttributeError, KeyError):
-            return self.__format_other (node, match, props)
+        prop_name = props['property_name']
+        link_name = "%s::%s---Property" % (type_name, prop_name)
+        link = self.get_named_link (link_name)
 
-        return self._format_property (node, prop)
+        if link:
+            return self._format_property (prop_name, link)
+
+        return self.__format_other (node, match, props)
 
     def __format_signal (self, node, match, props):
         raise NotImplementedError
@@ -951,7 +950,7 @@ class Formatter(object):
             parameter = node.get_parameter(props['param_name'])
         except (AttributeError, ValueError):
             return self.__format_other (node, match, props)
- 
+
         if isinstance(parameter.type, ast.Varargs):
             param_name = "..."
         else:

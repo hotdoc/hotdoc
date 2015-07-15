@@ -3,187 +3,228 @@
 
 @def content():
 
+<table class="navigation" id="top" summary="Navigation header" width="100%" cellpadding="2" cellspacing="5">
+	<tbody>
+	<tr valign="middle">
+		<td class="shortcuts" align="left" width=100%>
+			<a class="shortcut" href="#">Top</a>
+
+			@if functions_summary:
+			<span id="nav_functions">
+				<span class="dim">|</span>
+				<a href="#functions">Functions</a>
+			</span>
+			@end
+
+			@if function_macros_summary:
+			<span id="nav_function_macros">
+				<span class="dim">|</span>
+				<a href="#function_macros">Function Macros</a>
+			</span>
+			@end
+
+			@if properties_summary:
+			<span id="nav_properties">
+				<span class="dim">|</span>
+				<a href="#properties">Properties</a>
+			</span>
+			@end
+
+			@if fields_summary:
+			<span id="nav_fields">
+				<span class="dim">|</span>
+				<a href="#fields">Fields</a>
+			</span>
+			@end
+
+			@if signals_summary:
+			<span id="nav_signals">
+				<span class="dim">|</span>
+				<a href="#signals">Signals</a>
+			</span>
+			@end
+
+			@if vfunctions_summary:
+			<span id="nav_vfunctions">
+				<span class="dim">|</span>
+				<a href="#vfunctions">Virtual Functions</a>
+			</span>
+			@end
+
+			@if callbacks_summary:
+			<span id="nav_callbacks">
+				<span class="dim">|</span>
+				<a href="#callbacks">Callback Functions</a>
+			</span>
+			@end
+
+			@if constants_summary:
+			<span id="nav_constants">
+				<span class="dim">|</span>
+				<a href="#constants">Constants</a>
+			</span>
+			@end
+
+			@if enums_summary:
+			<span id="nav_enums">
+				<span class="dim">|</span>
+				<a href="#enums">Enumerations</a>
+			</span>
+			@end
+
+			@if aliases_summary:
+			<span id="nav_aliases">
+				<span class="dim">|</span>
+				<a href="#aliases">Aliases</a>
+			</span>
+			@end
+
+		</td>
+	</tr>
+	</tbody>
+</table>
+
+<a name="@klass.type_name"></a>
+<h1 class="class">@klass.type_name</h1>
+<p>@short_description</p>
+
+<div class="refentry">
 	@if functions_summary:
-		<a href="#functions">Functions</a>
+	<a name=functions></a>
+	@functions_summary
 	@end
 
 	@if function_macros_summary:
-		<a href="#function_macros">Function Macros</a>
+	<a name=function_macros></a>
+	@function_macros_summary
 	@end
 
 	@if properties_summary:
-		<a href="#properties">Properties</a>
+	<a name=properties></a>
+	@properties_summary
 	@end
 
 	@if fields_summary:
-		<a href="#fields">Fields</a>
+	<a name=fields></a>
+	@fields_summary
 	@end
 
 	@if signals_summary:
-		<a href="#signals">Signals</a>
-	@end
-
-	@if vfunctions_summary:
-		<a href="#vfunctions">Virtual Functions</a>
-	@end
-
-	@if callbacks_summary:
-		<a href="#callbacks">Callback Functions</a>
+	<a name=signals></a>
+	@signals_summary
 	@end
 
 	@if constants_summary:
-		<a href="#constants">Constants</a>
+	<a name=constants></a>
+	@constants_summary
+	@end
+
+	@if callbacks_summary:
+	<a name=callbacks></a>
+	@callbacks_summary
 	@end
 
 	@if enums_summary:
-		<a href="#enums">Enumerations</a>
+	<a name=enums></a>
+	@enums_summary
 	@end
 
 	@if aliases_summary:
-		<a href="#aliases">Aliases</a>
+	<a name=aliases></a>
+	@aliases_summary
 	@end
 
-	<a name="@klass.type_name"></a>
-	<h1 class="class">@klass.type_name</h1>
-	<p>@short_description</p>
+	<h2>Instance description</h2>
+	@instance_doc
 
-	<div class="refentry">
-		@if functions_summary:
-			<a name=functions></a>
-			@functions_summary
-		@end
+	@if class_doc:
+	<h2>Class Description</h2>
+	@class_doc
+	@end
 
-		@if function_macros_summary:
-			<a name=function_macros></a>
-			@function_macros_summary
-		@end
+	@if vfunctions_summary:
+	<a name=vfunctions></a>
+	@vfunctions_summary
+	@end
 
-		@if properties_summary:
-			<a name=properties></a>
-			@properties_summary
-		@end
+	@if functions_details:
+	<h2>Function Details</h2>
+	@for detail in functions_details:
+	@detail
+	@end
+	<hr></hr>
+	@end
 
-		@if fields_summary:
-			<a name=fields></a>
-			@fields_summary
-		@end
+	@if function_macros_details:
+	<h2>Function Macro Details</h2>
+	@for detail in function_macros_details:
+	@detail
+	@end
+	<hr></hr>
+	@end
 
-		@if signals_summary:
-			<a name=signals></a>
-			@signals_summary
-		@end
+	@if properties_details:
+	<h2>Property Details</h2>
+	@for detail in properties_details:
+	@detail
+	@end
+	<hr></hr>
+	@end
 
-		@if constants_summary:
-			<a name=constants></a>
-			@constants_summary
-		@end
+	@if fields_details:
+	<h2>Field Details</h2>
+	@for detail in fields_details:
+	@detail
+	@end
+	<hr></hr>
+	@end
 
-		@if callbacks_summary:
-			<a name=callbacks></a>
-			@callbacks_summary
-		@end
+	@if signals_details:
+	<h2>Signal Details</h2>
+	@for detail in signals_details:
+	@detail
+	@end
+	<hr></hr>
+	@end
 
-		@if enums_summary:
-			<a name=enums></a>
-			@enums_summary
-		@end
+	@if vfunctions_details:
+	<h2>Virtual Function Details</h2>
+	@for detail in vfunctions_details:
+	@detail
+	@end
+	<hr></hr>
+	@end
 
-		@if aliases_summary:
-			<a name=aliases></a>
-			@aliases_summary
-		@end
+	@if callbacks_details:
+	<h2>Callback Function Details</h2>
+	@for detail in callbacks_details:
+	@detail
+	@end
+	<hr></hr>
+	@end
 
-		<h2>Instance description</h2>
-		@instance_doc
+	@if constants_details:
+	<h2>Constant Details</h2>
+	@for detail in constants_details:
+	@detail
+	@end
+	<hr></hr>
+	@end
 
-		@if class_doc:
-			<h2>Class Description</h2>
-			@class_doc
-		@end
+	@if enums_details:
+	<h2>Enumeration Details</h2>
+	@for detail in enums_details:
+	@detail
+	@end
+	<hr></hr>
+	@end
 
-		@if vfunctions_summary:
-			<a name=vfunctions></a>
-			@vfunctions_summary
-		@end
-
-		@if functions_details:
-			<h2>Function Details</h2>
-			@for detail in functions_details:
-				@detail
-			@end
-			<hr></hr>
-		@end
-
-		@if function_macros_details:
-			<h2>Function Macro Details</h2>
-			@for detail in function_macros_details:
-				@detail
-			@end
-			<hr></hr>
-		@end
-
-		@if properties_details:
-			<h2>Property Details</h2>
-			@for detail in properties_details:
-				@detail
-			@end
-			<hr></hr>
-		@end
-
-		@if fields_details:
-			<h2>Field Details</h2>
-			@for detail in fields_details:
-				@detail
-			@end
-			<hr></hr>
-		@end
-
-		@if signals_details:
-			<h2>Signal Details</h2>
-			@for detail in signals_details:
-				@detail
-			@end
-			<hr></hr>
-		@end
-
-		@if vfunctions_details:
-			<h2>Virtual Function Details</h2>
-			@for detail in vfunctions_details:
-				@detail
-			@end
-			<hr></hr>
-		@end
-
-		@if callbacks_details:
-			<h2>Callback Function Details</h2>
-			@for detail in callbacks_details:
-				@detail
-			@end
-			<hr></hr>
-		@end
-
-		@if constants_details:
-			<h2>Constant Details</h2>
-			@for detail in constants_details:
-				@detail
-			@end
-			<hr></hr>
-		@end
-
-		@if enums_details:
-			<h2>Enumeration Details</h2>
-			@for detail in enums_details:
-				@detail
-			@end
-			<hr></hr>
-		@end
-
-		@if aliases_details:
-			<h2>Alias Details</h2>
-			@for detail in aliases_details:
-				@detail
-			@end
-			<hr></hr>
-		@end
-	</div>
+	@if aliases_details:
+	<h2>Alias Details</h2>
+	@for detail in aliases_details:
+	@detail
+	@end
+	<hr></hr>
+	@end
+</div>
 @end
