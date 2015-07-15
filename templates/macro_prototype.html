@@ -1,7 +1,9 @@
-@require(macro)
+@require(macro, is_callable)
 
 <pre class="programlisting">
-#define @macro.type_name (\
+#define @macro.type_name \
+@if is_callable:
+(\
 @for i, parameter in enumerate (macro.parameters):
 @if i != 0:
 , \
@@ -9,4 +11,7 @@
 @parameter.type_name\
 @end
 )
+@else:
+@macro.value\
+@end
 </pre>
