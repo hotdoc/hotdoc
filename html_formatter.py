@@ -26,12 +26,8 @@ class HtmlFormatter (Formatter):
     def __init__(self, *args, **kwargs):
         Formatter.__init__(self, *args, **kwargs)
         self.__paragraph_opened = False
-        self.__formatting_class = False
-        self.__prototype_context = None
-        self.__prototypes_type = None
 
         # Used to decide whether to render a separator
-        self.__first_in_section = False
         searchpath = ['templates']
         self.engine = Engine(
             loader=FileLoader(searchpath, encoding='UTF-8'),
@@ -58,7 +54,7 @@ class HtmlFormatter (Formatter):
 
     def _format_callable_prototype (self, return_value, function_name,
             parameters, is_pointer):
-        template = self.engine.get_template('function_detail.html')
+        template = self.engine.get_template('callable_prototype.html')
         param_offset = ' ' * (len (function_name) + 2)
         if is_pointer:
             param_offset += 3 * ' '
@@ -68,32 +64,29 @@ class HtmlFormatter (Formatter):
                                  'is_pointer': is_pointer,
                                 })
 
-    def _format_field_prototype (self, type_link, field_name):
-        template = self.engine.get_template('field_prototype.html')
-        return template.render ({'type_link': type_link,
-                                 'field_name': field_name,
+    def _format_type_prototype (self, directive, type_name, name):
+        template = self.engine.get_template('type_prototype.html')
+        return template.render ({'directive': directive,
+                                 'type_name': type_name,
+                                 'name': name,
                                 })
 
-    def _format_constant_prototype (self, constant):
-        template = self.engine.get_template('constant_prototype.html')
-        return template.render ({'constant_name': constant.type_name,
-                                 'constant_value': constant.value,
-                                })
-
-    def _format_function_macro_prototype (self, macro):
-        template = self.engine.get_template('function_macro_prototype.html')
+    def _format_macro_prototype (self, macro, is_callable):
+        template = self.engine.get_template('macro_prototype.html')
         return template.render ({'macro': macro,
+                                 'is_callable': is_callable,
                                 })
 
-    def _format_parameter_doc (self, parameter_name, parameter_doc):
-        template = self.engine.get_template('parameter_doc.html')
+    def _format_parameter_detail (self, parameter_name, parameter_detail):
+        template = self.engine.get_template('parameter_detail.html')
         return template.render ({'param_name': parameter_name,
-                                 'param_doc': parameter_doc,
+                                 'param_detail': parameter_detail,
                                 })
 
-    def _format_callable_detail (self, name, linkname, prototype, doc, param_docs):
-        template = self.engine.get_template('callable_detail.html')
+    def _format_symbol_detail (self, name, symbol_type, linkname, prototype, doc, param_docs):
+        template = self.engine.get_template('symbol_detail.html')
         return template.render ({'name': name,
+                                 'symbol_type': symbol_type,
                                  'linkname': linkname,
                                  'prototype': prototype,
                                  'doc': doc,
@@ -104,15 +97,9 @@ class HtmlFormatter (Formatter):
         template = self.engine.get_template('enum_detail.html')
         return template.render ({'enum': enum})
 
-    def _format_alias_prototype (self, type_, alias_name):
-        template = self.engine.get_template('alias_prototype.html')
-        return template.render ({'type_name': type_,
-                                 'alias_name': alias_name,
-                                })
-
     def _format_callable_summary (self, return_value, function_name,
             is_callable, is_pointer):
-        template = self.engine.get_template('function_summary.html')
+        template = self.engine.get_template('callable_summary.html')
 
         return template.render({'return_value': return_value,
                                 'function_name': function_name,
@@ -127,13 +114,14 @@ class HtmlFormatter (Formatter):
                                 'type_name': type_name,
                                })
 
-    def _format_function_macro_summary (self, function_macro):
-        template = self.engine.get_template('function_macro_summary.html')
+    def _format_macro_summary (self, macro_link, is_callable):
+        template = self.engine.get_template('macro_summary.html')
 
-        return template.render({'macro': function_macro,
+        return template.render({'macro': macro_link,
+                                'is_callable': is_callable,
                                })
 
-    def __format_callable (self, callable_, title_string, is_callable=True,
+    def __format_callable (self, callable_, name, symbol_type, is_callable=True,
             is_pointer=False):
         return_value = self._format_linked_symbol (callable_.return_value)
         callable_link = self._format_linked_symbol (callable_)
@@ -143,11 +131,11 @@ class HtmlFormatter (Formatter):
 
         for param in callable_.parameters:
             parameters.append (self._format_linked_symbol(param))
-            param_docs.append (self._format_parameter_doc (param.argname,
+            param_docs.append (self._format_parameter_detail (param.argname,
                 param.formatted_doc))
         prototype = self._format_callable_prototype (return_value,
                 callable_.type_name, parameters, is_pointer)
-        detail = self._format_callable_detail (title_string,
+        detail = self._format_symbol_detail (name, symbol_type,
                 callable_.link.get_link().split('#')[-1], prototype,
                 callable_.formatted_doc, param_docs)
         summary = self._format_callable_summary (return_value, callable_link,
@@ -156,47 +144,43 @@ class HtmlFormatter (Formatter):
         return detail, summary
 
     def _format_function (self, func):
-        return self.__format_callable (func, "The '%s' method" % func.type_name)
+        return self.__format_callable (func, func.type_name, "method")
 
     def _format_signal (self, signal):
-        return self.__format_callable (signal, "The '%s' signal" %
-                signal.type_name, is_callable=False)
+        return self.__format_callable (signal,
+                signal.type_name, "signal", is_callable=False)
 
     def _format_vfunction (self, func):
-        return self.__format_callable (func, "The '%s' virtual function" %
-                func.type_name)
+        return self.__format_callable (func, func.type_name, "virtual function")
 
     def _format_callback (self, func):
-        return self.__format_callable (func, "The '%s' callback" %
-                func.type_name, is_pointer=True)
+        return self.__format_callable (func, func.type_name, "callback", is_pointer=True)
 
-    def _format_member (self, prop, member_type):
-        type_link = self._format_linked_symbol (prop.type_)
-        prop_link = self._format_linked_symbol (prop)
-        summary = self._format_type_summary (type_link, prop_link)
-        prototype = unicode (self._format_field_prototype (type_link,
-            prop.type_name))
-        detail = self._format_callable_detail (u"The “%s” %s" %
-                (prop.type_name, member_type),
-                prop.link.get_link().split('#')[-1], prototype,
-                prop.formatted_doc, None)
+    def _format_type (self, directive, type_, member_type):
+        type_type = self._format_linked_symbol (type_.type_)
+        type_name = self._format_linked_symbol (type_)
+        name = type_.type_name
+
+        if directive:
+            summary = self._format_type_summary (directive, type_name)
+        else:
+            summary = self._format_type_summary (type_type, type_name)
+
+        prototype = self._format_type_prototype (directive, type_type,
+                type_.type_name)
+        detail = self._format_symbol_detail (name, member_type,
+                type_.link.get_link().split('#')[-1], prototype,
+                type_.formatted_doc, None)
         return detail, summary
 
     def _format_property (self, prop):
-        return self._format_member (prop, "property")
+        return self._format_type (None, prop, "property")
 
     def _format_alias (self, alias):
-        type_link = self._format_linked_symbol (alias.type_)
-        alias_link = self._format_linked_symbol (alias)
-        summary = self._format_type_summary ("typedef", alias_link)
-        prototype = self._format_alias_prototype (type_link, alias.type_name)
-        detail = self._format_callable_detail (u"The “%s” alias" %
-                alias.type_name, alias.link.get_link().split('#')[-1],
-                prototype, alias.formatted_doc, None)
-        return detail, summary
+        return self._format_type ("typedef", alias, "alias")
 
     def _format_field (self, field):
-        return self._format_member (field, "field")
+        return self._format_type (None, field, "field")
 
     def _format_summary (self, summaries, summary_type):
         if not summaries:
@@ -206,35 +190,34 @@ class HtmlFormatter (Formatter):
                                 'summaries': summaries
                             })
 
-    def _format_constant (self, constant):
-        constant_link = self._format_linked_symbol (constant)
-        summary = self._format_type_summary ("#define", constant_link)
-        prototype = self._format_constant_prototype (constant)
-        detail = self._format_callable_detail (u'The “%s” constant' %
-                constant.type_name, constant.link.get_link().split ('#')[-1],
-                prototype, constant.formatted_doc, None)
+    def _format_macro (self, macro, is_callable=False):
+        macro_link = self._format_linked_symbol (macro)
+        summary = self._format_macro_summary (macro_link, is_callable)
+        param_docs = []
+
+        if is_callable:
+            for param in macro.parameters:
+                param_docs.append (self._format_parameter_detail (param.type_name,
+                    param.formatted_doc))
+
+        prototype = self._format_macro_prototype (macro, is_callable)
+        detail = self._format_symbol_detail (macro.type_name, "macro",
+                macro.link.get_link().split ('#')[-1],
+                prototype, macro.formatted_doc, param_docs) 
         return detail, summary
+
+    def _format_constant (self, constant): 
+        return self._format_macro (constant)
 
     def _format_enum (self, enum):
         enum_link = self._format_linked_symbol (enum)
         summary = self._format_type_summary ("enum", enum_link)
+        enum.parameters = enum.members
         detail = self._format_enum_detail (enum)
         return detail, summary
 
     def _format_function_macro (self, macro):
-        macro_link = self._format_linked_symbol (macro)
-        summary = self._format_function_macro_summary (macro_link)
-        param_docs = []
-
-        for param in macro.parameters:
-            param_docs.append (self._format_parameter_doc (param.type_name,
-                param.formatted_doc))
-
-        prototype = self._format_function_macro_prototype (macro)
-        detail = self._format_callable_detail (u'The “%s” macro' %
-                macro.type_name, macro.link.get_link().split ('#')[-1],
-                prototype, macro.formatted_doc, param_docs) 
-        return detail, summary
+        return self._format_macro (macro, is_callable=True)
 
     def _fill_class_template_dict (self, klass, dict_, singular, plural, summary_name):
         details = []
