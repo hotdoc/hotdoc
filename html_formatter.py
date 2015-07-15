@@ -104,10 +104,6 @@ class HtmlFormatter (Formatter):
         template = self.engine.get_template('enum_detail.html')
         return template.render ({'enum': enum})
 
-    def _format_alias_summary (self, alias):
-        template = self.engine.get_template ("alias_summary.html")
-        return template.render ({'alias': alias})
-
     def _format_alias_prototype (self, type_, alias_name):
         template = self.engine.get_template('alias_prototype.html')
         return template.render ({'type_name': type_,
@@ -124,16 +120,11 @@ class HtmlFormatter (Formatter):
                                 'is_pointer': is_pointer,
                                })
 
-    def _format_constant_summary (self, constant):
-        template = self.engine.get_template('constant_summary.html')
+    def _format_type_summary (self, type_type, type_name): 
+        template = self.engine.get_template('type_summary.html')
 
-        return template.render({'constant': constant,
-                               })
-
-    def _format_enum_summary (self, enum):
-        template = self.engine.get_template ('enum_summary.html')
-
-        return template.render({'enum': enum,
+        return template.render({'type_type': type_type,
+                                'type_name': type_name,
                                })
 
     def _format_function_macro_summary (self, function_macro):
@@ -182,8 +173,7 @@ class HtmlFormatter (Formatter):
     def _format_member (self, prop, member_type):
         type_link = self._format_linked_symbol (prop.type_)
         prop_link = self._format_linked_symbol (prop)
-        summary = self._format_callable_summary (type_link, prop_link, False,
-                False)
+        summary = self._format_type_summary (type_link, prop_link)
         prototype = unicode (self._format_field_prototype (type_link,
             prop.type_name))
         detail = self._format_callable_detail (u"The “%s” %s" %
@@ -198,7 +188,7 @@ class HtmlFormatter (Formatter):
     def _format_alias (self, alias):
         type_link = self._format_linked_symbol (alias.type_)
         alias_link = self._format_linked_symbol (alias)
-        summary = self._format_alias_summary (alias_link)
+        summary = self._format_type_summary ("typedef", alias_link)
         prototype = self._format_alias_prototype (type_link, alias.type_name)
         detail = self._format_callable_detail (u"The “%s” alias" %
                 alias.type_name, alias.link.get_link().split('#')[-1],
@@ -218,7 +208,7 @@ class HtmlFormatter (Formatter):
 
     def _format_constant (self, constant):
         constant_link = self._format_linked_symbol (constant)
-        summary = self._format_constant_summary (constant_link)
+        summary = self._format_type_summary ("#define", constant_link)
         prototype = self._format_constant_prototype (constant)
         detail = self._format_callable_detail (u'The “%s” constant' %
                 constant.type_name, constant.link.get_link().split ('#')[-1],
@@ -227,7 +217,7 @@ class HtmlFormatter (Formatter):
 
     def _format_enum (self, enum):
         enum_link = self._format_linked_symbol (enum)
-        summary = self._format_enum_summary (enum_link)
+        summary = self._format_type_summary ("enum", enum_link)
         detail = self._format_enum_detail (enum)
         return detail, summary
 
