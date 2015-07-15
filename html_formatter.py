@@ -45,12 +45,19 @@ class HtmlFormatter (Formatter):
 
     def _format_linked_symbol (self, symbol):
         template = self.engine.get_template('linked_symbol.html')
-        return template.render ({'qualifiers': symbol.qualifiers,
-                                'type': symbol.type_name,
-                                'indirection': symbol.indirection,
-                                'type_link': symbol.link,
-                                'name': symbol.argname,
-                                })
+        if hasattr (symbol, 'qualifiers'):
+            return template.render ({'qualifiers': symbol.qualifiers,
+                                    'type': symbol.type_name,
+                                    'indirection': symbol.indirection,
+                                    'type_link': symbol.link,
+                                    'name': symbol.argname,
+                                    })
+        return template.render ({'qualifiers': '',
+                                 'type': symbol.type_name,
+                                 'indirection': '',
+                                 'type_link': symbol.link,
+                                 'name': '',
+                                 })
 
     def _format_callable_prototype (self, return_value, function_name,
             parameters, is_pointer):
@@ -236,7 +243,7 @@ class HtmlFormatter (Formatter):
         dict_ = {'klass': klass,
                 'short_description': klass.get_short_description (),
                 'instance_doc': klass.formatted_doc,
-                'class_doc': klass.class_doc,
+                'class_doc': klass.get_class_doc (),
                 }
 
         for tup in [('function', 'functions', 'Functions'),
