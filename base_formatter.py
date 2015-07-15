@@ -227,32 +227,6 @@ def get_sorted_symbols_from_sections (sections, symbols):
         get_sorted_symbols_from_sections (element, symbols)
 
 
-class AggregatedClass(object):
-    def __init__(self):
-        self.__formatter = NameFormatter(language='C')
-        self.signals = []
-        self.methods = []
-        self.properties = []
-        self.virtual_functions = []
-        self.fields = []
-        self.__class_node = None
-
-    def add_aggregated_page (self, page):
-        name = self.__formatter.get_full_node_name (page.node)
-        if type (page.node) == ast.Signal:
-            self.signals.append(page)
-        elif type (page.node) == ast.Function:
-            self.methods.append (page)
-        elif type (page.node) == ast.VFunction:
-            self.virtual_functions.append(page)
-        elif type (page.node) == ast.Property:
-            self.properties.append(page)
-        elif type (page.node) == ast.Field:
-            self.fields.append(page)
-        else:
-            #FIXME
-            pass
-
 class SymbolResolver(object):
     def __init__(self, transformer):
         self.__transformer = transformer
@@ -347,47 +321,6 @@ class LocalLink (Link):
             return "%s#%s" % (self.__pagename, self.__symbol)
         else:
             return self.__pagename
-
-
-class LinkedSymbol (object):
-    def __init__(self, type_, argname, link):
-        self.indirection_level = type_.count ('*')
-        self.type_ = type_.rstrip('*')
-        self.link = link
-        self.argname = argname
-
-    def format_type (self):
-        return self.type_
-
-
-class LinkedReturnValue (object):
-    def __init__(self, type_, link):
-        self.indirection_level = type_.count ('*')
-        self.type_ = type_.rstrip().rstrip('*')
-        self.link = link
-
-    def format_type (self):
-        return self.type_
-
-class LinkedParameter (object):
-    def __init__(self, type_, argname, link):
-        self.indirection_level = type_.count ('*')
-        self.type_ = type_.rstrip('*')
-        self.link = link
-        self.argname = argname
-
-class Prototype (object):
-    def __init__(self, name, params, retval, link):
-        self.name = name
-        self.params = params
-        self.retval = retval
-        self.link = link
-
-class Field (object):
-    def __init__(self, name, type_, link):
-        self.name = name
-        self.type_ = type_
-        self.link = link
 
 class LinkResolver(object):
     def __init__(self, transformer):
@@ -744,16 +677,6 @@ def add_missing_symbols (transformer):
     print "added %d functions" % added_functions
     sections_parser.write ('fixed.xml')
 
-class Page (object):
-    def __init__(self, ident, link, node, filename):
-        self.ident = ident
-        self.link = link
-        self.node = node
-        self.filename = filename
-
-    def get_short_description (self):
-        return self.node.short_description
-
 class Formatter(object):
     def __init__ (self, transformer, include_directories, sections, output,
             do_class_aggregation=False):
@@ -821,73 +744,8 @@ class Formatter(object):
                 out = self._format_class (klass, True)
                 f.write (out.encode('utf-8'))
 
-        return
-        for section in self.__sections_parser.get_all_sections ():
-            name = section.find ('SYMBOL').text
-            node = self.__symbol_resolver.resolve_type (name)
-            self.__current_section_node = node
-            self.__handle_node (output, node)
-            for symbol in section.find('SYMBOLS').findall ('SYMBOL'):
-                node = self.__symbol_resolver.resolve_symbol (symbol.text)
-                if not node:
-                    node = self.__symbol_resolver.resolve_type (symbol.text)
-                self.__handle_node (output, node)
-
-        if self.__do_class_aggregation:
-            self.__aggregate_classes (output)
-
-    def __format_section (self, name, output, pages):
-        if not pages:
-            return ""
-
-        out = ""
-        out += self._start_section (name)
-
-        for page in pages:
-            out += self._start_section_block ()
-            filename = page.filename
-            with open (filename, 'r') as f:
-                out += f.read()
-            out += self._end_section_block ()
-            #os.unlink (os.path.abspath (filename))
-
-        out += self._end_section ()
-
-        return out
-
-    def __aggregate_classes (self, output):
-        for section in self.__sections_parser.get_all_sections ():
-            name = section.find ('SYMBOL').text
-            node = self.__symbol_resolver.resolve_type (name)
-            if not node or type (node) not in [ast.Class, ast.Record,
-                    ast.Interface, ast.Interface]:
-                continue
-
-            klass = AggregatedClass ()
-
-            symbols = section.find ('SYMBOLS')
-            for symbol in symbols.findall('SYMBOL'):
-                try:
-                    symbol_page = self.__created_pages[symbol.text]
-                except KeyError:
-                    continue
-                klass.add_aggregated_page (symbol_page)
-
-            filename = self.__make_file_name (node)
-            with open (filename, 'a') as f:
-                out = ""
-                out += self.__format_section ('Properties', output,
-                        klass.properties)
-                out += self.__format_section ('Methods', output, klass.methods)
-                out += self.__format_section ('Signals', output, klass.signals)
-                out += self.__format_section ('Virtual Functions', output,
-                        klass.virtual_functions)
-                out += self.__format_section ('Fields', output,
-                        klass.fields)
-                out += self._end_page (False)
-                f.write (unicode(out, 'utf-8').encode('utf-8'))
-
     def format_index (self, output):
+        return ""
         out = ""
 
         sections = self.__sections_parser.get_sections ()
@@ -1075,77 +933,12 @@ class Formatter(object):
     def __format_heading (self, node, match, props):
         return self._format_heading ()
 
-    def __get_class_symbols (self, root, node):
-        formatter = NameFormatter (language='C')
-        node_name = formatter.get_full_node_name (node)
-        return_next = False
-        for element in root:
-            if return_next:
-                return element
-
-            if element.text == node_name:
-                return_next = True
-                continue
-
-            res = self.__get_class_symbols (element, node)
-            if res is not None:
-                return res
-        return None
-
     def __make_file_name (self, node):
         extension = self._get_extension ()
         name = self.__name_formatter.make_page_name (node)
         if not name:
             return ""
         return os.path.join (self.__output, "%s.%s" % (name, extension))
-
-    def __handle_symbol(self, symbol):
-        try:
-            handler = self.__handlers[type (symbol.ast_node)]
-        except KeyError:
-            return
-
-        return
-        filename = self.__make_file_name (node)
-
-        try:
-            handler = self.__handlers[type (node)]
-        except KeyError:
-            return True
-
-        section_symbol = self.__sections_parser.find_symbol (node)
-        if section_symbol is None:
-            print "Warning : ", self.__name_formatter.get_full_node_name (node)
-            return True
-
-        if node.name == "ElementClass":
-            print "handling element class"
-
-        with open (filename, 'w') as f:
-            out = ""
-
-            to_be_aggregated = False
-            if self.__do_class_aggregation:
-                to_be_aggregated = \
-                self.__sections_parser.symbol_is_in_class_section (section_symbol)
-
-            out += self._start_page (to_be_aggregated)
-            out += handler (node)
-
-            # We will call _end_page at aggregation time otherwise
-            if not self.__do_class_aggregation or type (node) not in [ast.Class,
-                    ast.Record, ast.Interface]:
-                out += self._end_page (to_be_aggregated)
-
-            ident = self.__name_formatter.get_full_node_name (node)
-            page = Page (ident, LocalLink (None, os.path.basename (filename)),
-                    node, filename)
-
-            self.__created_pages[section_symbol.text] = page
-
-            f.write (unicode(out).encode('utf-8'))
-
-        return True
 
     def __format_doc_string (self, node, docstring):
         if not docstring:
@@ -1167,52 +960,8 @@ class Formatter(object):
 
     def __format_doc (self, node):
         out = ""
-        out += self._start_doc ()
         out += self.__format_doc_string (node, node.doc)
-        out += self._end_doc ()
         return out
-
-    def __format_short_description (self, node):
-        if not node.short_description:
-            return ""
-
-        out = ""
-        out += self._start_short_description ()
-        out += self.__format_doc_string (node, node.short_description)
-        out += self._end_short_description ()
-        return out
-
-    def __handle_parameter (self, node):
-        out = ""
-        out += self._start_parameter (node.argname)
-
-        logging.debug ("handling parameter %s" % node.argname)
-        out += self.__format_doc (node)
-
-        out += self._end_parameter ()
-
-        return out
-
-    def __make_linked_symbol(self, type_, argname):
-        if type_.target_fundamental:
-            link = self.__get_link (type_)
-            return LinkedSymbol (type_.ctype, argname, link)
-        if type_.ctype is not None:
-            ret_type_node = self.__symbol_resolver.resolve_type (type_.ctype.strip
-                    ('*'))
-            link = None
-            if ret_type_node:
-                link = self.__get_link (ret_type_node)
-            return LinkedSymbol (type_.ctype, argname, link)
-
-        ret_type_node = self.__transformer.lookup_giname (type_.target_giname)
-        link = None
-        if ret_type_node:
-            link = self.__get_link (ret_type_node)
-        type_ = self.__transformer.lookup_typenode (type_)
-        if type_:
-            return LinkedSymbol (type_.ctype + "*", argname, link)
-        return None
 
     def __split_ctype (self, ctype):
         qualifiers = ""
@@ -1272,49 +1021,6 @@ class Formatter(object):
 
         return Symbol (type_name, qualifiers, indirection, argname, link, node, doc)
 
-    def __make_return_value(self, node):
-        type_ = node.retval.type
-        return self.__make_linked_symbol (type_, "")
-
-    def __make_parameter(self, node):
-        type_ = node.type
-        return self.__make_linked_symbol (type_, node.argname)
-
-    def __make_prototype (self, node):
-        retval = self.__make_return_value (node)
-        parameters = []
-        for param in node.all_parameters:
-            parameters.append (self.__make_parameter(param))
-        link = self.__get_link(node, is_aggregated=True)
-
-        if type (node) in [ast.Signal, ast.VFunction]:
-            name = node.name
-        else:
-            name = self.__name_formatter.get_full_node_name (node)
-
-        prototype = Prototype (name, parameters, retval, link)
-        return prototype
-
-    def __make_method_prototypes (self, node, class_section):
-        prototypes = []
-        symbols = class_section.find('SYMBOLS')
-        for symbol in symbols:
-            node = self.__symbol_resolver.resolve_symbol (symbol.text)
-            if node is None or type (node) != ast.Function:
-                continue
-            prototypes.append (self.__make_prototype (node))
-        return prototypes
-
-    def __make_vfunc_prototypes (self, node, class_section):
-        prototypes = []
-        symbols = class_section.find('SYMBOLS')
-        for symbol in symbols:
-            node = self.__symbol_resolver.resolve_symbol (symbol.text)
-            if node is None or type (node) != ast.VFunction:
-                continue
-            prototypes.append (self.__make_prototype (node))
-        return prototypes
-
     #FIXME ...
     def __add_missing_signal_parameters (self, node):
         if node.instance_parameter:
@@ -1327,127 +1033,6 @@ class Formatter(object):
                 (target_fundamental = "gpointer", ctype="gpointer"))
         user_data_param.doc = "user data set when the signal handler was connected."
         node.parameters.append (user_data_param)
-
-    def __make_signal_prototypes (self, node, class_section):
-        prototypes = []
-        symbols = class_section.find('SYMBOLS')
-        for symbol in symbols:
-            node = self.__symbol_resolver.resolve_symbol (symbol.text)
-            if node is None or type (node) != ast.Signal:
-                continue
-
-            self.__add_missing_signal_parameters (node)
-
-            prototypes.append (self.__make_prototype (node))
-        return prototypes
-
-    def __make_field (self, field):
-        type_ = field.type
-        link = self.__get_link (field, is_aggregated=True)
-        return Field (field.name, self.__make_linked_symbol (type_, ""),
-                link)
-
-    def __make_constant (self, constant):
-        link = self.__get_link (constant, is_aggregated=True)
-
-    def __make_fields (self, node, class_section):
-        fields = []
-        symbols = class_section.find('SYMBOLS')
-        for symbol in symbols:
-            node = self.__symbol_resolver.resolve_symbol (symbol.text)
-            if node is None or type (node) != ast.Field:
-                continue
-
-            if node.type is None or node.private:
-                continue
-
-            fields.append (self.__make_field (node))
-
-        return fields
-
-    def __make_types (self, node, class_section):
-        types = []
-        symbols = class_section.find('SYMBOLS')
-        for symbol in symbols:
-            node = self.__symbol_resolver.resolve_symbol (symbol.text)
-            if node is None or type (node) != ast.Constant:
-                continue
-
-            types.append (self.__make_constant (node))
-
-        return types
-
-
-    def __format_prototypes (self, prototypes, type_, is_callable):
-        out = ""
-        if prototypes:
-            out += self._start_prototypes(type_)
-            for prototype in prototypes:
-                out += self._format_prototype (prototype, is_callable)
-            out += self._end_prototypes()
-        return out
-
-    def __handle_prototypes (self, node):
-        out = ""
-        class_section = self.__sections_parser.get_class_section(node)
-
-        if class_section is not None:
-            prototypes = self.__make_method_prototypes (node, class_section)
-            out += self.__format_prototypes (prototypes, 'Functions', True)
-
-            prototypes = self.__make_signal_prototypes (node, class_section)
-            out += self.__format_prototypes (prototypes, 'Signals', False)
-
-            prototypes = self.__make_vfunc_prototypes (node, class_section)
-            out += self.__format_prototypes (prototypes, 'VFunctions', False)
-
-            fields = self.__make_fields (node, class_section)
-            out += self.__format_fields (fields)
-
-            types = self.__make_types (node, class_section)
-        return out
-
-    def __handle_class (self, node):
-        out = ""
-
-        out += self._start_class (self.__name_formatter.get_full_node_name
-                (node))
-
-        out += self.__format_short_description (node)
-
-        out += self.__handle_prototypes (node)
-
-        logging.debug ("handling class %s" % self.__name_formatter.get_full_node_name (node))
-        out += self.__format_doc (node)
-
-        out += self._end_class ()
-
-        return out
-
-    def __handle_parameters (self, node):
-        out = ""
-        if node.all_parameters:
-            out += self._start_parameters ()
-
-            for param in node.all_parameters:
-                out += self.__handle_parameter (param)
-
-            out += self._end_parameters ()
-
-        return out
-
-    def __handle_return_value (self, node):
-        if node.retval.type.ctype == 'void':
-            return ""
-
-        out = ""
-        out += self._start_return_value ()
-
-        out += self.__format_doc (node.retval)
-
-        out += self._end_return_value ()
-
-        return out
 
     def __handle_callable (self, symbol_node, actual_name, ast_node):
         doc = self.__format_doc (ast_node)
@@ -1535,33 +1120,6 @@ class Formatter(object):
         field.set_type (type_)
         klass.add_field (field)
 
-    def __handle_virtual_function (self, node):
-        out = ""
-        out += self._start_virtual_function (node.name, self.__name_formatter.get_full_node_name (node))
-
-        out += self._format_prototype (self.__make_prototype (node), True)
-
-        out += self.__format_doc (node)
-
-        #FIXME: ideally parameters for vfunc should be documented !
-        #out += self.__handle_parameters (node)
-
-        out += self._end_virtual_function ()
-
-        return out
-
-    def __handle_doc_section (self, node):
-        out = ""
-
-        out += self._start_doc_section (node.name)
-
-        logging.debug ("handling doc section %s" % node.name)
-        out += self.__format_doc (node)
-
-        out += self._end_doc_section ()
-
-        return out
-
     def __warn_not_implemented (self, func):
         if func in self.__not_implemented_methods:
             return
@@ -1576,212 +1134,6 @@ class Formatter(object):
         ('markdown', 'html')
         """
         self.__warn_not_implemented (self._get_extension)
-        return ""
-
-    def _start_index (self, namespace_name):
-        self.__warn_not_implemented (self._start_index)
-        return ""
-
-    def _end_index (self):
-        self.__warn_not_implemented (self._end_index)
-        return ""
-
-    def _start_doc (self):
-        """
-        Notifies the subclass that the symbol's documentation
-        is going to be parsed
-        """
-        self.__warn_not_implemented (self._start_doc)
-        return ""
-
-    def _end_doc (self):
-        """
-        Notifies the subclass that the symbol's documentation
-        has been parsed, it is safe to assume no _format_
-        virtual methods will be called until the next call
-        to _start_doc or _start_short_description
-        """
-        self.__warn_not_implemented (self._end_doc)
-        return ""
-
-    def _start_short_description (self):
-        """
-        Notifies the subclass that the symbol's short description
-        is going to be parsed
-        """
-        self.__warn_not_implemented (self._start_short_description)
-        return ""
-
-    def _end_short_description (self):
-        """
-        Notifies the subclass that the symbol's short description
-        has been parsed, it is safe to assume no _format_
-        virtual methods will be called until the next call
-        to _start_doc or _start_short_description
-        """
-        self.__warn_not_implemented (self._end_short_description)
-        return ""
-
-    def _start_page (self, to_be_aggregated):
-        """
-        Notifies the subclass that an empty page has been
-        started.
-        @to_be_aggregated: whether that page will be appended to
-        a potential parent class.
-        Useful to avoid including css multiple times in the
-        same page for example
-        """
-        self.__warn_not_implemented (self._start_page)
-        return ""
-
-    def _end_page (self, to_be_aggregated):
-        """
-        Notifies the subclass that the current page is
-        finished
-        @to_be_aggregated: whether that page will be appended to
-        a potential parent class.
-        Useful to avoid including css multiple times in the
-        same page for example
-        """
-        self.__warn_not_implemented (self._end_page)
-        return ""
-
-    def _start_doc_section (self, section_name):
-        """
-        Notifies the subclass that a standalone doc section
-        is being parsed
-        """
-        self.__warn_not_implemented (self._start_doc_section)
-        return ""
-
-    def _end_doc_section (self):
-        """
-        Notifies the subclass that a standalone doc section
-        is done being parsed
-        """
-        self.__warn_not_implemented (self._end_doc_section)
-        return ""
-
-    def _start_class (self, class_name, prototypes):
-        """
-        Notifies the subclass that a class is being
-        parsed
-        @prototypes: Prototypes of the methods of the class as a list of strings
-        """
-        self.__warn_not_implemented (self._start_class)
-        return ""
-
-    def _end_class (self):
-        """
-        Notifies the subclass that a class is done being parsed
-        """
-        self.__warn_not_implemented (self._end_class)
-        return ""
-
-    def _start_prototypes (self, type_):
-        """
-        Notifies the subclass that prototypes will now be rendered
-        @type: the type of the prototypes (Signals, Methods ...)
-        """
-        self.__warn_not_implemented (self._start_prototypes)
-        return ""
-
-    def _end_prototypes (self):
-        """
-        Notifies the subclass that prototypes are done rendering
-        """
-        self.__warn_not_implemented (self._end_prototypes)
-        return ""
-
-    def _start_function (self, function_name):
-        """
-        Notifies the subclass that a function is being parsed
-        """
-        self.__warn_not_implemented (self._start_function)
-        return ""
-
-    def _end_function (self):
-        """
-        Notifies the subclass that a function is done being parsed
-        """
-        self.__warn_not_implemented (self._end_function)
-        return ""
-
-    def _start_virtual_function (self, function_name, link_name):
-        """
-        Notifies the subclass that a virtual function is being parsed
-        """
-        self.__warn_not_implemented (self._start_virtual_function)
-        return ""
-
-    def _end_virtual_function (self):
-        """
-        Notifies the subclass that a virtual function is done being parsed
-        """
-        self.__warn_not_implemented (self._end_virtual_function)
-        return ""
-
-    def _start_signal (self, signal_name, link_name):
-        """
-        Notifies the subclass that a signal is being parsed
-        """
-        self.__warn_not_implemented (self._start_signal)
-        return ""
-
-    def _end_signal (self):
-        """
-        Notifies the subclass that a signal is done being parsed
-        """
-        self.__warn_not_implemented (self._end_signal)
-        return ""
-
-    def _start_parameters (self):
-        """
-        Notifies the subclass that parameters are being parsed
-        """
-        self.__warn_not_implemented (self._start_parameters)
-        return ""
-
-    def _end_parameters (self):
-        """
-        Notifies the subclass that parameters are done being parsed
-        """
-        self.__warn_not_implemented (self._end_parameters)
-        return ""
-
-    def _start_parameter (self, param_name):
-        """
-        Notifies the subclass that a parameter is being parsed
-        """
-        self.__warn_not_implemented (self._start_parameter)
-        return ""
-
-    def _end_parameter (self):
-        """
-        Notifies the subclass that a parameter is done being parsed
-        """
-        self.__warn_not_implemented (self._end_parameter)
-        return ""
-
-    def _start_return_value (self):
-        """
-        Notifies the subclass that a return value is being parsed
-        """
-        self.__warn_not_implemented (self._start_return_value)
-        return ""
-
-    def _end_return_value (self):
-        """
-        Notifies the subclass that a return value is done being parsed
-        """
-        self.__warn_not_implemented (self._end_return_value)
-        return ""
-
-    def _format_prototype (self, prototype, is_callable):
-        """
-        @prototype: A class containing linked parameters and return values
-        """
-        self.__warn_not_implemented (self._format_prototype)
         return ""
 
     def _format_other (self, other):
@@ -1862,36 +1214,6 @@ class Formatter(object):
         Called when a code block is finished
         """
         self.__warn_not_implemented (self._format_code_end)
-        return ""
-
-    def _start_section (self, section_name):
-        """
-        Called when aggregating signals, properties, virtual functions
-        and functions to their parent class
-        @section_name: the name of the section (Signals, Methods ...)
-        """
-        self.__warn_not_implemented (self._start_section)
-        return ""
-
-    def _end_section (self):
-        """
-        Called when a section is finished
-        """
-        self.__warn_not_implemented (self._end_section)
-        return ""
-
-    def _start_section_block (self, section__block_name):
-        """
-        Called when aggregating one symbol in a section
-        """
-        self.__warn_not_implemented (self._start_section_block)
-        return ""
-
-    def _end_section_block (self):
-        """
-        Called when aggregation of a symbol in a section is finished
-        """
-        self.__warn_not_implemented (self._end_section_block)
         return ""
 
     def _format_index (self, pages):
