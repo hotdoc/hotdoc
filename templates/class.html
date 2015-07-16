@@ -149,82 +149,112 @@
 
 	@if functions_details:
 	<h2>Function Details</h2>
-	@for detail in functions_details:
+	@for i, detail in enumerate (functions_details):
+
+	@if i != 0:
+	<hr></hr>
+	@end
 	@detail
 	@end
-	<hr></hr>
 	@end
 
 	@if function_macros_details:
 	<h2>Function Macro Details</h2>
-	@for detail in function_macros_details:
+	@for i, detail in enumerate (function_macros_details):
+
+	@if i != 0:
+	<hr></hr>
+	@end
 	@detail
 	@end
-	<hr></hr>
 	@end
 
 	@if properties_details:
 	<h2>Property Details</h2>
-	@for detail in properties_details:
+	@for i, detail in enumerate (properties_details):
+
+	@if i != 0:
+	<hr></hr>
+	@end
 	@detail
 	@end
-	<hr></hr>
 	@end
 
 	@if fields_details:
 	<h2>Field Details</h2>
-	@for detail in fields_details:
+	@for i, detail in enumerate (fields_details):
+
+	@if i != 0:
+	<hr></hr>
+	@end
 	@detail
 	@end
-	<hr></hr>
 	@end
 
 	@if signals_details:
 	<h2>Signal Details</h2>
-	@for detail in signals_details:
+	@for i, detail in enumerate (signals_details):
+
+	@if i != 0:
+	<hr></hr>
+	@end
 	@detail
 	@end
-	<hr></hr>
 	@end
 
 	@if vfunctions_details:
 	<h2>Virtual Function Details</h2>
-	@for detail in vfunctions_details:
+	@for i, detail in enumerate (vfunctions_details):
+
+	@if i != 0:
+	<hr></hr>
+	@end
 	@detail
 	@end
-	<hr></hr>
 	@end
 
 	@if callbacks_details:
 	<h2>Callback Function Details</h2>
-	@for detail in callbacks_details:
+	@for i, detail in enumerate (callbacks_details):
+
+	@if i != 0:
+	<hr></hr>
+	@end
 	@detail
 	@end
-	<hr></hr>
 	@end
 
 	@if constants_details:
 	<h2>Constant Details</h2>
-	@for detail in constants_details:
+	@for i, detail in enumerate (constants_details):
+
+	@if i != 0:
+	<hr></hr>
+	@end
 	@detail
 	@end
-	<hr></hr>
 	@end
 
 	@if enums_details:
 	<h2>Enumeration Details</h2>
-	@for detail in enums_details:
+	@for i, detail in enumerate (enums_details):
+
+	@if i != 0:
+	<hr></hr>
+	@end
 	@detail
 	@end
-	<hr></hr>
 	@end
 
 	@if aliases_details:
 	<h2>Alias Details</h2>
-	@for detail in aliases_details:
+	@for i, detail in enumerate (aliases_details):
+
+	@if i != 0:
+	<hr></hr>
+	@end
 	@detail
 	@end
-	<hr></hr>
 	@end
 </div>
 @end
