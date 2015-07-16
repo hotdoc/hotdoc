@@ -1,7 +1,16 @@
-@require(param_name, param_detail)
+@require(name, detail, annotations)
 <tr>
 	<td class="parameter_name">
-		<p>@param_name</p>
+		<p>@name</p>
 	</td>
-	<td class="parameter_description"><p>@param_detail</p></td>
+	<td class="parameter_description"><p>@detail</p></td>
+	<td class="parameter_annotations">
+@for annotation in annotations:
+<span class="annotation">[\
+<acronym title="@annotation.help_text">\
+<span class="acronym">@annotation.nick</span>\
+</acronym>]\
+</span>
+@end
+	<td>
 </tr>

@@ -84,14 +84,15 @@ class HtmlFormatter (Formatter):
                                  'is_callable': is_callable,
                                 })
 
-    def _priv_format_parameter_detail (self, parameter_name, parameter_detail):
+    def _priv_format_parameter_detail (self, name, detail, annotations):
         template = self.engine.get_template('parameter_detail.html')
-        return template.render ({'param_name': parameter_name,
-                                 'param_detail': parameter_detail,
+        return template.render ({'name': name,
+                                 'detail': detail,
+                                 'annotations': annotations,
                                 })
 
     def _priv_format_symbol_detail (self, name, symbol_type, linkname,
-            prototype, doc, retval, param_docs):
+            prototype, doc, retval, param_docs, flags=None):
         template = self.engine.get_template('symbol_detail.html')
         return template.render ({'name': name,
                                  'symbol_type': symbol_type,
@@ -100,6 +101,7 @@ class HtmlFormatter (Formatter):
                                  'doc': doc,
                                  'retval': retval,
                                  'param_docs': param_docs,
+                                 'flags': flags,
                                 })
 
     def _priv_format_enum_detail (self, enum):
@@ -107,20 +109,22 @@ class HtmlFormatter (Formatter):
         return template.render ({'enum': enum})
 
     def _priv_format_callable_summary (self, return_value, function_name,
-            is_callable, is_pointer):
+            is_callable, is_pointer, flags):
         template = self.engine.get_template('callable_summary.html')
 
         return template.render({'return_value': return_value,
                                 'function_name': function_name,
                                 'is_callable': is_callable,
                                 'is_pointer': is_pointer,
+                                'flags': flags
                                })
 
-    def _priv_format_type_summary (self, type_type, type_name): 
+    def _priv_format_type_summary (self, type_type, type_name, flags=None): 
         template = self.engine.get_template('type_summary.html')
 
         return template.render({'type_type': type_type,
                                 'type_name': type_name,
+                                'flags': flags,
                                })
 
     def _priv_format_macro_summary (self, macro_link, is_callable):
@@ -141,14 +145,15 @@ class HtmlFormatter (Formatter):
         for param in callable_.parameters:
             parameters.append (self._priv_format_linked_symbol(param))
             param_docs.append (self._priv_format_parameter_detail (param.argname,
-                param.formatted_doc))
+                param.formatted_doc, param.annotations))
         prototype = self._priv_format_callable_prototype (return_value,
                 callable_.type_name, parameters, is_pointer)
         detail = self._priv_format_symbol_detail (name, symbol_type,
                 callable_.link.get_link().split('#')[-1], prototype,
-                callable_.formatted_doc, callable_.return_value, param_docs)
+                callable_.formatted_doc, callable_.return_value, param_docs,
+                callable_.flags)
         summary = self._priv_format_callable_summary (return_value, callable_link,
-                is_callable, is_pointer)
+                is_callable, is_pointer, callable_.flags)
 
         return detail, summary
 
@@ -171,15 +176,17 @@ class HtmlFormatter (Formatter):
         name = type_.type_name
 
         if directive:
-            summary = self._priv_format_type_summary (directive, type_name)
+            summary = self._priv_format_type_summary (directive, type_name,
+                    type_.flags)
         else:
-            summary = self._priv_format_type_summary (type_type, type_name)
+            summary = self._priv_format_type_summary (type_type, type_name,
+                    type_.flags)
 
         prototype = self._priv_format_type_prototype (directive, type_type,
                 type_.type_name)
         detail = self._priv_format_symbol_detail (name, member_type,
                 type_.link.get_link().split('#')[-1], prototype,
-                type_.formatted_doc, None, None)
+                type_.formatted_doc, None, None, type_.flags)
         return detail, summary
 
     def _priv_format_property (self, prop):
@@ -207,7 +214,7 @@ class HtmlFormatter (Formatter):
         if is_callable:
             for param in macro.parameters:
                 param_docs.append (self._priv_format_parameter_detail (param.type_name,
-                    param.formatted_doc))
+                    param.formatted_doc, param.annotations))
 
         prototype = self._priv_format_macro_prototype (macro, is_callable)
         detail = self._priv_format_symbol_detail (macro.type_name, "macro",

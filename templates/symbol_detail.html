@@ -1,4 +1,4 @@
-@require(name, symbol_type, linkname, prototype, doc, retval, param_docs)
+@require(name, symbol_type, linkname, prototype, doc, retval, param_docs, flags)
 <div class="refsect2">
 	<a name=@linkname></a>
 	<h3 class="method">
@@ -14,6 +14,7 @@
 					<colgroup>
 						<col class="parameters_name" width="150px" />
 						<col class="parameters_description" />
+						<col class="parameters_annotations" width="200px"/>
 					</colgroup>
 					<tbody>
 						@for param_doc in param_docs:
@@ -25,10 +26,27 @@
 		</div>
 	@end
 
-	@if retval:
+	@if retval and retval.formatted_doc:
 		<div class="refsect3">
 			<h4>Returns</h4>
 			@retval.formatted_doc
 		</div>
 	@end
+
+@if flags:
+<p>Flags:\
+@for i, flag in enumerate (flags):
+
+@if i != 0:
+/\
+@end
+
+@if flag.link:
+<a href="@flag.link">@flag.nick</a>
+@else:
+@flag.nick
+@end
+@end
+@end
+</p>
 </div>

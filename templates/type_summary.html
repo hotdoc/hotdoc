@@ -1,4 +1,4 @@
-@require(type_type, type_name)
+@require(type_type, type_name, flags)
 <tr>
     <td class="property_type">
 	    <span>@type_type</span>
@@ -6,4 +6,21 @@
     <td class="property_name">
 	    <span>@type_name</span>
     </td>
+@if flags:
+<td class="signal_flags">
+@for i, flag in enumerate (flags):
+
+@if i != 0:
+/\
+@end
+
+@if flag.link:
+<a href="@flag.link">@flag.nick</a>
+@else:
+@flag.nick
+@end
+@end
+</td>
+@end
+</tr>
 </tr>

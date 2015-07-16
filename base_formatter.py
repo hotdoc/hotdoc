@@ -89,49 +89,6 @@ class NameFormatter(object):
 
         return out
 
-    def make_gtkdoc_id(self, node, separator=None, formatter=None):
-        def class_style(name):
-            return name
-
-        def function_style(name):
-            snake_case = re.sub('(.)([A-Z][a-z]+)', r'\1_\2',
-                    name)
-            snake_case = re.sub('([a-z0-9])([A-Z])', r'\1_\2', snake_case).lower()
-            return snake_case.replace("_", "-")
-
-        if separator is None:
-            separator = "-"
-            formatter = function_style
-            if isinstance(node, (ast.Class, ast.Union, ast.Enum, ast.Record, ast.Interface,
-                                ast.Callback, ast.Alias)):
-                separator = ""
-                formatter = class_style
-
-        if isinstance(node, ast.Namespace):
-            if node.identifier_prefixes:
-                return formatter(node.identifier_prefixes[0])
-            return node.name
-
-        if hasattr(node, '_chain') and node._chain:
-            parent = node._chain[-1]
-        else:
-            parent = getattr(node, 'parent', None)
-
-        if parent is None:
-            if isinstance(node, ast.Function) and node.shadows:
-                return '%s%s%s' % (formatter(node.namespace.name), separator,
-                        formatter(node.shadows))
-            else:
-                return '%s%s%s' % (formatter(node.namespace.name), separator,
-                        formatter(node.name))
-
-        if isinstance(node, ast.Function) and node.shadows:
-            return '%s%s%s' % (self.make_gtkdoc_id(parent, separator=separator,
-                formatter=formatter), separator, formatter(node.shadows))
-        else:
-            return '%s%s%s' % (self.make_gtkdoc_id(parent, separator=separator,
-                formatter=formatter), separator, formatter(node.name))
-
     def make_page_name (self, node):
         return self.__make_c_node_name (node)
 
@@ -468,6 +425,8 @@ class Symbol (object):
         self.__doc_formatter = doc_formatter
         self._symbol_factory = symbol_factory
         self.type_name = type_name
+        self.annotations = []
+        self.flags = []
 
     def __repr__(self):
         res = "%s\n" % object.__repr__(self)
@@ -490,12 +449,16 @@ class Symbol (object):
     def get_extra_links (self):
         return []
 
+    def add_annotation (self, annotation):
+        self.annotations.append (annotation)
+
 class QualifiedSymbol (Symbol):
     def __init__(self, qualifiers, indirection, argname, *args):
         self.qualifiers = qualifiers
         self.indirection = indirection
         self.argname = argname
         Symbol.__init__(self, *args)
+
 
 class Section (Symbol):
     def __init__(self, *args):
@@ -538,8 +501,16 @@ class TypedSymbol (Symbol):
         return Symbol.do_format (self)
 
 class PropertySymbol (TypedSymbol):
-    pass
-
+    def __init__(self, *args):
+        TypedSymbol.__init__(self, *args)
+        if self.ast_node.readable:
+            self.flags.append (ReadableFlag ())
+        if self.ast_node.writable:
+            self.flags.append (WritableFlag ())
+        if self.ast_node.construct_only:
+            self.flags.append (ConstructOnlyFlag ())
+        elif self.ast_node.construct:
+            self.flags.append (ConstructFlag ())
 
 class FieldSymbol (TypedSymbol):
     pass
@@ -563,6 +534,49 @@ class ConstantSymbol (Symbol):
         return Symbol.do_format (self)
 
 
+class Annotation (object):
+    def __init__(self, nick, help_text):
+        self.nick = nick
+        self.help_text = help_text
+
+
+class Flag (object):
+    def __init__ (self, nick, link):
+        self.nick = nick
+        self.link = link
+
+
+class RunLastFlag (Flag):
+    def __init__(self):
+        Flag.__init__ (self, "Run Last",
+                "https://developer.gnome.org/gobject/unstable/gobject-Signals.html#G-SIGNAL-RUN-LAST:CAPS")
+
+class RunFirstFlag (Flag):
+    def __init__(self):
+        Flag.__init__ (self, "Run First",
+                "https://developer.gnome.org/gobject/unstable/gobject-Signals.html#G-SIGNAL-RUN-FIRST:CAPS")
+
+class RunCleanupFlag (Flag):
+    def __init__(self):
+        Flag.__init__ (self, "Run Cleanup",
+                "https://developer.gnome.org/gobject/unstable/gobject-Signals.html#G-SIGNAL-RUN-CLEANUP:CAPS")
+
+class WritableFlag (Flag):
+    def __init__(self):
+        Flag.__init__ (self, "Write", None)
+
+class ReadableFlag (Flag):
+    def __init__(self):
+        Flag.__init__ (self, "Read", None)
+
+class ConstructFlag (Flag):
+    def __init__(self):
+        Flag.__init__ (self, "Construct", None)
+
+class ConstructOnlyFlag (Flag):
+    def __init__(self):
+        Flag.__init__ (self, "Construct Only", None)
+
 class FunctionSymbol (Symbol):
     def __init__(self, *args):
         Symbol.__init__(self, *args)
@@ -581,9 +595,35 @@ class FunctionSymbol (Symbol):
 
     def do_format (self):
         self.return_value = self._symbol_factory.make_qualified_symbol (self.ast_node.retval)
-        for parameter in self.ast_node.all_parameters:
-            param = self._symbol_factory.make_qualified_symbol (parameter)
+
+        if self.ast_node.instance_parameter:
+            param = self._symbol_factory.make_qualified_symbol (self.ast_node.instance_parameter)
             self.parameters.append (param)
+
+        for parameter in self.ast_node.parameters:
+            param = self._symbol_factory.make_qualified_symbol (parameter)
+            if type (self) == FunctionSymbol:
+                if param.indirection:
+                    if parameter.optional or parameter.nullable:
+                        annotation = Annotation ("allow-none", "NULL is OK, both for passing and returning")
+                        param.add_annotation(annotation)
+                    if parameter.transfer == 'none':
+                        annotation = Annotation ("transfer none", "Don't free data after the code is done")
+                        param.add_annotation(annotation)
+                    elif parameter.transfer == 'full':
+                        annotation = Annotation ("transfer full", "Free data after the code is done")
+                        param.add_annotation(annotation)
+                if parameter.closure_name:
+                    annotation = Annotation ("closure",
+"This parameter is a closure for callbacks, many\
+ bindings can pass NULL to %s" % parameter.closure_name)
+                    param.add_annotation(annotation)
+                if parameter.direction == "out":
+                    annotation = Annotation ("out", "Parameter for returning results")
+                    param.add_annotation(annotation)
+
+            self.parameters.append (param)
+
         return Symbol.do_format (self)
 
 
@@ -613,6 +653,13 @@ class SignalSymbol (VirtualFunctionSymbol):
 
     def do_format (self):
         self.__add_missing_signal_parameters (self.ast_node)
+        if self.ast_node.when == "last":
+            self.flags.append (RunLastFlag ())
+        elif self.ast_node.when == "first":
+            self.flags.append (RunFirstFlag ())
+        elif self.ast_node.when == "cleanup":
+            self.flags.append (RunCleanupFlag ())
+
         return FunctionSymbol.do_format (self)
 
 
