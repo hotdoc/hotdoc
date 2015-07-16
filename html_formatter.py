@@ -319,7 +319,7 @@ class HtmlFormatter (Formatter):
     def _format_other (self, other):
         doc, tag, text = Doc().tagtext()
         text (other)
-        return do_indent (doc.getvalue())
+        return doc.getvalue()
 
     def _format_note (self, other):
         doc, tag, text = Doc().tagtext()

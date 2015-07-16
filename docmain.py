@@ -1,8 +1,9 @@
 import argparse, os
 
-from xml.etree import ElementTree as ET
+from lxml import etree as ET
 from giscanner.transformer import Transformer
 import logging
+import sys
 
 from base_formatter import Formatter, add_missing_symbols
 from sections import SectionsGenerator
@@ -51,6 +52,9 @@ def doc_main (args):
                       help="Link to gtk-doc documentation, the documentation "
                       "packages to link against need to be installed in "
                       "/usr/share/gtk-doc")
+    parser.add_argument("-m", "--add-missing-symbols", action="store_true",
+            dest="add_missing_symbols", help="Add missing symbols to an "
+            "existing sections file, which must comply to the new scheme")
     parser.add_argument("-R", "--resolve-implicit-links",
                       action="store_true", dest="resolve_implicit_links",
                       help="All the space and parentheses-separated tokens "
@@ -77,10 +81,11 @@ def doc_main (args):
         sections_generator = SectionsGenerator (transformer)
         sections = sections_generator.generate (args.output)
     else:
-        sections = ET.parse (args.sections_file).getroot ()
+        sections = ET.parse (args.sections_file)
 
-    with open ('tmpsections.xml', 'w') as f:
-        f.write (ET.tostring (sections))
+    if args.add_missing_symbols:
+        add_missing_symbols (transformer, sections)
+        sys.exit (0)
 
     from slate_markdown_formatter import SlateMarkdownFormatter
     from html_formatter import HtmlFormatter

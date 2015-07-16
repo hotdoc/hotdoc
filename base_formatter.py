@@ -2,7 +2,6 @@
 
 import os, re
 
-from xml.etree import ElementTree as ET
 from giscanner import ast
 import logging
 from lxml import etree
@@ -10,6 +9,27 @@ from lxml import etree
 from xml.sax.saxutils import unescape
 
 from datetime import datetime
+
+
+STRING=\
+"""
+An example of a UI definition fragment with accel groups:
+|[
+<object class="GtkWindow">
+  <accel-groups>
+    <group name="accelgroup1"/>
+  </accel-groups>
+  <initial-focus name="thunderclap"/>
+</object>
+
+...
+
+<object class="GtkAccelGroup" id="accelgroup1"/>
+]|
+
+The GtkWindow implementation of the GtkBuildable interface supports
+"""
+
 
 class NameFormatter(object):
     def __init__(self, language='python'):
@@ -98,7 +118,7 @@ class DocScanner(object):
             ('!alpha', r'[a-zA-Z0-9_]+'),
             ('!alpha_dash', r'[a-zA-Z0-9_-]+'),
             ('!anything', r'.*'),
-            ('note', r'\>\s*<<note_contents:anything>>\s*\n'),
+            ('note', r'\n+>\s*<<note_contents:anything>>\s*\n'),
             ('new_paragraph', r'\n\n'),
             ('new_line', r'\n'),
             ('code_start_with_language',
@@ -346,6 +366,11 @@ class SymbolFactory (object):
                     ast.Alias: AliasSymbol,
                 }
 
+        self.__translations = {
+                "utf8": "gchar *",
+                "<map>": "GHashTable *",
+                }
+
     def __split_ctype (self, ctype):
         qualifiers = ""
         type_name = ""
@@ -363,6 +388,9 @@ class SymbolFactory (object):
 
         return (qualifiers, type_name, indirection)
 
+    def __translate_fundamental (self, target):
+        return self.__translations[target]
+
     def make_qualified_symbol (self, node):
         if not hasattr (node, "type"): # Aliases
             type_ = node.target
@@ -373,10 +401,19 @@ class SymbolFactory (object):
         qualifiers = ""
         type_name = ""
         indirection = ""
+        array_indirection = ""
         link = ""
 
+        while not type_.ctype and isinstance (type_, ast.Array):
+            type_ = type_.element_type
+            array_indirection += '*'
+
         if type_.target_fundamental:
-            qualifiers, type_name, indirection = self.__split_ctype (type_.ctype)
+            if not type_.ctype:
+                ctype = self.__translate_fundamental (type_.target_fundamental)
+            else:
+                ctype = type_.ctype
+            qualifiers, type_name, indirection = self.__split_ctype(ctype)
             link = self.__doc_formatter.get_named_link (type_name)
         elif type_.ctype is not None:
             qualifiers, type_name, indirection = self.__split_ctype (type_.ctype)
@@ -400,6 +437,7 @@ class SymbolFactory (object):
         else:
             argname = None
 
+        indirection += array_indirection
         symbol = QualifiedSymbol (qualifiers, indirection, argname, node,
                 self.__doc_formatter, type_name)
         symbol.do_format ()
@@ -753,10 +791,10 @@ class ClassSymbol (SectionSymbol):
 
 
 class SectionsParser(object):
-    def __init__(self, symbol_resolver):
+    def __init__(self, symbol_resolver, root):
         self.__symbol_resolver = symbol_resolver
         parser = etree.XMLParser(remove_blank_text=True)
-        self.__root = etree.parse ('tmpsections.xml', parser)
+        self.__root = root
         self.__name_formatter = NameFormatter (language='C')
         self.__class_sections = {}
 
@@ -800,10 +838,10 @@ def __add_symbols (symbols_node, type_name, class_node, name_formatter):
     return added_symbols
 
 
-def add_missing_symbols (transformer):
+def add_missing_symbols (transformer, sections):
     name_formatter = NameFormatter(language='C')
     symbol_resolver = SymbolResolver (transformer)
-    sections_parser = SectionsParser (symbol_resolver)
+    sections_parser = SectionsParser (symbol_resolver, sections)
     added_signals = 0
     added_properties = 0
     added_virtual_methods = 0
@@ -811,7 +849,6 @@ def add_missing_symbols (transformer):
     added_functions = 0
     for name, section in sections_parser.get_class_sections ().iteritems():
         class_node = symbol_resolver.resolve_type (section.find ('SYMBOL').text)
-        print section.find ('SYMBOL').text
         symbols_node = section.find ('SYMBOLS')
         added_functions += __add_symbols (symbols_node, 'methods', class_node, name_formatter)
         added_signals += __add_symbols (symbols_node, 'signals', class_node, name_formatter)
@@ -850,7 +887,8 @@ class Formatter(object):
         self.__link_resolver = LinkResolver (transformer)
         self.__symbol_resolver = SymbolResolver (self.__transformer)
         self.__name_formatter = NameFormatter(language='C')
-        self.__sections_parser = SectionsParser (self.__symbol_resolver)
+        self.__sections_parser = SectionsParser (self.__symbol_resolver,
+                sections)
         self.__symbol_factory = SymbolFactory (self, self.__symbol_resolver,
                 self.__transformer)
         self.__local_links = {}

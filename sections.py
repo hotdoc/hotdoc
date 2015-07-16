@@ -1,6 +1,6 @@
 import os
 
-from xml.etree import ElementTree as ET
+from lxml import etree as ET
 from giscanner import ast
 
 from base_formatter import NameFormatter
