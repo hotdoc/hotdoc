@@ -11,26 +11,6 @@ from xml.sax.saxutils import unescape
 from datetime import datetime
 
 
-STRING=\
-"""
-An example of a UI definition fragment with accel groups:
-|[
-<object class="GtkWindow">
-  <accel-groups>
-    <group name="accelgroup1"/>
-  </accel-groups>
-  <initial-focus name="thunderclap"/>
-</object>
-
-...
-
-<object class="GtkAccelGroup" id="accelgroup1"/>
-]|
-
-The GtkWindow implementation of the GtkBuildable interface supports
-"""
-
-
 class NameFormatter(object):
     def __init__(self, language='python'):
         if language == 'C':
@@ -793,14 +773,13 @@ class ClassSymbol (SectionSymbol):
 class SectionsParser(object):
     def __init__(self, symbol_resolver, root):
         self.__symbol_resolver = symbol_resolver
-        parser = etree.XMLParser(remove_blank_text=True)
         self.__root = root
         self.__name_formatter = NameFormatter (language='C')
         self.__class_sections = {}
 
     def __find_class_sections (self):
         for section in self.__root.findall ('.//SECTION'):
-            name = section.find('SYMBOL').text
+            name = section.find('TITLE').text
             if type (self.__symbol_resolver.resolve_type (name)) in [ast.Class,
                     ast.Record, ast.Interface]:
                 self.__class_sections[name] = section
@@ -848,7 +827,7 @@ def add_missing_symbols (transformer, sections):
     added_fields = 0
     added_functions = 0
     for name, section in sections_parser.get_class_sections ().iteritems():
-        class_node = symbol_resolver.resolve_type (section.find ('SYMBOL').text)
+        class_node = symbol_resolver.resolve_type (section.find ('TITLE').text)
         symbols_node = section.find ('SYMBOLS')
         added_functions += __add_symbols (symbols_node, 'methods', class_node, name_formatter)
         added_signals += __add_symbols (symbols_node, 'signals', class_node, name_formatter)
@@ -902,11 +881,11 @@ class Formatter(object):
         # Used to create the index file and aggregate pages  if required
         self.__created_pages = {}
  
-    def __create_symbols (self):
-        section_nodes = self.__sections_parser.get_sections ()
+    def __create_symbols (self, parent=None):
+        section_nodes = self.__sections_parser.get_sections (parent)
         sections = []
         for section_node in section_nodes:
-            section_name = section_node.find ('SYMBOL').text
+            section_name = section_node.find ('TITLE').text
             class_node = self.__symbol_resolver.resolve_type (section_name)
 
             if type (class_node) not in [ast.Class, ast.Record, ast.Interface,
