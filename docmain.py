@@ -89,5 +89,4 @@ def doc_main (args):
     print ("Actually starting work")
     n = datetime.now()
     formatter.format (args.output)
-    formatter.format_index (args.output)
     print "done", datetime.now() - n

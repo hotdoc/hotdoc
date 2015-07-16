@@ -427,6 +427,7 @@ class Symbol (object):
         self.type_name = type_name
         self.annotations = []
         self.flags = []
+        self.filename = None
 
     def __repr__(self):
         res = "%s\n" % object.__repr__(self)
@@ -910,23 +911,12 @@ class Formatter(object):
             filename = self.__make_file_name (section.ast_node)
             with open (filename, 'w') as f:
                 out = self._format_class (section, True)
+                section.filename = os.path.basename(filename)
                 f.write (out.encode('utf-8'))
+        self.format_index (sections, output)
 
-    def format_index (self, output):
-        return ""
-        out = ""
-
-        sections = self.__sections_parser.get_sections ()
-        pages = []
-        for section in sections:
-            try:
-                page = self.__created_pages[section.find ('SYMBOL').text]
-            except KeyError:
-                #FIXME
-                continue
-            pages.append (page)
-
-        out += self._format_index (pages)
+    def format_index (self, sections, output):
+        out = self._format_index (sections)
 
         extension = self._get_extension ()
         filename = os.path.join (output, "index.%s" % extension)

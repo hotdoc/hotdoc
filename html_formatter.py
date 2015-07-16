@@ -270,21 +270,10 @@ class HtmlFormatter (Formatter):
 
         return template.render(dict_)
 
-    def _format_index (self, pages):
-        doc, tag, text = Doc().tagtext()
-        out = ""
-        out += self._start_page (False)
-        with tag('div', klass='toc'):
-            for page in pages:
-                with tag ('dt'):
-                    with tag ('span', klass='refentrytitle'):
-                        with tag ('a', href=page.link.get_link()):
-                            text (page.ident)
-                    with tag ('span', klass='refpurpose'):
-                        doc.asis (u' — %s' % page.get_short_description())
-        out += do_indent (doc.getvalue ())
-        out += self._end_page (False)
-        return out
+    def _format_index (self, sections):
+        template = self.engine.get_template('index_page.html')
+
+        return template.render({'sections': sections})
 
     def _format_parameter (self, param_name):
         doc, tag, text = Doc().tagtext()
