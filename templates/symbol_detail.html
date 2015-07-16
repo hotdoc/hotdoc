@@ -1,4 +1,4 @@
-@require(name, symbol_type, linkname, prototype, doc, param_docs)
+@require(name, symbol_type, linkname, prototype, doc, retval, param_docs)
 <div class="refsect2">
 	<a name=@linkname></a>
 	<h3 class="method">
@@ -22,6 +22,13 @@
 					</tbody>
 				</table>
 			</div>
+		</div>
+	@end
+
+	@if retval:
+		<div class="refsect3">
+			<h4>Returns</h4>
+			@retval.formatted_doc
 		</div>
 	@end
 </div>

@@ -90,13 +90,15 @@ class HtmlFormatter (Formatter):
                                  'param_detail': parameter_detail,
                                 })
 
-    def _priv_format_symbol_detail (self, name, symbol_type, linkname, prototype, doc, param_docs):
+    def _priv_format_symbol_detail (self, name, symbol_type, linkname,
+            prototype, doc, retval, param_docs):
         template = self.engine.get_template('symbol_detail.html')
         return template.render ({'name': name,
                                  'symbol_type': symbol_type,
                                  'linkname': linkname,
                                  'prototype': prototype,
                                  'doc': doc,
+                                 'retval': retval,
                                  'param_docs': param_docs,
                                 })
 
@@ -144,7 +146,7 @@ class HtmlFormatter (Formatter):
                 callable_.type_name, parameters, is_pointer)
         detail = self._priv_format_symbol_detail (name, symbol_type,
                 callable_.link.get_link().split('#')[-1], prototype,
-                callable_.formatted_doc, param_docs)
+                callable_.formatted_doc, callable_.return_value, param_docs)
         summary = self._priv_format_callable_summary (return_value, callable_link,
                 is_callable, is_pointer)
 
@@ -177,7 +179,7 @@ class HtmlFormatter (Formatter):
                 type_.type_name)
         detail = self._priv_format_symbol_detail (name, member_type,
                 type_.link.get_link().split('#')[-1], prototype,
-                type_.formatted_doc, None)
+                type_.formatted_doc, None, None)
         return detail, summary
 
     def _priv_format_property (self, prop):
@@ -210,7 +212,7 @@ class HtmlFormatter (Formatter):
         prototype = self._priv_format_macro_prototype (macro, is_callable)
         detail = self._priv_format_symbol_detail (macro.type_name, "macro",
                 macro.link.get_link().split ('#')[-1],
-                prototype, macro.formatted_doc, param_docs) 
+                prototype, macro.formatted_doc, None, param_docs) 
         return detail, summary
 
     def _priv_format_constant (self, constant): 
@@ -293,6 +295,29 @@ class HtmlFormatter (Formatter):
         with tag('a', href = href):
             with tag ('span', klass="type"):
                 text(u'“%s”' % prop_name)
+        return do_indent (doc.getvalue())
+
+    def _format_signal (self, signal_name, link):
+        doc, tag, text = Doc().tagtext()
+        if link:
+            href = link.get_link()
+        else:
+            href = ""
+        with tag('a', href = href):
+            with tag ('span', klass="type"):
+                text(u'“%s”' % signal_name)
+        return do_indent (doc.getvalue())
+
+    def _format_enum_value (self, prop_name, link):
+        doc, tag, text = Doc().tagtext()
+        if link:
+            href = link.get_link()
+        else:
+            href = ""
+
+        with tag('a', href = href):
+            with tag ('code'):
+                text('%s' % prop_name)
         return do_indent (doc.getvalue())
 
     def _format_other (self, other):

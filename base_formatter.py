@@ -515,7 +515,7 @@ class EnumSymbol (Symbol):
             self.members.append (member_)
 
     def get_extra_links (self):
-        return [member.type_name for member in self.members]
+        return ['%s' % member.type_name for member in self.members]
 
     def do_format (self):
         for member in self.members:
@@ -887,6 +887,18 @@ class Formatter(object):
             with open (filename, 'w') as f:
                 f.write (unicode(out).encode('utf-8'))
 
+    def __create_local_link (self, containing_page_name, node_name):
+            return LocalLink (node_name, containing_page_name)
+
+    def get_named_link(self, ident, search_remote=True):
+        link = None
+        try:
+            link = self.__local_links [ident]
+        except KeyError:
+            if search_remote:
+                link = self.__link_resolver.get_named_link (ident)
+        return link
+
     def __create_doc_formatters (self):
         return {
             'other': self.__format_other,
@@ -924,18 +936,19 @@ class Formatter(object):
         return self.__format_other (node, match, props)
 
     def __format_signal (self, node, match, props):
-        raise NotImplementedError
+        type_name = props['type_name']
 
-    def __create_local_link (self, containing_page_name, node_name):
-            return LocalLink (node_name, containing_page_name)
+        signal_name = props['signal_name']
+        link_name = "%s::%s---Signal" % (type_name, signal_name)
+        link = self.get_named_link (link_name, search_remote = False)
 
-    def get_named_link(self, ident):
-        link = None
-        try:
-            link = self.__local_links [ident]
-        except KeyError:
-            link = self.__link_resolver.get_named_link (ident)
-        return link
+        if not link: # Gtk doc syntax
+            link = self.get_named_link ('%s_%s' % (type_name, signal_name))
+
+        if link:
+            return self._format_signal (signal_name, link)
+
+        return self.__format_other (node, match, props)
 
     def __format_type_name (self, node, match, props):
         ident = props['type_name']
@@ -943,19 +956,20 @@ class Formatter(object):
         return self._format_type_name (ident, link)
 
     def __format_enum_value (self, node, match, props):
-        raise NotImplementedError
+        member_name = props['member_name']
+
+        link = self.get_named_link (member_name, search_remote=False)
+
+        if not link: # gtk doc suffixes with CAPS
+            link = self.get_named_link ('%s:CAPS' % member_name)
+
+        if link:
+            return self._format_enum_value (member_name, link)
+
+        return self.__format_other (node, match, props)
 
     def __format_parameter (self, node, match, props):
-        try:
-            parameter = node.get_parameter(props['param_name'])
-        except (AttributeError, ValueError):
-            return self.__format_other (node, match, props)
-
-        if isinstance(parameter.type, ast.Varargs):
-            param_name = "..."
-        else:
-            param_name = parameter.argname
-
+        param_name = props['param_name']
         return self._format_parameter (param_name)
 
     def __format_function_call (self, node, match, props):
@@ -1038,12 +1052,9 @@ class Formatter(object):
         tokens = self.__doc_scanner.scan (docstring)
         for tok in tokens:
             kind, match, props = tok
-            try:
-                formated_token = self.__doc_formatters[kind](node, match, props)
-                if formated_token:
-                    out += formated_token
-            except NotImplementedError:
-                continue
+            formated_token = self.__doc_formatters[kind](node, match, props)
+            if formated_token:
+                out += formated_token
 
         return out
 
