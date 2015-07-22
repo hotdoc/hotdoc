@@ -8,7 +8,6 @@ import sys
 from base_formatter import Formatter, add_missing_symbols
 from sections import SectionsGenerator
 from datetime import datetime
-from markdown_sections import SectionFilter
 
 class StupidFormatter (Formatter):
     pass
