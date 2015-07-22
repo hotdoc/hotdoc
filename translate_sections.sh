@@ -2,7 +2,7 @@
 
 echo "<SECTIONS>" > raw.txt
 
-cat $1 | grep -v "^<SUBSECTION.*>\|</SUBSECTION>" >> raw.txt
+cat $1 | grep -v "^<SUBSECTION.*>\|</SUBSECTION>" | grep -v "^\#.*$" >> raw.txt
 
 echo "</SECTIONS>" >> raw.txt
 
