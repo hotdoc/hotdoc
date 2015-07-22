@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
 
-import os, re
-
-from giscanner import ast
+import os
+import re
+import sys
+import json
 import logging
-from lxml import etree
-
-from xml.sax.saxutils import unescape
 
 from datetime import datetime
+from lxml import etree
+from giscanner import ast
+from xml.sax.saxutils import unescape
 
+from gnome_markdown_filter import GnomeMarkdownFilter
+from pandoc_client import pandoc_converter
 
 class NameFormatter(object):
     def __init__(self, language='python'):
@@ -271,13 +274,13 @@ class ExternalLink (Link):
 class LocalLink (Link):
     def __init__(self, symbol, pagename):
         self.__symbol = symbol
-        self.__pagename = pagename
+        self.pagename = pagename
 
     def get_link (self):
         if (self.__symbol):
-            return "%s#%s" % (self.__pagename, self.__symbol)
+            return "%s#%s" % (self.pagename, self.__symbol)
         else:
-            return self.__pagename
+            return self.pagename
 
 class LinkResolver(object):
     def __init__(self, transformer):
@@ -447,17 +450,6 @@ class Symbol (object):
         self.flags = []
         self.filename = None
 
-    def __repr__(self):
-        res = "%s\n" % object.__repr__(self)
-        res += "%s %s %s %s\n" % (self.qualifiers, self.type_name,
-                self.indirection, self.argname)
-        if self.link:
-            res += "[%s]\n" % self.link.get_link ()
-        else:
-            res += "No link !"
-        res += "Description : \n%s\n" % self.formatted_doc
-        return res
-
     def do_format (self):
         self.formatted_doc = self.__doc_formatter.format_doc (self.ast_node)
         return True
@@ -602,16 +594,6 @@ class FunctionSymbol (Symbol):
         self.parameters = []
         self.return_value = None
 
-    def __repr__ (self):
-        res = "%s\n" % Symbol.__repr__(self)
-        res += "===\nParameters :\n"
-        for param in self.parameters:
-            res += param.__repr__() + "\n"
-        if self.return_value:
-            res += "===\nReturn value :\n%s" % self.return_value.__repr__()
-
-        return res
-
     def do_format (self):
         self.return_value = self._symbol_factory.make_qualified_symbol (self.ast_node.retval)
 
@@ -702,6 +684,7 @@ class SectionSymbol (Symbol):
     def __init__(self, *args):
         Symbol.__init__ (self, *args)
         self.symbols = []
+        self.sections = []
 
     def add_symbol (self, symbol):
         self.symbols.append (symbol)
@@ -736,9 +719,10 @@ class ClassSymbol (SectionSymbol):
     def add_symbol (self, symbol):
         # Special case
         if type (symbol) == RecordSymbol:
-            if str(symbol.ast_node.is_gtype_struct_for) == self.ast_node.gi_name:
-                self.__class_record = symbol
-            return
+            if self.ast_node:
+                if str(symbol.ast_node.is_gtype_struct_for) == self.ast_node.gi_name:
+                    self.__class_record = symbol
+                return
         SectionSymbol.add_symbol (self, symbol)
 
     def do_format (self):
@@ -751,18 +735,11 @@ class ClassSymbol (SectionSymbol):
         return SectionSymbol.do_format (self)
 
     def get_short_description (self):
+        if not self.ast_node:
+            return ""
         if not self.ast_node.short_description:
             return ""
         return self.ast_node.short_description
-
-    def __repr__(self):
-        res = "%s\n" % Symbol.__repr__(self)
-        res += "===\nFunctions :\n"
-        for func in self.functions:
-            res += func.__repr__()
-
-        res += "\n"
-        return res
 
     def get_class_doc (self):
         if self.__class_record:
@@ -852,14 +829,85 @@ def add_missing_symbols (transformer, sections):
     print "added %d functions" % added_functions
     sections_parser.write ('fixed.xml')
 
+class SectionFilter (GnomeMarkdownFilter):
+    def __init__(self, directory, symbol_resolver, symbol_factory, doc_formatter):
+        GnomeMarkdownFilter.__init__(self, directory)
+        self.sections = []
+        self.__current_section = None
+        self.__symbol_resolver = symbol_resolver
+        self.__symbol_factory = symbol_factory
+        self.__doc_formatter = doc_formatter
+        self.local_links = {}
+
+    def parse_extensions (self, key, value, format_, meta):
+        if key == "BulletList":
+            res = []
+            for val in value:
+                content = val[0]['c'][0]
+                if content['t'] == "Link":
+                    symbol_name = content['c'][0][0]['c']
+                    ast_node = self.__symbol_resolver.resolve_symbol (symbol_name)
+                    if not ast_node:
+                        ast_node = self.__symbol_resolver.resolve_type (symbol_name)
+
+                    if ast_node:
+                        symbol = self.__symbol_factory.make (ast_node, symbol_name)
+                        if symbol:
+                            link = LocalLink (symbol_name, self.__current_section.link.pagename)
+                            self.local_links[symbol_name] = link
+                            symbol.set_link (link)
+                            self.__current_section.add_symbol (symbol)
+                        continue
+
+                res.append (val)
+            return None
+
+        return GnomeMarkdownFilter.parse_extensions (self, key, value, format_,
+                meta)
+
+    def parse_link (self, key, value, format_, meta):
+        old_section = self.__current_section
+        self.parse_file (value[1][0], old_section)
+        self.__current_section = old_section
+
+    def parse_file (self, filename, parent=None):
+        path = os.path.join(self.directory, filename)
+        if not os.path.isfile (path):
+            return
+
+        name = os.path.splitext(filename)[0]
+        ast_node = self.__symbol_resolver.resolve_type (name)
+        #print name, ast_node
+
+        section = ClassSymbol (ast_node, self.__doc_formatter,
+            name)
+        if self.__current_section:
+            self.__current_section.sections.append (section)
+        else:
+            self.sections.append (section)
+        self.__current_section = section
+        pagename = "%s.%s" % (name, self.__doc_formatter._get_extension ())
+        link = LocalLink (None, pagename)
+        self.local_links[name] = link
+        self.__current_section.set_link (link)
+
+        with open (path, 'r') as f:
+            contents = f.read()
+            res = self.filter_text (contents)
+
+    def create_symbols (self, filename):
+        self.parse_file (filename)
+
+
 class Formatter(object):
-    def __init__ (self, transformer, include_directories, sections, output,
+    def __init__ (self, transformer, include_directories, sections, index_file, output,
             do_class_aggregation=False):
         self.__transformer = transformer
         self.__include_directories = include_directories
         self.__sections = sections
         self.__do_class_aggregation = do_class_aggregation
         self.__output = output
+        self.__index_file = index_file
 
         self.__doc_formatters = self.__create_doc_formatters ()
         self.__doc_scanner = DocScanner()
@@ -871,6 +919,8 @@ class Formatter(object):
         self.__symbol_factory = SymbolFactory (self, self.__symbol_resolver,
                 self.__transformer)
         self.__local_links = {}
+        self.__gnome_markdown_filter = GnomeMarkdownFilter (os.path.dirname(index_file))
+        self.__gnome_markdown_filter.set_formatter (self)
 
         # Used to warn subclasses a method isn't implemented
         self.__not_implemented_methods = {}
@@ -920,17 +970,33 @@ class Formatter(object):
 
         return sections
 
-    def format (self, output):
-        n = datetime.now ()
-        sections = self.__create_symbols ()
-        for section in sections:
+    def create_symbols(self):
+        filename = os.path.basename (self.__index_file)
+        dir_ = os.path.dirname (self.__index_file)
+        sf = SectionFilter (dir_, self.__symbol_resolver, self.__symbol_factory,
+                self)
+        sf.create_symbols (filename)
+        self.__local_links = sf.local_links
+        return sf.sections
+
+    def __format_section (self, section):
+        if section.ast_node:
             section.do_format ()
             filename = self.__make_file_name (section.ast_node)
             with open (filename, 'w') as f:
                 out = self._format_class (section, True)
                 section.filename = os.path.basename(filename)
                 f.write (out.encode('utf-8'))
-        self.format_index (sections, output)
+        for section in section.sections:
+            self.__format_section (section)
+
+    def format (self, output):
+        n = datetime.now ()
+        sections = self.create_symbols ()
+
+        for section in sections:
+            self.__format_section (section)
+        #self.format_index (sections, output)
 
     def format_index (self, sections, output):
         out = self._format_index (sections)
@@ -1103,14 +1169,9 @@ class Formatter(object):
 
         out = ""
         docstring = unescape (docstring)
-        tokens = self.__doc_scanner.scan (docstring)
-        for tok in tokens:
-            kind, match, props = tok
-            formated_token = self.__doc_formatters[kind](node, match, props)
-            if formated_token:
-                out += formated_token
-
-        return out
+        json_doc = self.__gnome_markdown_filter.filter_text (docstring)
+        html_text = pandoc_converter.convert ("json", "html", json.dumps (json_doc))
+        return html_text
 
     def format_doc (self, node):
         out = ""

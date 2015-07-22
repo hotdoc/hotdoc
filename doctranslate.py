@@ -172,6 +172,7 @@ def doc_translate (args):
     args.cpp_includes = cpp_includes
 
     ss = create_source_scanner (args, args.filenames, cflags)
+    print "sources scanned"
     cbp = GtkDocCommentBlockParser()
     blocks = cbp.parse_comment_blocks(ss.get_comments())
     for name, block in blocks.iteritems():
@@ -191,3 +192,4 @@ def doc_translate (args):
                 f.write (res)
         else:
             print res
+            pass

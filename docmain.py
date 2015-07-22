@@ -8,6 +8,7 @@ import sys
 from base_formatter import Formatter, add_missing_symbols
 from sections import SectionsGenerator
 from datetime import datetime
+from markdown_sections import SectionFilter
 
 class StupidFormatter (Formatter):
     pass
@@ -44,6 +45,9 @@ def doc_main (args):
     parser.add_argument("-u", "--sections-file",
                       action="store", dest="sections_file",
                       help="Sections file to use for ordering")
+    parser.add_argument("-i", "-index",
+                      action="store", dest="index",
+                      help="Sections index")
     parser.add_argument("-O", "--online-links",
                       action="store_true", dest="online_links",
                       help="Generate online links")
@@ -55,18 +59,12 @@ def doc_main (args):
     parser.add_argument("-m", "--add-missing-symbols", action="store_true",
             dest="add_missing_symbols", help="Add missing symbols to an "
             "existing sections file, which must comply to the new scheme")
-    parser.add_argument("-R", "--resolve-implicit-links",
-                      action="store_true", dest="resolve_implicit_links",
-                      help="All the space and parentheses-separated tokens "
-                      "in the comment blocks will be analyzed to see if they "
-                      "map to an existing code or symbol. If they do, a link "
-                      "will be inserted, for example 'pass that function "
-                      "a GList' will resolve the existing GList type and "
-                      "insert a link to its documentation")
 
     args = parser.parse_args(args[1:])
     if not args.output:
         raise SystemExit("missing output parameter")
+
+    print os.path.dirname (args.index)
 
     if 'UNINSTALLED_INTROSPECTION_SRCDIR' in os.environ:
         top_srcdir = os.environ['UNINSTALLED_INTROSPECTION_SRCDIR']
@@ -77,11 +75,13 @@ def doc_main (args):
     extra_include_dirs.extend(args.include_paths)
     transformer = Transformer.parse_from_gir(args.girfile, extra_include_dirs)
 
+    """
     if not args.sections_file:
         sections_generator = SectionsGenerator (transformer)
         sections = sections_generator.generate (args.output)
     else:
         sections = ET.parse (args.sections_file)
+    """
 
     if args.add_missing_symbols:
         add_missing_symbols (transformer, sections)
@@ -89,8 +89,9 @@ def doc_main (args):
 
     from slate_markdown_formatter import SlateMarkdownFormatter
     from html_formatter import HtmlFormatter
+
     formatter = HtmlFormatter (transformer, args.markdown_include_paths,
-            sections, args.output, do_class_aggregation=True)
+            None, args.index, args.output, do_class_aggregation=True)
     print ("Actually starting work")
     n = datetime.now()
     formatter.format (args.output)
