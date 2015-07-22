@@ -13,6 +13,7 @@ from xml.sax.saxutils import unescape
 
 from gnome_markdown_filter import GnomeMarkdownFilter
 from pandoc_client import pandoc_converter
+from pandocfilters import BulletList
 
 class NameFormatter(object):
     def __init__(self, language='python'):
@@ -94,97 +95,6 @@ class NameFormatter(object):
 
     def make_page_name (self, node):
         return self.__make_c_node_name (node)
-
-class DocScanner(object):
-    def __init__(self):
-        specs = [
-            ('!alpha', r'[a-zA-Z0-9_]+'),
-            ('!alpha_dash', r'[a-zA-Z0-9_-]+'),
-            ('!anything', r'.*'),
-            ('note', r'\n+>\s*<<note_contents:anything>>\s*\n'),
-            ('new_paragraph', r'\n\n'),
-            ('new_line', r'\n'),
-            ('code_start_with_language',
-                r'\|\[\<!\-\-\s*language\s*\=\s*\"<<language_name:alpha>>\"\s*\-\-\>'),
-            ('code_start', r'\|\['),
-            ('code_end', r'\]\|'),
-            ('property', r'#<<type_name:alpha>>:(<<property_name:alpha_dash>>)'),
-            ('signal', r'#<<type_name:alpha>>::(<<signal_name:alpha_dash>>)'),
-            ('type_name', r'#(<<type_name:alpha>>)'),
-            ('enum_value', r'%(<<member_name:alpha>>)'),
-            ('parameter', r'@<<param_name:alpha>>'),
-            ('function_call', r'<<symbol_name:alpha>>\s*\(\)'),
-            ('include', r'{{\s*<<include_name:anything>>\s*}}'),
-            ('heading', r'#+\s+<<heading:anything>>'),
-        ]
-        self.specs = self.unmangle_specs(specs)
-        self.regex = self.make_regex(self.specs)
-
-    def unmangle_specs(self, specs):
-        mangled = re.compile('<<([a-zA-Z_:]+)>>')
-        specdict = dict((name.lstrip('!'), spec) for name, spec in specs)
-
-        def unmangle(spec, name=None):
-            def replace_func(match):
-                child_spec_name = match.group(1)
-
-                if ':' in child_spec_name:
-                    pattern_name, child_spec_name = child_spec_name.split(':', 1)
-                else:
-                    pattern_name = None
-
-                child_spec = specdict[child_spec_name]
-                # Force all child specs of this one to be unnamed
-                unmangled = unmangle(child_spec, None)
-                if pattern_name and name:
-                    return '(?P<%s_%s>%s)' % (name, pattern_name, unmangled)
-                else:
-                    return unmangled
-
-            return mangled.sub(replace_func, spec)
-
-        return [(name, unmangle(spec, name)) for name, spec in specs]
-
-    def make_regex(self, specs):
-        regex = '|'.join('(?P<%s>%s)' % (name, spec) for name, spec in specs
-                         if not name.startswith('!'))
-        return re.compile(regex)
-
-    def get_properties(self, name, match):
-        groupdict = match.groupdict()
-        properties = {name: groupdict.pop(name)}
-        name = name + "_"
-        for group, value in groupdict.iteritems():
-            if group.startswith(name):
-                key = group[len(name):]
-                properties[key] = value
-        return properties
-
-    def scan(self, text):
-        pos = 0
-        while True:
-            match = self.regex.search(text, pos)
-            if match is None:
-                break
-
-            start = match.start()
-            if start > pos:
-                yield ('other', text[pos:start], None)
-
-            pos = match.end()
-            name = match.lastgroup
-            yield (name, match.group(0), self.get_properties(name, match))
-
-        if pos < len(text):
-            yield ('other', text[pos:], None)
-
-
-# Long name is long
-def get_sorted_symbols_from_sections (sections, symbols):
-    for element in sections:
-        if element.tag == "SYMBOL":
-            symbols.append (element.text)
-        get_sorted_symbols_from_sections (element, symbols)
 
 
 class SymbolResolver(object):
@@ -281,6 +191,7 @@ class LocalLink (Link):
             return "%s#%s" % (self.pagename, self.__symbol)
         else:
             return self.pagename
+
 
 class LinkResolver(object):
     def __init__(self, transformer):
@@ -463,6 +374,7 @@ class Symbol (object):
     def add_annotation (self, annotation):
         self.annotations.append (annotation)
 
+
 class QualifiedSymbol (Symbol):
     def __init__(self, qualifiers, indirection, argname, *args):
         self.qualifiers = qualifiers
@@ -478,6 +390,7 @@ class Section (Symbol):
 
     def add_symbol (self, symbol):
         self.symbols.append (symbol)
+
 
 class EnumSymbol (Symbol):
     def __init__(self, *args):
@@ -495,6 +408,7 @@ class EnumSymbol (Symbol):
         for member in self.members:
             member.do_format ()
         return Symbol.do_format(self)
+
 
 class TypedSymbol (Symbol):
     def __init__(self, *args):
@@ -522,6 +436,7 @@ class PropertySymbol (TypedSymbol):
             self.flags.append (ConstructOnlyFlag ())
         elif self.ast_node.construct:
             self.flags.append (ConstructFlag ())
+
 
 class FieldSymbol (TypedSymbol):
     pass
@@ -562,31 +477,38 @@ class RunLastFlag (Flag):
         Flag.__init__ (self, "Run Last",
                 "https://developer.gnome.org/gobject/unstable/gobject-Signals.html#G-SIGNAL-RUN-LAST:CAPS")
 
+
 class RunFirstFlag (Flag):
     def __init__(self):
         Flag.__init__ (self, "Run First",
                 "https://developer.gnome.org/gobject/unstable/gobject-Signals.html#G-SIGNAL-RUN-FIRST:CAPS")
+
 
 class RunCleanupFlag (Flag):
     def __init__(self):
         Flag.__init__ (self, "Run Cleanup",
                 "https://developer.gnome.org/gobject/unstable/gobject-Signals.html#G-SIGNAL-RUN-CLEANUP:CAPS")
 
+
 class WritableFlag (Flag):
     def __init__(self):
         Flag.__init__ (self, "Write", None)
+
 
 class ReadableFlag (Flag):
     def __init__(self):
         Flag.__init__ (self, "Read", None)
 
+
 class ConstructFlag (Flag):
     def __init__(self):
         Flag.__init__ (self, "Construct", None)
 
+
 class ConstructOnlyFlag (Flag):
     def __init__(self):
         Flag.__init__ (self, "Construct Only", None)
+
 
 class FunctionSymbol (Symbol):
     def __init__(self, *args):
@@ -677,8 +599,10 @@ class FunctionMacroSymbol (Symbol):
             self.parameters.append (param)
         return Symbol.do_format(self)
 
+
 class RecordSymbol (Symbol):
     pass
+
 
 class SectionSymbol (Symbol):
     def __init__(self, *args):
@@ -688,6 +612,7 @@ class SectionSymbol (Symbol):
 
     def add_symbol (self, symbol):
         self.symbols.append (symbol)
+
 
 class ClassSymbol (SectionSymbol):
     def __init__(self, *args):
@@ -702,7 +627,9 @@ class ClassSymbol (SectionSymbol):
         self.enums = []
         self.callbacks = []
         self.aliases = []
+        self.records = []
         self.__class_record = None
+        self.parsed_contents = None
         self.__list_map = {
                             FunctionSymbol: self.functions,
                             SignalSymbol: self.signals,
@@ -714,6 +641,7 @@ class ClassSymbol (SectionSymbol):
                             EnumSymbol: self.enums,
                             CallbackSymbol: self.callbacks,
                             AliasSymbol: self.aliases,
+                            RecordSymbol: self.records,
                             }
 
     def add_symbol (self, symbol):
@@ -746,37 +674,6 @@ class ClassSymbol (SectionSymbol):
             return self.__class_record.formatted_doc
         return None
 
-
-class SectionsParser(object):
-    def __init__(self, symbol_resolver, root):
-        self.__symbol_resolver = symbol_resolver
-        self.__root = root
-        self.__name_formatter = NameFormatter (language='C')
-        self.__class_sections = {}
-
-    def __find_class_sections (self):
-        for section in self.__root.findall ('.//SECTION'):
-            name = section.find('TITLE').text
-            if type (self.__symbol_resolver.resolve_type (name)) in [ast.Class,
-                    ast.Record, ast.Interface]:
-                self.__class_sections[name] = section
-
-    def get_sections (self, parent=None):
-        if not parent:
-            return self.__root.findall('SECTION')
-        else:
-            return parent.findall('SECTION')
-
-    def get_class_sections (self):
-        if not self.__class_sections:
-            self.__find_class_sections ()
-        return self.__class_sections
-
-    def get_all_sections (self):
-        return self.__sections
-
-    def write (self, filename):
-        self.__root.write (filename, pretty_print=True, xml_declaration=True)
 
 def __add_symbols (symbols_node, type_name, class_node, name_formatter):
     added_symbols = 0
@@ -860,24 +757,26 @@ class SectionFilter (GnomeMarkdownFilter):
                         continue
 
                 res.append (val)
-            return None
+            if res:
+                return BulletList(res)
+            return []
 
         return GnomeMarkdownFilter.parse_extensions (self, key, value, format_,
                 meta)
 
     def parse_link (self, key, value, format_, meta):
         old_section = self.__current_section
-        self.parse_file (value[1][0], old_section)
+        if self.parse_file (value[1][0], old_section):
+            value[1][0] = os.path.splitext(value[1][0])[0] + ".html"
         self.__current_section = old_section
 
     def parse_file (self, filename, parent=None):
         path = os.path.join(self.directory, filename)
         if not os.path.isfile (path):
-            return
+            return False
 
         name = os.path.splitext(filename)[0]
         ast_node = self.__symbol_resolver.resolve_type (name)
-        #print name, ast_node
 
         section = ClassSymbol (ast_node, self.__doc_formatter,
             name)
@@ -895,6 +794,9 @@ class SectionFilter (GnomeMarkdownFilter):
             contents = f.read()
             res = self.filter_text (contents)
 
+        section.parsed_contents = res
+        return True
+
     def create_symbols (self, filename):
         self.parse_file (filename)
 
@@ -909,13 +811,9 @@ class Formatter(object):
         self.__output = output
         self.__index_file = index_file
 
-        self.__doc_formatters = self.__create_doc_formatters ()
-        self.__doc_scanner = DocScanner()
         self.__link_resolver = LinkResolver (transformer)
         self.__symbol_resolver = SymbolResolver (self.__transformer)
         self.__name_formatter = NameFormatter(language='C')
-        self.__sections_parser = SectionsParser (self.__symbol_resolver,
-                sections)
         self.__symbol_factory = SymbolFactory (self, self.__symbol_resolver,
                 self.__transformer)
         self.__local_links = {}
@@ -931,45 +829,6 @@ class Formatter(object):
         # Used to create the index file and aggregate pages  if required
         self.__created_pages = {}
  
-    def __create_symbols (self, parent=None):
-        section_nodes = self.__sections_parser.get_sections (parent)
-        sections = []
-        for section_node in section_nodes:
-            section_name = section_node.find ('TITLE').text
-            class_node = self.__symbol_resolver.resolve_type (section_name)
-
-            if type (class_node) not in [ast.Class, ast.Record, ast.Interface,
-                    ast.Enum]:
-                #FIXME
-                #print "didn't handle %s" % str(type (class_node))
-                continue
-
-            section = ClassSymbol (class_node, self, section_name)
-            pagename = os.path.basename (self.__make_file_name (class_node))
-            link = self.__create_local_link (pagename, None)
-            self.__local_links[section_name] = link
-            symbols = section_node.find ('SYMBOLS').findall ('SYMBOL')
-            for symbol_node in symbols:
-                ast_node = self.__symbol_resolver.resolve_symbol (symbol_node.text)
-                if not ast_node:
-                    ast_node = self.__symbol_resolver.resolve_type (symbol_node.text)
-
-                symbol = self.__symbol_factory.make (ast_node, symbol_node.text)
-                if not symbol:
-                    #FIXME
-                    continue
-
-                link = self.__create_local_link (pagename, symbol_node.text)
-                symbol.set_link (link)
-                self.__local_links[symbol_node.text] = link
-                for linkname in symbol.get_extra_links():
-                    link = self.__create_local_link (pagename, linkname)
-                    self.__local_links[linkname] = link
-                section.add_symbol (symbol)
-            sections.append (section)
-
-        return sections
-
     def create_symbols(self):
         filename = os.path.basename (self.__index_file)
         dir_ = os.path.dirname (self.__index_file)
@@ -980,13 +839,17 @@ class Formatter(object):
         return sf.sections
 
     def __format_section (self, section):
-        if section.ast_node:
-            section.do_format ()
-            filename = self.__make_file_name (section.ast_node)
-            with open (filename, 'w') as f:
-                out = self._format_class (section, True)
-                section.filename = os.path.basename(filename)
-                f.write (out.encode('utf-8'))
+        out = ""
+        section.do_format ()
+        filename = section.link.pagename
+        with open (os.path.join (self.__output, filename), 'w') as f:
+            if section.parsed_contents and not section.ast_node:
+                out += pandoc_converter.convert("json", "html", json.dumps
+                        (section.parsed_contents))
+            out += self._format_class (section, True)
+            section.filename = os.path.basename(filename)
+            f.write (out.encode('utf-8'))
+
         for section in section.sections:
             self.__format_section (section)
 
@@ -1019,150 +882,6 @@ class Formatter(object):
                 link = self.__link_resolver.get_named_link (ident)
         return link
 
-    def __create_doc_formatters (self):
-        return {
-            'other': self.__format_other,
-            'property': self.__format_property,
-            'signal': self.__format_signal,
-            'type_name': self.__format_type_name,
-            'enum_value': self.__format_enum_value,
-            'parameter': self.__format_parameter,
-            'function_call': self.__format_function_call,
-            'code_start': self.__format_code_start,
-            'code_start_with_language': self.__format_code_start_with_language,
-            'code_end': self.__format_code_end,
-            'new_line': self.__format_new_line,
-            'new_paragraph': self.__format_new_paragraph,
-            'include': self.__format_include,
-            'note': self.__format_note,
-            'heading': self.__format_heading
-        }
-
-    def __format_other (self, node, match, props):
-        if self.__processing_code:
-            match += '\n'
-        return self._format_other (match)
-
-    def __format_property (self, node, match, props):
-        type_name = props['type_name']
-
-        prop_name = props['property_name']
-        link_name = "%s::%s---Property" % (type_name, prop_name)
-        link = self.get_named_link (link_name)
-
-        if link:
-            return self._format_property (prop_name, link)
-
-        return self.__format_other (node, match, props)
-
-    def __format_signal (self, node, match, props):
-        type_name = props['type_name']
-
-        signal_name = props['signal_name']
-        link_name = "%s::%s---Signal" % (type_name, signal_name)
-        link = self.get_named_link (link_name, search_remote = False)
-
-        if not link: # Gtk doc syntax
-            link = self.get_named_link ('%s_%s' % (type_name, signal_name))
-
-        if link:
-            return self._format_signal (signal_name, link)
-
-        return self.__format_other (node, match, props)
-
-    def __format_type_name (self, node, match, props):
-        ident = props['type_name']
-        link = self.get_named_link (ident)
-        return self._format_type_name (ident, link)
-
-    def __format_enum_value (self, node, match, props):
-        member_name = props['member_name']
-
-        link = self.get_named_link (member_name, search_remote=False)
-
-        if not link: # gtk doc suffixes with CAPS
-            link = self.get_named_link ('%s:CAPS' % member_name)
-
-        if link:
-            return self._format_enum_value (member_name, link)
-
-        return self.__format_other (node, match, props)
-
-    def __format_parameter (self, node, match, props):
-        param_name = props['param_name']
-        return self._format_parameter (param_name)
-
-    def __format_function_call (self, node, match, props):
-        ident = props['symbol_name']
-        link = self.get_named_link (ident)
-        if not link:
-            return self.__format_other (node, match, props)
-
-        return self._format_function_call (ident, link)
-
-    def __format_code_start (self, node, match, props):
-        self.__processing_code = True
-        return self._format_code_start ()
-
-    def __format_code_start_with_language (self, node, match, props):
-        self.__processing_code = True
-        return self._format_code_start_with_language (props["language_name"])
-
-    def __format_code_end (self, node, match, props):
-        self.__processing_code = False
-        return self._format_code_end ()
-
-    def __format_new_line (self, node, match, props):
-        if self.__processing_code:
-            return ""
-
-        return self._format_new_line ()
-
-    def __format_new_paragraph (self, node, match, props):
-        return self._format_new_paragraph ()
-
-    def __format_include (self, node, match, props):
-        filename = props["include_name"].strip()
-        f = None
-
-        try:
-            f = open(filename, 'r')
-        except IOError:
-            for dir_ in self.__include_directories:
-                try:
-                    f = open(os.path.join(dir_, filename), 'r')
-                    break
-                except:
-                    continue
-        if f:
-            contents = f.read()
-            if self.__processing_code:
-                return self._format_other (contents)
-            else:
-                out = self.__format_doc_string(node, contents)
-            f.close()
-        else:
-            logging.warning("Could not find file %s" % (props["include_name"], ))
-            out = match
-
-        return out
-
-    def __format_note (self, node, match, props):
-        if self.__processing_code:
-            return self.__format_other (node, match, props)
-
-        return self._format_note (props["note_contents"])
-
-    def __format_heading (self, node, match, props):
-        return self._format_heading ()
-
-    def __make_file_name (self, node):
-        extension = self._get_extension ()
-        name = self.__name_formatter.make_page_name (node)
-        if not name:
-            return ""
-        return os.path.join (self.__output, "%s.%s" % (name, extension))
-
     def __format_doc_string (self, node, docstring):
         if not docstring:
             return ""
@@ -1175,7 +894,8 @@ class Formatter(object):
 
     def format_doc (self, node):
         out = ""
-        out += self.__format_doc_string (node, node.doc)
+        if node:
+            out += self.__format_doc_string (node, node.doc)
         return out
 
     def __warn_not_implemented (self, func):
@@ -1192,86 +912,6 @@ class Formatter(object):
         ('markdown', 'html')
         """
         self.__warn_not_implemented (self._get_extension)
-        return ""
-
-    def _format_other (self, other):
-        """
-        @other: A string that doesn't contain any GNOME markup
-        """
-        self.__warn_not_implemented (self._format_other)
-        return ""
-
-    def _format_type_name (self, type_name, link):
-        """
-        @type_name: the name of a type to link to
-        @link: the prepared link
-        """
-        self.__warn_not_implemented (self._format_type_name)
-        return ""
-
-    def _format_parameter (self, param_name):
-        """
-        @param_name: the name of a parameter referred to
-        """
-        self.__warn_not_implemented (self._format_parameter)
-        return ""
-
-    def _format_new_paragraph (self):
-        """
-        Called when the parsed markup contained a new paragraph
-        """
-        self.__warn_not_implemented (self._format_new_paragraph)
-        return ""
-
-    def _format_heading (self):
-        """
-        """
-        self.__warn_not_implemented (self._format_heading)
-        return ""
-
-    def _format_function_call (self, function_name, link):
-        """
-        @function_name: A function name to link to
-        @link: the prepared link
-        """
-        self.__warn_not_implemented (self._format_function_call)
-        return ""
-
-    def _format_new_line (self):
-        """
-        Called when the parsed markup contained a new line
-        """
-        self.__warn_not_implemented (self._format_new_line)
-        return ""
-
-    def _format_note (self, note):
-        """
-        @note: A note to format, eg an informational hint
-        """
-        self.__warn_not_implemented (self._format_note)
-        return ""
-
-    def _format_code_start (self):
-        """
-        Called when the parsed markup contains code to format,
-        with no specified language
-        """
-        self.__warn_not_implemented (self._format_code_start)
-        return ""
-
-    def _format_code_start_with_language (self, language):
-        """
-        Called when the parsed markup contains code to format
-        @language: the language of the code
-        """
-        self.__warn_not_implemented (self._format_code_start_with_language)
-        return ""
-
-    def _format_code_end (self):
-        """
-        Called when a code block is finished
-        """
-        self.__warn_not_implemented (self._format_code_end)
         return ""
 
     def _format_index (self, pages):

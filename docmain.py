@@ -92,7 +92,5 @@ def doc_main (args):
 
     formatter = HtmlFormatter (transformer, args.markdown_include_paths,
             None, args.index, args.output, do_class_aggregation=True)
-    print ("Actually starting work")
     n = datetime.now()
     formatter.format (args.output)
-    print "done", datetime.now() - n
