@@ -6,12 +6,15 @@ import json
 from datetime import datetime
 from subprocess import Popen
 from time import sleep
+import os
 
 class Converter (object):
     def __init__(self):
         self.context = zmq.Context()
 
-        self.server = Popen (["./pandoc_server"])
+        module_path = path = os.path.dirname(__file__)
+        server_executable = os.path.join(module_path, "pandoc_server")
+        self.server = Popen ([server_executable])
         #  Socket to talk to server
         self.socket = self.context.socket(zmq.REQ)
         self.socket.connect("tcp://localhost:5555")

@@ -160,11 +160,12 @@ def doc_translate (args):
     translator = LegacyTranslator ()
 
     cflags = []
-    for p in args.packages:
-        includes = PkgConfig ("--cflags %s" % p)
-        for include in includes:
-            if include:
-                cflags.append (include)
+    if args.packages:
+        for p in args.packages:
+            includes = PkgConfig ("--cflags %s" % p)
+            for include in includes:
+                if include:
+                    cflags.append (include)
 
     cpp_includes = []
     for i in args.cpp_includes:

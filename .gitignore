@@ -1,0 +1,5 @@
+*.pyc
+*.o
+*.hi
+*.swp
+pandoc_server

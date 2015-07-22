@@ -8,13 +8,7 @@ from base_formatter import Formatter, LocalLink, ExternalLink
 from yattag import Doc, indent
 
 import uuid
-
-INDENT_HTML = False
-
-def do_indent (string):
-    if INDENT_HTML:
-        return indent (string, indent_text=True)
-    return string
+import os
 
 class Callable(object):
     def __init__(self, return_value, name, parameters):
@@ -28,7 +22,8 @@ class HtmlFormatter (Formatter):
         self.__paragraph_opened = False
 
         # Used to decide whether to render a separator
-        searchpath = ['templates']
+        module_path = os.path.dirname(__file__)
+        searchpath = [os.path.join(module_path, "templates")]
         self.engine = Engine(
             loader=FileLoader(searchpath, encoding='UTF-8'),
             extensions=[CoreExtension()]

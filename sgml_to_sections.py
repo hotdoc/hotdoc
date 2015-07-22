@@ -1,13 +1,15 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import sys
 import pandocfilters
 import os
+import StringIO
 from lxml import etree as ET
 from pandoc_client import pandoc_converter
 import subprocess
 
-OUTPUT="translated_sgml"
+OUTPUT=sys.argv[3]
 
 def convert_file (filename, new_name):
     with open(os.devnull, 'w') as f:
@@ -73,11 +75,25 @@ def parse_sgml_parts (parent, new_parent, path, sections):
     with open (os.path.join (OUTPUT, "index.markdown"), 'w') as f:
         f.write (out)
 
+def parse_sgml_book_chapters (parent, new_parent, path, sections):
+    out = ""
+    for part in parent.findall ("chapter"):
+        title = part.find("title").text
+        filename = '_'.join(title.split()) + ".markdown"
+        out += "# [%s](%s)\n\n" % (title, filename)
+
+        parse_sgml_chapters (part, os.path.join (OUTPUT,
+            filename), path, 2, sections)
+
+    with open (os.path.join (OUTPUT, "index.markdown"), 'w') as f:
+        f.write (out)
+
 if __name__=="__main__":
     prefix_map = {'xi': 'http://www.w3.org/2003/XInclude'}
     new_root = ET.Element('SECTIONS')
     new_tree = ET.ElementTree(new_root)
-    parser = ET.XMLParser(load_dtd=True)
+    parser = ET.XMLParser(load_dtd=True, resolve_entities=False)
+
     root = ET.parse (sys.argv[1], parser=parser).getroot()
 
     path = os.path.dirname (os.path.abspath(sys.argv[1]))
@@ -85,4 +101,7 @@ if __name__=="__main__":
     sections = {}
     for section in sections_root.findall ('.//SECTION'):
         sections[section.find('FILE').text] = section
-    parse_sgml_parts (root, new_root, path, sections)
+    if root.findall("part"):
+        parse_sgml_parts (root, new_root, path, sections)
+    else:
+        parse_sgml_book_chapters (root, new_root, path, sections)
