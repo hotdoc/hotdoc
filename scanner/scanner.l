@@ -2,8 +2,8 @@
 %{
 #include "scanner.h"
 
-extern int yylex (PyObject *comments);
-#define YY_DECL int yylex (PyObject *comments)
+extern int yylex (PyObject *comments, const char *filename);
+#define YY_DECL int yylex (PyObject *comments, const char *filename)
 static int yywrap (void);
 static void parse_comment ();
 %}
@@ -13,7 +13,7 @@ static void parse_comment ();
 
 %%
 
-"/*"              { parse_comment (comments); }
+"/*"              { parse_comment (comments, filename); }
 
 .|\n		  { }
 
@@ -43,7 +43,7 @@ realloc_and_concat(char *str, char *s2)
 #define BUFSIZE 64
 
 static void
-parse_comment (PyObject *comments)
+parse_comment (PyObject *comments, const char *filename)
 {
   int c1, c2;
   int comment_lineno;
@@ -79,7 +79,8 @@ parse_comment (PyObject *comments)
     comment = realloc_and_concat (comment, buf);
     comment = realloc_and_concat (comment, "*/");
 
-    PyObject *item = Py_BuildValue ("(sii)", comment,
+    PyObject *item = Py_BuildValue ("(ssii)", comment,
+    				    strdup(filename), /* Sic .. */
                                     comment_lineno,
                                     yylineno);
     PyList_Append (comments, item);
@@ -100,7 +101,7 @@ scan_filename (const char *filename, PyObject *comments)
   yylineno = 1;
   yyin = fopen (filename, "r");
 
-  yylex (comments);
+  yylex (comments, filename);
 
   fclose (yyin);
 

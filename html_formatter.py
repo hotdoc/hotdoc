@@ -4,7 +4,8 @@ from wheezy.template.engine import Engine
 from wheezy.template.ext.core import CoreExtension
 from wheezy.template.loader import FileLoader
 
-from base_formatter import Formatter, LocalLink, ExternalLink
+from base_formatter import Formatter, LocalLink, ExternalLink, Link, QualifiedSymbol, ParameterSymbol
+from base_formatter import FunctionSymbol, FunctionMacroSymbol, ClassSymbol
 from yattag import Doc, indent
 
 import uuid
@@ -16,10 +17,26 @@ class Callable(object):
         self.name = name
         self.parameters = parameters
 
+class TocSection (object):
+    def __init__(self, summary, name):
+        self.summary = summary
+        self.name = name
+        self.id_ = ''.join(name.split())
+
+class SymbolDescriptions (object):
+    def __init__(self, descriptions, name):
+        self.descriptions = descriptions
+        self.name = name
+
 class HtmlFormatter (Formatter):
     def __init__(self, *args, **kwargs):
         Formatter.__init__(self, *args, **kwargs)
-        self.__paragraph_opened = False
+        self.__symbol_formatters = {
+                FunctionSymbol: self._format_function,
+                FunctionMacroSymbol: self._format_function_macro,
+                ClassSymbol: self._format_class,
+                ParameterSymbol: self._format_parameter_symbol,
+                }
 
         # Used to decide whether to render a separator
         module_path = os.path.dirname(__file__)
@@ -29,30 +46,28 @@ class HtmlFormatter (Formatter):
             extensions=[CoreExtension()]
         )
 
-    def __maybe_close_paragraph (self):
-        if self.__paragraph_opened:
-            self.__paragraph_opened = False
-            return "</p>"
-        return ""
-
     def _get_extension (self):
         return "html"
 
     def _priv_format_linked_symbol (self, symbol):
-        template = self.engine.get_template('linked_symbol.html')
-        if hasattr (symbol, 'qualifiers'):
-            return template.render ({'qualifiers': symbol.qualifiers,
-                                    'type': symbol.type_name,
-                                    'indirection': symbol.indirection,
-                                    'type_link': symbol.link,
-                                    'name': symbol.argname,
-                                    })
-        return template.render ({'qualifiers': '',
-                                 'type': symbol.type_name,
-                                 'indirection': '',
-                                 'type_link': symbol.link,
-                                 'name': '',
-                                 })
+        template = self.engine.get_template('link.html')
+        out = ""
+        if isinstance (symbol, QualifiedSymbol):
+            for tok in symbol.type_tokens:
+                if isinstance (tok, Link):
+                    out += '%s ' % template.render ({'link': tok.get_link(),
+                                            'link_title': tok.title,
+                                            })
+                else:
+                    out += tok
+        elif hasattr (symbol, "link"):
+            out += template.render ({'link': symbol.link.get_link(),
+                                     'link_title': symbol.link.title})
+
+        if type (symbol) == ParameterSymbol:
+            out += symbol.argname
+
+        return out
 
     def _priv_format_callable_prototype (self, return_value, function_name,
             parameters, is_pointer):
@@ -142,8 +157,8 @@ class HtmlFormatter (Formatter):
             param_docs.append (self._priv_format_parameter_detail (param.argname,
                 param.formatted_doc, param.annotations))
         prototype = self._priv_format_callable_prototype (return_value,
-                callable_.type_name, parameters, is_pointer)
-        detail = self._priv_format_symbol_detail (name, symbol_type,
+                callable_.link.title, parameters, is_pointer)
+        detail = self._priv_format_symbol_detail (callable_.link.title, symbol_type,
                 callable_.link.get_link().split('#')[-1], prototype,
                 callable_.formatted_doc, callable_.return_value, param_docs,
                 callable_.flags)
@@ -154,6 +169,22 @@ class HtmlFormatter (Formatter):
 
     def _priv_format_function (self, func):
         return self.__format_callable (func, func.type_name, "method")
+
+    def _priv_format_function_summary (self, func):
+        return self._priv_format_callable_summary (
+                self._priv_format_linked_symbol (func.return_value),
+                self._priv_format_linked_symbol (func),
+                True,
+                False,
+                [])
+
+    def _priv_format_function_macro_summary (self, func):
+        return self._priv_format_callable_summary (
+                "#define ",
+                self._priv_format_linked_symbol (func),
+                True,
+                False,
+                [])
 
     def _priv_format_signal (self, signal):
         return self.__format_callable (signal,
@@ -230,42 +261,104 @@ class HtmlFormatter (Formatter):
     def _priv_format_function_macro (self, macro):
         return self._priv_format_macro (macro, is_callable=True)
 
-    def _fill_class_template_dict (self, klass, dict_, singular, plural, summary_name):
-        details = []
-        summaries = []
-        for element in getattr (klass, "%s" % plural):
-            detail, summary = getattr (self, "_priv_format_%s" % singular)(element)
-            if detail:
-                details.append (detail)
-            if summary:
-                summaries.append (summary)
-        summary = self._priv_format_summary (summaries, summary_name)
-        dict_["%s_summary" % plural] = summary
-        dict_["%s_details" % plural] = details
-
-    def _format_class (self, klass, aggregate):
-        dict_ = {'klass': klass,
-                'short_description': klass.get_short_description (),
-                'instance_doc': klass.formatted_doc,
-                'class_doc': klass.get_class_doc (),
-                }
-
-        for tup in [('function', 'functions', 'Functions'),
-                    ('signal', 'signals', 'Signals'),
-                    ('function_macro', 'function_macros', 'Function Macros'),
-                    ('vfunction', 'vfunctions', 'Virtual Functions'),
-                    ('property', 'properties', 'Properties'),
-                    ('field', 'fields', 'Fields'),
-                    ('constant', 'constants', 'Constants'),
-                    ('enum', 'enums', 'Enumerations'),
-                    ('callback', 'callbacks', 'Callbacks'),
-                    ('alias', 'aliases', 'Aliases')]:
-            self._fill_class_template_dict (klass, dict_, *tup)
-        template = self.engine.get_template('class.html')
-
-        return template.render(dict_)
-
     def _format_index (self, sections):
         template = self.engine.get_template('index_page.html')
 
         return template.render({'sections': sections})
+
+    def _format_symbols_toc_section (self, klass, singular, plural, summary_name):
+        toc_section_summaries = []
+        detailed_descriptions = []
+        
+        for element in getattr (klass, "%s" % plural):
+            summary = getattr (self, "_priv_format_%s_summary" % singular)(element)
+            if summary:
+                toc_section_summaries.append (summary)
+            if element.detailed_description:
+                detailed_descriptions.append (element.detailed_description)
+
+        if not toc_section_summaries:
+            return (None, None)
+
+        summary = self._priv_format_summary (toc_section_summaries,
+                summary_name)
+        toc_section = TocSection (summary, summary_name)
+
+        symbol_descriptions = None
+        if detailed_descriptions:
+            symbol_descriptions = SymbolDescriptions (detailed_descriptions,
+                    summary_name)
+        return (toc_section, symbol_descriptions)
+
+    def _format_class(self, klass):
+        toc_sections = []
+        symbols_details = []
+
+        for tup in [('function', 'functions', 'Functions'),
+                    ('function_macro', 'function_macros', 'Function Macros')]:
+            toc_section, symbols_descriptions = self._format_symbols_toc_section (klass, *tup)
+            if toc_section:
+                toc_sections.append(toc_section)
+            if symbols_descriptions:
+                symbols_details.append (symbols_descriptions) 
+
+        template = self.engine.get_template('class2.html')
+        out = template.render ({'klass': klass,
+                         'toc_sections': toc_sections,
+                         'symbols_details': symbols_details})
+
+        return (out, True)
+
+    def _format_prototype (self, function):
+        return_value = self._priv_format_linked_symbol (function.return_value)
+        parameters = []
+        for param in function.parameters:
+            parameters.append (self._priv_format_linked_symbol(param))
+
+        return self._priv_format_callable_prototype (return_value,
+                function.link.title, parameters, False)
+
+    def _format_raw_code (self, code):
+        template = self.engine.get_template('raw_code.html')
+        return template.render ({'code': code})
+
+    def _format_parameters (self, parameters):
+        parameter_docs = []
+        for param in parameters:
+            parameter_docs.append (self._priv_format_parameter_detail
+                    (param.argname, param.formatted_doc, []))
+        return parameter_docs
+
+    def _format_parameter_symbol (self, parameter):
+        return (self._priv_format_parameter_detail (parameter.argname,
+                parameter.formatted_doc, []), False)
+
+    def _format_function(self, function):
+        template = self.engine.get_template('function.html')
+        prototype = self._format_prototype (function)
+        parameters = [p.detailed_description for p in function.parameters]
+
+        out = template.render ({'prototype': prototype,
+                                'function': function,
+                                'return_value': function.return_value,
+                                'parameters': parameters})
+
+        return (out, False)
+
+    def _format_function_macro(self, function_macro):
+        template = self.engine.get_template('function.html')
+        prototype = self._format_raw_code (function_macro.original_text)
+        parameters = [p.detailed_description for p in function_macro.parameters]
+
+        out = template.render ({'prototype': prototype,
+                                'function': function_macro,
+                                'return_value': None,
+                                'parameters': parameters})
+
+        return (out, False)
+
+    def _format_symbol (self, symbol):
+        format_function = self.__symbol_formatters.get(type(symbol))
+        if format_function:
+            return format_function (symbol)
+        return (None, False)
