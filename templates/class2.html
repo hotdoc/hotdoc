@@ -38,6 +38,9 @@
 
 @for symbols_detail in symbols_details:
 <a name=@symbols_detail.name></a>
+<h2>
+	@symbols_detail.name
+</h2>
 @for description in symbols_detail.descriptions:
 @description
 @end

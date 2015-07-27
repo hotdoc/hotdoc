@@ -20,6 +20,7 @@ import clang.cindex
 from clang.cindex import *
 
 import linecache
+import uuid
 
 from giscanner.sourcescanner import CSYMBOL_TYPE_FUNCTION
 from giscanner.sourcescanner import CTYPE_INVALID, CTYPE_VOID,\
@@ -194,14 +195,14 @@ class ExternalLink (Link):
 
 
 class LocalLink (Link):
-    def __init__(self, symbol, pagename, title):
-        self.__symbol = symbol
+    def __init__(self, id_, pagename, title):
+        self.id_ = id_
         self.pagename = pagename
         self.title = title
 
     def get_link (self):
-        if (self.__symbol):
-            return "%s#%s" % (self.pagename, self.__symbol)
+        if (self.id_):
+            return "%s#%s" % (self.pagename, self.id_)
         else:
             return self.pagename
 
@@ -274,8 +275,10 @@ def cname_from_base_type(base_type):
     return res
 
 class SymbolFactory (object):
-    def __init__(self, doc_formatter):
+    def __init__(self, doc_formatter, extensions, comments):
+        self.__comments = comments
         self.__doc_formatter = doc_formatter
+        self.__extensions = extensions
         self.__symbol_classes = {
                     clang.cindex.CursorKind.FUNCTION_DECL: FunctionSymbol,
                 }
@@ -314,19 +317,23 @@ class SymbolFactory (object):
         tokens.reverse()
         return tokens
 
-    def make_qualified_symbol (self, type_, comment, argname=None):
+    def make_parameter_symbol (self, type_, comment, argname):
         tokens = self.__make_c_style_type_name (type_)
-        if argname:
-            res = ParameterSymbol (argname, tokens, type_, comment,
-                    self.__doc_formatter, self)
-        else:
-            res = ReturnValueSymbol (tokens, type_, comment, self.__doc_formatter,
+        return ParameterSymbol (argname, tokens, type_, comment,
+                self.__doc_formatter, self)
+
+    def make_qualified_symbol (self, tokens, type_, comment):
+        return QualifiedSymbol (tokens, type_, comment,
+                self.__doc_formatter, self)
+
+
+    def make_return_value_symbol (self, type_, comment):
+        tokens = self.__make_c_style_type_name (type_)
+        return ReturnValueSymbol (tokens, type_, comment, self.__doc_formatter,
                     self)
 
-        return res
-
     def make_untyped_parameter_symbol (self, comment, argname):
-        symbol = ParameterSymbol (argname, None, None, comment,
+        symbol = ParameterSymbol (argname, None, argname, comment,
                 self.__doc_formatter, self)
         return symbol
 
@@ -351,6 +358,21 @@ class SymbolFactory (object):
             res = klass (symbol, comment, self.__doc_formatter, self)
         return res
 
+    def make_custom (self, symbol, comment, klass):
+        return klass (symbol, comment, self.__doc_formatter, self)
+
+    def make_section(self, symbol, comment):
+        res = None
+        for extension in self.__extensions:
+            klass, extra_args = extension.get_section_type (symbol)
+            if klass:
+                res = klass (symbol, comment, self.__doc_formatter, self)
+                res.symbol_init (self.__comments, extra_args)
+
+        if not res:
+            res = SectionSymbol (symbol, comment, self.__doc_formatter, self)
+
+        return res
 
 class Symbol (object):
     def __init__(self, symbol, comment, doc_formatter, symbol_factory=None):
@@ -365,7 +387,7 @@ class Symbol (object):
         self.annotations = []
         self.flags = []
         self.filename = None
-        self.link = None
+        self.link = LocalLink (self._make_unique_id(), "", self._make_name())
         self.detailed_description = None
 
     def do_format (self):
@@ -376,14 +398,27 @@ class Symbol (object):
             self.__doc_formatter.write_symbol (self)
         return True
 
-    def set_link (self, link):
-        self.link = link
+    def _make_name (self):
+        if type(self._symbol) in [clang.cindex.Cursor, clang.cindex.Type]:
+            return self._symbol.spelling
+        elif type(self._symbol) in [str, unicode]:
+            return self._symbol
+        print type (self), type(self._symbol)
+        raise NotImplementedError
+
+    def _make_unique_id (self):
+        if type(self._symbol) == clang.cindex.Cursor:
+            return self._symbol.spelling
+        return str(hex(uuid.getnode()))
 
     def get_extra_links (self):
         return []
 
     def add_annotation (self, annotation):
         self.annotations.append (annotation)
+
+    def get_named_link (self, ident, search_remote=True):
+        return self.__doc_formatter.get_named_link (ident, search_remote)
 
 class QualifiedSymbol (Symbol):
     def __init__(self, tokens, *args):
@@ -531,14 +566,14 @@ class FunctionSymbol (Symbol):
 
     def do_format (self):
         self.return_value = \
-                self._symbol_factory.make_qualified_symbol(self._symbol.result_type,
+                self._symbol_factory.make_return_value_symbol(self._symbol.result_type,
                         self._comment.tags.get("returns"))
 
         self.return_value.do_format()
         self.parameters = []
         for param in self._symbol.get_arguments():
             param_comment = self._comment.params.get (param.displayname)
-            parameter = self._symbol_factory.make_qualified_symbol \
+            parameter = self._symbol_factory.make_parameter_symbol \
                     (param.type, param_comment, param.displayname)
             parameter.do_format()
             self.parameters.append (parameter)
@@ -607,47 +642,32 @@ class Dependency (object):
         self.deps = set({})
 
 
+class TypedSymbolsList (object):
+    def __init__ (self, name):
+        self.name = name
+        self.symbols = []
+
+
 class SectionSymbol (Symbol, Dependency):
-    def __init__(self, filename, *args):
+    def __init__(self, *args):
         Symbol.__init__ (self, *args)
-        Dependency.__init__ (self, filename)
         self.symbols = []
         self.sections = []
-        self.functions = []
-        self.signals = []
-        self.vfunctions = []
-        self.properties = []
-        self.fields = []
-        self.constants = []
-        self.function_macros = []
-        self.enums = []
-        self.callbacks = []
-        self.aliases = []
-        self.records = []
-        self.parsed_contents = None
-        self.__list_map = {
-                            FunctionSymbol: self.functions,
-                            SignalSymbol: self.signals,
-                            VirtualFunctionSymbol: self.vfunctions,
-                            PropertySymbol: self.properties,
-                            FieldSymbol: self.fields,
-                            ConstantSymbol: self.constants,
-                            FunctionMacroSymbol: self.function_macros,
-                            EnumSymbol: self.enums,
-                            CallbackSymbol: self.callbacks,
-                            AliasSymbol: self.aliases,
-                            RecordSymbol: self.records,
-                            }
 
+        self.typed_symbols = {}
+        self.typed_symbols[FunctionSymbol] = TypedSymbolsList ("Functions")
+        self.typed_symbols[FunctionMacroSymbol] = TypedSymbolsList ("Function Macros")
+        self.parsed_contents = None
 
     def do_format (self):
         for symbol in self.symbols:
             if symbol.do_format ():
-                symbol_list = self.__list_map [type (symbol)]
-                symbol_list.append (symbol)
+                typed_symbols_list = self.typed_symbols [type (symbol)]
+                typed_symbols_list.symbols.append (symbol)
         return Symbol.do_format(self)
 
     def add_symbol (self, symbol):
+        symbol.link.pagename = self.link.pagename
         self.symbols.append (symbol)
 
     def get_short_description (self):
@@ -656,6 +676,9 @@ class SectionSymbol (Symbol, Dependency):
         if not self._comment.short_description:
             return ""
         return self._comment.short_description
+
+    def _make_unique_id (self):
+        return None
 
 class ClassSymbol (SectionSymbol):
     def __init__(self, *args):
@@ -762,15 +785,11 @@ class SectionFilter (GnomeMarkdownFilter):
                             sym = self.__symbol_factory.make (symbol,
                                     comment_block)
                             if sym:
-                                link = LocalLink (symbol_name,
-                                        self.__current_section.link.pagename,
-                                        symbol_name)
-                                self.local_links[symbol_name] = link
-                                sym.set_link (link)
+                                self.local_links[symbol_name] = sym.link
                                 self.__current_section.add_symbol (sym)
-                                self.__current_section.deps.add('"%s"' % comment_block.position.filename)
-                                self.__current_section.deps.add('"%s"' %
-                                        str(symbol.location.file))
+                                #self.__current_section.deps.add('"%s"' % comment_block.position.filename)
+                                #self.__current_section.deps.add('"%s"' %
+                                #        str(symbol.location.file))
 
                 res.append (val)
             if res:
@@ -795,7 +814,9 @@ class SectionFilter (GnomeMarkdownFilter):
 
         comment = self.__comment_blocks.get("SECTION:%s" % name.lower())
         symbol = self.__symbols.get(name)
-        section = ClassSymbol (filename, symbol, comment, self.__doc_formatter)
+        if not symbol:
+            symbol = name
+        section = self.__symbol_factory.make_section (symbol, comment)
 
         if self.__current_section:
             self.__current_section.sections.append (section)
@@ -804,15 +825,14 @@ class SectionFilter (GnomeMarkdownFilter):
 
         self.__current_section = section
         pagename = "%s.%s" % (name, "html")
-        link = LocalLink (None, pagename, name)
-        self.local_links[name] = link
-        self.__current_section.set_link (link)
+        self.__current_section.link.pagename = pagename
+        self.local_links[name] = self.__current_section.link
 
         with open (path, 'r') as f:
             contents = f.read()
             res = self.filter_text (contents)
 
-        self.dag.add ('"%s"' % os.path.basename(filename), list(self.__current_section.deps))
+        #self.dag.add ('"%s"' % os.path.basename(filename), list(self.__current_section.deps))
         return True
 
     def create_symbols (self, filename):
@@ -821,7 +841,7 @@ class SectionFilter (GnomeMarkdownFilter):
 
 class Formatter(object):
     def __init__ (self, symbols, comments, include_directories, index_file, output,
-            do_class_aggregation=False):
+            extensions, do_class_aggregation=False):
         self.__include_directories = include_directories
         self.__do_class_aggregation = do_class_aggregation
         self.__output = output
@@ -831,7 +851,7 @@ class Formatter(object):
 
         self.__link_resolver = LinkResolver ()
         self.__name_formatter = NameFormatter(language='C')
-        self.__symbol_factory = SymbolFactory (self)
+        self.__symbol_factory = SymbolFactory (self, extensions, comments)
         self.__local_links = {}
         self.__gnome_markdown_filter = GnomeMarkdownFilter (os.path.dirname(index_file))
         self.__gnome_markdown_filter.set_formatter (self)
@@ -859,8 +879,6 @@ class Formatter(object):
     def __format_section (self, section):
         out = ""
         section.do_format ()
-        filename = "%s.%s" % (os.path.splitext(section.filename)[0],
-                self._get_extension())
         #with open (os.path.join (self.__output, filename), 'w') as f:
         #    if section.parsed_contents and not section.ast_node:
         #        out += pandoc_converter.convert("json", "html", json.dumps

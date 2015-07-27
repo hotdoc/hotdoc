@@ -15,7 +15,7 @@ from pandoc_client import pandoc_converter
 from html_formatter import HtmlFormatter
 from xml.etree.cElementTree import parse, tostring
 from clangizer import ClangScanner
-from gobject_extension.dumpparser import GIDumpParser
+from gi_extension import GIExtension
 
 def PkgConfig(args):
     cmd = ['pkg-config'] + shlex.split(args)
@@ -71,10 +71,10 @@ def main (args):
     blocks = cbp.parse_comment_blocks(css.comments)
     print "Comment block parsing done", datetime.now() - n
 
+    extensions = []
     if args.gobject_introspection_dump:
-        n = datetime.now()
-        gdp = GIDumpParser(args.gobject_introspection_dump)
-        print "gi dump parsing done :", datetime.now() - n
+        extensions.append (GIExtension.GIExtension(args.gobject_introspection_dump))
 
-    formatter = HtmlFormatter (css.symbols, blocks, [], args.index, "new_doc")
+    formatter = HtmlFormatter (css.symbols, blocks, [], args.index, "new_doc",
+            extensions)
     formatter.format()

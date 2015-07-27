@@ -5,8 +5,11 @@ from wheezy.template.ext.core import CoreExtension
 from wheezy.template.loader import FileLoader
 
 from base_formatter import Formatter, LocalLink, ExternalLink, Link, QualifiedSymbol, ParameterSymbol
-from base_formatter import FunctionSymbol, FunctionMacroSymbol, ClassSymbol
+from base_formatter import FunctionSymbol, FunctionMacroSymbol, ClassSymbol, SectionSymbol
 from yattag import Doc, indent
+
+# We support that extension
+from gi_extension.GIExtension import *
 
 import uuid
 import os
@@ -34,8 +37,17 @@ class HtmlFormatter (Formatter):
         self.__symbol_formatters = {
                 FunctionSymbol: self._format_function,
                 FunctionMacroSymbol: self._format_function_macro,
+                GIClassSymbol: self._format_class,
+                GIPropertySymbol: self._format_gi_property,
                 ClassSymbol: self._format_class,
+                SectionSymbol: self._format_class,
                 ParameterSymbol: self._format_parameter_symbol,
+                }
+
+        self.__summary_formatters = {
+                FunctionSymbol: self._priv_format_function_summary,
+                FunctionMacroSymbol: self._priv_format_function_macro_summary,
+                GIPropertySymbol: self._format_gi_property_summary,
                 }
 
         # Used to decide whether to render a separator
@@ -56,7 +68,7 @@ class HtmlFormatter (Formatter):
             for tok in symbol.type_tokens:
                 if isinstance (tok, Link):
                     out += '%s ' % template.render ({'link': tok.get_link(),
-                                            'link_title': tok.title,
+                                                     'link_title': tok.title,
                                             })
                 else:
                     out += tok
@@ -186,6 +198,15 @@ class HtmlFormatter (Formatter):
                 False,
                 [])
 
+    def _format_gi_property_summary (self, prop):
+        template = self.engine.get_template('property_summary.html')
+        property_type = self._priv_format_linked_symbol (prop.type_)
+        prop_link = self._priv_format_linked_symbol (prop)
+
+        return template.render({'property_type': property_type,
+                                'property_link': prop_link,
+                               })
+
     def _priv_format_signal (self, signal):
         return self.__format_callable (signal,
                 signal.type_name, "signal", is_callable=False)
@@ -266,12 +287,16 @@ class HtmlFormatter (Formatter):
 
         return template.render({'sections': sections})
 
-    def _format_symbols_toc_section (self, klass, singular, plural, summary_name):
+    def _format_symbols_toc_section (self, symbols_type, symbols_list):
+        summary_formatter = self.__summary_formatters.get(symbols_type)
+        if not summary_formatter:
+            return (None, None)
+
         toc_section_summaries = []
         detailed_descriptions = []
         
-        for element in getattr (klass, "%s" % plural):
-            summary = getattr (self, "_priv_format_%s_summary" % singular)(element)
+        for element in symbols_list.symbols:
+            summary = summary_formatter(element)
             if summary:
                 toc_section_summaries.append (summary)
             if element.detailed_description:
@@ -281,22 +306,30 @@ class HtmlFormatter (Formatter):
             return (None, None)
 
         summary = self._priv_format_summary (toc_section_summaries,
-                summary_name)
-        toc_section = TocSection (summary, summary_name)
+                symbols_list.name)
+        toc_section = TocSection (summary, symbols_list.name)
 
         symbol_descriptions = None
         if detailed_descriptions:
             symbol_descriptions = SymbolDescriptions (detailed_descriptions,
-                    summary_name)
+                    symbols_list.name)
+
         return (toc_section, symbol_descriptions)
 
     def _format_class(self, klass):
         toc_sections = []
         symbols_details = []
 
-        for tup in [('function', 'functions', 'Functions'),
-                    ('function_macro', 'function_macros', 'Function Macros')]:
-            toc_section, symbols_descriptions = self._format_symbols_toc_section (klass, *tup)
+        # Enforce our ordering
+        for symbols_type in [FunctionSymbol, FunctionMacroSymbol, GIPropertySymbol]:
+            symbols_list = klass.typed_symbols.get(symbols_type)
+            if not symbols_list:
+                continue
+
+            toc_section, symbols_descriptions = \
+                    self._format_symbols_toc_section (symbols_type,
+                            symbols_list)
+
             if toc_section:
                 toc_sections.append(toc_section)
             if symbols_descriptions:
@@ -304,10 +337,20 @@ class HtmlFormatter (Formatter):
 
         template = self.engine.get_template('class2.html')
         out = template.render ({'klass': klass,
-                         'toc_sections': toc_sections,
-                         'symbols_details': symbols_details})
+                                'toc_sections': toc_sections,
+                                'symbols_details': symbols_details})
 
         return (out, True)
+
+    def _format_gi_property(self, prop):
+        type_link = self._priv_format_linked_symbol (prop.type_)
+        template = self.engine.get_template('property_prototype.html')
+        prototype = template.render ({'property_name': prop.link.title,
+                                      'property_type': type_link})
+        template = self.engine.get_template ('property.html')
+        res = template.render ({'prototype': prototype,
+                               'property': prop})
+        return (res, False)
 
     def _format_prototype (self, function):
         return_value = self._priv_format_linked_symbol (function.return_value)
