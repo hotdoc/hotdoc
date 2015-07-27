@@ -2,4 +2,7 @@
 *.o
 *.hi
 *.swp
+*.html
+*.so
+*.dot
 pandoc_server

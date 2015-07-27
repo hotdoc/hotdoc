@@ -1,4 +1,4 @@
-@require(klass, short_description, functions_summary, function_macros_summary, properties_summary, fields_summary, signals_summary, vfunctions_summary, constants_summary, enums_summary, aliases_summary, callbacks_summary, functions_details, function_macros_details, signals_details, vfunctions_details, properties_details, fields_details, constants_details, enums_details, callbacks_details, aliases_details, instance_doc, class_doc)
+@require(klass, toc_sections, symbols_details)
 @extends('page.html')
 
 @def content():
@@ -9,252 +9,43 @@
 		<td class="shortcuts" align="left" width=100%>
 			<a class="shortcut" href="#">Top</a>
 
-			@if functions_summary:
-			<span id="nav_functions">
-				<span class="dim">|</span>
-				<a href="#functions">Functions</a>
-			</span>
+			@for toc_section in toc_sections:
+				<span id="nav_@toc_section.name">
+					<span class="dim">|</span>
+					<a href="#@toc_section.id_">@toc_section.name</a>
+				</span>
 			@end
-
-			@if function_macros_summary:
-			<span id="nav_function_macros">
-				<span class="dim">|</span>
-				<a href="#function_macros">Function Macros</a>
-			</span>
-			@end
-
-			@if properties_summary:
-			<span id="nav_properties">
-				<span class="dim">|</span>
-				<a href="#properties">Properties</a>
-			</span>
-			@end
-
-			@if fields_summary:
-			<span id="nav_fields">
-				<span class="dim">|</span>
-				<a href="#fields">Fields</a>
-			</span>
-			@end
-
-			@if signals_summary:
-			<span id="nav_signals">
-				<span class="dim">|</span>
-				<a href="#signals">Signals</a>
-			</span>
-			@end
-
-			@if vfunctions_summary:
-			<span id="nav_vfunctions">
-				<span class="dim">|</span>
-				<a href="#vfunctions">Virtual Functions</a>
-			</span>
-			@end
-
-			@if callbacks_summary:
-			<span id="nav_callbacks">
-				<span class="dim">|</span>
-				<a href="#callbacks">Callback Functions</a>
-			</span>
-			@end
-
-			@if constants_summary:
-			<span id="nav_constants">
-				<span class="dim">|</span>
-				<a href="#constants">Constants</a>
-			</span>
-			@end
-
-			@if enums_summary:
-			<span id="nav_enums">
-				<span class="dim">|</span>
-				<a href="#enums">Enumerations</a>
-			</span>
-			@end
-
-			@if aliases_summary:
-			<span id="nav_aliases">
-				<span class="dim">|</span>
-				<a href="#aliases">Aliases</a>
-			</span>
-			@end
-
 		</td>
 	</tr>
 	</tbody>
 </table>
 
-<a name="@klass.type_name"></a>
-<h1 class="class">@klass.type_name</h1>
-<p>@short_description</p>
+<a name="@klass.link.pagename"></a>
+<h1 class="class">@klass.link.title</h1>
+<p>@klass.get_short_description()</p>
 
 <div class="refentry">
-	@if functions_summary:
-	<a name=functions></a>
-	@functions_summary
-	@end
-
-	@if function_macros_summary:
-	<a name=function_macros></a>
-	@function_macros_summary
-	@end
-
-	@if properties_summary:
-	<a name=properties></a>
-	@properties_summary
-	@end
-
-	@if fields_summary:
-	<a name=fields></a>
-	@fields_summary
-	@end
-
-	@if signals_summary:
-	<a name=signals></a>
-	@signals_summary
-	@end
-
-	@if constants_summary:
-	<a name=constants></a>
-	@constants_summary
-	@end
-
-	@if callbacks_summary:
-	<a name=callbacks></a>
-	@callbacks_summary
-	@end
-
-	@if enums_summary:
-	<a name=enums></a>
-	@enums_summary
-	@end
-
-	@if aliases_summary:
-	<a name=aliases></a>
-	@aliases_summary
-	@end
-
-	<h2>Instance description</h2>
-	@instance_doc
-
-	@if class_doc:
-	<h2>Class Description</h2>
-	@class_doc
-	@end
-
-	@if vfunctions_summary:
-	<a name=vfunctions></a>
-	@vfunctions_summary
-	@end
-
-	@if functions_details:
-	<h2>Function Details</h2>
-	@for i, detail in enumerate (functions_details):
-
-	@if i != 0:
-	<hr></hr>
-	@end
-	@detail
-	@end
-	@end
-
-	@if function_macros_details:
-	<h2>Function Macro Details</h2>
-	@for i, detail in enumerate (function_macros_details):
-
-	@if i != 0:
-	<hr></hr>
-	@end
-	@detail
-	@end
-	@end
-
-	@if properties_details:
-	<h2>Property Details</h2>
-	@for i, detail in enumerate (properties_details):
-
-	@if i != 0:
-	<hr></hr>
-	@end
-	@detail
-	@end
-	@end
-
-	@if fields_details:
-	<h2>Field Details</h2>
-	@for i, detail in enumerate (fields_details):
-
-	@if i != 0:
-	<hr></hr>
-	@end
-	@detail
-	@end
-	@end
-
-	@if signals_details:
-	<h2>Signal Details</h2>
-	@for i, detail in enumerate (signals_details):
-
-	@if i != 0:
-	<hr></hr>
-	@end
-	@detail
-	@end
-	@end
-
-	@if vfunctions_details:
-	<h2>Virtual Function Details</h2>
-	@for i, detail in enumerate (vfunctions_details):
-
-	@if i != 0:
-	<hr></hr>
-	@end
-	@detail
-	@end
-	@end
-
-	@if callbacks_details:
-	<h2>Callback Function Details</h2>
-	@for i, detail in enumerate (callbacks_details):
-
-	@if i != 0:
-	<hr></hr>
-	@end
-	@detail
-	@end
-	@end
-
-	@if constants_details:
-	<h2>Constant Details</h2>
-	@for i, detail in enumerate (constants_details):
-
-	@if i != 0:
-	<hr></hr>
-	@end
-	@detail
-	@end
-	@end
-
-	@if enums_details:
-	<h2>Enumeration Details</h2>
-	@for i, detail in enumerate (enums_details):
-
-	@if i != 0:
-	<hr></hr>
-	@end
-	@detail
-	@end
-	@end
-
-	@if aliases_details:
-	<h2>Alias Details</h2>
-	@for i, detail in enumerate (aliases_details):
-
-	@if i != 0:
-	<hr></hr>
-	@end
-	@detail
-	@end
+	@for toc_section in toc_sections:
+		<a name=@toc_section.id_></a>
+		@toc_section.summary
 	@end
 </div>
+
+@if klass.formatted_doc:
+<h2>Instance description</h2>
+@klass.formatted_doc
+@end
+
+@for symbols_detail in symbols_details:
+<a name=@symbols_detail.name></a>
+<h2>
+	@symbols_detail.name
+</h2>
+@for i, description in enumerate(symbols_detail.descriptions):
+
+@if i != 0:
+<hr></hr>
+@end
+@description
+@end
 @end
