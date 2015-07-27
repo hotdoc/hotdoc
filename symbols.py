@@ -6,7 +6,7 @@ import uuid
 
 import clang.cindex
 
-from links import LocalLink
+from links import link_resolver, LocalLink
 from clangizer import ast_node_is_function_pointer
 
 class Symbol (object):
@@ -22,11 +22,7 @@ class Symbol (object):
         self.detailed_description = None
 
     def do_format (self):
-        self.formatted_doc = self.__doc_formatter.format_doc (self._comment)
-        out, standalone = self.__doc_formatter._format_symbol (self)
-        self.detailed_description = out
-        if standalone:
-            self.__doc_formatter.write_symbol (self)
+        self.__doc_formatter.format_symbol (self)
         return True
 
     def _lookup_ast_node (self, name):
@@ -53,9 +49,6 @@ class Symbol (object):
 
     def add_annotation (self, annotation):
         self.annotations.append (annotation)
-
-    def get_named_link (self, ident, search_remote=True):
-        return self.__doc_formatter.get_named_link (ident, search_remote)
 
 
 class FunctionSymbol (Symbol):
@@ -109,6 +102,7 @@ class EnumSymbol (Symbol):
             member_comment = self._comment.params.get (member.spelling)
             member = self._symbol_factory.make_simple_symbol (member,
                     member_comment)
+            link_resolver.add_local_link (member.link)
             self.members.append (member)
 
     def get_extra_links (self):
@@ -281,9 +275,10 @@ class AliasSymbol (Symbol):
 
 
 class SymbolFactory (object):
-    def __init__(self, doc_formatter, extensions, comments):
+    def __init__(self, doc_formatter, extensions, comments, source_scanner):
         self.__comments = comments
         self.__doc_formatter = doc_formatter
+        self.source_scanner = source_scanner
         self.__extensions = extensions
         self.__symbol_classes = {
                     clang.cindex.CursorKind.FUNCTION_DECL: FunctionSymbol,
@@ -306,13 +301,13 @@ class SymbolFactory (object):
 
         if type_.kind == clang.cindex.TypeKind.TYPEDEF:
             d = type_.get_declaration ()
-            link = self.__doc_formatter.get_named_link (d.displayname)
+            link = link_resolver.get_named_link (d.displayname)
             if link:
                 tokens.append (link)
             else:
                 tokens.append (d.displayname + ' ')
         else:
-            link = self.__doc_formatter.get_named_link (type_.spelling)
+            link = link_resolver.get_named_link (type_.spelling)
             if link:
                 tokens.append (link)
             else:
@@ -386,6 +381,8 @@ class SymbolFactory (object):
         res = None
         if klass:
             res = klass (symbol, comment, self.__doc_formatter, self)
+
+        link_resolver.add_local_link (res.link)
         return res
 
     def make_custom (self, symbol, comment, klass):

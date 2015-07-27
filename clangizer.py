@@ -83,6 +83,19 @@ class ClangScanner(object):
         if node.kind == clang.cindex.CursorKind.TYPEDEF_DECL:
             self.external_symbols[node.spelling] = node
 
+    def lookup_ast_node (self, name):
+        return self.symbols.get(name) or self.external_symbols.get(name)
+
+    def lookup_underlying_type (self, name):
+        ast_node = self.lookup_ast_node (name)
+        if not ast_node:
+            return None
+
+        while ast_node.kind == clang.cindex.CursorKind.TYPEDEF_DECL:
+            t = ast_node.underlying_typedef_type
+            ast_node = t.get_declaration()
+        return ast_node.kind
+
 if __name__=="__main__": 
     css = ClangScanner ([sys.argv[1]])
     print css.comments

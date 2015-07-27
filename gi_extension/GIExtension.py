@@ -3,26 +3,27 @@ from lxml import etree
 from symbols import Symbol, FunctionSymbol, ClassSymbol
 import clang.cindex
 from giscanner.annotationparser import GtkDocParameter
+from links import link_resolver
 
-class GISymbol(object):
+class GISymbol(Symbol):
     def _make_name(self):
         return self._symbol.attrib["name"]
 
     def make_qualified_symbol (self, type_name):
-        type_link = self.get_named_link (type_name)
+        type_link = link_resolver.get_named_link (type_name)
         if type_link:
             tokens = [type_link]
         else:
             tokens = [type_name]
 
-        utype = self._lookup_underlying_type(type_name)
+        utype = self._symbol_factory.source_scanner.lookup_underlying_type(type_name)
         if utype == clang.cindex.CursorKind.STRUCT_DECL:
             tokens.append('*')
 
         return self._symbol_factory.make_qualified_symbol (type_name, None, tokens)
 
 
-class GIPropertySymbol (GISymbol, Symbol):
+class GIPropertySymbol (GISymbol):
     def _make_unique_id(self):
         parent_name = self._symbol.getparent().attrib['name']
         return "%s:::%s---%s" % (parent_name, self._symbol.attrib["name"],

@@ -29,18 +29,25 @@ class LocalLink (Link):
             return self.pagename
 
 
-class ExternalLinkResolver(object):
+class LinkResolver(object):
     def __init__(self):
-        self.__all_links = {}
+        self.__external_links = {}
+        self.__local_links = {}
         self.__gather_gtk_doc_links ()
 
     def get_named_link (self, name):
         link = None
         try:
-            link = self.__all_links[name]
+            link = self.__local_links[name]
         except KeyError:
-            pass
+            try:
+                link = self.__external_links[name]
+            except KeyError:
+                pass
         return link
+
+    def add_local_link (self, link):
+        self.__local_links[link.title] = link
 
     def __gather_gtk_doc_links (self):
         if not os.path.exists(os.path.join("/usr/share/gtk-doc/html")):
@@ -68,4 +75,8 @@ class ExternalLinkResolver(object):
                     title = split_line[1].replace('-', '_')
                     link = ExternalLink (split_line[1], dir_, remote_prefix,
                             filename, title)
-                    self.__all_links[title] = link
+                    if title.endswith (":CAPS"):
+                        title = title [:-5]
+                    self.__external_links[title] = link
+
+link_resolver = LinkResolver()

@@ -34,6 +34,7 @@ class SectionSymbol (Symbol, Dependency):
         self.typed_symbols[EnumSymbol] = TypedSymbolsList ("Enumerations")
         self.typed_symbols[AliasSymbol] = TypedSymbolsList ("Aliases")
         self.parsed_contents = None
+        self.formatted_contents = None
 
     def _register_typed_symbol (self, symbol_type, symbol_type_name):
         self.typed_symbols[symbol_type] = TypedSymbolsList (symbol_type_name)
@@ -72,7 +73,6 @@ class SectionFilter (GnomeMarkdownFilter):
         self.__comment_blocks = comment_blocks
         self.__symbol_factory = symbol_factory
         self.__doc_formatter = doc_formatter
-        self.local_links = {}
 
     def parse_extensions (self, key, value, format_, meta):
         if key == "BulletList":
@@ -89,10 +89,7 @@ class SectionFilter (GnomeMarkdownFilter):
                             sym = self.__symbol_factory.make (symbol,
                                     comment_block)
                             if sym:
-                                self.local_links[symbol_name] = sym.link
                                 self.__current_section.add_symbol (sym)
-                                for l in sym.get_extra_links():
-                                    self.local_links[l.title] = l
                                 #self.__current_section.deps.add('"%s"' % comment_block.position.filename)
                                 #self.__current_section.deps.add('"%s"' %
                                 #        str(symbol.location.file))
@@ -132,11 +129,12 @@ class SectionFilter (GnomeMarkdownFilter):
         self.__current_section = section
         pagename = "%s.%s" % (name, "html")
         self.__current_section.link.pagename = pagename
-        self.local_links[name] = self.__current_section.link
 
         with open (path, 'r') as f:
             contents = f.read()
             res = self.filter_text (contents)
+            if not self.__current_section.symbols:
+                self.__current_section.parsed_contents = res
 
         #self.dag.add ('"%s"' % os.path.basename(filename), list(self.__current_section.deps))
         return True

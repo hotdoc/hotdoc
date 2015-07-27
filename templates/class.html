@@ -36,6 +36,10 @@
 @klass.formatted_doc
 @end
 
+@if klass.formatted_contents:
+@klass.formatted_contents
+@end
+
 @for symbols_detail in symbols_details:
 <a name=@symbols_detail.name></a>
 <h2>

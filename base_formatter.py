@@ -11,11 +11,8 @@ from xml.sax.saxutils import unescape
 
 from pandoc_client import pandoc_converter
 
-import clang.cindex
-
 from sections import SectionFilter
 from symbols import SymbolFactory
-from links import ExternalLinkResolver
 
 
 class Annotation (object):
@@ -69,81 +66,58 @@ class ConstructOnlyFlag (Flag):
 
 
 class Formatter(object):
-    def __init__ (self, symbols, external_symbols, comments, include_directories, index_file, output,
+    def __init__ (self, source_scanner, comments, include_directories, index_file, output,
             extensions, do_class_aggregation=False):
         self.__include_directories = include_directories
         self.__do_class_aggregation = do_class_aggregation
         self.__output = output
         self.__index_file = index_file
-        self.__symbols = symbols
-        self.__external_symbols = external_symbols
+        self.__source_scanner = source_scanner
         self.__comments = comments
 
-        self.__link_resolver = ExternalLinkResolver ()
-        self.__symbol_factory = SymbolFactory (self, extensions, comments)
-        self.__local_links = {}
+        self.__symbol_factory = SymbolFactory (self, extensions, comments,
+                source_scanner)
         self.__gnome_markdown_filter = GnomeMarkdownFilter (os.path.dirname(index_file))
         self.__gnome_markdown_filter.set_formatter (self)
 
         # Used to warn subclasses a method isn't implemented
         self.__not_implemented_methods = {}
 
-    def lookup_ast_node (self, name):
-        return self.__symbols.get(name) or self.__external_symbols.get(name)
+    def format (self):
+        n = datetime.now ()
+        sections = self.__create_symbols ()
 
-    def lookup_underlying_type (self, name):
-        ast_node = self.lookup_ast_node (name)
-        if not ast_node:
-            return None
+        for section in sections:
+            self.__format_section (section)
 
-        while ast_node.kind == clang.cindex.CursorKind.TYPEDEF_DECL:
-            t = ast_node.underlying_typedef_type
-            ast_node = t.get_declaration()
-        return ast_node.kind
+    def format_symbol (self, symbol):
+        symbol.formatted_doc = self.__format_doc (symbol._comment)
+        out, standalone = self._format_symbol (symbol)
+        symbol.detailed_description = out
+        if standalone:
+            self.__write_symbol (symbol)
 
-    def create_symbols(self):
+    def __create_symbols(self):
         n = datetime.now()
-        sf = SectionFilter (os.path.dirname(self.__index_file), self.__symbols,
-                self.__comments, self, self.__symbol_factory)
+        sf = SectionFilter (os.path.dirname(self.__index_file),
+                self.__source_scanner.symbols, self.__comments, self, self.__symbol_factory)
         sf.create_symbols (os.path.basename(self.__index_file))
-        self.__local_links = sf.local_links
         print "Markdown parsing done", datetime.now() - n
         return sf.sections
 
     def __format_section (self, section):
         out = ""
         section.do_format ()
-        #with open (os.path.join (self.__output, filename), 'w') as f:
-        #    if section.parsed_contents and not section.ast_node:
-        #        out += pandoc_converter.convert("json", "html", json.dumps
-        #                (section.parsed_contents))
-            #out += self._format_class (section, True)
-        #    section.filename = os.path.basename(filename)
-            #f.write (out.encode('utf-8'))
 
         for section in section.sections:
             self.__format_section (section)
 
-    def write_symbol (self, symbol):
+    def __write_symbol (self, symbol):
         path = os.path.join (self.__output, symbol.link.pagename)
         with open (path, 'w') as f:
-            f.write (symbol.detailed_description.encode('utf-8'))
+            out = symbol.detailed_description
+            f.write (out.encode('utf-8'))
 
-    def format (self):
-        n = datetime.now ()
-        sections = self.create_symbols ()
-
-        for section in sections:
-            self.__format_section (section)
-
-    def get_named_link(self, ident, search_remote=True):
-        link = None
-        try:
-            link = self.__local_links [ident]
-        except KeyError:
-            if search_remote:
-                link = self.__link_resolver.get_named_link (ident)
-        return link
 
     def __format_doc_string (self, docstring):
         if not docstring:
@@ -155,7 +129,7 @@ class Formatter(object):
         html_text = pandoc_converter.convert ("json", "html", json.dumps (json_doc))
         return html_text
 
-    def format_doc (self, comment):
+    def __format_doc (self, comment):
         out = ""
         if comment:
             out += self.__format_doc_string (comment.description)

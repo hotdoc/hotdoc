@@ -7,7 +7,9 @@ from wheezy.template.loader import FileLoader
 from symbols import *
 
 from base_formatter import Formatter
+from pandoc_client import pandoc_converter
 from links import Link
+import json
 
 # We support the GNOME extension
 from gi_extension.GIExtension import *
@@ -259,6 +261,10 @@ class HtmlFormatter (Formatter):
                 symbols_details.append (symbols_descriptions) 
 
         template = self.engine.get_template('class.html')
+        if klass.parsed_contents:
+            klass.formatted_contents = pandoc_converter.convert("json", "html",
+                    json.dumps(klass.parsed_contents))
+
         out = template.render ({'klass': klass,
                                 'toc_sections': toc_sections,
                                 'symbols_details': symbols_details})

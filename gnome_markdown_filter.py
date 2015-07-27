@@ -7,10 +7,12 @@ import pypandoc
 import json
 import sys
 import re
-from pandoc_client import pandoc_converter
 
 from datetime import datetime
 import os
+
+from pandoc_client import pandoc_converter
+from links import link_resolver
 
 class GnomeMarkdownFilter(object):
     def __init__(self, directory=None):
@@ -38,7 +40,7 @@ class GnomeMarkdownFilter(object):
         link = value[1]
         if not link[0] or link[0] in ['signal', 'property']:
             linkname = value[0][0]['c']
-            actual_link = self.__formatter.get_named_link (linkname)
+            actual_link = link_resolver.get_named_link (linkname)
             if actual_link:
                 link[0] = actual_link.get_link()
         return None
