@@ -4,9 +4,10 @@ from wheezy.template.engine import Engine
 from wheezy.template.ext.core import CoreExtension
 from wheezy.template.loader import FileLoader
 
-from base_formatter import Formatter, LocalLink, ExternalLink, Link, QualifiedSymbol, ParameterSymbol
-from base_formatter import FunctionSymbol, FunctionMacroSymbol, ClassSymbol, SectionSymbol
-from base_formatter import ConstantSymbol, AliasSymbol
+from symbols import *
+
+from base_formatter import Formatter
+from links import Link
 
 # We support the GNOME extension
 from gi_extension.GIExtension import *

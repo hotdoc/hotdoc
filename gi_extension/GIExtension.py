@@ -1,6 +1,6 @@
 from lxml import etree
 
-from base_formatter import *
+from symbols import Symbol, FunctionSymbol, ClassSymbol
 import clang.cindex
 from giscanner.annotationparser import GtkDocParameter
 
@@ -75,8 +75,9 @@ class GIClassSymbol (ClassSymbol):
     def symbol_init (self, comments, extra_args):
         xml_node = extra_args['xml_node']
         self.xml_node = xml_node
-        self.typed_symbols[GIPropertySymbol] = TypedSymbolsList("Properties")
-        self.typed_symbols[GISignalSymbol] = TypedSymbolsList("Signals")
+        self._register_typed_symbol (GIPropertySymbol, "Properties")
+        self._register_typed_symbol (GISignalSymbol, "Signals")
+
         for prop_node in xml_node.findall('property'):
             parent_name = prop_node.getparent().attrib['name']
             block_name = '%s:%s' % (parent_name, prop_node.attrib['name'])

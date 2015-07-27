@@ -12,8 +12,3 @@
 
 * It is the responsibility of the formatter subclass to handle these new symbols,
   and to advertise the extensions it supports
-
-## Creating new symbols
-
-While parsing the standalone documentation, we create so-called "Section Symbols".
-The extension can choose to add its own symbols to the Section Symbols.

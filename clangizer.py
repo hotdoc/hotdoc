@@ -8,6 +8,15 @@ import clang.cindex
 from lol import show_ast
 from scanner.scanner import get_comments
 
+
+def ast_node_is_function_pointer (ast_node):
+    if ast_node.kind == clang.cindex.TypeKind.POINTER and \
+            ast_node.get_pointee().get_result().kind != \
+            clang.cindex.TypeKind.INVALID:
+        return True
+    return False
+
+
 class ClangScanner(object):
     def __init__(self, filenames):
         index = clang.cindex.Index.create()
