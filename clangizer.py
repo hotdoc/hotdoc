@@ -35,6 +35,7 @@ class ClangScanner(object):
               ]
 
         self.symbols = {}
+        self.external_symbols = {}
         self.comments = []
 
         self.parsed = set({})
@@ -52,22 +53,26 @@ class ClangScanner(object):
                 cursor = tu.cursor
                 for c in cursor.get_children ():
                     filename = str(c.location.file)
+                    self.parsed.add (filename)
                     if filename in self.filenames:
-                        self.parsed.add (filename)
-                        self.find_things(c)
+                        self.find_internal_symbols(c)
+                    else:
+                        self.find_external_symbols(c)
 
         print "Source parsing done !", datetime.now() - n
 
-    def find_things(self, node):
-        filename = str(node.location.file)
-
+    def find_internal_symbols(self, node):
         if node.kind in [clang.cindex.CursorKind.FUNCTION_DECL,
                          clang.cindex.CursorKind.TYPEDEF_DECL,
                          clang.cindex.CursorKind.MACRO_DEFINITION]:
             self.symbols[node.spelling] = node
 
         for c in node.get_children():
-            self.find_things(c)
+            self.find_internal_symbols(c)
+
+    def find_external_symbols(self, node):
+        if node.kind == clang.cindex.CursorKind.TYPEDEF_DECL:
+            self.external_symbols[node.spelling] = node
 
 if __name__=="__main__": 
     css = ClangScanner ([sys.argv[1]])

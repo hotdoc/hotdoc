@@ -39,6 +39,7 @@ class HtmlFormatter (Formatter):
                 FunctionMacroSymbol: self._format_function_macro,
                 GIClassSymbol: self._format_class,
                 GIPropertySymbol: self._format_gi_property,
+                GISignalSymbol: self._format_gi_signal,
                 ClassSymbol: self._format_class,
                 SectionSymbol: self._format_class,
                 ParameterSymbol: self._format_parameter_symbol,
@@ -48,6 +49,7 @@ class HtmlFormatter (Formatter):
                 FunctionSymbol: self._priv_format_function_summary,
                 FunctionMacroSymbol: self._priv_format_function_macro_summary,
                 GIPropertySymbol: self._format_gi_property_summary,
+                GISignalSymbol: self._format_gi_signal_summary,
                 }
 
         # Used to decide whether to render a separator
@@ -190,6 +192,14 @@ class HtmlFormatter (Formatter):
                 False,
                 [])
 
+    def _format_gi_signal_summary (self, signal):
+        return self._priv_format_callable_summary (
+                self._priv_format_linked_symbol (signal.return_value),
+                self._priv_format_linked_symbol (signal),
+                True,
+                False,
+                [])
+
     def _priv_format_function_macro_summary (self, func):
         return self._priv_format_callable_summary (
                 "#define ",
@@ -321,7 +331,8 @@ class HtmlFormatter (Formatter):
         symbols_details = []
 
         # Enforce our ordering
-        for symbols_type in [FunctionSymbol, FunctionMacroSymbol, GIPropertySymbol]:
+        for symbols_type in [FunctionSymbol, FunctionMacroSymbol,
+                GIPropertySymbol, GISignalSymbol]:
             symbols_list = klass.typed_symbols.get(symbols_type)
             if not symbols_list:
                 continue
@@ -376,27 +387,35 @@ class HtmlFormatter (Formatter):
         return (self._priv_format_parameter_detail (parameter.argname,
                 parameter.formatted_doc, []), False)
 
-    def _format_function(self, function):
-        template = self.engine.get_template('function.html')
-        prototype = self._format_prototype (function)
-        parameters = [p.detailed_description for p in function.parameters]
+    def _format_callable(self, callable_, callable_type):
+        template = self.engine.get_template('callable.html')
+        prototype = self._format_prototype (callable_)
+        parameters = [p.detailed_description for p in callable_.parameters]
 
         out = template.render ({'prototype': prototype,
-                                'function': function,
-                                'return_value': function.return_value,
-                                'parameters': parameters})
+                                'callable': callable_,
+                                'return_value': callable_.return_value,
+                                'parameters': parameters,
+                                'callable_type': callable_type})
 
         return (out, False)
 
+    def _format_function(self, function):
+        return self._format_callable (function, "method")
+
+    def _format_gi_signal (self, signal):
+        return self._format_callable (signal, "signal")
+
     def _format_function_macro(self, function_macro):
-        template = self.engine.get_template('function.html')
+        template = self.engine.get_template('callable.html')
         prototype = self._format_raw_code (function_macro.original_text)
         parameters = [p.detailed_description for p in function_macro.parameters]
 
         out = template.render ({'prototype': prototype,
-                                'function': function_macro,
+                                'callable': function_macro,
                                 'return_value': None,
-                                'parameters': parameters})
+                                'parameters': parameters,
+                                'callable_type': "function macro"})
 
         return (out, False)
 

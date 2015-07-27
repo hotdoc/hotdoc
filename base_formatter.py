@@ -332,8 +332,8 @@ class SymbolFactory (object):
         return ReturnValueSymbol (tokens, type_, comment, self.__doc_formatter,
                     self)
 
-    def make_untyped_parameter_symbol (self, comment, argname):
-        symbol = ParameterSymbol (argname, None, argname, comment,
+    def make_custom_parameter_symbol (self, comment, type_tokens, argname):
+        symbol = ParameterSymbol (argname, type_tokens, argname, comment,
                 self.__doc_formatter, self)
         return symbol
 
@@ -397,6 +397,19 @@ class Symbol (object):
         if standalone:
             self.__doc_formatter.write_symbol (self)
         return True
+
+    def _lookup_ast_node (self, name):
+        return self.__doc_formatter.lookup_ast_node (name)
+
+    def _lookup_underlying_type (self, name):
+        ast_node = self._lookup_ast_node (name)
+        if not ast_node:
+            return None
+
+        while ast_node.kind == clang.cindex.CursorKind.TYPEDEF_DECL:
+            t = ast_node.underlying_typedef_type
+            ast_node = t.get_declaration()
+        return ast_node.kind
 
     def _make_name (self):
         if type(self._symbol) in [clang.cindex.Cursor, clang.cindex.Type]:
@@ -626,7 +639,7 @@ class FunctionMacroSymbol (Symbol):
 
     def do_format (self):
         for param_name, comment in self._comment.params.iteritems():
-            parameter = self._symbol_factory.make_untyped_parameter_symbol (comment, param_name)
+            parameter = self._symbol_factory.make_custom_parameter_symbol(comment, [], param_name)
             parameter.do_format ()
             self.parameters.append (parameter)
         return Symbol.do_format(self)
@@ -840,13 +853,14 @@ class SectionFilter (GnomeMarkdownFilter):
         self.dag.dot("dependencies.dot")
 
 class Formatter(object):
-    def __init__ (self, symbols, comments, include_directories, index_file, output,
+    def __init__ (self, symbols, external_symbols, comments, include_directories, index_file, output,
             extensions, do_class_aggregation=False):
         self.__include_directories = include_directories
         self.__do_class_aggregation = do_class_aggregation
         self.__output = output
         self.__index_file = index_file
         self.__symbols = symbols
+        self.__external_symbols = external_symbols
         self.__comments = comments
 
         self.__link_resolver = LinkResolver ()
@@ -858,7 +872,10 @@ class Formatter(object):
 
         # Used to warn subclasses a method isn't implemented
         self.__not_implemented_methods = {}
- 
+
+    def lookup_ast_node (self, name):
+        return self.__symbols.get(name) or self.__external_symbols.get(name)
+
     def create_symbols(self):
         n = datetime.now()
         sf = SectionFilter (os.path.dirname(self.__index_file), self.__symbols,
