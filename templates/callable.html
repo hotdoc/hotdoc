@@ -26,7 +26,7 @@
 		</div>
 	@end
 
-	@if return_value:
+	@if return_value and return_value.formatted_doc:
 		<div class="refsect3">
 			<h4>Returns</h4>
 			@return_value.formatted_doc

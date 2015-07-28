@@ -117,11 +117,8 @@ class GISignalSymbol (GISymbol, FunctionSymbol):
     def do_format (self):
         parent_name = self._symbol.getparent().attrib['name']
         rtype_name = self._symbol.attrib["return"]
-        if rtype_name != "void":
-            self.return_value = self.make_qualified_symbol (rtype_name)
-            self.return_value.do_format()
-        else:
-            self.return_value = None
+        self.return_value = self.make_qualified_symbol (rtype_name)
+        self.return_value.do_format()
         self.parameters = []
 
         when = self._symbol.attrib.get('when')

@@ -15,6 +15,7 @@ import json
 from gi_extension.GIExtension import *
 
 import os
+import re
 
 class Callable(object):
     def __init__(self, return_value, name, parameters):
@@ -282,8 +283,11 @@ class HtmlFormatter (Formatter):
         for param in function.parameters:
             parameters.append (self._format_linked_symbol(param))
 
+        title = function.link.title
+        if type (function) == GISignalSymbol:
+            title = "%s_callback" % re.sub ('-', '_', title)
         return self._format_callable_prototype (return_value,
-                function.link.title, parameters, is_pointer)
+                title, parameters, is_pointer)
 
     def _format_raw_code (self, code):
         template = self.engine.get_template('raw_code.html')
