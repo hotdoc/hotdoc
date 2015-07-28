@@ -13,56 +13,7 @@ from pandoc_client import pandoc_converter
 
 from sections import SectionFilter
 from symbols import SymbolFactory
-
-
-class Annotation (object):
-    def __init__(self, nick, help_text):
-        self.nick = nick
-        self.help_text = help_text
-
-
-class Flag (object):
-    def __init__ (self, nick, link):
-        self.nick = nick
-        self.link = link
-
-
-class RunLastFlag (Flag):
-    def __init__(self):
-        Flag.__init__ (self, "Run Last",
-                "https://developer.gnome.org/gobject/unstable/gobject-Signals.html#G-SIGNAL-RUN-LAST:CAPS")
-
-
-class RunFirstFlag (Flag):
-    def __init__(self):
-        Flag.__init__ (self, "Run First",
-                "https://developer.gnome.org/gobject/unstable/gobject-Signals.html#G-SIGNAL-RUN-FIRST:CAPS")
-
-
-class RunCleanupFlag (Flag):
-    def __init__(self):
-        Flag.__init__ (self, "Run Cleanup",
-                "https://developer.gnome.org/gobject/unstable/gobject-Signals.html#G-SIGNAL-RUN-CLEANUP:CAPS")
-
-
-class WritableFlag (Flag):
-    def __init__(self):
-        Flag.__init__ (self, "Write", None)
-
-
-class ReadableFlag (Flag):
-    def __init__(self):
-        Flag.__init__ (self, "Read", None)
-
-
-class ConstructFlag (Flag):
-    def __init__(self):
-        Flag.__init__ (self, "Construct", None)
-
-
-class ConstructOnlyFlag (Flag):
-    def __init__(self):
-        Flag.__init__ (self, "Construct Only", None)
+from simple_signals import Signal
 
 
 class Formatter(object):
@@ -83,6 +34,13 @@ class Formatter(object):
         # Used to warn subclasses a method isn't implemented
         self.__not_implemented_methods = {}
 
+        self.formatting_symbol_signals = {}
+        for klass in self.__symbol_factory.symbol_subclasses:
+            self.formatting_symbol_signals[klass] = Signal()
+
+        for extension in extensions:
+            extension.setup (self, self.__symbol_factory)
+
     def format (self):
         n = datetime.now ()
         sections = self.__create_symbols ()
@@ -91,6 +49,7 @@ class Formatter(object):
             self.__format_section (section)
 
     def format_symbol (self, symbol):
+        self.formatting_symbol_signals[type(symbol)](symbol)
         symbol.formatted_doc = self.__format_doc (symbol._comment)
         out, standalone = self._format_symbol (symbol)
         symbol.detailed_description = out

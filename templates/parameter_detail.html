@@ -11,7 +11,11 @@
 <span class="annotation">[\
 <acronym title="@annotation.help_text">\
 <span class="acronym">@annotation.nick</span>\
-</acronym>]\
+</acronym>\
+@if annotation.value:
+@annotation.value\
+@end
+]\
 </span>
 @end
 	<td>

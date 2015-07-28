@@ -119,6 +119,8 @@ class HtmlFormatter (Formatter):
 
     def _format_parameter_detail (self, name, detail, annotations):
         template = self.engine.get_template('parameter_detail.html')
+        if not annotations:
+            annotations = []
         return template.render ({'name': name,
                                  'detail': detail,
                                  'annotations': annotations,
@@ -284,16 +286,10 @@ class HtmlFormatter (Formatter):
         template = self.engine.get_template('raw_code.html')
         return template.render ({'code': code})
 
-    def _format_parameters (self, parameters):
-        parameter_docs = []
-        for param in parameters:
-            parameter_docs.append (self._format_parameter_detail
-                    (param.argname, param.formatted_doc, []))
-        return parameter_docs
-
     def _format_parameter_symbol (self, parameter):
+        annotations = parameter.get_extension_attribute (GIExtension, "annotations")
         return (self._format_parameter_detail (parameter.argname,
-                parameter.formatted_doc, []), False)
+                parameter.formatted_doc, annotations), False)
 
     def _format_field_symbol (self, field):
         field_id = self._format_linked_symbol (field) 
@@ -305,9 +301,17 @@ class HtmlFormatter (Formatter):
         prototype = self._format_prototype (callable_, is_pointer)
         parameters = [p.detailed_description for p in callable_.parameters]
 
+        return_annotations = []
+        if callable_.return_value:
+            annotations = callable_.return_value.get_extension_attribute (GIExtension, "annotations")
+
+        if annotations:
+            return_annotations = annotations
+
         out = template.render ({'prototype': prototype,
                                 'callable': callable_,
                                 'return_value': callable_.return_value,
+                                'return_annotations': return_annotations,
                                 'parameters': parameters,
                                 'callable_type': callable_type})
 
@@ -331,6 +335,7 @@ class HtmlFormatter (Formatter):
         out = template.render ({'prototype': prototype,
                                 'callable': function_macro,
                                 'return_value': None,
+                                'return_annotations': None,
                                 'parameters': parameters,
                                 'callable_type': "function macro"})
 

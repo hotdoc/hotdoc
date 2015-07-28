@@ -8,6 +8,7 @@ import clang.cindex
 
 from links import link_resolver, LocalLink
 from clangizer import ast_node_is_function_pointer
+from simple_signals import Signal
 
 class Symbol (object):
     def __init__(self, symbol, comment, doc_formatter, symbol_factory=None):
@@ -16,14 +17,27 @@ class Symbol (object):
         self._symbol = symbol
         self._comment = comment
         self.original_text = None
-        self.annotations = []
-        self.flags = []
-        self.link = LocalLink (self._make_unique_id(), "", self._make_name())
         self.detailed_description = None
+        self.__extension_attributes = {}
 
     def do_format (self):
         self.__doc_formatter.format_symbol (self)
         return True
+
+    def add_extension_attribute (self, extension_type, attribute, value):
+        attributes = self.__extension_attributes.get(extension_type)
+        if not attributes:
+            attributes = {}
+            self.__extension_attributes[extension_type] = attributes
+
+        attributes[attribute] = value
+
+    def get_extension_attribute (self, extension_type, attribute):
+        attributes = self.__extension_attributes.get(extension_type)
+        if not attributes:
+            return None
+
+        return attributes.get(attribute)
 
     def _lookup_ast_node (self, name):
         return self.__doc_formatter.lookup_ast_node (name)
@@ -274,15 +288,21 @@ class AliasSymbol (Symbol):
         return Symbol.do_format (self)
 
 
+def all_subclasses(cls):
+        return cls.__subclasses__() + [g for s in cls.__subclasses__()
+                                       for g in all_subclasses(s)]
+
 class SymbolFactory (object):
     def __init__(self, doc_formatter, extensions, comments, source_scanner):
         self.__comments = comments
         self.__doc_formatter = doc_formatter
         self.source_scanner = source_scanner
         self.__extensions = extensions
-        self.__symbol_classes = {
-                    clang.cindex.CursorKind.FUNCTION_DECL: FunctionSymbol,
-                }
+        self.symbol_subclasses = all_subclasses (Symbol)
+        self.symbol_subclasses.append(Symbol)
+        self.new_symbol_signals = {}
+        for klass in self.symbol_subclasses:
+            self.new_symbol_signals [klass] = Signal()
 
     def __apply_qualifiers (self, type_, tokens):
         if type_.is_const_qualified():
@@ -318,38 +338,40 @@ class SymbolFactory (object):
         tokens.reverse()
         return tokens
 
+    def __signal_new_symbol (self, symbol):
+        self.new_symbol_signals[type(symbol)](symbol)
+        return symbol
+
     def make_parameter_symbol (self, type_, comment, argname):
         tokens = self.__make_c_style_type_name (type_)
-        return ParameterSymbol (argname, tokens, type_, comment,
-                self.__doc_formatter, self)
+        return self.__signal_new_symbol(ParameterSymbol (argname, tokens, type_, comment,
+                self.__doc_formatter, self))
 
     def make_qualified_symbol (self, type_, comment, tokens=None):
         if tokens is None:
             tokens = self.__make_c_style_type_name (type_)
-        return QualifiedSymbol (tokens, type_, comment,
-                self.__doc_formatter, self)
+        return self.__signal_new_symbol(QualifiedSymbol (tokens, type_, comment,
+                self.__doc_formatter, self))
 
     def make_field_symbol (self, ast_node, comment, member_name):
         is_function_pointer = ast_node_is_function_pointer (ast_node)
         tokens = self.__make_c_style_type_name (ast_node)
 
-        return FieldSymbol (is_function_pointer, member_name, tokens, ast_node, comment,
-                self.__doc_formatter, self)
+        return self.__signal_new_symbol(FieldSymbol (is_function_pointer,
+            member_name, tokens, ast_node, comment, self.__doc_formatter, self))
 
     def make_simple_symbol (self, symbol, comment):
-        res = Symbol (symbol, comment, self.__doc_formatter,
-                self)
-        return res
+        return self.__signal_new_symbol(Symbol (symbol, comment, self.__doc_formatter,
+                self))
 
     def make_return_value_symbol (self, type_, comment):
         tokens = self.__make_c_style_type_name (type_)
-        return ReturnValueSymbol (tokens, type_, comment, self.__doc_formatter,
-                    self)
+        return self.__signal_new_symbol(ReturnValueSymbol (tokens, type_, comment, self.__doc_formatter,
+                    self))
 
     def make_custom_parameter_symbol (self, comment, type_tokens, argname):
-        symbol = ParameterSymbol (argname, type_tokens, argname, comment,
-                self.__doc_formatter, self)
-        return symbol
+        return self.__signal_new_symbol(ParameterSymbol (argname, type_tokens, argname, comment,
+                self.__doc_formatter, self))
 
     def make (self, symbol, comment):
         klass = None
@@ -383,10 +405,14 @@ class SymbolFactory (object):
             res = klass (symbol, comment, self.__doc_formatter, self)
 
         link_resolver.add_local_link (res.link)
-        return res
+        if res:
+            return self.__signal_new_symbol (res)
+
+        return None
 
     def make_custom (self, symbol, comment, klass):
-        return klass (symbol, comment, self.__doc_formatter, self)
+        return self.__signal_new_symbol(klass (symbol, comment,
+            self.__doc_formatter, self))
 
     def make_section(self, symbol, comment):
         res = None
@@ -399,7 +425,7 @@ class SymbolFactory (object):
         if not res:
             res = SectionSymbol (symbol, comment, self.__doc_formatter, self)
 
-        return res
+        return self.__signal_new_symbol(res)
 
 
 from sections import SectionSymbol
