@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/python
 
 import zmq
@@ -24,8 +25,9 @@ class Converter (object):
                            'outformat': outformat,
                            'payload': payload})
         self.socket.send(job)
+        result = self.socket.recv(copy=False)
 
-        return self.socket.recv().decode('utf-8', errors='replace')
+        return (str(result)).decode('utf-8')
 
     def __del__ (self):
         self.server.terminate ()
@@ -38,3 +40,4 @@ if __name__=="__main__":
 
     n = datetime.now ()
     out = pandoc_converter.convert (sys.argv[2], sys.argv[3], contents)
+    print out
