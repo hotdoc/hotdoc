@@ -112,8 +112,10 @@ class EnumSymbol (Symbol):
         decl = underlying.get_declaration()
         for member in decl.get_children():
             member_comment = self._comment.params.get (member.spelling)
+            member_value = member.enum_value
             member = self._symbol_factory.make_simple_symbol (member,
                     member_comment)
+            member.enum_value = member_value
             link_resolver.add_local_link (member.link)
             self.members.append (member)
 

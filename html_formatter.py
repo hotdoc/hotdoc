@@ -234,10 +234,11 @@ class HtmlFormatter (Formatter):
 
     def _format_enum (self, enum):
         for member in enum.members:
-            template = self.engine.get_template ("simple_symbol.html")
-            name = template.render ({'symbol': member})
-            member.detailed_description = self._format_parameter_detail (
-                    name, member.formatted_doc, [])
+            template = self.engine.get_template ("enum_member.html")
+            member.detailed_description = template.render ({
+                                    'name': member.link.title,
+                                    'detail': member.formatted_doc,
+                                    'value': str (member.enum_value)})
 
         members_list = self._format_members_list (enum.members)
         template = self.engine.get_template ("enum.html")
