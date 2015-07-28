@@ -21,7 +21,20 @@ class Symbol (object):
         self.link = LocalLink (self._make_unique_id(), "", self._make_name())
         self.__extension_attributes = {}
 
+    def parse_tags(self):
+        if not self._comment:
+            return []
+
+        if not hasattr (self._comment, "tags"):
+            return []
+
+        tags = []
+        for tag, value in self._comment.tags.iteritems():
+            tags.append (Tag (tag, value.value))
+        return tags
+
     def do_format (self):
+        self.tags = self.parse_tags ()
         self.__doc_formatter.format_symbol (self)
         return True
 
@@ -66,11 +79,21 @@ class Symbol (object):
         self.annotations.append (annotation)
 
 
+class Tag:
+    def __init__(self, name, value):
+        self.name = name
+        self.description = value
+
+
 class FunctionSymbol (Symbol):
     def do_format (self):
+        return_comment = self._comment.tags.get('returns')
+        if return_comment:
+            self._comment.tags.pop('returns', None)
+
         self.return_value = \
                 self._symbol_factory.make_return_value_symbol(self._symbol.result_type,
-                        self._comment.tags.get("returns"))
+                        return_comment)
 
         self.return_value.do_format()
         self.parameters = []
@@ -101,6 +124,7 @@ class CallbackSymbol (FunctionSymbol):
                 parameter.do_format()
                 self.parameters.append (parameter)
 
+        self._comment.tags.pop('returns', None)
         return Symbol.do_format (self)
 
 
@@ -243,6 +267,14 @@ class FunctionMacroSymbol (MacroSymbol):
         self.parameters = []
 
     def do_format (self):
+        return_comment = self._comment.tags.get ('returns')
+        self.return_value = None
+        if return_comment:
+            self._comment.tags.pop ('returns')
+            self.return_value = \
+                self._symbol_factory.make_untyped_return_value_symbol (return_comment)
+            self.return_value.do_format ()
+
         for param_name, comment in self._comment.params.iteritems():
             parameter = self._symbol_factory.make_custom_parameter_symbol(comment, [], param_name)
             parameter.do_format ()
@@ -371,6 +403,10 @@ class SymbolFactory (object):
     def make_custom_parameter_symbol (self, comment, type_tokens, argname):
         return self.__signal_new_symbol(ParameterSymbol (argname, type_tokens, argname, comment,
                 self.__doc_formatter, self))
+
+    def make_untyped_return_value_symbol (self, comment):
+        return self.__signal_new_symbol (ReturnValueSymbol ([],
+            "", comment, self.__doc_formatter, self))
 
     def make (self, symbol, comment):
         klass = None

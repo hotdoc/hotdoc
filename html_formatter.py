@@ -342,7 +342,7 @@ class HtmlFormatter (Formatter):
 
         out = template.render ({'prototype': prototype,
                                 'callable': function_macro,
-                                'return_value': None,
+                                'return_value': function_macro.return_value,
                                 'return_annotations': None,
                                 'parameters': parameters,
                                 'callable_type': "function macro",

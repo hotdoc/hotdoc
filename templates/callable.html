@@ -63,4 +63,12 @@
 	@end
 	@end
 	@end
+
+	@for tag in callable.tags:
+	<p>
+	@tag.name\
+	@if tag.description:
+       	: @tag.description
+	</p>
+	@end
 </div>
