@@ -148,6 +148,7 @@ class GISignalSymbol (GISymbol, FunctionSymbol):
                     (param_comment, type_.type_tokens, param_name)
             parameter.do_format()
             self.parameters.append(parameter)
+            i += 1
 
         udata_type = self.make_qualified_symbol ("gpointer")
         udata_comment = GtkDocParameter ("user_data")
