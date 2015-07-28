@@ -4,6 +4,8 @@ from symbols import Symbol, FunctionSymbol, ClassSymbol, ParameterSymbol, Return
 import clang.cindex
 from giscanner.annotationparser import GtkDocParameter
 from links import link_resolver
+from giscanner.gdumpparser import G_PARAM_READABLE, G_PARAM_WRITABLE,\
+        G_PARAM_CONSTRUCT, G_PARAM_CONSTRUCT_ONLY
 
 class Annotation (object):
     def __init__(self, nick, help_text, value=None):
@@ -35,6 +37,12 @@ class RunCleanupFlag (Flag):
                 "https://developer.gnome.org/gobject/unstable/gobject-Signals.html#G-SIGNAL-RUN-CLEANUP:CAPS")
 
 
+class NoHooksFlag (Flag):
+    def __init__(self):
+        Flag.__init__(self, "No Hooks",
+"https://developer.gnome.org/gobject/unstable/gobject-Signals.html#G-SIGNAL-NO-HOOKS:CAPS")
+
+
 class WritableFlag (Flag):
     def __init__(self):
         Flag.__init__ (self, "Write", None)
@@ -56,6 +64,10 @@ class ConstructOnlyFlag (Flag):
 
 
 class GISymbol(Symbol):
+    def __init__(self, *args):
+        self.flags = []
+        Symbol.__init__(self, *args)
+
     def _make_name(self):
         return self._symbol.attrib["name"]
 
@@ -72,6 +84,8 @@ class GISymbol(Symbol):
 
         return self._symbol_factory.make_qualified_symbol (type_name, None, tokens)
 
+    def do_format (self):
+        return Symbol.do_format(self)
 
 class GIPropertySymbol (GISymbol):
     def _make_unique_id(self):
@@ -80,9 +94,18 @@ class GIPropertySymbol (GISymbol):
                 'property')
 
     def do_format (self):
+        flags = int(self._symbol.attrib["flags"])
+        if flags & G_PARAM_READABLE:
+            self.flags.append (ReadableFlag())
+        if flags & G_PARAM_WRITABLE:
+            self.flags.append (WritableFlag())
+        if flags & G_PARAM_CONSTRUCT_ONLY:
+            self.flags.append (ConstructOnlyFlag())
+        elif flags & G_PARAM_CONSTRUCT:
+            self.flags.append (ConstructFlag())
         type_name = self._symbol.attrib["type"]
         self.type_ = self.make_qualified_symbol(type_name)
-        return Symbol.do_format(self)
+        return GISymbol.do_format(self)
 
 
 class GISignalSymbol (GISymbol, FunctionSymbol):
@@ -94,9 +117,24 @@ class GISignalSymbol (GISymbol, FunctionSymbol):
     def do_format (self):
         parent_name = self._symbol.getparent().attrib['name']
         rtype_name = self._symbol.attrib["return"]
-        self.return_value = self.make_qualified_symbol (rtype_name)
-        self.return_value.do_format()
+        if rtype_name != "void":
+            self.return_value = self.make_qualified_symbol (rtype_name)
+            self.return_value.do_format()
+        else:
+            self.return_value = None
         self.parameters = []
+
+        when = self._symbol.attrib.get('when')
+        if when == "first":
+            self.flags.append (RunFirstFlag())
+        elif when == "last":
+            self.flags.append (RunLastFlag())
+        elif when == "cleanup":
+            self.flags.append (CleanupFlag())
+
+        no_hooks = self._symbol.attrib.get('no-hooks')
+        if no_hooks == '1':
+            self.flags.append (NoHooksFlag())
 
         i = 0
         dumped_params = list (self._symbol.findall ('param'))
@@ -119,7 +157,7 @@ class GISignalSymbol (GISymbol, FunctionSymbol):
         udata_param.do_format()
         self.parameters.append (udata_param)
 
-        return Symbol.do_format(self)
+        return GISymbol.do_format(self)
 
 
 class GIClassSymbol (ClassSymbol):

@@ -18,6 +18,7 @@ class Symbol (object):
         self._comment = comment
         self.original_text = None
         self.detailed_description = None
+        self.link = LocalLink (self._make_unique_id(), "", self._make_name())
         self.__extension_attributes = {}
 
     def do_format (self):
@@ -66,9 +67,6 @@ class Symbol (object):
 
 
 class FunctionSymbol (Symbol):
-    def __init__(self, *args):
-        Symbol.__init__(self, *args)
-
     def do_format (self):
         self.return_value = \
                 self._symbol_factory.make_return_value_symbol(self._symbol.result_type,

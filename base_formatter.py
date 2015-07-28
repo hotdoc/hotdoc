@@ -85,8 +85,9 @@ class Formatter(object):
         out = ""
         docstring = unescape (docstring)
         json_doc = self.__gnome_markdown_filter.filter_text (docstring)
-        html_text = pandoc_converter.convert ("json", "html", json.dumps (json_doc))
-        return html_text
+        rendered_text = pandoc_converter.convert ("json",
+                self._get_pandoc_format(), json.dumps (json_doc))
+        return rendered_text
 
     def __format_doc (self, comment):
         out = ""

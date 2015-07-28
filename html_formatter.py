@@ -75,6 +75,9 @@ class HtmlFormatter (Formatter):
     def _get_extension (self):
         return "html"
 
+    def _get_pandoc_format (self):
+        return "html"
+
     def _format_linked_symbol (self, symbol):
         template = self.engine.get_template('link.html')
         out = ""
@@ -296,7 +299,7 @@ class HtmlFormatter (Formatter):
         return (self._format_parameter_detail (field_id,
             field.formatted_doc, []), False)
 
-    def _format_callable(self, callable_, callable_type, is_pointer=False):
+    def _format_callable(self, callable_, callable_type, is_pointer=False, flags=None):
         template = self.engine.get_template('callable.html')
         prototype = self._format_prototype (callable_, is_pointer)
         parameters = [p.detailed_description for p in callable_.parameters]
@@ -304,16 +307,16 @@ class HtmlFormatter (Formatter):
         return_annotations = []
         if callable_.return_value:
             annotations = callable_.return_value.get_extension_attribute (GIExtension, "annotations")
-
-        if annotations:
-            return_annotations = annotations
+            if annotations:
+                return_annotations = annotations
 
         out = template.render ({'prototype': prototype,
                                 'callable': callable_,
                                 'return_value': callable_.return_value,
                                 'return_annotations': return_annotations,
                                 'parameters': parameters,
-                                'callable_type': callable_type})
+                                'callable_type': callable_type,
+                                'flags': flags})
 
         return (out, False)
 
@@ -337,7 +340,8 @@ class HtmlFormatter (Formatter):
                                 'return_value': None,
                                 'return_annotations': None,
                                 'parameters': parameters,
-                                'callable_type': "function macro"})
+                                'callable_type': "function macro",
+                                'flags': None})
 
         return (out, False)
 
@@ -369,6 +373,7 @@ class HtmlFormatter (Formatter):
 
         return template.render({'property_type': property_type,
                                 'property_link': prop_link,
+                                'flags': prop.flags,
                                })
 
     def _format_gi_signal_summary (self, signal):
@@ -377,10 +382,10 @@ class HtmlFormatter (Formatter):
                 self._format_linked_symbol (signal),
                 True,
                 False,
-                [])
+                signal.flags)
 
     def _format_gi_signal (self, signal):
-        return self._format_callable (signal, "signal")
+        return self._format_callable (signal, "signal", flags=signal.flags)
 
     def _format_gi_property(self, prop):
         type_link = self._format_linked_symbol (prop.type_)

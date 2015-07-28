@@ -21,8 +21,10 @@
 </table>
 
 <a name="@klass.link.pagename"></a>
+@if klass.symbols:
 <h1 class="class">@klass.link.title</h1>
 <p>@klass.get_short_description()</p>
+@end
 
 <div class="refentry">
 	@for toc_section in toc_sections:

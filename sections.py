@@ -73,9 +73,10 @@ class SectionFilter (GnomeMarkdownFilter):
         self.__comment_blocks = comment_blocks
         self.__symbol_factory = symbol_factory
         self.__doc_formatter = doc_formatter
+        self.__created_section_names = []
 
     def parse_extensions (self, key, value, format_, meta):
-        if key == "BulletList":
+        if key == "BulletList" and not "ignore_bullet_points" in meta['unMeta']:
             res = []
             for val in value:
                 content = val[0]['c'][0]
@@ -114,11 +115,14 @@ class SectionFilter (GnomeMarkdownFilter):
             return False
 
         name = os.path.splitext(filename)[0]
+        if name in self.__created_section_names:
+            return True
 
         comment = self.__comment_blocks.get("SECTION:%s" % name.lower())
         symbol = self.__symbols.get(name)
         if not symbol:
             symbol = name
+        self.__created_section_names.append (name)
         section = self.__symbol_factory.make_section (symbol, comment)
 
         if self.__current_section:
