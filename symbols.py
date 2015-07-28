@@ -155,7 +155,7 @@ class StructSymbol (Symbol):
 
         start = decl.extent.start.line
         end = decl.extent.end.line + 1
-        original_lines = [linecache.getline(filename, i).strip() for i in range(start,
+        original_lines = [linecache.getline(filename, i).rstrip() for i in range(start,
             end)]
 
         public = True
@@ -213,7 +213,6 @@ class StructSymbol (Symbol):
                     next_child = children.pop()
 
         return ('\n'.join(final_text), public_children)
-
 
     def __locate_delimiters (self, tokens, delimiters):
         had_public = False
