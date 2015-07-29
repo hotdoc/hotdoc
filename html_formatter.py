@@ -267,12 +267,27 @@ class HtmlFormatter (Formatter):
             if symbols_descriptions:
                 symbols_details.append (symbols_descriptions) 
 
+        hierarchy = None
+        if hasattr (klass, 'hierarchy'):
+            hierarchy = []
+            children = []
+            for p in klass.hierarchy:
+                hierarchy.append(self._format_linked_symbol (p))
+            for c in klass.children:
+                children.append(self._format_linked_symbol (c))
+
+            template = self.engine.get_template ("hierarchy.html")
+            hierarchy = template.render ({'hierarchy': hierarchy,
+                                          'children': children,
+                                          'klass': klass})
+
         template = self.engine.get_template('class.html')
         if klass.parsed_contents:
             klass.formatted_contents = pandoc_converter.convert("json", "html",
                     json.dumps(klass.parsed_contents))
 
         out = template.render ({'klass': klass,
+                                'hierarchy': hierarchy,
                                 'toc_sections': toc_sections,
                                 'symbols_details': symbols_details})
 

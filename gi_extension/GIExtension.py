@@ -3,7 +3,7 @@ from lxml import etree
 from symbols import Symbol, FunctionSymbol, ClassSymbol, ParameterSymbol, ReturnValueSymbol
 import clang.cindex
 from giscanner.annotationparser import GtkDocParameter
-from links import link_resolver
+from links import link_resolver, Link
 from giscanner.gdumpparser import G_PARAM_READABLE, G_PARAM_WRITABLE,\
         G_PARAM_CONSTRUCT, G_PARAM_CONSTRUCT_ONLY
 
@@ -64,13 +64,6 @@ class ConstructOnlyFlag (Flag):
 
 
 class GISymbol(Symbol):
-    def __init__(self, *args):
-        self.flags = []
-        Symbol.__init__(self, *args)
-
-    def _make_name(self):
-        return self._symbol.attrib["name"]
-
     def make_qualified_symbol (self, type_name):
         type_link = link_resolver.get_named_link (type_name)
         if type_link:
@@ -87,7 +80,15 @@ class GISymbol(Symbol):
     def do_format (self):
         return Symbol.do_format(self)
 
-class GIPropertySymbol (GISymbol):
+class GIFlaggedSymbol(GISymbol):
+    def _make_name(self):
+        return self._symbol.attrib["name"]
+
+    def __init__(self, *args):
+        self.flags = []
+        GISymbol.__init__(self, *args)
+
+class GIPropertySymbol (GIFlaggedSymbol):
     def _make_unique_id(self):
         parent_name = self._symbol.getparent().attrib['name']
         return "%s:::%s---%s" % (parent_name, self._symbol.attrib["name"],
@@ -105,10 +106,10 @@ class GIPropertySymbol (GISymbol):
             self.flags.append (ConstructFlag())
         type_name = self._symbol.attrib["type"]
         self.type_ = self.make_qualified_symbol(type_name)
-        return GISymbol.do_format(self)
+        return GIFlaggedSymbol.do_format(self)
 
 
-class GISignalSymbol (GISymbol, FunctionSymbol):
+class GISignalSymbol (GIFlaggedSymbol, FunctionSymbol):
     def _make_unique_id(self):
         parent_name = self._symbol.getparent().attrib['name']
         return "%s:::%s---%s" % (parent_name, self._symbol.attrib["name"],
@@ -155,12 +156,13 @@ class GISignalSymbol (GISymbol, FunctionSymbol):
         udata_param.do_format()
         self.parameters.append (udata_param)
 
-        return GISymbol.do_format(self)
+        return GIFlaggedSymbol.do_format(self)
 
 
-class GIClassSymbol (ClassSymbol):
+class GIClassSymbol (GISymbol, ClassSymbol):
     def symbol_init (self, comments, extra_args):
         xml_node = extra_args['xml_node']
+        self.__children_names = extra_args['children']
         self.xml_node = xml_node
         self._register_typed_symbol (GIPropertySymbol, "Properties")
         self._register_typed_symbol (GISignalSymbol, "Signals")
@@ -179,6 +181,22 @@ class GIClassSymbol (ClassSymbol):
                 continue
             self.add_symbol (self._symbol_factory.make_custom (prop_node,
                 comment, GISignalSymbol))
+
+    def do_format (self):
+        self.__create_hierarchy(self._symbol)
+        self.hierarchy.reverse()
+        return ClassSymbol.do_format(self)
+
+    def __create_hierarchy (self, symbol):
+        for parent in self.xml_node.attrib['parents'].split(','):
+            cursor = \
+                    self._symbol_factory.source_scanner.lookup_ast_node(parent)
+            parent_symbol = self._symbol_factory.make_qualified_symbol (cursor.type, None)
+            self.hierarchy.append (parent_symbol)
+        for child in self.__children_names:
+            cursor = self._symbol_factory.source_scanner.lookup_ast_node(child)
+            child_symbol = self._symbol_factory.make_qualified_symbol (cursor.type, None)
+            self.children.append (child_symbol)
 
 
 ALLOW_NONE_HELP = \
@@ -234,8 +252,12 @@ class GIExtension(object):
     def __init__(self, xml_dump):
         self._gi_classes = {}
         root = etree.parse (xml_dump).getroot()
+
+        self.children_map = {}
         for klass in root.findall("class"):
             self._gi_classes[klass.attrib["name"]] = klass
+            self.children_map[klass.attrib["name"]] = []
+
         self.__annotation_factories = \
                 {"allow-none": self.__make_allow_none_annotation,
                  "transfer": self.__make_transfer_annotation,
@@ -250,6 +272,16 @@ class GIExtension(object):
                  "type": self.__make_type_annotation,
                 }
 
+        self.__create_chilren_map(root)
+
+    def __create_chilren_map (self, root):
+        for klass in root.findall ("class"):
+            parent = klass.attrib["parents"].split(',')[0]
+            children = self.children_map.get(parent)
+            if not type(children) == list: # External parents
+                continue
+            children.append (klass.attrib['name'])
+
     def get_section_type (self, symbol):
         if type (symbol) != clang.cindex.Cursor:
             return (None, None)
@@ -257,7 +289,8 @@ class GIExtension(object):
         if not symbol.spelling in self._gi_classes:
             return (None, None)
 
-        extra_args = {'xml_node': self._gi_classes[symbol.spelling]}
+        extra_args = {'xml_node': self._gi_classes[symbol.spelling],
+                      'children': self.children_map[symbol.spelling]}
         return (GIClassSymbol, extra_args)
 
     def __make_type_annotation (self, annotation, value):

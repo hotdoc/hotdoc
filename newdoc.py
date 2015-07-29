@@ -75,6 +75,6 @@ def main (args):
     if args.gobject_introspection_dump:
         extensions.append (GIExtension.GIExtension(args.gobject_introspection_dump))
 
-    formatter = HtmlFormatter (css, blocks, [], args.index, "new_doc",
+    formatter = HtmlFormatter (css, blocks, [], args.index, "gst",
             extensions)
     formatter.format()

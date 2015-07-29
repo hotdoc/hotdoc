@@ -53,12 +53,6 @@ class Symbol (object):
 
         return attributes.get(attribute)
 
-    def _lookup_ast_node (self, name):
-        return self.__doc_formatter.lookup_ast_node (name)
-
-    def _lookup_underlying_type (self, name):
-        return self.__doc_formatter.lookup_underlying_type(name)
-
     def _make_name (self):
         if type(self._symbol) in [clang.cindex.Cursor, clang.cindex.Type]:
             return self._symbol.spelling
@@ -466,4 +460,7 @@ class SymbolFactory (object):
 from sections import SectionSymbol
 
 class ClassSymbol (SectionSymbol):
-    pass
+    def __init__(self, *args):
+        self.hierarchy = []
+        self.children = []
+        SectionSymbol.__init__(self, *args)

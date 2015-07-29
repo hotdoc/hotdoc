@@ -1,4 +1,4 @@
-@require(klass, toc_sections, symbols_details)
+@require(klass, toc_sections, symbols_details, hierarchy)
 @extends('page.html')
 
 @def content():
@@ -32,6 +32,10 @@
 		@toc_section.summary
 	@end
 </div>
+
+@if hierarchy:
+@hierarchy
+@end
 
 @if klass.formatted_doc:
 <h2>Instance description</h2>

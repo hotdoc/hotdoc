@@ -59,9 +59,6 @@ class SectionSymbol (Symbol, Dependency):
             return ""
         return self._comment.short_description
 
-    def _make_unique_id (self):
-        return None
-
 
 class SectionFilter (GnomeMarkdownFilter):
     def __init__(self, directory, symbols, comment_blocks, doc_formatter, symbol_factory=None):
