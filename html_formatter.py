@@ -236,7 +236,7 @@ class HtmlFormatter (Formatter):
         for member in enum.members:
             template = self.engine.get_template ("enum_member.html")
             member.detailed_description = template.render ({
-                                    'name': member.link.title,
+                                    'link': member.link,
                                     'detail': member.formatted_doc,
                                     'value': str (member.enum_value)})
 

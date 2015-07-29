@@ -1,0 +1,30 @@
+@require(hierarchy, klass, children)
+<div class="refsect1">
+	<h2>Object Hierarchy</h2>
+<pre class="screen">
+@for i, parent in enumerate(hierarchy):
+\
+@if i != 0:
+\
+@for j in range (i * 4):
+ \
+@end
+<span class="lineart">╰──</span>\
+@end
+@parent
+@end
+@for j in range ((i + 1) * 4):
+ \
+@end
+<span class="lineart">╰──</span>@klass.link.title
+@for child in children:
+\
+@for j in range ((i + 2) * 4):
+ \
+@end
+<span class="lineart">╰──</span>\
+@child
+@end
+
+
+</div>
