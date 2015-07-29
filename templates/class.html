@@ -10,52 +10,59 @@
 			<a class="shortcut" href="#">Top</a>
 
 			@for toc_section in toc_sections:
-				<span id="nav_@toc_section.name">
-					<span class="dim">|</span>
-					<a href="#@toc_section.id_">@toc_section.name</a>
-				</span>
+			<span id="nav_@toc_section.name">
+				<span class="dim">|</span>
+				<a href="#@toc_section.id_">@toc_section.name</a>
+			</span>
 			@end
 		</td>
 	</tr>
 	</tbody>
 </table>
 
-<a name="@klass.link.pagename"></a>
-@if klass.symbols:
-<h1 class="class">@klass.link.title</h1>
-<p>@klass.get_short_description()</p>
-@end
-
 <div class="refentry">
+	<div class="refnamediv">
+		<a name="@klass.link.id_"></a>
+		@if klass.symbols:
+		<h1 class="class">@klass.link.title</h1>
+		<p>@klass.get_short_description()</p>
+		@end
+	</div>
+
 	@for toc_section in toc_sections:
+	<div class="refsect1">
 		<a name=@toc_section.id_></a>
 		@toc_section.summary
+	</div>
+	@end
+
+	@if hierarchy:
+	@hierarchy
+	@end
+
+	@if klass.formatted_doc:
+	<div class="refsect1">
+		<h2>Instance description</h2>
+		@klass.formatted_doc
+	</div>
+	@end
+
+	@if klass.formatted_contents:
+	@klass.formatted_contents
+	@end
+
+	@for symbols_detail in symbols_details:
+	<div class="refsect1">
+		<a name="@symbols_detail.name"></a>
+		<h2>@symbols_detail.name</h2>
+		@for i, description in enumerate(symbols_detail.descriptions):
+
+		@if i != 0:
+		<hr></hr>
+		@end
+		@description
+		@end
+	</div>
 	@end
 </div>
-
-@if hierarchy:
-@hierarchy
-@end
-
-@if klass.formatted_doc:
-<h2>Instance description</h2>
-@klass.formatted_doc
-@end
-
-@if klass.formatted_contents:
-@klass.formatted_contents
-@end
-
-@for symbols_detail in symbols_details:
-<a name=@symbols_detail.name></a>
-<h2>
-	@symbols_detail.name
-</h2>
-@for i, description in enumerate(symbols_detail.descriptions):
-
-@if i != 0:
-<hr></hr>
-@end
-@description
-@end
 @end

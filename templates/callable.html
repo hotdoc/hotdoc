@@ -2,7 +2,7 @@
 <div class="refsect2">
 	<a name=@callable.link.id_></a>
 	<h3 class="method">
-		<span class="entry" id=@callable.link.id_>The <code>“@callable.link.title”</code> @callable_type</span>
+		<span class="entry">The <code>“@callable.link.title”</code> @callable_type</span>
 	</h3>
 	@prototype
 	@callable.formatted_doc
@@ -49,26 +49,27 @@
 	@end
 
 	@if flags:
-	<p>Flags:\
-	@for i, flag in enumerate (flags):
+		<p>Flags:\
+		@for i, flag in enumerate (flags):
 
-	@if i != 0:
-	/\
-	@end
+			@if i != 0:
+			/\
+			@end
 
-	@if flag.link:
-	<a href="@flag.link">@flag.nick</a>
-	@else:
-	@flag.nick
-	@end
-	@end
+			@if flag.link:
+			<a href="@flag.link">@flag.nick</a>
+			@else:
+			@flag.nick
+			@end
+		@end
 	@end
 
 	@for tag in callable.tags:
-	<p>
-	@tag.name\
-	@if tag.description:
-       	: @tag.description
-	</p>
+		<p>
+		@tag.name\
+		@if tag.description:
+       			: @tag.description
+		@end
+		</p>
 	@end
 </div>

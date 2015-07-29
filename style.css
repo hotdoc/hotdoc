@@ -359,7 +359,7 @@ acronym,abbr
   {
     display: inline-block;
     position: relative;
-    top:-5em;
+    top:-2.5em;
   }
   /* this seems to be a bug in the xsl style sheets when generating indexes */
   div.index div.index
