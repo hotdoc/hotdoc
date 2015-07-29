@@ -15,6 +15,13 @@
 				<a href="#@toc_section.id_">@toc_section.name</a>
 			</span>
 			@end
+
+			@if hierarchy:
+			<span id="nav_hierarchy">
+				<span class="dim">|</span>
+				<a href="#hierarchy">Object Hierarchy</a>
+			</span>
+			@end
 		</td>
 	</tr>
 	</tbody>
@@ -37,7 +44,10 @@
 	@end
 
 	@if hierarchy:
+	<div class="refsect1">
+	<a name="hierarchy"></a>
 	@hierarchy
+	</div>
 	@end
 
 	@if klass.formatted_doc:
