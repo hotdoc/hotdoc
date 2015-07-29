@@ -251,8 +251,13 @@ class StructSymbol (Symbol):
 class MacroSymbol (Symbol):
     def __init__(self, *args):
         Symbol.__init__(self, *args)
-        self.original_text = linecache.getline (str(self._symbol.location.file),
-                self._symbol.location.line).strip()
+
+        start = self._symbol.extent.start.line
+        end = self._symbol.extent.end.line + 1
+        filename = str(self._symbol.location.file)
+        original_lines = [linecache.getline(filename, i).rstrip() for i in range(start,
+            end)]
+        self.original_text = '\n'.join(original_lines)
 
 
 class FunctionMacroSymbol (MacroSymbol):
