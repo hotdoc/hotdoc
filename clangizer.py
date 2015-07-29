@@ -19,6 +19,10 @@ def ast_node_is_function_pointer (ast_node):
 
 class ClangScanner(object):
     def __init__(self, filenames):
+        clang_options = os.getenv("CLANG_OPTIONS")
+
+        if clang_options:
+            clang_options = clang_options.split(' ')
         index = clang.cindex.Index.create()
         flags = clang.cindex.TranslationUnit.PARSE_SKIP_FUNCTION_BODIES |\
                 clang.cindex.TranslationUnit.PARSE_INCOMPLETE |\
@@ -26,22 +30,8 @@ class ClangScanner(object):
 
         self.filenames = [os.path.abspath(filename) for filename in filenames]
 
-        args=["-I/home/meh/pitivi-git/gstreamer/gst",
-              "-I/home/meh/pitivi-git/gstreamer/",
-              "-isystem /usr/include/glib-2.0",
-              "-isystem /usr/lib64/glib-2.0/include",
-              "-I../libs",
-              "-I..",
-              "-pthread",
-              "-I/usr/include/glib-2.0",
-              "-I/usr/lib64/glib-2.0/include",
-              "-I/usr/lib/clang/3.5.0/include/",
-              "-D_GNU_SOURCE",
-              "-DGST_EXPORTS",
-              '-DGST_API_VERSION=\""1.0"\"',
-              "-DGST_DISABLE_DEPRECATED",
-              "-DHAVE_CONFIG_H",
-              ]
+        args = ["-I/usr/lib/clang/3.5.0/include/"]
+        args.extend (clang_options)
 
         self.symbols = {}
         self.external_symbols = {}
@@ -53,21 +43,22 @@ class ClangScanner(object):
         for filename in self.filenames:
             self.comments.extend(get_comments(filename))
 
-            if filename in self.parsed:
+            if os.path.abspath(filename) in self.parsed:
                 continue
 
             if not filename.endswith ("c"):
                 tu = index.parse(filename, args=args, options=flags)
+                for diag in tu.diagnostics:
+                    print diag
 
                 cursor = tu.cursor
                 for c in cursor.get_children ():
                     filename = str(c.location.file)
-                    self.parsed.add (filename)
-                    if filename in self.filenames:
+                    self.parsed.add (os.path.abspath(filename))
+                    if os.path.abspath(filename) in self.filenames:
                         self.find_internal_symbols(c)
                     else:
                         self.find_external_symbols(c)
-
         print "Source parsing done !", datetime.now() - n
 
     def find_internal_symbols(self, node):
