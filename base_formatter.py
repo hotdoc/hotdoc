@@ -42,7 +42,6 @@ class Formatter(object):
             extension.setup (self, self.__symbol_factory)
 
     def format (self):
-        n = datetime.now ()
         sections = self.__create_symbols ()
 
         for section in sections:
@@ -57,11 +56,9 @@ class Formatter(object):
             self.__write_symbol (symbol)
 
     def __create_symbols(self):
-        n = datetime.now()
         sf = SectionFilter (os.path.dirname(self.__index_file),
                 self.__source_scanner.symbols, self.__comments, self, self.__symbol_factory)
         sf.create_symbols (os.path.basename(self.__index_file))
-        print "Markdown parsing done", datetime.now() - n
         return sf.sections
 
     def __format_section (self, section):

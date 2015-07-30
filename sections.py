@@ -6,6 +6,8 @@ import dagger
 from symbols import *
 from gnome_markdown_filter import GnomeMarkdownFilter
 from pandocfilters import BulletList
+from datetime import datetime
+from loggable import Loggable
 
 class Dependency (object):
     def __init__(self, filename):
@@ -60,9 +62,10 @@ class SectionSymbol (Symbol, Dependency):
         return self._comment.short_description
 
 
-class SectionFilter (GnomeMarkdownFilter):
+class SectionFilter (GnomeMarkdownFilter, Loggable):
     def __init__(self, directory, symbols, comment_blocks, doc_formatter, symbol_factory=None):
         GnomeMarkdownFilter.__init__(self, directory)
+        Loggable.__init__(self)
         self.sections = []
         self.dag = dagger.dagger()
         self.__current_section = None
@@ -91,6 +94,13 @@ class SectionFilter (GnomeMarkdownFilter):
                                 #self.__current_section.deps.add('"%s"' % comment_block.position.filename)
                                 #self.__current_section.deps.add('"%s"' %
                                 #        str(symbol.location.file))
+                        else:
+                            self.warning ("Found a symbol for empty link with"
+                                    " name %s but no comment block associated" %
+                                    symbol_name)
+                    else:
+                        self.warning ("Found an empty link with name %s but no"
+                        " symbol was found" % symbol_name)
 
                 res.append (val)
             if res:
@@ -118,7 +128,11 @@ class SectionFilter (GnomeMarkdownFilter):
         comment = self.__comment_blocks.get("SECTION:%s" % name.lower())
         symbol = self.__symbols.get(name)
         if not symbol:
+            self.debug ("Creating section %s with no symbol associated" % name)
             symbol = name
+        else:
+            self.debug ("Creating section %s with a symbol associated" % name)
+
         self.__created_section_names.append (name)
         section = self.__symbol_factory.make_section (symbol, comment)
 
@@ -141,5 +155,8 @@ class SectionFilter (GnomeMarkdownFilter):
         return True
 
     def create_symbols (self, filename):
+        n = datetime.now()
+        self.info ("starting")
         self.parse_file (filename)
         self.dag.dot("dependencies.dot")
+        self.info ("done")

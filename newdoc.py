@@ -7,6 +7,8 @@ import sys
 import shlex
 import subprocess
 import types
+import loggable
+
 from giscanner.message import MessageLogger
 from datetime import datetime
 from gnome_markdown_filter import GnomeMarkdownFilter
@@ -16,6 +18,7 @@ from html_formatter import HtmlFormatter
 from xml.etree.cElementTree import parse, tostring
 from clangizer import ClangScanner
 from gi_extension import GIExtension
+from naive_index import NaiveIndexFormatter
 
 def PkgConfig(args):
     cmd = ['pkg-config'] + shlex.split(args)
@@ -48,6 +51,7 @@ def main (args):
 
     logger = MessageLogger.get(namespace=None)
 
+    loggable.init("DOC_DEBUG")
     args = parser.parse_args(args[1:])
 
 
@@ -74,6 +78,10 @@ def main (args):
     extensions = []
     if args.gobject_introspection_dump:
         extensions.append (GIExtension.GIExtension(args.gobject_introspection_dump))
+
+    if not args.index:
+        nif = NaiveIndexFormatter (css.symbols)
+        sys.exit(0)
 
     formatter = HtmlFormatter (css, blocks, [], args.index, "gst",
             extensions)

@@ -4,10 +4,11 @@ import os
 import sys
 from datetime import datetime, timedelta
 import clang.cindex
+from clang.cindex import *
 
-from lol import show_ast
+from loggable import Loggable
 from scanner.scanner import get_comments
-
+from ctypes import *
 
 def ast_node_is_function_pointer (ast_node):
     if ast_node.kind == clang.cindex.TypeKind.POINTER and \
@@ -17,8 +18,9 @@ def ast_node_is_function_pointer (ast_node):
     return False
 
 
-class ClangScanner(object):
-    def __init__(self, filenames):
+class ClangScanner(Loggable):
+    def __init__(self, filenames, parse_sources=False):
+        Loggable.__init__(self)
         clang_options = os.getenv("CLANG_OPTIONS")
 
         if clang_options:
@@ -36,6 +38,7 @@ class ClangScanner(object):
         self.symbols = {}
         self.external_symbols = {}
         self.comments = []
+        self.token_groups = []
 
         self.parsed = set({})
 
@@ -48,31 +51,64 @@ class ClangScanner(object):
 
             if not filename.endswith ("c"):
                 tu = index.parse(filename, args=args, options=flags)
-                for diag in tu.diagnostics:
-                    print diag
+                self.__parse_file (filename, tu)
+                for include in tu.get_includes():
+                    self.__parse_file (os.path.abspath(str(include.source)), tu)
 
-                cursor = tu.cursor
-                for c in cursor.get_children ():
-                    filename = str(c.location.file)
-                    self.parsed.add (os.path.abspath(filename))
-                    if os.path.abspath(filename) in self.filenames:
-                        self.find_internal_symbols(c)
-                    else:
-                        self.find_external_symbols(c)
-        print "Source parsing done !", datetime.now() - n
+        self.info ("Source parsing done %s" % str(datetime.now() - n))
+        self.info ("%d internal symbols found" % len (self.symbols))
+        self.info ("%d external symbols found" % len (self.external_symbols))
+        self.info ("%d comments found" % len (self.comments))
 
-    def find_internal_symbols(self, node):
-        if node.kind in [clang.cindex.CursorKind.FUNCTION_DECL,
-                         clang.cindex.CursorKind.TYPEDEF_DECL,
-                         clang.cindex.CursorKind.MACRO_DEFINITION]:
-            self.symbols[node.spelling] = node
+    def __parse_file (self, filename, tu):
+        if filename in self.parsed:
+            return
 
-        for c in node.get_children():
-            self.find_internal_symbols(c)
+        self.parsed.add (os.path.abspath(filename))
+        start = tu.get_location (filename, 0)
+        end = tu.get_location (filename, os.path.getsize(filename))
+        extent = clang.cindex.SourceRange.from_locations (start, end)
+        cursors = self.__get_cursors(tu, extent)
+        if filename in self.filenames:
+            self.find_internal_symbols (cursors, tu)
+        else:
+            self.find_external_symbols (cursors, tu)
 
-    def find_external_symbols(self, node):
-        if node.kind == clang.cindex.CursorKind.TYPEDEF_DECL:
-            self.external_symbols[node.spelling] = node
+    # That's the fastest way of obtaining our ast nodes for a given filename
+    def __get_cursors (self, tu, extent):
+        tokens_memory = POINTER(Token)()
+        tokens_count = c_uint()
+
+        clang.cindex.conf.lib.clang_tokenize(tu, extent, byref(tokens_memory),
+                byref(tokens_count))
+
+        count = int(tokens_count.value)
+
+        if count < 1:
+            return
+
+        self.token_groups.append(clang.cindex.TokenGroup(tu, tokens_memory, tokens_count))
+        cursors = (Cursor * count)()
+        clang.cindex.conf.lib.clang_annotateTokens (tu, tokens_memory, tokens_count,
+                cursors)
+
+        return cursors
+
+    def find_internal_symbols(self, nodes, tu):
+        for node in nodes:
+            if node.kind in [clang.cindex.CursorKind.FUNCTION_DECL,
+                            clang.cindex.CursorKind.TYPEDEF_DECL,
+                            clang.cindex.CursorKind.MACRO_DEFINITION]:
+                self.symbols[node.spelling] = node
+                self.debug ("Found internal symbol %s" % node.spelling)
+                node._tu = tu
+
+    def find_external_symbols(self, nodes, tu):
+        for node in nodes:
+            if node.kind == clang.cindex.CursorKind.TYPEDEF_DECL:
+                self.external_symbols[node.spelling] = node
+                self.debug ("Found external symbol %s" % node.spelling)
+                node._tu = tu
 
     def lookup_ast_node (self, name):
         return self.symbols.get(name) or self.external_symbols.get(name)

@@ -268,7 +268,7 @@ class HtmlFormatter (Formatter):
                 symbols_details.append (symbols_descriptions) 
 
         hierarchy = None
-        if hasattr (klass, 'hierarchy'):
+        if hasattr (klass, 'hierarchy') and klass.hierarchy:
             hierarchy = []
             children = []
             for p in klass.hierarchy:

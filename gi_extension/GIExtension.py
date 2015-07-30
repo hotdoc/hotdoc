@@ -191,10 +191,14 @@ class GIClassSymbol (GISymbol, ClassSymbol):
         for parent in self.xml_node.attrib['parents'].split(','):
             cursor = \
                     self._symbol_factory.source_scanner.lookup_ast_node(parent)
+            if not cursor:
+                continue
             parent_symbol = self._symbol_factory.make_qualified_symbol (cursor.type, None)
             self.hierarchy.append (parent_symbol)
         for child in self.__children_names:
             cursor = self._symbol_factory.source_scanner.lookup_ast_node(child)
+            if not cursor:
+                continue
             child_symbol = self._symbol_factory.make_qualified_symbol (cursor.type, None)
             self.children.append (child_symbol)
 
