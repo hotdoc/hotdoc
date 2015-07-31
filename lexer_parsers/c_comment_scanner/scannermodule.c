@@ -22,8 +22,8 @@ static PyMethodDef ScannerMethods[] = {
 };
 
 PyMODINIT_FUNC
-initscanner(void)
+initc_comment_scanner(void)
 {
-  (void) Py_InitModule("scanner", ScannerMethods);
+  (void) Py_InitModule("c_comment_scanner", ScannerMethods);
 }
 

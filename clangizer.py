@@ -7,7 +7,7 @@ import clang.cindex
 from clang.cindex import *
 
 from loggable import Loggable
-from scanner.scanner import get_comments
+from lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
 from ctypes import *
 from fnmatch import fnmatch
 
