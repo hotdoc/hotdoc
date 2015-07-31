@@ -6,7 +6,7 @@ import pandocfilters
 import os
 import StringIO
 from lxml import etree as ET
-from pandoc_client import pandoc_converter
+from pandoc_interface.pandoc_client import pandoc_converter
 import subprocess
 
 OUTPUT=sys.argv[3]

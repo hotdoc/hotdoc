@@ -9,7 +9,7 @@ from gnome_markdown_filter import GnomeMarkdownFilter
 from datetime import datetime
 from xml.sax.saxutils import unescape
 
-from pandoc_client import pandoc_converter
+from pandoc_interface.pandoc_client import pandoc_converter
 
 from sections import SectionFilter
 from symbols import SymbolFactory

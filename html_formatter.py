@@ -7,7 +7,7 @@ from wheezy.template.loader import FileLoader
 from symbols import *
 
 from base_formatter import Formatter
-from pandoc_client import pandoc_converter
+from pandoc_interface.pandoc_client import pandoc_converter
 from links import Link
 import json
 

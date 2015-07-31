@@ -11,7 +11,7 @@ import re
 from datetime import datetime
 import os
 
-from pandoc_client import pandoc_converter
+from pandoc_interface.pandoc_client import pandoc_converter
 from links import link_resolver
 
 class GnomeMarkdownFilter(object):

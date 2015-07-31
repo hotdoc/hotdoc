@@ -13,7 +13,7 @@ from giscanner.message import MessageLogger
 from datetime import datetime
 from gnome_markdown_filter import GnomeMarkdownFilter
 from pandocfilters import BulletList
-from pandoc_client import pandoc_converter
+from pandoc_interface.pandoc_client import pandoc_converter
 from html_formatter import HtmlFormatter
 from xml.etree.cElementTree import parse, tostring
 from clangizer import ClangScanner
