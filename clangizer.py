@@ -9,6 +9,7 @@ from clang.cindex import *
 from loggable import Loggable
 from scanner.scanner import get_comments
 from ctypes import *
+from fnmatch import fnmatch
 
 def ast_node_is_function_pointer (ast_node):
     if ast_node.kind == clang.cindex.TypeKind.POINTER and \
@@ -19,10 +20,11 @@ def ast_node_is_function_pointer (ast_node):
 
 
 class ClangScanner(Loggable):
-    def __init__(self, filenames, parse_sources=False):
+    def __init__(self, filenames, full_scan=False, full_scan_patterns=['*.h']):
         Loggable.__init__(self)
         clang_options = os.getenv("CLANG_OPTIONS")
 
+        self.full_scan = full_scan
         if clang_options:
             clang_options = clang_options.split(' ')
         index = clang.cindex.Index.create()
@@ -44,12 +46,14 @@ class ClangScanner(Loggable):
 
         n = datetime.now()
         for filename in self.filenames:
-            self.comments.extend(get_comments(filename))
+            if not full_scan:
+                self.comments.extend(get_comments(filename))
 
             if os.path.abspath(filename) in self.parsed:
                 continue
 
-            if not filename.endswith ("c"):
+            full_scan = any(fnmatch(filename, p) for p in full_scan_patterns)
+            if full_scan:
                 tu = index.parse(filename, args=args, options=flags)
                 self.__parse_file (filename, tu)
                 for include in tu.get_includes():
@@ -99,6 +103,9 @@ class ClangScanner(Loggable):
             if node.kind in [clang.cindex.CursorKind.FUNCTION_DECL,
                             clang.cindex.CursorKind.TYPEDEF_DECL,
                             clang.cindex.CursorKind.MACRO_DEFINITION]:
+                if self.full_scan and not node.raw_comment:
+                    continue
+
                 self.symbols[node.spelling] = node
                 self.debug ("Found internal symbol %s" % node.spelling)
                 node._tu = tu

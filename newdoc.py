@@ -42,6 +42,8 @@ def main (args):
     parser.add_argument("-U", nargs="+",
                       action="store", dest="cpp_undefines",
                       help="Pre processor undefines")
+    parser.add_argument("-s", "--style", action="store", default="gnome",
+            dest="style")
     parser.add_argument ("-f", "--filenames", action="store", nargs="+",
             dest="filenames")
     parser.add_argument ("-i", "--index", action="store",
@@ -68,12 +70,23 @@ def main (args):
         cpp_includes.append (os.path.realpath (i))
     args.cpp_includes = cpp_includes
 
-    css = ClangScanner (args.filenames)
+    print args.style
+    if args.style == "gnome":
+        css = ClangScanner (args.filenames)
+        n = datetime.now()
+        cbp = GtkDocCommentBlockParser()
+        blocks = cbp.parse_comment_blocks(css.comments)
+        Loggable.info("Comment block parsing done" % str(datetime.now() - n))
+    elif args.style == "doxygen":
+        css = ClangScanner (args.filenames, full_scan=True,
+                full_scan_patterns=['*.c', '*.h'])
+        dbp = DoxygenCommentBlockParser()
+        dbp.parse_comment_blocks (css.symbols)
+        return
+    else:
+        loggable.error ("style not handled : %s" % args.style)
+        sys.exit (0)
 
-    n = datetime.now()
-    cbp = GtkDocCommentBlockParser()
-    blocks = cbp.parse_comment_blocks(css.comments)
-    print "Comment block parsing done", datetime.now() - n
 
     extensions = []
     if args.gobject_introspection_dump:

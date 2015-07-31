@@ -40,7 +40,7 @@ realloc_and_concat(char *str, char *s2)
     return s;
 }
 
-#define BUFSIZE 64
+#define BUFSIZE 1024
 
 static void
 parse_comment (PyObject *comments, const char *filename)
