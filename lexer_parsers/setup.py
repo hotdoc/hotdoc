@@ -4,6 +4,7 @@ from distutils.core import setup, Extension
 from distutils.dep_util import newer_group
 from distutils.spawn import spawn
 from distutils.command.build_ext import build_ext as _build_ext
+from utils import PkgConfig
 
 scanner_source_dir = os.path.abspath('./')
 def src(filename):
@@ -44,13 +45,25 @@ class build_ext(_build_ext):
                         self.copy_file (src(output), dest)
                     break
 
-module = Extension('c_comment_scanner',
-                    sources = ['c_comment_scanner/scannermodule.c'],
-                    depends = ['c_comment_scanner/scanner.l',
-                               'c_comment_scanner/scanner.h'])
+c_comment_scanner_module = Extension('c_comment_scanner',
+                            sources = ['c_comment_scanner/scannermodule.c'],
+                            depends = ['c_comment_scanner/scanner.l',
+                            'c_comment_scanner/scanner.h'])
+
+glib_cflags = [flag for flag in PkgConfig ('--cflags glib-2.0') if flag]
+glib_libs = [flag for flag in PkgConfig ('--libs glib-2.0') if flag]
+
+doxygen_block_parser_module = Extension('doxygen_parser',
+                                sources = ['doxygen_parser/doxparser_module.c',
+                                           'doxygen_parser/doxparser.c'],
+                                depends = ['doxygen_parser/doxenizer.l',
+                                           'doxygen_parser/doxenizer.h',
+                                           'doxygen_parser/doxparser.h'],
+                                extra_compile_args = glib_cflags,
+                                extra_link_args = glib_libs)
 
 res = setup (name = 'lexer_parsers',
        version = '1.0',
        description = 'Collection of lexers and parsers',
        cmdclass = {'build_ext': build_ext},
-       ext_modules = [module])
+       ext_modules = [c_comment_scanner_module, doxygen_block_parser_module])
