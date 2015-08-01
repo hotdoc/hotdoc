@@ -2,7 +2,6 @@
 
 import os
 import json
-import logging
 
 from gnome_markdown_filter import GnomeMarkdownFilter
 
@@ -13,7 +12,7 @@ from pandoc_interface.pandoc_client import pandoc_converter
 
 from sections import SectionFilter
 from symbols import SymbolFactory
-from simple_signals import Signal
+from utils.simple_signals import Signal
 
 
 class Formatter(object):
@@ -96,7 +95,6 @@ class Formatter(object):
         if func in self.__not_implemented_methods:
             return
         self.__not_implemented_methods [func] = True
-        logging.warning ("%s not implemented !" % func) 
 
     # Virtual methods
 

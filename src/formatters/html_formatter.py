@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 
+import json
+
 from wheezy.template.engine import Engine
 from wheezy.template.ext.core import CoreExtension
 from wheezy.template.loader import FileLoader
 
-from symbols import *
-
-from base_formatter import Formatter
+from core.symbols import *
+from core.base_formatter import Formatter
+from core.links import Link
 from pandoc_interface.pandoc_client import pandoc_converter
-from links import Link
-import json
 
 # We support the GNOME extension
-from gi_extension.GIExtension import *
+from extensions.GIExtension import *
 
 import os
 import re

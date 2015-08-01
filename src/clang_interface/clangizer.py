@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import clang.cindex
 from clang.cindex import *
 
-from loggable import Loggable
+from utils.loggable import Loggable
 from lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
 from ctypes import *
 from fnmatch import fnmatch

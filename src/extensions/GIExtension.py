@@ -1,9 +1,9 @@
 from lxml import etree
 
-from symbols import Symbol, FunctionSymbol, ClassSymbol, ParameterSymbol, ReturnValueSymbol
+from core.symbols import Symbol, FunctionSymbol, ClassSymbol, ParameterSymbol, ReturnValueSymbol
 import clang.cindex
 from giscanner.annotationparser import GtkDocParameter
-from links import link_resolver, Link
+from core.links import link_resolver, Link
 from giscanner.gdumpparser import G_PARAM_READABLE, G_PARAM_WRITABLE,\
         G_PARAM_CONSTRUCT, G_PARAM_CONSTRUCT_ONLY
 

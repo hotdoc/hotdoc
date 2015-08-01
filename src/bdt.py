@@ -52,6 +52,9 @@ sys.path.insert(0, path)
 
 sys.path = [p for p in sys.path if not "python3" in p]
 
-from newdoc import main
+dir_ = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(dir_)
+
+from core.main import main
 
 sys.exit(main(sys.argv))

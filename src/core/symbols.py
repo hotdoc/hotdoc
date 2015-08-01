@@ -4,11 +4,12 @@ import re
 import linecache
 import uuid
 
+# FIXME: This will have to be abstracted, might be involved :)
 import clang.cindex
+from clang_interface.clangizer import ast_node_is_function_pointer
 
 from links import link_resolver, LocalLink
-from clangizer import ast_node_is_function_pointer
-from simple_signals import Signal
+from utils.simple_signals import Signal
 
 class Symbol (object):
     def __init__(self, symbol, comment, doc_formatter, symbol_factory=None):
