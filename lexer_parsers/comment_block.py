@@ -11,4 +11,4 @@ class CommentBlock(object):
         self.retval_block = block
 
     def set_description (self, description):
-        self.description = description;
+        self.description = description.strip();

@@ -157,32 +157,50 @@ extern int yylex (void);
 
 %}
 
-CMD       ("\\"|"@")
-WS        [ \t\r\n]
-NONWS     [^ \t\r\n]
-BLANK     [ \t\r]
-ID        "$"?[a-z_A-Z\x80-\xFF][a-z_A-Z0-9\x80-\xFF]*
-LABELID   [a-z_A-Z\x80-\xFF][a-z_A-Z0-9\x80-\xFF\-]*
-PHPTYPE   [\\:a-z_A-Z0-9\x80-\xFF\-]+
-VERBATIM  "verbatim"{BLANK}*
-SPCMD1    {CMD}([a-z_A-Z][a-z_A-Z0-9]*|{VERBATIM}|"--"|"---")
-SPCMD2    {CMD}[\\@<>&$#%~".|]
-SPCMD4    {CMD}"::"
-INOUT	  "inout"|"in"|"out"|("in"{BLANK}*","{BLANK}*"out")|("out"{BLANK}*","{BLANK}*"in")
-PARAMIO   {CMD}param{BLANK}*"["{BLANK}*{INOUT}{BLANK}*"]"
-CHARWORDQ [^ \t\n\r\\@<>()\[\]:;\?{}&%$#,."=']
-ESCWORD   ("%"{ID}(("::"|"."){ID})*)|("%'")
-WORD1     {ESCWORD}|{CHARWORDQ}+|"{"|"}"|"'\"'"|("\""[^"\n]*\n?[^"\n]*"\"")
-WORD2     "."|","|"("|")"|"["|"]"|":"|";"|"\?"|"="|"'"
+CMD             ("\\"|"@")
+WS              [ \t\r\n]
+SLASH           \/
+STAR            \*
+BLANK           [ \t\r]
+CCOMMENT_START  {SLASH}{STAR}*
+CCOMMENT_END    {STAR}{SLASH}
+LONE_STAR       \n{BLANK}*{STAR}[^{SLASH}]
+ID              "$"?[a-z_A-Z\x80-\xFF][a-z_A-Z0-9\x80-\xFF]*
+LABELID         [a-z_A-Z\x80-\xFF][a-z_A-Z0-9\x80-\xFF\-]*
+PHPTYPE         [\\:a-z_A-Z0-9\x80-\xFF\-]+
+VERBATIM        "verbatim"{BLANK}*
+SPCMD1          {CMD}([a-z_A-Z][a-z_A-Z0-9]*|{VERBATIM}|"--"|"---")
+SPCMD2          {CMD}[\\@<>&$#%~".|]
+SPCMD4          {CMD}"::"
+INOUT	          "inout"|"in"|"out"|("in"{BLANK}*","{BLANK}*"out")|("out"{BLANK}*","{BLANK}*"in")
+PARAMIO         {CMD}param{BLANK}*"["{BLANK}*{INOUT}{BLANK}*"]"
+CHARWORDQ       [^ \t\n\r\\@<>()\[\]:;\?{}&%$#,."=']
+ESCWORD         ("%"{ID}(("::"|"."){ID})*)|("%'")
+WORD1           {ESCWORD}|{CHARWORDQ}+|"{"|"}"|"'\"'"|("\""[^"\n]*\n?[^"\n]*"\"")
+WORD2           "."|","|"("|")"|"["|"]"|":"|";"|"\?"|"="|"'"
 
 %option noyywrap
 %option yylineno
 
 %x St_Para
 %x St_Param
-%x St_Text
+%s St_Initial
 
 %%
+
+<*>{CCOMMENT_END}                    {
+  BEGIN (St_Initial); /* Shouldn't really matter but whatev */
+}
+
+<*>{LONE_STAR}                       {
+}
+
+<St_Initial>{CCOMMENT_START}         {
+  printf ("matched comment baby\n");
+  BEGIN (St_Para);
+  return TK_NEWPARA;
+}
+
 <St_Para>\r            /* skip carriage return */
 <St_Para>"{"{BLANK}*"@link" {
   SET_TOKEN_NAME("javalink");
@@ -236,8 +254,8 @@ WORD2     "."|","|"("|")"|"["|"]"|":"|";"|"\?"|"="|"'"
   return TK_COMMAND;
 }
 
-<St_Para,St_Text>{WORD1} |
-<St_Para,St_Text>{WORD2} { /* function call */ 
+<St_Para>{WORD1} |
+<St_Para>{WORD2} { /* function call */ 
   if (yytext[0]=='%') // strip % if present
     SET_TOKEN_NAME (yytext + 1);
   else
@@ -245,15 +263,10 @@ WORD2     "."|","|"("|")"|"["|"]"|":"|";"|"\?"|"="|"'"
   return TK_WORD;
 }
 
-<St_Para,St_Text>{BLANK}+      |
-<St_Para,St_Text>{BLANK}*\n{BLANK}* { /* white space */ 
+<St_Para>{BLANK}+      |
+<St_Para>{BLANK}*\n{BLANK}* { /* white space */ 
   g_token->chars=yytext;
   return TK_WHITESPACE;
-}
-
-<St_Text>[\\@<>&$#%~]  {
-  SET_TOKEN_NAME (yytext);
-  return TK_COMMAND;
 }
 
 <St_Para>({BLANK}*\n)+{BLANK}*\n{BLANK}* {
@@ -312,7 +325,7 @@ void doctokenizerYYinit(const char *input)
 {
   g_inputString = input;
   g_inputPos    = 0;
-  BEGIN(St_Para);
+  BEGIN(St_Initial);
 }
 
 void doctokenizerYYsetStatePara()

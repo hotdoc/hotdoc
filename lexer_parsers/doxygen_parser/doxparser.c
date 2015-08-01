@@ -143,13 +143,20 @@ endparagraph:
 PyObject *dox_parser_parse (DoxParser *self, const char *raw_comment)
 {
   PyObject *block = PyObject_CallObject(comment_block_class, NULL);
+  int tok;
 
 	g_token = (TokenInfo *) malloc (sizeof (TokenInfo));
   g_token->name = g_string_new (NULL);
 
 	doctokenizerYYinit (raw_comment);
   self->current_block = block;
-	parse_para (self, block);
+  while ((tok = yylex ()) != TK_NEWPARA && tok);
+
+  if (!tok) {
+    printf ("Empty block !\n");
+  } else {
+	  parse_para (self, block);
+  }
 	return block;
 }
 
