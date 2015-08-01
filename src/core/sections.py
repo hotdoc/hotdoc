@@ -8,7 +8,7 @@ from gnome_markdown_filter import GnomeMarkdownFilter
 from lexer_parsers.doxygen_block_parser import parse_doxygen_comment
 from pandocfilters import BulletList
 from datetime import datetime
-from utils.loggable import Loggable
+from utils.loggable import Loggable, ProgressBar
 
 class Dependency (object):
     def __init__(self, filename):

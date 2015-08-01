@@ -259,6 +259,9 @@ class ProgressBar:
         self.cleared = 1  # : true if we haven't drawn the bar yet.
         self.update(0, '')
 
+    def set_header (self, header):
+        self.header = self.term.render(self.HEADER % header.center(self.width))
+
     def update(self, percent, message):
         if self.cleared:
             sys.stdout.write(self.header)
@@ -275,6 +278,9 @@ class ProgressBar:
                              self.term.UP + self.term.CLEAR_EOL +
                              self.term.UP + self.term.CLEAR_EOL)
             self.cleared = 1
+
+
+progress_bar = ProgressBar (TerminalController (), "")
 
 
 def getLevelName(level):

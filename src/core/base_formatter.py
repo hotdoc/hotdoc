@@ -13,6 +13,7 @@ from pandoc_interface.pandoc_client import pandoc_converter
 from sections import SectionFilter
 from symbols import SymbolFactory
 from utils.simple_signals import Signal
+from utils.loggable import progress_bar
 
 
 class Formatter(object):
@@ -43,8 +44,21 @@ class Formatter(object):
     def format (self):
         sections = self.__create_symbols ()
 
+        self.__total_sections = 0
+        self.__total_rendered_sections = 0
+        for section in sections:
+            self.__total_sections += self.__get_subsections_count (section)
+        progress_bar.set_header("Rendering Sections (2 / 2)")
+        progress_bar.clear()
+        self.__update_progress ()
+        
         for section in sections:
             self.__format_section (section)
+
+    def __update_progress (self):
+        percent = float (self.__total_rendered_sections) / float (self.__total_sections)
+        progress_bar.update (percent, "%d / %d" %
+                (self.__total_rendered_sections, self.__total_sections))
 
     def format_symbol (self, symbol):
         self.formatting_symbol_signals[type(symbol)](symbol)
@@ -60,9 +74,17 @@ class Formatter(object):
         sf.create_symbols (os.path.basename(self.__index_file))
         return sf.sections
 
+    def __get_subsections_count (self, section):
+        count = 1
+        for subsection in section.sections:
+            count += self.__get_subsections_count (subsection)
+        return count
+
     def __format_section (self, section):
         out = ""
         section.do_format ()
+        self.__total_rendered_sections += 1
+        self.__update_progress()
 
         for section in section.sections:
             self.__format_section (section)

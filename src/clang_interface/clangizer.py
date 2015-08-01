@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import clang.cindex
 from clang.cindex import *
 
-from utils.loggable import Loggable
+from utils.loggable import Loggable, progress_bar
 from lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
 from ctypes import *
 from fnmatch import fnmatch
@@ -41,6 +41,11 @@ class ClangScanner(Loggable):
         self.external_symbols = {}
         self.comments = []
         self.token_groups = []
+        self.__total_files = len (self.filenames)
+        self.__total_files_parsed = 0
+        progress_bar.set_header("Parsing sources (1 / 2)")
+        progress_bar.clear()
+        self.__update_progress()
 
         self.parsed = set({})
 
@@ -58,11 +63,20 @@ class ClangScanner(Loggable):
                 self.__parse_file (filename, tu)
                 for include in tu.get_includes():
                     self.__parse_file (os.path.abspath(str(include.source)), tu)
+            else:
+                self.__total_files_parsed += 1
+                self.__update_progress ()
 
         self.info ("Source parsing done %s" % str(datetime.now() - n))
         self.info ("%d internal symbols found" % len (self.symbols))
         self.info ("%d external symbols found" % len (self.external_symbols))
         self.info ("%d comments found" % len (self.comments))
+
+
+    def __update_progress (self):
+        percent = float (self.__total_files_parsed) / float (self.__total_files)
+        progress_bar.update (percent, "%d / %d" %
+                (self.__total_files_parsed, self.__total_files)) 
 
     def __parse_file (self, filename, tu):
         if filename in self.parsed:
@@ -74,6 +88,8 @@ class ClangScanner(Loggable):
         extent = clang.cindex.SourceRange.from_locations (start, end)
         cursors = self.__get_cursors(tu, extent)
         if filename in self.filenames:
+            self.__total_files_parsed += 1
+            self.__update_progress ()
             self.find_internal_symbols (cursors, tu)
         else:
             self.find_external_symbols (cursors, tu)
