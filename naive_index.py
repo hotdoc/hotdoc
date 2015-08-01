@@ -15,6 +15,11 @@ class NaiveIndexFormatter(object):
         mddir = "tmp_markdown_files"
 
         try:
+            os.rmdir (mddir)
+        except OSError:
+            pass
+
+        try:
             os.mkdir (mddir)
         except OSError:
             pass
@@ -23,7 +28,7 @@ class NaiveIndexFormatter(object):
             for page, symbols in pages.iteritems():
                 base_name = os.path.basename (os.path.splitext(page)[0])
                 filename = '%s.markdown' % base_name
-                index.write ('[%s](%s)\n' % (base_name, filename))
-                with open (os.path.join(mddir, filename), 'w') as f:
+                index.write ('### [%s](%s)\n' % (base_name, filename))
+                with open (os.path.join(mddir, filename), 'a') as f:
                     for symbol in symbols:
                         f.write('* [%s]()\n' % symbol.spelling)

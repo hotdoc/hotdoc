@@ -4,7 +4,14 @@ from distutils.core import setup, Extension
 from distutils.dep_util import newer_group
 from distutils.spawn import spawn
 from distutils.command.build_ext import build_ext as _build_ext
-from utils import PkgConfig
+import shlex
+import subprocess
+
+def PkgConfig(args):
+    cmd = ['pkg-config'] + shlex.split(args)
+    out = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE).stdout
+    line = out.readline()[:-1].split(" ")
+    return filter(lambda a: a != ' ', line)
 
 scanner_source_dir = os.path.abspath('./')
 def src(filename):

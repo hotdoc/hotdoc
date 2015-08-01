@@ -28,7 +28,7 @@ parse_param_or_return_value (DoxParser *self, gboolean is_return)
 
   tok = yylex();
   if (tok == 0) {
-    printf ("Premature end of param block\n");
+    //printf ("Premature end of param block\n");
     return;
   }
 
@@ -44,9 +44,9 @@ parse_param_or_return_value (DoxParser *self, gboolean is_return)
     g_string_free (param_name, TRUE);
 
     if (tok != TK_WHITESPACE) {
-      printf ("unexpected token in comment block while parsing the "
-          "argument of param command\n");
-      printf ("token type : %s, token : %s\n", tokToString (tok), g_token->name->str);
+      //printf ("unexpected token in comment block while parsing the "
+      //    "argument of param command\n");
+      //printf ("token type : %s, token : %s\n", tokToString (tok), g_token->name->str);
       Py_DECREF (pyparam_name);
       return;
     }
@@ -84,14 +84,14 @@ parse_command (DoxParser *self)
   DoxParsingFunction cmd_func;
 
   if (tok != TK_WHITESPACE) {
-    printf ("Expected whitespace after %s command", g_token->name->str);
+    //printf ("Expected whitespace after %s command", g_token->name->str);
     return;
   }
 
   cmd_func = (DoxParsingFunction) (g_hash_table_lookup (self->command_map, g_token->name->str));
 
   if (!cmd_func) {
-    printf ("Unhandled command [%s]\n", g_token->name->str);
+    //printf ("Unhandled command [%s]\n", g_token->name->str);
     return;
   }
 
@@ -126,7 +126,7 @@ parse_para (DoxParser *self, PyObject *block)
       case TK_NEWPARA:     
         goto endparagraph;
       default:
-        printf ("found unexpected token, %s %s", tokToString (tok), g_token->name->str);
+        //printf ("found unexpected token, %s %s", tokToString (tok), g_token->name->str);
         break;	
     }
   }
@@ -153,7 +153,7 @@ PyObject *dox_parser_parse (DoxParser *self, const char *raw_comment)
   while ((tok = yylex ()) != TK_NEWPARA && tok);
 
   if (!tok) {
-    printf ("Empty block !\n");
+    //printf ("Empty block !\n");
   } else {
 	  parse_para (self, block);
   }

@@ -4,8 +4,6 @@ import dagger
 
 from giscanner.annotationparser import GtkDocCommentBlockParser
 import sys
-import shlex
-import subprocess
 import types
 import loggable
 
@@ -19,13 +17,9 @@ from xml.etree.cElementTree import parse, tostring
 from clangizer import ClangScanner
 from gi_extension import GIExtension
 from naive_index import NaiveIndexFormatter
-
-def PkgConfig(args):
-    cmd = ['pkg-config'] + shlex.split(args)
-    out = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE).stdout
-    line = out.readline()[:-1].split(" ")
-    return filter(lambda a: a != ' ', line)
-
+from utils import PkgConfig
+from test_doxygen_parser import display_one_block
+from pprint import pprint
 
 def main (args):
     parser = argparse.ArgumentParser()
@@ -80,11 +74,9 @@ def main (args):
     elif args.style == "doxygen":
         css = ClangScanner (args.filenames, full_scan=True,
                 full_scan_patterns=['*.c', '*.h'])
-        dbp = DoxygenCommentBlockParser()
-        dbp.parse_comment_blocks (css.symbols)
-        return
+        blocks = None
     else:
-        loggable.error ("style not handled : %s" % args.style)
+        loggable.error ("style not handled : %s" % args.style, "")
         sys.exit (0)
 
 

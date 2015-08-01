@@ -163,8 +163,8 @@ SLASH           \/
 STAR            \*
 BLANK           [ \t\r]
 CCOMMENT_START  {SLASH}{STAR}*
-CCOMMENT_END    {STAR}{SLASH}
-LONE_STAR       \n{BLANK}*{STAR}[^{SLASH}]
+CCOMMENT_END    {WS}*{STAR}{SLASH}
+LONE_STAR       \n{BLANK}*{STAR}
 ID              "$"?[a-z_A-Z\x80-\xFF][a-z_A-Z0-9\x80-\xFF]*
 LABELID         [a-z_A-Z\x80-\xFF][a-z_A-Z0-9\x80-\xFF\-]*
 PHPTYPE         [\\:a-z_A-Z0-9\x80-\xFF\-]+
@@ -196,7 +196,6 @@ WORD2           "."|","|"("|")"|"["|"]"|":"|";"|"\?"|"="|"'"
 }
 
 <St_Initial>{CCOMMENT_START}         {
-  printf ("matched comment baby\n");
   BEGIN (St_Para);
   return TK_NEWPARA;
 }
@@ -316,6 +315,8 @@ WORD2           "."|","|"("|")"|"["|"]"|":"|";"|"\?"|"="|"'"
   g_token->chars=yytext;
   return TK_WHITESPACE;
 }
+
+<*>.
 
 %%
 

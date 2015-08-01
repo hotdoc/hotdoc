@@ -104,10 +104,13 @@ class ClangScanner(Loggable):
                             clang.cindex.CursorKind.TYPEDEF_DECL,
                             clang.cindex.CursorKind.MACRO_DEFINITION]:
                 if self.full_scan and not node.raw_comment:
+                    self.debug ("Discarding symbol %s at location %s as it has no doc" %
+                            (node.spelling, str(node.location)))
                     continue
 
                 self.symbols[node.spelling] = node
-                self.debug ("Found internal symbol %s" % node.spelling)
+                self.debug ("Found internal symbol [%s] of kind %s at location %s" %
+                        (node.spelling, str(node.kind), str (node.location)))
                 node._tu = tu
 
     def find_external_symbols(self, nodes, tu):

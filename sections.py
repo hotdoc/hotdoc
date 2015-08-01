@@ -5,6 +5,7 @@ import dagger
 
 from symbols import *
 from gnome_markdown_filter import GnomeMarkdownFilter
+from lexer_parsers.doxygen_block_parser import parse_doxygen_comment
 from pandocfilters import BulletList
 from datetime import datetime
 from loggable import Loggable
@@ -85,7 +86,10 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
                     symbol = self.__symbols.get(symbol_name)
 
                     if symbol:
-                        comment_block = self.__comment_blocks.get (symbol_name)
+                        if self.__comment_blocks:
+                            comment_block = self.__comment_blocks.get (symbol_name)
+                        else:
+                            comment_block = parse_doxygen_comment (symbol.raw_comment)
                         if comment_block:
                             sym = self.__symbol_factory.make (symbol,
                                     comment_block)
@@ -125,7 +129,10 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
         if name in self.__created_section_names:
             return True
 
-        comment = self.__comment_blocks.get("SECTION:%s" % name.lower())
+        comment = None
+        if self.__comment_blocks:
+            comment = self.__comment_blocks.get("SECTION:%s" % name.lower())
+
         symbol = self.__symbols.get(name)
         if not symbol:
             self.debug ("Creating section %s with no symbol associated" % name)
