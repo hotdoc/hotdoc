@@ -25,9 +25,6 @@
 
 typedef struct _Definition Definition;
 typedef struct _MemberGroup MemberGroup;
-typedef struct
-{
-} HtmlAttribList;
 
 enum Tokens
 {
@@ -71,53 +68,25 @@ typedef enum {
   Anchor        = 5
 } SectionType;
 
-typedef enum 
-{ In=1,
-  Out=2,
-  InOut=3,
-  Unspecified=0 }
-  ParamDir;
+typedef enum {
+  In = 1,
+  Out = 2,
+  InOut = 3,
+  Unspecified = 0
+} ParamDir;
 
-  /** @brief Data associated with a token used by the comment block parser. */
-  typedef struct
+typedef struct
 {
-  // unknown token
-  char unknownChar;
-
   // command token
-  //char *name;
   GString *name;
 
-  // command text (RCS tag)
-  char *text;
-
-  // list token info
-  bool isEnumList;
   int indent;
-
-  // sections
-  char *sectionId;
-
-  // simple section
-  char *simpleSectName;
-  char *simpleSectText;
-
-  // verbatim fragment
-  char *verb;
 
   // xrefitem
   int id;
 
-  // html tag
-  HtmlAttribList attribs;
-  bool endTag;
-  bool emptyTag;
-
   // whitespace
   char *chars;
-
-  // url
-  bool isEMailAddr;
 
   // param attributes
   ParamDir paramDir;
@@ -136,40 +105,6 @@ void doctokenizerYYinit(const char *input);
 void doctokenizerYYcleanup();
 int  doctokenizerYYlex();
 void doctokenizerYYsetStatePara();
-void doctokenizerYYsetStateTitle();
-void doctokenizerYYsetStateTitleAttrValue();
-void doctokenizerYYsetStateCode();
-void doctokenizerYYsetStateXmlCode();
-void doctokenizerYYsetStateHtmlOnly();
-void doctokenizerYYsetStateManOnly();
-void doctokenizerYYsetStateLatexOnly();
-void doctokenizerYYsetStateXmlOnly();
-void doctokenizerYYsetStateDbOnly();
-void doctokenizerYYsetStateRtfOnly();
-void doctokenizerYYsetStateVerbatim();
-void doctokenizerYYsetStateDot();
-void doctokenizerYYsetStateMsc();
 void doctokenizerYYsetStateParam();
-void doctokenizerYYsetStateXRefItem();
-void doctokenizerYYsetStateFile();
-void doctokenizerYYsetStatePattern();
-void doctokenizerYYsetStateLink();
-void doctokenizerYYsetStateCite();
-void doctokenizerYYsetStateRef();
-void doctokenizerYYsetStateInternalRef();
-void doctokenizerYYsetStateText();
-void doctokenizerYYsetStateSkipTitle();
-void doctokenizerYYsetStateAnchor();
-void doctokenizerYYsetInsidePre(bool b);
-void doctokenizerYYpushBackHtmlTag(const char *tag);
-void doctokenizerYYsetStateSnippet();
-void doctokenizerYYstartAutoList();
-void doctokenizerYYendAutoList();
-void doctokenizerYYsetStatePlantUML();
-void doctokenizerYYsetStateSetScope();
-void doctokenizerYYsetStatePlantUMLOpt();
-
-/* FIXME */
-char *realloc_and_concat(char *str, char *s2);
 
 #endif

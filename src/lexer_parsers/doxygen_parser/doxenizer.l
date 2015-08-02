@@ -28,16 +28,6 @@
   
 //--------------------------------------------------------------------------
 
-struct _Definition
-{
-	char *filebase;
-};
-
-struct _MemberGroup
-{
-	Definition *parent;
-};
-
 typedef struct
 {
 } SectionInfo;
@@ -47,58 +37,12 @@ TokenInfo *g_token = 0;
 static int g_inputPos = 0;
 static const char *g_inputString;
 
-// context for section finding phase
-
-struct DocLexerContext
-{
-  TokenInfo *token;
-  int rule;
-  int autoListLevel;
-  int inputPos;
-  const char *inputString;
-  YY_BUFFER_STATE state;
-};
-
 #define SET_TOKEN_NAME(new_name)           \
 G_STMT_START {                         \
   g_string_free (g_token->name, TRUE); \
   g_token->name = g_string_new (new_name); \
 } G_STMT_END                           \
                     
-
-/* static QStack<DocLexerContext> g_lexerStack; */
-
-//--------------------------------------------------------------------------
-
-/*
-void doctokenizerYYpushContext()
-{
-  DocLexerContext *ctx = new DocLexerContext;
-  ctx->rule = YY_START;
-  ctx->autoListLevel = g_autoListLevel;
-  ctx->token = g_token;
-  ctx->inputPos = g_inputPos;
-  ctx->inputString = g_inputString;
-  ctx->state = YY_CURRENT_BUFFER;
-  g_lexerStack.push(ctx);
-  yy_switch_to_buffer(yy_create_buffer(doctokenizerYYin, YY_BUF_SIZE));
-}
-
-bool doctokenizerYYpopContext()
-{
-  if (g_lexerStack.isEmpty()) return false;
-  DocLexerContext *ctx = g_lexerStack.pop();
-  g_autoListLevel = ctx->autoListLevel;
-  g_inputPos = ctx->inputPos;
-  g_inputString = ctx->inputString;
-  yy_delete_buffer(YY_CURRENT_BUFFER);
-  yy_switch_to_buffer(ctx->state);
-  BEGIN(ctx->rule);
-  delete ctx;
-  return true;
-}
-*/
-
 //--------------------------------------------------------------------------
 
 const char *tokToString(int token)
