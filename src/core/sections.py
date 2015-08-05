@@ -2,13 +2,16 @@
 
 import os
 import dagger
+import json
 
 from symbols import *
 from gnome_markdown_filter import GnomeMarkdownFilter
 from lexer_parsers.doxygen_block_parser import parse_doxygen_comment
-from pandocfilters import BulletList
+from pandocfilters import BulletList, Plain, Link, Para, Emph, Str, Space
 from datetime import datetime
 from utils.loggable import Loggable, ProgressBar
+from pprint import pprint
+from pandoc_interface.pandoc_client import pandoc_converter
 
 class Dependency (object):
     def __init__(self, filename):
@@ -38,6 +41,8 @@ class SectionSymbol (Symbol, Dependency):
         self.typed_symbols[AliasSymbol] = TypedSymbolsList ("Aliases")
         self.parsed_contents = None
         self.formatted_contents = None
+        if self._comment is not None and self._comment.title is not None:
+            self.link.title = self._comment.title
 
     def _register_typed_symbol (self, symbol_type, symbol_type_name):
         self.typed_symbols[symbol_type] = TypedSymbolsList (symbol_type_name)
@@ -58,9 +63,16 @@ class SectionSymbol (Symbol, Dependency):
     def get_short_description (self):
         if not self._comment:
             return ""
-        if not "short_description" in self._comment.params:
+        if not self._comment.short_description:
             return ""
-        return self._comment.params["short_description"].description
+        return self._comment.short_description
+
+    def get_title (self):
+        if not self._comment:
+            return ""
+        if not self._comment.title:
+            return ""
+        return self._comment.title
 
 
 class SectionFilter (GnomeMarkdownFilter, Loggable):
@@ -114,13 +126,35 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
         return GnomeMarkdownFilter.parse_extensions (self, key, value, format_,
                 meta)
 
-    def parse_link (self, key, value, format_, meta):
+    def __parse_link (self, value):
+        res = None
         old_section = self.__current_section
-        if self.parse_file (value[1][0], old_section):
-            value[1][0] = os.path.splitext(value[1][0])[0] + ".html"
-        self.__current_section = old_section
 
-    def parse_file (self, filename, parent=None):
+        if self.parse_file (value[1][0], old_section, value[0][0]['c']):
+            value[1][0] = os.path.splitext(value[1][0])[0] + ".html"
+
+            # Let's check if we can get a better title
+            title = self.__current_section.get_title()
+            if title:
+                value[0][0]['c'] = title
+            res = self.__current_section.get_short_description()
+
+        self.__current_section = old_section
+        return res
+
+    def parse_header (self, key, value, format_, meta):
+        if value[2][0]['t'] == 'Link':
+            res = self.__parse_link (value[2][0]['c'])
+            if res:
+                description = pandoc_converter.convert ('markdown', 'json', res)
+                description = json.loads(description)
+                value[2].append (Space ())
+                value[2].append (Str (u'—'))
+                value[2].append (Space())
+                for val in description[1][0]['c']:
+                    value[2].append (val)
+
+    def parse_file (self, filename, parent=None, section_name=None):
         path = os.path.join(self.directory, filename)
         if not os.path.isfile (path):
             return False
@@ -130,8 +164,12 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
             return True
 
         comment = None
+        if section_name is None:
+            section_name = name
+
         if self.__comment_blocks:
-            comment = self.__comment_blocks.get("SECTION:%s" % name.lower())
+            comment = self.__comment_blocks.get("SECTION:%s" %
+                    section_name.lower())
 
         symbol = self.__symbols.get(name)
         if not symbol:

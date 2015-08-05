@@ -16,8 +16,16 @@ class CommentBlock(object):
 class GtkDocCommentBlock(CommentBlock):
     def __init__(self, name, annotations, params, description, tags):
         CommentBlock.__init__(self)
+        self.short_description = None
+        self.title = None
+
         for param in params:
-            self.params[param.name] = param
+            if param.name.lower() == 'short_description':
+                self.short_description = param.description
+            elif param.name.lower() == 'title':
+                self.title = param.description
+            else:
+                self.params[param.name] = param
         self.name = name
         self.description = description
         self.annotations = {}

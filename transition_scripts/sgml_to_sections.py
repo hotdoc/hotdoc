@@ -4,6 +4,10 @@
 import sys
 import pandocfilters
 import os
+
+dir_ = os.path.dirname(os.path.abspath(__file__))
+sys.path.append (os.path.abspath(os.path.join(dir_, os.pardir, "src")))
+
 import StringIO
 from lxml import etree as ET
 from pandoc_interface.pandoc_client import pandoc_converter
@@ -17,16 +21,18 @@ def convert_file (filename, new_name):
             filename], stderr=f)
 
     converted = pandoc_converter.convert ("docbook", "markdown", xincluded)
+    print "writing conversion to", new_name
     with open (os.path.join (OUTPUT, new_name + ".markdown"), 'w') as f:
-        converted = converted.decode('utf-8', 'ignore')
         f.write (converted.encode('utf-8'))
     return os.path.join (OUTPUT, new_name + ".markdown")
 
 def create_symbol_file (section_node, name):
+    name = '_'.join(name.split())
     child = section_node.getchildren()[-1]
     symbols = child.tail.split("\n")
+    print "writing symbols to", name
     with open (os.path.join (OUTPUT, name + ".markdown"), 'w') as f:
-        f.write ("# %s\n\n" % name)
+        f.write ("### %s\n\n" % name)
         for symbol in symbols:
             if symbol:
                 f.write ("* [%s]()\n" % symbol)
@@ -51,11 +57,11 @@ def parse_sgml_chapters (part, filename, path, level, sections):
                             title_node.text)
                 else:
                     new_filename = create_symbol_file (sections[title], title)
-            out += "## [%s](%s)\n\n" % (title, os.path.basename(new_filename))
+            out += "#### [%s](%s)\n\n" % (title, os.path.basename(new_filename))
         else:
             title = elem.find("title").text
             nested_filename = '_'.join(title.split()) + ".markdown"
-            out += "## [%s](%s)\n" % (title, nested_filename)
+            out += "### [%s](%s)\n" % (title, nested_filename)
             parse_sgml_chapters (elem, os.path.join (OUTPUT,
                 nested_filename), path, level + 1, sections)
 
@@ -67,7 +73,7 @@ def parse_sgml_parts (parent, new_parent, path, sections):
     for part in parent.findall ("part"):
         title = part.find("title").text
         filename = '_'.join(title.split()) + ".markdown"
-        out += "# [%s](%s)\n\n" % (title, filename)
+        out += "### [%s](%s)\n\n" % (title, filename)
 
         parse_sgml_chapters (part, os.path.join (OUTPUT,
             filename), path, 2, sections)
@@ -80,7 +86,7 @@ def parse_sgml_book_chapters (parent, new_parent, path, sections):
     for part in parent.findall ("chapter"):
         title = part.find("title").text
         filename = '_'.join(title.split()) + ".markdown"
-        out += "# [%s](%s)\n\n" % (title, filename)
+        out += "### [%s](%s)\n\n" % (title, filename)
 
         parse_sgml_chapters (part, os.path.join (OUTPUT,
             filename), path, 2, sections)

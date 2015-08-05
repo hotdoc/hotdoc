@@ -248,6 +248,13 @@ SCOPE_CALL_HELP = \
 NULLABLE_HELP = \
 "NULL may be passed to the value"
 
+DEFAULT_HELP = \
+"Default parameter value (for in case the shadows-to function has less parameters)"
+
+# VERY DIFFERENT FROM THE PREVIOUS ONE BEWARE :P
+OPTIONAL_HELP = \
+"NULL may be passed instead of a pointer to a location"
+
 # WTF
 TYPE_HELP = \
 "Override the parsed C type with given type"
@@ -274,6 +281,8 @@ class GIExtension(object):
                  "closure": self.__make_closure_annotation,
                  "nullable": self.__make_nullable_annotation,
                  "type": self.__make_type_annotation,
+                 "optional": self.__make_optional_annotation,
+                 "default": self.__make_default_annotation,
                 }
 
         self.__create_chilren_map(root)
@@ -305,6 +314,9 @@ class GIExtension(object):
 
     def __make_nullable_annotation (self, annotation, value):
         return Annotation("nullable", NULLABLE_HELP)
+
+    def __make_optional_annotation (self, annotation, value):
+        return Annotation ("optional", OPTIONAL_HELP)
 
     def __make_allow_none_annotation(self, annotation, value):
         return Annotation ("allow-none", ALLOW_NONE_HELP)
@@ -359,6 +371,9 @@ class GIExtension(object):
             return Annotation ("closure", CLOSURE_DATA_HELP)
 
         return Annotation ("closure", CLOSURE_HELP % value[0])
+
+    def __make_default_annotation (self, annotation, value):
+        return Annotation ("default %s" % str (value[0]), DEFAULT_HELP)
 
     def __create_annotation (self, annotation_name, annotation_value):
         factory = self.__annotation_factories.get(annotation_name)

@@ -44,7 +44,7 @@ WORD                {WORD1}|{WORD2}
 
 /* Initial state */
 CCOMMENT_START      {SLASH}{STAR}{STAR}
-CCOMMENT_END        ({WS}*{STAR}{SLASH})|{NEWPARA}{SLASH}
+CCOMMENT_END        ({WS}*{STAR}{SLASH})|{EMPTYLINE}+{NEWLINE}{SLASH}
 
 /* Annotations */
 ANN_START           {BLANK}*\({BLANK}*
@@ -98,6 +98,11 @@ CODE_END            "]|"
 %%
 
 <St_In_Ann_Arg_Key_Value>= {
+}
+
+<St_In_Ann_Arg_Key_Value>{WORD}/{ANN_ARG_KV} {
+  yylval->text = yytext;
+  return TK_ANNOTATION_ARG_VALUE;
 }
 
 <St_In_Ann_Arg_Key_Value>{WORD} {
@@ -211,6 +216,10 @@ CODE_END            "]|"
 
 <*>{CCOMMENT_END}                    {
   parameters_done = 0;
+  if (YY_START == St_In_Code) {
+    yylval->text = yytext;   
+    return TK_WORD;
+  }
   if (YY_START != INITIAL) {
     BEGIN (INITIAL);
     return TK_COMMENT_END;

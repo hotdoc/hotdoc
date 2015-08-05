@@ -281,8 +281,7 @@ class ProgressBar:
 
 
 try:
-    #progress_bar = ProgressBar (TerminalController (), "")
-    progress_bar = None
+    progress_bar = ProgressBar (TerminalController (), "")
 except ValueError:
     progress_bar = None
 

@@ -130,8 +130,8 @@ extension
 {
 	$$ = PyString_FromFormat ("*%s*()", $2);
 }
-	| TK_CODE_START { $$ = PyString_FromString ("```"); }
-	| TK_CODE_END   { $$ = PyString_FromString ("```"); }
+	| TK_CODE_START { $$ = PyString_FromString ("\n```\n"); }
+	| TK_CODE_END   { $$ = PyString_FromString ("\n```\n"); }
 ;
 
 paragraph

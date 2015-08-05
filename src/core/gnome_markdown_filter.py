@@ -30,6 +30,8 @@ class GnomeMarkdownFilter(object):
             return self.parse_link (key, value, format_, meta)
         elif key == "Para" and len (value) == 1:
             return self.parse_include (key, value, format_, meta)
+        elif key == "Header":
+            return self.parse_header (key, value, format_, meta)
 
         return None
 
@@ -43,6 +45,9 @@ class GnomeMarkdownFilter(object):
             actual_link = link_resolver.get_named_link (linkname)
             if actual_link:
                 link[0] = actual_link.get_link()
+        return None
+
+    def parse_header (self):
         return None
 
     def parse_include (self, key, value, format_, meta):
