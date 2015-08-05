@@ -340,7 +340,7 @@ class GIExtension(object):
         annotation_val = None
         if type(value) == dict:
             annotation_val = ""
-            for name, val in value:
+            for name, val in value.iteritems():
                 annotation_val += "%s=%s" % (name, val)
         return Annotation ("array", ARRAY_HELP, annotation_val)
 
@@ -377,8 +377,8 @@ class GIExtension(object):
 
         for ann, val in parameter._comment.annotations.iteritems():
             if ann == "skip":
-                continue   #FIXME: why should I skip a parameter
-            annotation = self.__create_annotation (ann, val)
+                continue
+            annotation = self.__create_annotation (ann, val.argument)
             if not annotation:
                 print "This parameter annotation is unknown :[" + ann + "]", val
                 continue

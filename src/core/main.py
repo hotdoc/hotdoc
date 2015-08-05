@@ -50,8 +50,9 @@ def main (args):
     if args.style == "gnome":
         css = ClangScanner (args.filenames)
         n = datetime.now()
-        cbp = GtkDocCommentBlockParser()
-        blocks = cbp.parse_comment_blocks(css.comments)
+        #cbp = GtkDocCommentBlockParser()
+        #blocks = cbp.parse_comment_blocks(css.comments)
+        blocks = css.new_comments
         loggable.info("Comment block parsing done in %s" % str(datetime.now() -n), "")
     elif args.style == "doxygen":
         css = ClangScanner (args.filenames, full_scan=True,

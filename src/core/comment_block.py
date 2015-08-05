@@ -1,15 +1,8 @@
-class GtkDocCommentBlock(object):
-    def __init__(self, name, annotations, params, description, tags):
+class CommentBlock(object):
+    def __init__ (self):
         self.params = {}
-        for param in params:
-            self.params[param.name] = param
-        self.name = name
-        self.retval_block = None
-        self.description = description
-        self.annotations = annotations
+        self.description = None
         self.tags = {}
-        for tag in tags:
-            self.tags[tag.name] = tag
 
     def add_param_block (self, param_name, block):
         self.params[param_name] = block
@@ -20,6 +13,20 @@ class GtkDocCommentBlock(object):
     def set_description (self, description):
         self.description = description.strip();
 
+class GtkDocCommentBlock(CommentBlock):
+    def __init__(self, name, annotations, params, description, tags):
+        CommentBlock.__init__(self)
+        for param in params:
+            self.params[param.name] = param
+        self.name = name
+        self.description = description
+        self.annotations = {}
+        for annotation in annotations:
+            self.annotations[annotation.name] = annotation
+        for tag in tags:
+            self.tags[tag.name.lower()] = tag
+
+
 class GtkDocAnnotation(object):
     def __init__ (self, name, argument):
         self.name = name
@@ -29,11 +36,15 @@ class GtkDocTag(object):
     def __init__(self, name, value, annotations, description):
         self.name = name
         self.value = value
-        self.annotations = annotations
+        self.annotations = {}
+        for annotation in annotations:
+            self.annotations[annotation.name] = annotation
         self.description = description
 
 class GtkDocParameter(object):
     def __init__(self, name, annotations, description):
         self.name = name
-        self.annotations = annotations
+        self.annotations = {}
+        for annotation in annotations:
+            self.annotations[annotation.name] = annotation
         self.description = description

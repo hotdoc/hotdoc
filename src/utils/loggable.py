@@ -280,8 +280,11 @@ class ProgressBar:
             self.cleared = 1
 
 
-progress_bar = ProgressBar (TerminalController (), "")
-
+try:
+    #progress_bar = ProgressBar (TerminalController (), "")
+    progress_bar = None
+except ValueError:
+    progress_bar = None
 
 def getLevelName(level):
     """

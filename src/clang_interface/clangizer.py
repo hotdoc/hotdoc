@@ -7,6 +7,7 @@ import clang.cindex
 from clang.cindex import *
 
 from utils.loggable import Loggable, progress_bar
+from lexer_parsers.gtkdoc_parser.gtkdoc_parser import parse_comment_blocks
 from lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
 from ctypes import *
 from fnmatch import fnmatch
@@ -43,22 +44,28 @@ class ClangScanner(Loggable):
         self.token_groups = []
         self.__total_files = len (self.filenames)
         self.__total_files_parsed = 0
-        progress_bar.set_header("Parsing sources (1 / 2)")
-        progress_bar.clear()
-        self.__update_progress()
+
+        if progress_bar is not None:
+            progress_bar.set_header("Parsing sources (1 / 2)")
+            progress_bar.clear()
+            self.__update_progress()
 
         self.parsed = set({})
 
         n = datetime.now()
+        self.new_comments = {}
         for filename in self.filenames:
             if not full_scan:
-                self.comments.extend(get_comments(filename))
+                with open (filename, 'r') as f:
+                    #print "Doing filename", filename
+                    for block in parse_comment_blocks (f.read()):
+                        self.new_comments[block.name] = block
 
             if os.path.abspath(filename) in self.parsed:
                 continue
 
-            full_scan = any(fnmatch(filename, p) for p in full_scan_patterns)
-            if full_scan:
+            do_full_scan = any(fnmatch(filename, p) for p in full_scan_patterns)
+            if do_full_scan:
                 tu = index.parse(filename, args=args, options=flags)
                 self.__parse_file (filename, tu)
                 for include in tu.get_includes():
@@ -70,10 +77,12 @@ class ClangScanner(Loggable):
         self.info ("Source parsing done %s" % str(datetime.now() - n))
         self.info ("%d internal symbols found" % len (self.symbols))
         self.info ("%d external symbols found" % len (self.external_symbols))
-        self.info ("%d comments found" % len (self.comments))
+        self.info ("%d comments found" % len (self.new_comments))
 
 
     def __update_progress (self):
+        if progress_bar is None:
+            return
         percent = float (self.__total_files_parsed) / float (self.__total_files)
         progress_bar.update (percent, "%d / %d" %
                 (self.__total_files_parsed, self.__total_files)) 

@@ -8,7 +8,10 @@
 #include "parser.h" 
 #include <stdio.h>
 
+#define YY_USER_ACTION yylloc->first_line = yylloc->last_line = yylineno;
+
 extern yyscan_t my_scanner;
+static int parameters_done = 0;
 
 %}
 
@@ -18,8 +21,10 @@ extern yyscan_t my_scanner;
 %option noinput
 %option reentrant noyywrap never-interactive nounistd
 %option bison-bridge
+%option bison-locations
 %option yylineno
 %option stack
+%option debug
 
 /* Generic */
 WS                  [ \t\r\n]
@@ -33,14 +38,13 @@ NEWPARA             {EMPTYLINE}{EMPTYLINE}+
 /* inherited from doxygen lexer */
 ID                  "$"?[a-z_A-Z\x80-\xFF][a-z_A-Z0-9\x80-\xFF]*
 CHARWORDQ           [^ \t\n\r\\@<>()\[\]:;\?{}&%$#,."=']
-ESCWORD             ("%"{ID}(("::"|"."){ID})*)|("%'")
-WORD1               {ESCWORD}|{CHARWORDQ}+|"{"|"}"|"'\"'"|("\""[^"\n]*\n?[^"\n]*"\"")
+WORD1               {ID}|{CHARWORDQ}+|"{"|"}"|"'\"'"|("\""[^"\n]*\n?[^"\n]*"\"")
 WORD2               "."|","|"("|")"|"["|"]"|":"|";"|"\?"|"="|"'"
 WORD                {WORD1}|{WORD2}
 
 /* Initial state */
 CCOMMENT_START      {SLASH}{STAR}{STAR}
-CCOMMENT_END        {WS}*{STAR}{SLASH}
+CCOMMENT_END        ({WS}*{STAR}{SLASH})|{NEWPARA}{SLASH}
 
 /* Annotations */
 ANN_START           {BLANK}*\({BLANK}*
@@ -68,6 +72,17 @@ TAG                 ("Since"|"since"|"Returns"|"returns")
 BLOCK_NAME          {WORD1}|{WORD1}"::"{WORD1}|{WORD1}:{WORD1}
 SECTION_NAME        "SECTION:"{WORD1}
 
+/* References */
+
+PARAM_REF           "@"
+
+/* Code blocks */
+
+CODE_START          "|["
+CODE_START_LANG_S   "|[<!-- language=\""
+CODE_START_LANG_E   "\" -->"
+CODE_END            "]|"
+
 %x St_In_Comment
 %x St_In_Block_Name
 %x St_In_Block
@@ -77,6 +92,8 @@ SECTION_NAME        "SECTION:"{WORD1}
 %x St_In_Ann_Arg
 %x St_In_Ann_Arg_Key_Value
 %x St_In_Tag_Value
+%x St_In_Param
+%x St_In_Code
 
 %%
 
@@ -104,8 +121,7 @@ SECTION_NAME        "SECTION:"{WORD1}
   yy_pop_state (my_scanner);
 }
 
-<St_In_Ann_Name>{ANN_START}     {
-}
+<St_In_Ann_Name>{ANN_END}|{ANN_START}
 
 <St_In_Ann_Name>{WORD}/{ANN_END} {
   yylval->text = yytext;
@@ -117,6 +133,7 @@ SECTION_NAME        "SECTION:"{WORD1}
   yylval->text = yytext;
   return TK_ANNOTATION_NAME;
 }
+
 
 <St_In_Ann_Name>{WORD} {
   BEGIN (St_In_Ann_Arg);
@@ -136,13 +153,13 @@ SECTION_NAME        "SECTION:"{WORD1}
   return TK_WORD;
 }
 
-<St_In_Comment>{PARAM}/{BLANK}*:{ANN}+: {
-  yy_push_state (St_In_Annotatable, my_scanner);
-  return TK_PARAM;
+<St_In_Param>:      {
+  BEGIN (St_In_Comment);
 }
 
-<St_In_Comment>{PARAM} {
-  return TK_PARAM;
+<St_In_Param>{WORD} {
+  yylval->text = yytext;
+  return TK_WORD;
 }
 
 <St_In_Tag>{WORD}/{BLANK}*:{ANN}+: {
@@ -193,6 +210,7 @@ SECTION_NAME        "SECTION:"{WORD1}
 }
 
 <*>{CCOMMENT_END}                    {
+  parameters_done = 0;
   if (YY_START != INITIAL) {
     BEGIN (INITIAL);
     return TK_COMMENT_END;
@@ -200,8 +218,46 @@ SECTION_NAME        "SECTION:"{WORD1}
 }
 
 {CCOMMENT_START}/\n         {
+  yylineno -= 1;
   BEGIN (St_In_Block_Name);
   return TK_COMMENT_START;
+}
+
+<St_In_Comment>{PARAM}/{WORD}{BLANK}*:{ANN}+: {
+  BEGIN (St_In_Param);
+  yy_push_state (St_In_Annotatable, my_scanner);
+  return TK_PARAM;
+}
+
+<St_In_Comment>{PARAM} {
+  if (!parameters_done) {
+    BEGIN (St_In_Param);
+    return TK_PARAM;
+  }
+
+  return TK_PARAM_REF;
+}
+
+<St_In_Comment>{PARAM_REF}/{WORD} {
+  return TK_PARAM_REF;
+}
+
+<St_In_Comment>%/{ID} {
+  return TK_TYPE_REF;
+}
+
+<St_In_Comment>{ID}/\(\)            {
+  yylval->text = yytext;
+  return TK_FUNCTION_REF;
+}
+
+<St_In_Comment>{BLOCK_NAME}         {
+  yylval->text = yytext;
+  return TK_WORD;
+}
+
+<St_In_Comment>#/{BLOCK_NAME} {
+  return TK_TYPE_REF; 
 }
 
 <St_In_Comment>{NEWLINE}|{NEWPARA}/{TAG}:    {
@@ -213,7 +269,28 @@ SECTION_NAME        "SECTION:"{WORD1}
   return TK_WORD;
 }
 
+<St_In_Comment>{CODE_START} {
+  BEGIN (St_In_Code);
+  return TK_CODE_START;
+}
+
+<St_In_Code>{NEWLINE} {
+  yylval->text = "\n";
+  return TK_WORD;
+}
+
+<St_In_Code>. {
+  yylval->text = yytext;
+  return TK_WORD;
+}
+
+<St_In_Code>{CODE_END}   {
+  BEGIN (St_In_Comment);
+  return TK_CODE_END;
+}
+
 <St_In_Comment>{NEWPARA}  {
+  parameters_done = 1;
   yylval->text = yytext;
   return TK_NEWPARA;
 }

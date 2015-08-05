@@ -6,7 +6,7 @@
 yyscan_t my_scanner;
 
 static PyObject *
-parser_parse_comment_block (PyObject *self, PyObject *args)
+parser_parse_comment_blocks (PyObject *self, PyObject *args)
 {
   const char *raw_source;
   PyObject *ret;
@@ -38,8 +38,8 @@ parser_parse_comment_block (PyObject *self, PyObject *args)
 }
 
 static PyMethodDef ParserMethods[] = {
-  {"parse_comment_block",  parser_parse_comment_block, METH_VARARGS, "Get a parsed comment block"
-    " from a raw comment"},
+  {"parse_comment_blocks",  parser_parse_comment_blocks, METH_VARARGS, "Get parsed comment blocks"
+    " from a source file"},
   {NULL, NULL, 0, NULL}
 };
 

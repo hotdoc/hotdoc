@@ -58,9 +58,9 @@ class SectionSymbol (Symbol, Dependency):
     def get_short_description (self):
         if not self._comment:
             return ""
-        if not self._comment.short_description:
+        if not "short_description" in self._comment.params:
             return ""
-        return self._comment.short_description
+        return self._comment.params["short_description"].description
 
 
 class SectionFilter (GnomeMarkdownFilter, Loggable):

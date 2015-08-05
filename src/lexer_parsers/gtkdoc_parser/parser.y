@@ -4,10 +4,12 @@
 #include "lexer.h"
 #include "comment_module_interface.h"
 
-static int yyerror(yyscan_t scanner, PyObject **block, const char *msg) {
-    printf ("yylineno is %d\n", yyget_lineno (scanner));
-    fprintf(stderr,"Error:%s\n",msg); return 0;
+static int yyerror(YYLTYPE * location, yyscan_t scanner, PyObject **block, const char *msg) {
+	fprintf(stderr,"Error at line %d :%s\n", location->first_line, msg);
+	return 0;
 }
+
+extern yyscan_t my_scanner;
 
 %}
 
@@ -33,6 +35,7 @@ typedef void* yyscan_t;
 %output  "gtkdoc_parser/parser.c"
 %defines "gtkdoc_parser/parser.h"
 
+%locations
 %error-verbose
 
 %define api.pure
@@ -48,6 +51,10 @@ typedef void* yyscan_t;
 %token TK_PARAM
 %token TK_COMMENT_START
 %token TK_COMMENT_END
+%token TK_PARAM_REF
+%token TK_TYPE_REF
+%token TK_CODE_START
+%token TK_CODE_END
  
 %token <text> TK_WORD
 %token <text> TK_WS
@@ -60,6 +67,7 @@ typedef void* yyscan_t;
 %token <text> TK_ANNOTATION_ARG
 %token <text> TK_ANNOTATION_ARG_KEY
 %token <text> TK_ANNOTATION_ARG_VALUE
+%token <text> TK_FUNCTION_REF
 
 %type <py_object> block
 %type <text> identifier
@@ -70,6 +78,7 @@ typedef void* yyscan_t;
 %type <text> annotation_name
 %type <text> annotation_arg
 
+%type <py_object> extension
 %type <py_object> paragraph
 %type <py_object> paragraphs
 %type <py_object> parameter;
@@ -108,6 +117,23 @@ word
 { $$ = $1; }
 ;
 
+extension
+	: TK_PARAM_REF TK_WORD { $$ = PyString_FromFormat ("*%s*", $2); }
+	| TK_FUNCTION_REF { $$ = PyString_FromFormat ("[%s]", $1); }
+	| TK_TYPE_REF TK_WORD { $$ = PyString_FromFormat ("[%s]()", $2); }
+	| TK_TYPE_REF TK_FUNCTION_REF
+{
+	$$ = PyString_FromFormat ("[%s]", $2);
+	//printf ("Warning, trying to reference to a function with unneeded #\n");
+}
+	| TK_PARAM_REF TK_FUNCTION_REF
+{
+	$$ = PyString_FromFormat ("*%s*()", $2);
+}
+	| TK_CODE_START { $$ = PyString_FromString ("```"); }
+	| TK_CODE_END   { $$ = PyString_FromString ("```"); }
+;
+
 paragraph
 	: { $$ = PyString_FromString (""); }
 	| paragraph word
@@ -117,6 +143,10 @@ paragraph
 	| paragraph TK_NEWLINE
 {
 	PyString_ConcatAndDel (&$$, PyString_FromString ("\n"));
+}
+	| paragraph extension
+{
+	PyString_ConcatAndDel (&$$, $2);
 }
 ;
 
@@ -133,6 +163,10 @@ paragraphs
 	| paragraphs TK_NEWPARA
 {
 	PyString_ConcatAndDel (&$$, PyString_FromString ("\n\n"));
+}
+	| paragraphs extension
+{
+	PyString_ConcatAndDel (&$$, $2);
 }
 ;
 
@@ -285,6 +319,14 @@ block_name
 {
 	$$ = strdup($1);
 }
+	| block_name TK_WORD
+{
+	//printf ("Skipping unrecognized token at line %d after block name : [%s]\n",
+		//yyget_lineno(my_scanner), $2);
+	//printf ("If that was an annotation, you need to add a colon after it.\n");
+}
+	| block_name TK_WS
+	| block_name TK_NEWLINE
 ;
 
 block_description
