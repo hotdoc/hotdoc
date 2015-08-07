@@ -1,7 +1,6 @@
 #!/usr/bin/python
 # -*- Mode: Python -*-
-# GObject-Introspection - a framework for introspecting GObject libraries
-# Copyright (C) 2008  Johan Dahlin
+# Copyright (C) 2015 Mathieu Duponchelle
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -29,13 +28,6 @@ else:
     datadir = "/usr/share"
 
 __builtin__.__dict__['DATADIR'] = datadir
-
-if 'GI_SCANNER_DEBUG' in os.environ:
-    def on_exception(exctype, value, tb):
-        print "Caught exception: %r %r" % (exctype, value)
-        import pdb
-        pdb.pm()
-    sys.excepthook = on_exception
 
 srcdir = os.getenv('UNINSTALLED_INTROSPECTION_SRCDIR', None)
 if srcdir is not None:

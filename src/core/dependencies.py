@@ -74,6 +74,7 @@ class DependencyTree (object):
             self.check_stale_nodes (node.get_children())
 
     def __get_or_create_node (self, filename, depended_on=False):
+        filename = os.path.abspath (filename)
         node = self.all_nodes.get (filename)
         if not node:
             node = DependencyNode (filename)

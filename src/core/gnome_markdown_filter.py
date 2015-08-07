@@ -3,7 +3,6 @@
 
 from pandocfilters import walk, Str, Para
 import pandocfilters
-import pypandoc
 import json
 import sys
 import re

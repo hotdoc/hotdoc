@@ -1,11 +1,17 @@
+import os
+
 from lxml import etree
 
 from core.symbols import Symbol, FunctionSymbol, ClassSymbol, ParameterSymbol, ReturnValueSymbol
 import clang.cindex
-from giscanner.annotationparser import GtkDocParameter
-from core.links import link_resolver, Link
-from giscanner.gdumpparser import G_PARAM_READABLE, G_PARAM_WRITABLE,\
-        G_PARAM_CONSTRUCT, G_PARAM_CONSTRUCT_ONLY
+from core.comment_block import GtkDocParameter
+from core.links import link_resolver, Link, ExternalLink
+
+# Copy pasted from giscanner/gdumpparser to remove any dependency on gi
+G_PARAM_READABLE = 1 << 0
+G_PARAM_WRITABLE = 1 << 1
+G_PARAM_CONSTRUCT = 1 << 2
+G_PARAM_CONSTRUCT_ONLY = 1 << 3
 
 class Annotation (object):
     def __init__(self, nick, help_text, value=None):
@@ -149,8 +155,8 @@ class GISignalSymbol (GIFlaggedSymbol, FunctionSymbol):
             i += 1
 
         udata_type = self.make_qualified_symbol ("gpointer")
-        udata_comment = GtkDocParameter ("user_data")
-        udata_comment.description = "user data set when the signal handler was connected."
+        udata_comment = GtkDocParameter ("user_data", [],
+                "user data set when the signal handler was connected.")
         udata_param = self._symbol_factory.make_custom_parameter_symbol\
                 (udata_comment, udata_type.type_tokens, 'user_data')
         udata_param.do_format()
@@ -286,6 +292,37 @@ class GIExtension(object):
                 }
 
         self.__create_chilren_map(root)
+        self.__gather_gtk_doc_links()
+
+    def __gather_gtk_doc_links (self):
+        if not os.path.exists(os.path.join("/usr/share/gtk-doc/html")):
+            print "no gtk doc to look at"
+            return
+
+        for node in os.listdir(os.path.join(DATADIR, "gtk-doc", "html")):
+            dir_ = os.path.join(DATADIR, "gtk-doc/html", node)
+            if os.path.isdir(dir_) and not "gst" in dir_:
+                try:
+                    self.__parse_sgml_index(dir_)
+                except IOError:
+                    pass
+
+    def __parse_sgml_index(self, dir_):
+        symbol_map = dict({})
+        remote_prefix = ""
+        with open(os.path.join(dir_, "index.sgml"), 'r') as f:
+            for l in f:
+                if l.startswith("<ONLINE"):
+                    remote_prefix = l.split('"')[1]
+                elif l.startswith("<ANCHOR"):
+                    split_line = l.split('"')
+                    filename = split_line[3].split('/', 1)[-1]
+                    title = split_line[1].replace('-', '_')
+                    link = ExternalLink (split_line[1], dir_, remote_prefix,
+                            filename, title)
+                    if title.endswith (":CAPS"):
+                        title = title [:-5]
+                    link_resolver.add_external_link (link)
 
     def __create_chilren_map (self, root):
         for klass in root.findall ("class"):

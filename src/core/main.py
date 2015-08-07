@@ -1,14 +1,7 @@
 import argparse, os
 
 import sys
-import types
 from utils import loggable
-
-# FIXME remove these deps
-from giscanner.annotationparser import GtkDocCommentBlockParser
-from giscanner.message import MessageLogger
-
-from datetime import datetime
 
 # FIXME: allow specification of the formatter on the command line
 from formatters.html_formatter import HtmlFormatter
@@ -19,9 +12,7 @@ from clang_interface.clangizer import ClangScanner
 from extensions.GIExtension import GIExtension
 
 from naive_index import NaiveIndexFormatter
-from utils.utils import PkgConfig
 from dependencies import DependencyTree
-import pickle
 
 def main (args):
     parser = argparse.ArgumentParser()
@@ -29,15 +20,16 @@ def main (args):
     parser.add_argument("-s", "--style", action="store", default="gnome",
             dest="style")
     parser.add_argument ("-f", "--filenames", action="store", nargs="+",
-            dest="filenames")
+            dest="filenames", help="source code files to parse")
     parser.add_argument ("-i", "--index", action="store",
-            dest="index")
+            dest="index", help="location of the index file")
     parser.add_argument ("-o", "--output", action="store",
-            dest="output", required=True)
+            dest="output", required=True, help=
+            "where to output the rendered documentation")
+    parser.add_argument ("-d", "--dependency-file", action="store",
+            default="doc_dependencies.p", dest="deps_file")
     parser.add_argument ("--gobject-introspection-dump", action="store",
             dest="gobject_introspection_dump")
-
-    logger = MessageLogger.get(namespace=None)
 
     loggable.init("DOC_DEBUG")
     args = parser.parse_args(args[1:])
@@ -49,14 +41,13 @@ def main (args):
     else:
         os.mkdir (args.output)
 
-    dep_tree = DependencyTree ("/home/meh/Documents/deps.p",
+    
+    dep_tree = DependencyTree (os.path.join(args.output, args.deps_file),
             [os.path.abspath (f) for f in args.filenames])
 
     if args.style == "gnome":
         css = ClangScanner (dep_tree.stale_sources)
-        n = datetime.now()
-        blocks = css.new_comments
-        loggable.info("Comment block parsing done in %s" % str(datetime.now() -n), "")
+        blocks = css.comments
     elif args.style == "doxygen":
         css = ClangScanner (dep_tree.stale_sources, full_scan=True,
                 full_scan_patterns=['*.c', '*.h'])

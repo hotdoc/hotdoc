@@ -2,13 +2,12 @@
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 import clang.cindex
 from clang.cindex import *
 
 from utils.loggable import Loggable, progress_bar
 from lexer_parsers.gtkdoc_parser.gtkdoc_parser import parse_comment_blocks
-from lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
 from ctypes import *
 from fnmatch import fnmatch
 
@@ -40,7 +39,7 @@ class ClangScanner(Loggable):
 
         self.symbols = {}
         self.external_symbols = {}
-        self.comments = []
+        self.comments = {}
         self.token_groups = []
         self.__total_files = len (self.filenames)
         self.__total_files_parsed = 0
@@ -53,12 +52,11 @@ class ClangScanner(Loggable):
         self.parsed = set({})
 
         n = datetime.now()
-        self.new_comments = {}
         for filename in self.filenames:
             if not full_scan:
                 with open (filename, 'r') as f:
                     for block in parse_comment_blocks (f.read(), filename):
-                        self.new_comments[block.name] = block
+                        self.comments[block.name] = block
 
             if os.path.abspath(filename) in self.parsed:
                 continue
@@ -76,7 +74,7 @@ class ClangScanner(Loggable):
         self.info ("Source parsing done %s" % str(datetime.now() - n))
         self.info ("%d internal symbols found" % len (self.symbols))
         self.info ("%d external symbols found" % len (self.external_symbols))
-        self.info ("%d comments found" % len (self.new_comments))
+        self.info ("%d comments found" % len (self.comments))
 
 
     def __update_progress (self):

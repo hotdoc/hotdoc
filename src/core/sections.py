@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import dagger
 import json
 
 from symbols import *
@@ -75,7 +74,6 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
         GnomeMarkdownFilter.__init__(self, directory)
         Loggable.__init__(self)
         self.sections = []
-        self.dag = dagger.dagger()
         self.__current_section = None
         self.__symbols = symbols
         self.__comment_blocks = comment_blocks
@@ -200,6 +198,9 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
     def __update_dependencies (self, sections):
         for s in sections:
             for sym in s.symbols:
+                if not hasattr (sym._symbol, "location"):
+                    continue
+
                 filename = str (sym._symbol.location.file)
                 self.__dependency_tree.add_dependency (s.source_file, filename)
                 comment_filename = sym._comment.filename
