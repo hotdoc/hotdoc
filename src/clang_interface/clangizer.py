@@ -57,8 +57,7 @@ class ClangScanner(Loggable):
         for filename in self.filenames:
             if not full_scan:
                 with open (filename, 'r') as f:
-                    #print "Doing filename", filename
-                    for block in parse_comment_blocks (f.read()):
+                    for block in parse_comment_blocks (f.read(), filename):
                         self.new_comments[block.name] = block
 
             if os.path.abspath(filename) in self.parsed:
@@ -83,6 +82,10 @@ class ClangScanner(Loggable):
     def __update_progress (self):
         if progress_bar is None:
             return
+
+        if self.__total_files == 0:
+            return
+
         percent = float (self.__total_files_parsed) / float (self.__total_files)
         progress_bar.update (percent, "%d / %d" %
                 (self.__total_files_parsed, self.__total_files)) 

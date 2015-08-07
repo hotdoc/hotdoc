@@ -10,13 +10,7 @@ from lexer_parsers.doxygen_block_parser import parse_doxygen_comment
 from pandocfilters import BulletList, Plain, Link, Para, Emph, Str, Space
 from datetime import datetime
 from utils.loggable import Loggable, ProgressBar
-from pprint import pprint
 from pandoc_interface.pandoc_client import pandoc_converter
-
-class Dependency (object):
-    def __init__(self, filename):
-        self.filename = filename
-        self.deps = set({})
 
 
 class TypedSymbolsList (object):
@@ -25,7 +19,7 @@ class TypedSymbolsList (object):
         self.symbols = []
 
 
-class SectionSymbol (Symbol, Dependency):
+class SectionSymbol (Symbol):
     def __init__(self, *args):
         Symbol.__init__ (self, *args)
         self.symbols = []
@@ -76,7 +70,8 @@ class SectionSymbol (Symbol, Dependency):
 
 
 class SectionFilter (GnomeMarkdownFilter, Loggable):
-    def __init__(self, directory, symbols, comment_blocks, doc_formatter, symbol_factory=None):
+    def __init__(self, directory, symbols, comment_blocks, doc_formatter,
+            dependency_tree, symbol_factory=None):
         GnomeMarkdownFilter.__init__(self, directory)
         Loggable.__init__(self)
         self.sections = []
@@ -87,6 +82,7 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
         self.__symbol_factory = symbol_factory
         self.__doc_formatter = doc_formatter
         self.__created_section_names = []
+        self.__dependency_tree = dependency_tree
 
     def parse_extensions (self, key, value, format_, meta):
         if key == "BulletList" and not "ignore_bullet_points" in meta['unMeta']:
@@ -130,7 +126,8 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
         res = None
         old_section = self.__current_section
 
-        if self.parse_file (value[1][0], old_section, value[0][0]['c']):
+        path = os.path.join (self.directory, value[1][0])
+        if self.parse_file (path, old_section, value[0][0]['c']):
             value[1][0] = os.path.splitext(value[1][0])[0] + ".html"
 
             # Let's check if we can get a better title
@@ -155,11 +152,11 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
                     value[2].append (val)
 
     def parse_file (self, filename, parent=None, section_name=None):
-        path = os.path.join(self.directory, filename)
+        path = filename
         if not os.path.isfile (path):
             return False
 
-        name = os.path.splitext(filename)[0]
+        name = os.path.basename(os.path.splitext(filename)[0])
         if name in self.__created_section_names:
             return True
 
@@ -180,6 +177,7 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
 
         self.__created_section_names.append (name)
         section = self.__symbol_factory.make_section (symbol, comment)
+        section.source_file = os.path.abspath(path)
 
         if self.__current_section:
             self.__current_section.sections.append (section)
@@ -199,9 +197,26 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
         #self.dag.add ('"%s"' % os.path.basename(filename), list(self.__current_section.deps))
         return True
 
+    def __update_dependencies (self, sections):
+        for s in sections:
+            for sym in s.symbols:
+                filename = str (sym._symbol.location.file)
+                self.__dependency_tree.add_dependency (s.source_file, filename)
+                comment_filename = sym._comment.filename
+                self.__dependency_tree.add_dependency (s.source_file, comment_filename)
+
+            self.__update_dependencies (s.sections)
+
     def create_symbols (self, filename):
         n = datetime.now()
+
         self.info ("starting")
-        self.parse_file (filename)
-        self.dag.dot("dependencies.dot")
+        if self.__dependency_tree.initial:
+            self.parse_file (os.path.join(self.directory, filename))
+        else:
+            for filename in self.__dependency_tree.stale_sections:
+                self.parse_file (filename)
+
+        n = datetime.now()
+        self.__update_dependencies (self.sections)
         self.info ("done")

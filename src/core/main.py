@@ -20,6 +20,8 @@ from extensions.GIExtension import GIExtension
 
 from naive_index import NaiveIndexFormatter
 from utils.utils import PkgConfig
+from dependencies import DependencyTree
+import pickle
 
 def main (args):
     parser = argparse.ArgumentParser()
@@ -47,15 +49,16 @@ def main (args):
     else:
         os.mkdir (args.output)
 
+    dep_tree = DependencyTree ("/home/meh/Documents/deps.p",
+            [os.path.abspath (f) for f in args.filenames])
+
     if args.style == "gnome":
-        css = ClangScanner (args.filenames)
+        css = ClangScanner (dep_tree.stale_sources)
         n = datetime.now()
-        #cbp = GtkDocCommentBlockParser()
-        #blocks = cbp.parse_comment_blocks(css.comments)
         blocks = css.new_comments
         loggable.info("Comment block parsing done in %s" % str(datetime.now() -n), "")
     elif args.style == "doxygen":
-        css = ClangScanner (args.filenames, full_scan=True,
+        css = ClangScanner (dep_tree.stale_sources, full_scan=True,
                 full_scan_patterns=['*.c', '*.h'])
         blocks = None
     else:
@@ -71,5 +74,6 @@ def main (args):
         args.index = tmp_markdown_files/tmp_index.markdown
 
     formatter = HtmlFormatter (css, blocks, [], args.index, args.output,
-            extensions)
+            extensions, dep_tree)
     formatter.format()
+    dep_tree.dump()

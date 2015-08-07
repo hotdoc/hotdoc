@@ -7,6 +7,7 @@ void create_comment_block (PyObject **block,
                            PyObject *description,
                            PyObject *tags);
 void comment_module_init  (void);
+void comment_module_set_current_filename (const char *filename);
 PyObject *create_annotation    (char *name, PyObject *arg);
 PyObject *create_tag    (char *name, char *value, PyObject *description, PyObject *annotations);
 PyObject *create_parameter (char *name, PyObject *description, PyObject *annotations);

@@ -4,12 +4,13 @@ static PyObject *comment_block_class;
 static PyObject *annotation_class;
 static PyObject *tag_class;
 static PyObject *parameter_class;
+static char     *current_filename;
 
 void
 create_comment_block (PyObject **block, char *name, PyObject *annotations, PyObject *parameters,
     PyObject *description, PyObject *tags)
 {
-  PyObject *arglist = Py_BuildValue ("(sOOOO)", name, annotations, parameters, description, tags);
+  PyObject *arglist = Py_BuildValue ("(ssOOOO)", name, current_filename, annotations, parameters, description, tags);
 
   *block = PyObject_CallObject(comment_block_class, arglist);
 
@@ -63,6 +64,14 @@ create_tag (char *name, char *value, PyObject *description, PyObject *annotation
 }
 
 void
+comment_module_set_current_filename (const char *filename)
+{
+  if (current_filename)
+    free (current_filename);
+  current_filename = strdup (filename);
+}
+
+void
 comment_module_init (void)
 {
   PyObject *comment_module = PyImport_ImportModule("core.comment_block");
@@ -70,4 +79,5 @@ comment_module_init (void)
   annotation_class = PyObject_GetAttrString (comment_module, "GtkDocAnnotation");
   tag_class = PyObject_GetAttrString (comment_module, "GtkDocTag");
   parameter_class = PyObject_GetAttrString (comment_module, "GtkDocParameter");
+  current_filename = NULL;
 }

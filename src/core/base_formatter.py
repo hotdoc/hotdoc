@@ -18,7 +18,7 @@ from utils.loggable import progress_bar
 
 class Formatter(object):
     def __init__ (self, source_scanner, comments, include_directories, index_file, output,
-            extensions, do_class_aggregation=False):
+            extensions, dependency_tree, do_class_aggregation=False):
         self.__include_directories = include_directories
         self.__do_class_aggregation = do_class_aggregation
         self.__output = output
@@ -30,6 +30,7 @@ class Formatter(object):
                 source_scanner)
         self.__gnome_markdown_filter = GnomeMarkdownFilter (os.path.dirname(index_file))
         self.__gnome_markdown_filter.set_formatter (self)
+        self.__dependency_tree = dependency_tree
 
         # Used to warn subclasses a method isn't implemented
         self.__not_implemented_methods = {}
@@ -63,6 +64,9 @@ class Formatter(object):
         if progress_bar is None:
             return
 
+        if self.__total_sections == 0:
+            return
+
         percent = float (self.__total_rendered_sections) / float (self.__total_sections)
         progress_bar.update (percent, "%d / %d" %
                 (self.__total_rendered_sections, self.__total_sections))
@@ -77,7 +81,8 @@ class Formatter(object):
 
     def __create_symbols(self):
         sf = SectionFilter (os.path.dirname(self.__index_file),
-                self.__source_scanner.symbols, self.__comments, self, self.__symbol_factory)
+                self.__source_scanner.symbols, self.__comments, self,
+                self.__dependency_tree, self.__symbol_factory)
         sf.create_symbols (os.path.basename(self.__index_file))
         return sf.sections
 

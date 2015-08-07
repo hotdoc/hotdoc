@@ -9,10 +9,13 @@ static PyObject *
 parser_parse_comment_blocks (PyObject *self, PyObject *args)
 {
   const char *raw_source;
+  const char *filename;
   PyObject *ret;
 
-  if (!PyArg_ParseTuple(args, "s", &raw_source))
+  if (!PyArg_ParseTuple(args, "ss", &raw_source, &filename))
     return NULL;
+
+  comment_module_set_current_filename (filename);
 
   YY_BUFFER_STATE state;
 
