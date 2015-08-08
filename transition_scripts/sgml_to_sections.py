@@ -10,7 +10,7 @@ sys.path.append (os.path.abspath(os.path.join(dir_, os.pardir, "src")))
 
 import StringIO
 from lxml import etree as ET
-from pandoc_interface.pandoc_client import pandoc_converter
+from pandoc_interface import translator
 import subprocess
 
 OUTPUT=sys.argv[3]
@@ -20,7 +20,7 @@ def convert_file (filename, new_name):
         xincluded = subprocess.check_output (["xmllint", "--xinclude",
             filename], stderr=f)
 
-    converted = pandoc_converter.convert ("docbook", "markdown", xincluded)
+    converted = translator.docbook_to_markdown (xincluded)
     print "writing conversion to", new_name
     with open (os.path.join (OUTPUT, new_name + ".markdown"), 'w') as f:
         f.write (converted.encode('utf-8'))

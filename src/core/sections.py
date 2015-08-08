@@ -9,7 +9,7 @@ from lexer_parsers.doxygen_block_parser import parse_doxygen_comment
 from pandocfilters import BulletList, Plain, Link, Para, Emph, Str, Space
 from datetime import datetime
 from utils.loggable import Loggable, ProgressBar
-from pandoc_interface.pandoc_client import pandoc_converter
+from pandoc_interface import translator
 
 
 class TypedSymbolsList (object):
@@ -141,7 +141,7 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
         if value[2][0]['t'] == 'Link':
             res = self.__parse_link (value[2][0]['c'])
             if res:
-                description = pandoc_converter.convert ('markdown', 'json', res)
+                description = translator.markdown_to_json (res).decode('utf-8')
                 description = json.loads(description)
                 value[2].append (Space ())
                 value[2].append (Str (u'—'))

@@ -10,7 +10,7 @@ import re
 from datetime import datetime
 import os
 
-from pandoc_interface.pandoc_client import pandoc_converter
+from pandoc_interface import translator
 from links import link_resolver
 
 class GnomeMarkdownFilter(object):
@@ -66,7 +66,7 @@ class GnomeMarkdownFilter(object):
         return None
 
     def filter_text (self, text):
-        json_text = pandoc_converter.convert ("markdown", "json", text)
+        json_text = translator.markdown_to_json (text)
         doc = json.loads (json_text, strict=False)
         new_doc = self.filter_json (doc)
         return new_doc

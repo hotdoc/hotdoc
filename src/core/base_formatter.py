@@ -8,7 +8,7 @@ from gnome_markdown_filter import GnomeMarkdownFilter
 from datetime import datetime, timedelta
 from xml.sax.saxutils import unescape
 
-from pandoc_interface.pandoc_client import pandoc_converter
+from pandoc_interface import translator
 
 from sections import SectionFilter
 from symbols import SymbolFactory
@@ -116,8 +116,8 @@ class Formatter(object):
         docstring = unescape (docstring)
         json_doc = self.__gnome_markdown_filter.filter_text (docstring)
         n = datetime.now()
-        rendered_text = pandoc_converter.convert ("json",
-                self._get_pandoc_format(), json.dumps (json_doc))
+        rendered_text = translator.json_to_html (json.dumps
+                (json_doc)).decode('utf-8')
         self.__total_time_converting += datetime.now() - n
         return rendered_text
 

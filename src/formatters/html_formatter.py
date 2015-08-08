@@ -9,7 +9,7 @@ from wheezy.template.loader import FileLoader
 from core.symbols import *
 from core.base_formatter import Formatter
 from core.links import Link
-from pandoc_interface.pandoc_client import pandoc_converter
+from core.pandoc_interface import translator
 
 # We support the GNOME extension
 from extensions.GIExtension import *
@@ -283,8 +283,7 @@ class HtmlFormatter (Formatter):
 
         template = self.engine.get_template('class.html')
         if klass.parsed_contents:
-            klass.formatted_contents = pandoc_converter.convert("json", "html",
-                    json.dumps(klass.parsed_contents))
+            klass.formatted_contents = translator.json_to_html (json.dumps(klass.parsed_contents)).decode('utf-8')
 
         out = template.render ({'klass': klass,
                                 'hierarchy': hierarchy,
