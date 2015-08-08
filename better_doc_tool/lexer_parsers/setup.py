@@ -74,11 +74,6 @@ class build_ext(_build_ext):
                         self.copy_file (src(output), dest)
                     break
 
-c_comment_scanner_module = Extension('c_comment_scanner',
-                            sources = ['c_comment_scanner/scannermodule.c'],
-                            depends = ['c_comment_scanner/scanner.l',
-                            'c_comment_scanner/scanner.h'])
-
 glib_cflags = [flag for flag in PkgConfig ('--cflags glib-2.0') if flag]
 glib_libs = [flag for flag in PkgConfig ('--libs glib-2.0') if flag]
 
@@ -103,6 +98,5 @@ res = setup (name = 'lexer_parsers',
        version = '1.0',
        description = 'Collection of lexers and parsers',
        cmdclass = {'build_ext': build_ext},
-       ext_modules = [c_comment_scanner_module,
-                      doxygen_block_parser_module,
+       ext_modules = [doxygen_block_parser_module,
                       gtk_doc_parser_module])

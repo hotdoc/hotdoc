@@ -5,11 +5,11 @@ import sys
 from datetime import datetime
 import clang.cindex
 from clang.cindex import *
-
-from utils.loggable import Loggable, progress_bar
-from lexer_parsers.gtkdoc_parser.gtkdoc_parser import parse_comment_blocks
 from ctypes import *
 from fnmatch import fnmatch
+
+from better_doc_tool.utils.loggable import Loggable, progress_bar
+from better_doc_tool.lexer_parsers.gtkdoc_parser.gtkdoc_parser import parse_comment_blocks
 
 def ast_node_is_function_pointer (ast_node):
     if ast_node.kind == clang.cindex.TypeKind.POINTER and \

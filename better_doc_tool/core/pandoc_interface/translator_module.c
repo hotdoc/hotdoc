@@ -82,11 +82,9 @@ PyMODINIT_FUNC
 inittranslator(void)
 {
   (void) Py_InitModule("translator", TranslatorMethods);
-  PyObject *toplevel_module = PyImport_ImportModule ("core.main");
+  PyObject *toplevel_module = PyImport_ImportModule ("better_doc_tool.core.main");
   PyObject *source_file = PyObject_GetAttrString (toplevel_module, "__file__");
 
-
-  printf ("source_file is %s\n", PyString_AsString (source_file));
   PyObject *path_module = PyImport_ImportModule("os.path");
   PyObject *basename_func = PyObject_GetAttrString (path_module, "dirname");
   PyObject *join_func = PyObject_GetAttrString (path_module, "join");
@@ -96,7 +94,6 @@ inittranslator(void)
   PyObject *convert_lib = PyObject_CallFunction (join_func, "Os",
       source_location, "pandoc_interface/libConvert.so");
 
-  printf ("Opening %s\n", PyString_AsString (convert_lib));
   if ( (libConvert = dlopen(PyString_AsString (convert_lib), RTLD_LAZY)) == NULL ||
        (translator_init = dlsym(libConvert, "doc_translator_init")) == NULL ||
        (hs_markdown_to_html = dlsym(libConvert, "hs_markdown_to_html")) == NULL ||
