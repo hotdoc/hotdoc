@@ -5,7 +5,7 @@ import json
 
 from gnome_markdown_filter import GnomeMarkdownFilter
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from xml.sax.saxutils import unescape
 
 from pandoc_interface import translator
@@ -13,7 +13,7 @@ from pandoc_interface import translator
 from sections import SectionFilter
 from symbols import SymbolFactory
 from utils.simple_signals import Signal
-from utils.loggable import progress_bar
+from better_doc_tool.utils.loggable import progress_bar
 
 
 class Formatter(object):
@@ -43,7 +43,6 @@ class Formatter(object):
             extension.setup (self, self.__symbol_factory)
 
     def format (self):
-        self.__total_time_converting = timedelta ()
         sections = self.__create_symbols ()
 
         self.__total_sections = 0
@@ -51,24 +50,24 @@ class Formatter(object):
         for section in sections:
             self.__total_sections += self.__get_subsections_count (section)
 
-        if progress_bar is not None:
-            progress_bar.set_header("Rendering Sections (2 / 2)")
-            progress_bar.clear()
+        self.__progress_bar = progress_bar.get_progress_bar ()
+        if self.__progress_bar is not None:
+            self.__progress_bar.set_header("Rendering Sections (2 / 2)")
+            self.__progress_bar.clear()
             self.__update_progress ()
         
         for section in sections:
             self.__format_section (section)
-        print self.__total_time_converting
 
     def __update_progress (self):
-        if progress_bar is None:
+        if self.__progress_bar is None:
             return
 
         if self.__total_sections == 0:
             return
 
         percent = float (self.__total_rendered_sections) / float (self.__total_sections)
-        progress_bar.update (percent, "%d / %d" %
+        self.__progress_bar.update (percent, "%d / %d" %
                 (self.__total_rendered_sections, self.__total_sections))
 
     def format_symbol (self, symbol):
@@ -115,10 +114,8 @@ class Formatter(object):
         out = ""
         docstring = unescape (docstring)
         json_doc = self.__gnome_markdown_filter.filter_text (docstring)
-        n = datetime.now()
         rendered_text = translator.json_to_html (json.dumps
                 (json_doc)).decode('utf-8')
-        self.__total_time_converting += datetime.now() - n
         return rendered_text
 
     def __format_doc (self, comment):

@@ -279,11 +279,22 @@ class ProgressBar:
                              self.term.UP + self.term.CLEAR_EOL)
             self.cleared = 1
 
+class ProgressBarWrapper (object):
+    def __init__(self):
+        self.progress_bar = None
 
-try:
-    progress_bar = ProgressBar (TerminalController (), "")
-except ValueError:
-    progress_bar = None
+    def get_progress_bar (self):
+        if self.progress_bar:
+            return self.progress_bar
+
+        try:
+            self.progress_bar = ProgressBar (TerminalController (), "")
+        except ValueError:
+            pass
+
+        return self.progress_bar
+
+progress_bar = ProgressBarWrapper ()
 
 def getLevelName(level):
     """

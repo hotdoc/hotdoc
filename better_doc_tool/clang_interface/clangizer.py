@@ -44,9 +44,10 @@ class ClangScanner(Loggable):
         self.__total_files = len (self.filenames)
         self.__total_files_parsed = 0
 
-        if progress_bar is not None:
-            progress_bar.set_header("Parsing sources (1 / 2)")
-            progress_bar.clear()
+        self.__progress_bar = progress_bar.get_progress_bar ()
+        if self.__progress_bar is not None:
+            self.__progress_bar.set_header("Parsing sources (1 / 2)")
+            self.__progress_bar.clear()
             self.__update_progress()
 
         self.parsed = set({})
@@ -78,14 +79,14 @@ class ClangScanner(Loggable):
 
 
     def __update_progress (self):
-        if progress_bar is None:
+        if self.__progress_bar is None:
             return
 
         if self.__total_files == 0:
             return
 
         percent = float (self.__total_files_parsed) / float (self.__total_files)
-        progress_bar.update (percent, "%d / %d" %
+        self.__progress_bar.update (percent, "%d / %d" %
                 (self.__total_files_parsed, self.__total_files)) 
 
     def __parse_file (self, filename, tu):
