@@ -79,19 +79,23 @@ class DependencyTree (object):
         if not node:
             node = DependencyNode (filename)
             self.all_nodes[filename] = node 
-            if not depended_on:
-                self.root_nodes[filename] = node
+        if not depended_on:
+            self.root_nodes[filename] = node
         return node
 
     def add_dependency (self, depending, depended_on, unmark_stale=True):
-        depended_on_node = self.__get_or_create_node (depended_on,
-                depended_on=True)
+        if depended_on:
+            depended_on_node = self.__get_or_create_node (depended_on,
+                    depended_on=True)
+
         if depending:
             depending_node = self.__get_or_create_node (depending)
-            depending_node.add_child (depended_on_node)
+            if depended_on:
+                depending_node.add_child (depended_on_node)
 
         if unmark_stale:
-            depended_on_node.set_stale(False)
+            if depended_on:
+                depended_on_node.set_stale(False)
             if depending:
                 depending_node.set_stale(False)
 

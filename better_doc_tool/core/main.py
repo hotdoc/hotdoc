@@ -41,11 +41,14 @@ def main (args):
             return
     else:
         os.mkdir (args.output)
-
-    link_resolver.unpickle (args.output)
     
     dep_tree = DependencyTree (os.path.join(args.output, args.deps_file),
             [os.path.abspath (f) for f in args.filenames])
+
+    if not dep_tree.stale_sources and not dep_tree.stale_sections:
+        return
+
+    link_resolver.unpickle (args.output)
 
     if args.style == "gnome":
         css = ClangScanner (dep_tree.stale_sources)

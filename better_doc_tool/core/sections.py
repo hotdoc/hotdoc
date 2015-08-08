@@ -197,6 +197,9 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
 
     def __update_dependencies (self, sections):
         for s in sections:
+            if not s.symbols:
+                self.__dependency_tree.add_dependency (s.source_file,
+                        None)
             for sym in s.symbols:
                 if not hasattr (sym._symbol, "location"):
                     continue
