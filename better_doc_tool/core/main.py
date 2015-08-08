@@ -13,6 +13,7 @@ from extensions.GIExtension import GIExtension
 
 from naive_index import NaiveIndexFormatter
 from dependencies import DependencyTree
+from better_doc_tool.core.links import link_resolver
 
 def main (args):
     parser = argparse.ArgumentParser()
@@ -41,6 +42,7 @@ def main (args):
     else:
         os.mkdir (args.output)
 
+    link_resolver.unpickle (args.output)
     
     dep_tree = DependencyTree (os.path.join(args.output, args.deps_file),
             [os.path.abspath (f) for f in args.filenames])
@@ -68,3 +70,4 @@ def main (args):
             extensions, dep_tree)
     formatter.format()
     dep_tree.dump()
+    link_resolver.pickle (args.output)

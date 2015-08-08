@@ -8,7 +8,7 @@ import uuid
 import clang.cindex
 from clang_interface.clangizer import ast_node_is_function_pointer
 
-from links import link_resolver, LocalLink
+from better_doc_tool.core.links import link_resolver, LocalLink
 from utils.simple_signals import Signal
 
 class Symbol (object):

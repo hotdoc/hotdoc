@@ -8,7 +8,7 @@ from wheezy.template.loader import FileLoader
 
 from core.symbols import *
 from core.base_formatter import Formatter
-from core.links import Link
+from better_doc_tool.core.links import Link
 from core.pandoc_interface import translator
 
 # We support the GNOME extension

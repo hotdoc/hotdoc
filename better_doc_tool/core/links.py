@@ -1,3 +1,7 @@
+import os
+import cPickle as pickle
+from datetime import datetime
+
 class Link (object):
     def get_link (self):
         raise NotImplementedError
@@ -31,6 +35,21 @@ class LinkResolver(object):
     def __init__(self):
         self.__external_links = {}
         self.__local_links = {}
+
+    def unpickle (self, output):
+        n = datetime.now()
+        try:
+            links = pickle.load (open (os.path.join (output, "links.p"), 'rb'))
+        except IOError:
+            return
+
+        self.__external_links = links[0]
+        self.__local_links = links[1]
+
+    def pickle (self, output):
+        n = datetime.now()
+        pickle.dump ([self.__external_links, self.__local_links],
+                open (os.path.join (output, "links.p"), 'wb'))
 
     def get_named_link (self, name):
         link = None
