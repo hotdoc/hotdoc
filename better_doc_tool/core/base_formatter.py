@@ -2,18 +2,17 @@
 
 import os
 import json
-
-from gnome_markdown_filter import GnomeMarkdownFilter
+import shutil
 
 from datetime import datetime
 from xml.sax.saxutils import unescape
 
-from pandoc_interface import translator
-
-from sections import SectionFilter
-from symbols import SymbolFactory
-from utils.simple_signals import Signal
-from better_doc_tool.utils.loggable import progress_bar
+from .gnome_markdown_filter import GnomeMarkdownFilter
+from .pandoc_interface import translator
+from .sections import SectionFilter
+from .symbols import SymbolFactory
+from ..utils.simple_signals import Signal
+from ..utils.loggable import progress_bar
 
 
 class Formatter(object):
@@ -59,6 +58,8 @@ class Formatter(object):
         for section in sections:
             self.__format_section (section)
 
+        self.__copy_extra_files ()
+
     def __update_progress (self):
         if self.__progress_bar is None:
             return
@@ -100,6 +101,11 @@ class Formatter(object):
         for section in section.sections:
             self.__format_section (section)
 
+    def __copy_extra_files (self):
+        for f in self._get_extra_files():
+            basename = os.path.basename (f)
+            shutil.copy (f, os.path.join (self.__output, basename))
+
     def __write_symbol (self, symbol):
         path = os.path.join (self.__output, symbol.link.pagename)
         with open (path, 'w') as f:
@@ -138,3 +144,6 @@ class Formatter(object):
         """
         self.__warn_not_implemented (self._get_extension)
         return ""
+
+    def _get_extra_files (self):
+        return []

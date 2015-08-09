@@ -1,19 +1,20 @@
 import argparse, os
 
 import sys
-from utils import loggable
+
+from ..utils import loggable
 
 # FIXME: allow specification of the formatter on the command line
-from formatters.html_formatter import HtmlFormatter
+from ..formatters.html_formatter import HtmlFormatter
 
-from clang_interface.clangizer import ClangScanner
+from ..clang_interface.clangizer import ClangScanner
 
 # FIXME extensions should be customizable too ..
-from extensions.GIExtension import GIExtension
+from ..extensions.GIExtension import GIExtension
 
-from naive_index import NaiveIndexFormatter
-from dependencies import DependencyTree
-from better_doc_tool.core.links import link_resolver
+from .naive_index import NaiveIndexFormatter
+from .dependencies import DependencyTree
+from .links import link_resolver
 
 def main (args):
     parser = argparse.ArgumentParser()

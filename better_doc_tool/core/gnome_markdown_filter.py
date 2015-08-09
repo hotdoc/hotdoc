@@ -10,8 +10,8 @@ import re
 from datetime import datetime
 import os
 
-from pandoc_interface import translator
-from links import link_resolver
+from .pandoc_interface import translator
+from .links import link_resolver
 
 class GnomeMarkdownFilter(object):
     def __init__(self, directory=None):

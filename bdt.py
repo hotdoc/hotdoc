@@ -31,9 +31,9 @@ __builtin__.__dict__['DATADIR'] = datadir
 
 sys.path = [p for p in sys.path if not "python3" in p]
 
-dir_ = os.path.dirname(os.path.abspath(__file__))
-source_dir = os.path.join (dir_, "better_doc_tool")
-sys.path.append(source_dir)
+#dir_ = os.path.dirname(os.path.abspath(__file__))
+#source_dir = os.path.join (dir_, "better_doc_tool")
+#sys.path.append(source_dir)
 
 from better_doc_tool.core.main import main
 

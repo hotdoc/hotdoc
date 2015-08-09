@@ -32,8 +32,8 @@ typedef void* yyscan_t;
 
 }
 
-%output  "gtkdoc_parser/parser.c"
-%defines "gtkdoc_parser/parser.h"
+%output  "better_doc_tool/lexer_parsers/gtkdoc_parser/parser.c"
+%defines "better_doc_tool/lexer_parsers/gtkdoc_parser/parser.h"
 
 %locations
 %error-verbose

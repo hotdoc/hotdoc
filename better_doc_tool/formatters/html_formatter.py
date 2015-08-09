@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 
 import json
+import os
+import re
 
 from wheezy.template.engine import Engine
 from wheezy.template.ext.core import CoreExtension
 from wheezy.template.loader import FileLoader
 
-from core.symbols import *
-from core.base_formatter import Formatter
-from better_doc_tool.core.links import Link
-from core.pandoc_interface import translator
+from ..core.symbols import *
+from ..core.base_formatter import Formatter
+from ..core.links import Link
+from ..core.pandoc_interface import translator
 
 # We support the GNOME extension
-from extensions.GIExtension import *
+from ..extensions.GIExtension import *
 
-import os
-import re
 
 class Callable(object):
     def __init__(self, return_value, name, parameters):
@@ -415,3 +415,7 @@ class HtmlFormatter (Formatter):
         res = template.render ({'prototype': prototype,
                                'property': prop})
         return (res, False)
+
+    def _get_extra_files (self):
+        dir_ = os.path.dirname(__file__)
+        return [os.path.join (dir_, "style.css")]

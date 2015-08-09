@@ -15,7 +15,7 @@ static int parameters_done = 0;
 
 %}
 
-%option header-file="gtkdoc_parser/lexer.h"
+%option header-file="better_doc_tool/lexer_parsers/gtkdoc_parser/lexer.h"
 %option warn nodefault
 %option nounput
 %option noinput

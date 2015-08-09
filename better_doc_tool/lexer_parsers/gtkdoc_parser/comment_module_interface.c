@@ -74,7 +74,7 @@ comment_module_set_current_filename (const char *filename)
 void
 comment_module_init (void)
 {
-  PyObject *comment_module = PyImport_ImportModule("core.comment_block");
+  PyObject *comment_module = PyImport_ImportModule("better_doc_tool.core.comment_block");
   comment_block_class = PyObject_GetAttrString (comment_module, "GtkDocCommentBlock");
   annotation_class = PyObject_GetAttrString (comment_module, "GtkDocAnnotation");
   tag_class = PyObject_GetAttrString (comment_module, "GtkDocTag");

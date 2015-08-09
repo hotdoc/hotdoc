@@ -1,11 +1,11 @@
 import os
 
 from lxml import etree
-
-from core.symbols import Symbol, FunctionSymbol, ClassSymbol, ParameterSymbol, ReturnValueSymbol
 import clang.cindex
-from core.comment_block import GtkDocParameter
-from better_doc_tool.core.links import link_resolver, Link, ExternalLink
+
+from ..core.symbols import Symbol, FunctionSymbol, ClassSymbol, ParameterSymbol, ReturnValueSymbol
+from ..core.comment_block import GtkDocParameter
+from ..core.links import link_resolver, Link, ExternalLink
 
 # Copy pasted from giscanner/gdumpparser to remove any dependency on gi
 G_PARAM_READABLE = 1 << 0

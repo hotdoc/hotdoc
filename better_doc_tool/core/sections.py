@@ -3,13 +3,14 @@
 import os
 import json
 
-from symbols import *
-from gnome_markdown_filter import GnomeMarkdownFilter
-from lexer_parsers.doxygen_block_parser import parse_doxygen_comment
 from pandocfilters import BulletList, Plain, Link, Para, Emph, Str, Space
 from datetime import datetime
-from utils.loggable import Loggable, ProgressBar
-from pandoc_interface import translator
+
+from .symbols import *
+from .gnome_markdown_filter import GnomeMarkdownFilter
+from ..lexer_parsers.doxygen_block_parser import parse_doxygen_comment
+from ..utils.loggable import Loggable, ProgressBar
+from .pandoc_interface import translator
 
 
 class TypedSymbolsList (object):
