@@ -193,7 +193,7 @@ pandoc_translator_module = HaskellExtension(
             'better_doc_tool/core/pandoc_interface/doc_translator.c'])
 
 setup(name='better_doc_tool',
-      version='0.2',
+      version='0.2.1',
       description='A documentation tool based on pandoc',
       keywords='documentation gnome pandoc doxygen',
       url='https://github.com/MathieuDuponchelle/better_doctool',
@@ -220,6 +220,5 @@ setup(name='better_doc_tool',
           },
       install_requires = ['wheezy.template',
                           'pandocfilters',
-                          'clang',
                           'lxml'],
       zip_safe=False)
