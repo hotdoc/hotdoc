@@ -63,7 +63,8 @@ class LinkResolver(object):
         return link
 
     def add_local_link (self, link):
-        self.__local_links[link.title] = link
+        if not link.title in self.__local_links:
+            self.__local_links[link.title] = link
 
     def add_external_link (self, link):
         self.__external_links[link.title] = link

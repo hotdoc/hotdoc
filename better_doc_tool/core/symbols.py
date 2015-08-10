@@ -248,6 +248,9 @@ class StructSymbol (Symbol):
                     delimiters.append((False, tok.location.line))
         return had_public
 
+    def _make_unique_id (self):
+        return self._symbol.spelling + "-struct"
+
 
 class MacroSymbol (Symbol):
     def __init__(self, *args):
