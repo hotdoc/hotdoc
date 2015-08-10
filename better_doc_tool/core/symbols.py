@@ -460,6 +460,7 @@ class SymbolFactory (object):
         if not res:
             res = SectionSymbol (symbol, comment, self.__doc_formatter, self)
 
+        link_resolver.add_local_link (res.link)
         return self.__signal_new_symbol(res)
 
 

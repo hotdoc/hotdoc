@@ -83,6 +83,10 @@ CODE_START_LANG_S   "|[<!-- language=\""
 CODE_START_LANG_E   "\" -->"
 CODE_END            "]|"
 
+/* Tags */
+
+TAG_VALUE           {WORD}+
+
 %x St_In_Comment
 %x St_In_Block_Name
 %x St_In_Block
@@ -167,24 +171,35 @@ CODE_END            "]|"
   return TK_WORD;
 }
 
-<St_In_Tag>{WORD}/{BLANK}*:{ANN}+: {
-  yy_push_state (St_In_Annotatable, my_scanner);
-  yylval->text = yytext;
-  return TK_TAG;
+<St_In_Tag_Value>:      {
 }
 
-<St_In_Tag>{WORD}/{BLANK}*: {
+<St_In_Tag_Value>{TAG_VALUE} {
   yylval->text = yytext;
-  return TK_TAG;
-}
-
-<St_In_Tag_Value>{WORD} {
+  BEGIN (St_In_Tag);
   return TK_TAG_VALUE;
 }
 
-<St_In_Tag>{WORD}/{ANN}+:{WORD_NO_WS}: {
+<St_In_Tag>{WORD}/:{BLANK}*{TAG_VALUE} {
+  BEGIN (St_In_Tag_Value);
+  yylval->text = yytext;
+  return TK_TAG;
+}
+
+<St_In_Tag>{WORD}/{ANN}+:{BLANK}*{TAG_VALUE} {
   BEGIN (St_In_Tag_Value);
   yy_push_state (St_In_Annotatable, my_scanner);
+  yylval->text = yytext;
+  return TK_TAG;
+}
+
+<St_In_Tag>{WORD}/:{ANN}+: {
+  yy_push_state (St_In_Annotatable, my_scanner);
+  yylval->text = yytext;
+  return TK_TAG;
+}
+
+<St_In_Tag>{WORD}/: {
   yylval->text = yytext;
   return TK_TAG;
 }

@@ -65,6 +65,8 @@ class ClangScanner(Loggable):
             do_full_scan = any(fnmatch(filename, p) for p in full_scan_patterns)
             if do_full_scan:
                 tu = index.parse(filename, args=args, options=flags)
+                for diag in tu.diagnostics:
+                    self.warning ("Clang issue : %s" % str (diag))
                 self.__parse_file (filename, tu)
                 for include in tu.get_includes():
                     self.__parse_file (os.path.abspath(str(include.source)), tu)
