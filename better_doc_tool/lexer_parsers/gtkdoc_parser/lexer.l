@@ -37,9 +37,9 @@ NEWPARA             {EMPTYLINE}{EMPTYLINE}+
 
 /* inherited from doxygen lexer */
 ID                  "$"?[a-z_A-Z\x80-\xFF][a-z_A-Z0-9\x80-\xFF]*
-CHARWORDQ           [^ \t\n\r\\@<>()\[\]:;\?{}&%$#,."=']
+CHARWORDQ           [^ \t\n\r\\@<>()\[\]:;\?{}&%$#,"=']
 WORD1               {ID}|{CHARWORDQ}+|"{"|"}"|"'\"'"|("\""[^"\n]*\n?[^"\n]*"\"")
-WORD2               "."|","|"("|")"|"["|"]"|":"|";"|"\?"|"="|"'"
+WORD2               ","|"("|")"|"["|"]"|":"|";"|"\?"|"="|"'"
 WORD                {WORD1}|{WORD2}
 
 /* Initial state */
@@ -66,6 +66,8 @@ WORD_NO_WS          {BLANK}*{WORD}{BLANK}*
 PARAM               {NEWLINE}{BLANK}*"@"
 
 TAG                 ("Since"|"since"|"Returns"|"returns")
+RETURNS_TAG         ("Returns"|"returns")
+SINCE_TAG           ("Since"|"since")
 
 /* Block */
 
@@ -90,7 +92,8 @@ TAG_VALUE           {WORD}+
 %x St_In_Comment
 %x St_In_Block_Name
 %x St_In_Block
-%x St_In_Tag
+%x St_In_Returns_Tag
+%x St_In_Since_Tag
 %x St_In_Annotatable
 %x St_In_Ann_Name
 %x St_In_Ann_Arg
@@ -176,30 +179,23 @@ TAG_VALUE           {WORD}+
 
 <St_In_Tag_Value>{TAG_VALUE} {
   yylval->text = yytext;
-  BEGIN (St_In_Tag);
+  BEGIN (St_In_Comment);
   return TK_TAG_VALUE;
 }
 
-<St_In_Tag>{WORD}/:{BLANK}*{TAG_VALUE} {
+<St_In_Since_Tag>{WORD} {
   BEGIN (St_In_Tag_Value);
   yylval->text = yytext;
   return TK_TAG;
 }
 
-<St_In_Tag>{WORD}/{ANN}+:{BLANK}*{TAG_VALUE} {
-  BEGIN (St_In_Tag_Value);
+<St_In_Returns_Tag>{WORD}/:{ANN}+: {
   yy_push_state (St_In_Annotatable, my_scanner);
   yylval->text = yytext;
   return TK_TAG;
 }
 
-<St_In_Tag>{WORD}/:{ANN}+: {
-  yy_push_state (St_In_Annotatable, my_scanner);
-  yylval->text = yytext;
-  return TK_TAG;
-}
-
-<St_In_Tag>{WORD}/: {
+<St_In_Returns_Tag>{WORD}/: {
   yylval->text = yytext;
   return TK_TAG;
 }
@@ -221,7 +217,7 @@ TAG_VALUE           {WORD}+
   return TK_BLOCK_NAME;
 }
 
-<St_In_Tag,St_In_Tag_Value,St_In_Block>: {
+<St_In_Returns_Tag,St_In_Block>: {
   BEGIN (St_In_Comment);
 }
 
@@ -284,8 +280,12 @@ TAG_VALUE           {WORD}+
   return TK_TYPE_REF; 
 }
 
-<St_In_Comment>{NEWLINE}|{NEWPARA}/{TAG}:    {
-  BEGIN (St_In_Tag);
+<St_In_Comment>{NEWLINE}|{NEWPARA}/{RETURNS_TAG}:    {
+  BEGIN (St_In_Returns_Tag);
+}
+
+<St_In_Comment>{NEWLINE}|{NEWPARA}/{SINCE_TAG}:    {
+  BEGIN (St_In_Since_Tag);
 }
 
 <St_In_Comment>{WORD}    {
