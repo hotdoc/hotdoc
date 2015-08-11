@@ -10,7 +10,8 @@ sys.path.append (os.path.abspath(os.path.join(dir_, os.pardir, "src")))
 
 import StringIO
 from lxml import etree as ET
-from pandoc_interface import translator
+import better_doc_tool.core.main
+from better_doc_tool.core.pandoc_interface import translator
 import subprocess
 
 OUTPUT=sys.argv[3]

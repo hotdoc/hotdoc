@@ -301,7 +301,7 @@ class GIExtension(object):
 
         for node in os.listdir(os.path.join(DATADIR, "gtk-doc", "html")):
             dir_ = os.path.join(DATADIR, "gtk-doc/html", node)
-            if os.path.isdir(dir_) and not "gst" in dir_:
+            if os.path.isdir(dir_):
                 try:
                     self.__parse_sgml_index(dir_)
                 except IOError:

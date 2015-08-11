@@ -193,7 +193,7 @@ pandoc_translator_module = HaskellExtension(
             'better_doc_tool/core/pandoc_interface/doc_translator.c'])
 
 setup(name='better_doc_tool',
-      version='0.2.1',
+      version='0.2.4',
       description='A documentation tool based on pandoc',
       keywords='documentation gnome pandoc doxygen',
       url='https://github.com/MathieuDuponchelle/better_doctool',
@@ -213,7 +213,10 @@ setup(name='better_doc_tool',
       cmdclass = {'build_ext': build_ext},
       ext_modules = [doxygen_block_parser_module, gtk_doc_parser_module,
           pandoc_translator_module],
-      scripts = ['bdt.py'],
+      scripts =
+      ['bdt.py',
+       'better_doc_tool/transition_scripts/sgml_to_sections.py',
+       'better_doc_tool/transition_scripts/translate_sections.sh'],
       package_data = {
           'better_doc_tool.core.pandoc_interface': ['libConvert.*'],
           'better_doc_tool.formatters': ['templates/*', 'style.css'],
