@@ -183,6 +183,17 @@ gtk_doc_parser_module = FlexBisonExtension(
                                  'better_doc_tool/lexer_parsers/gtkdoc_parser/lexer.l',
                                  'better_doc_tool/lexer_parsers/gtkdoc_parser/parser.y'])
 
+
+c_comment_scanner_module = FlexBisonExtension(
+                            ['better_doc_tool/lexer_parsers/c_comment_scanner/scanner.l'],
+                            [],
+                            'better_doc_tool.lexer_parsers.c_comment_scanner.c_comment_scanner',
+                            sources =
+                            ['better_doc_tool/lexer_parsers/c_comment_scanner/scannermodule.c'],
+                            depends =
+                            ['better_doc_tool/lexer_parsers/c_comment_scanner/scanner.l',
+                            'better_doc_tool/lexer_parsers/c_comment_scanner/scanner.h'])
+
 pandoc_translator_module = HaskellExtension(
         ['better_doc_tool/core/pandoc_interface/translator.hs',
         'better_doc_tool/core/pandoc_interface/doc_translator.c'],
@@ -212,7 +223,7 @@ setup(name='better_doc_tool',
                 'better_doc_tool.utils'],
       cmdclass = {'build_ext': build_ext},
       ext_modules = [doxygen_block_parser_module, gtk_doc_parser_module,
-          pandoc_translator_module],
+          pandoc_translator_module, c_comment_scanner_module],
       scripts =
       ['bdt.py',
        'better_doc_tool/transition_scripts/sgml_to_sections.py',
