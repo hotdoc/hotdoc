@@ -24,7 +24,7 @@ def convert_file (filename, new_name):
     converted = translator.docbook_to_markdown (xincluded)
     print "writing conversion to", new_name
     with open (os.path.join (OUTPUT, new_name + ".markdown"), 'w') as f:
-        f.write (converted.encode('utf-8'))
+        f.write (converted)
     return os.path.join (OUTPUT, new_name + ".markdown")
 
 def create_symbol_file (section_node, name):
