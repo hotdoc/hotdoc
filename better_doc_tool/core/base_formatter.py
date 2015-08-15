@@ -13,6 +13,7 @@ from .sections import SectionFilter
 from .symbols import SymbolFactory
 from ..utils.simple_signals import Signal
 from ..utils.loggable import progress_bar
+from ..transition_scripts.gtk_doc_translator import LegacyTranslator
 
 
 class Formatter(object):
@@ -30,6 +31,7 @@ class Formatter(object):
         self.__gnome_markdown_filter = GnomeMarkdownFilter (os.path.dirname(index_file))
         self.__gnome_markdown_filter.set_formatter (self)
         self.__dependency_tree = dependency_tree
+        self.__legacy_translator = LegacyTranslator ()
 
         # Used to warn subclasses a method isn't implemented
         self.__not_implemented_methods = {}
@@ -119,9 +121,8 @@ class Formatter(object):
 
         out = ""
         docstring = unescape (docstring)
-        json_doc = self.__gnome_markdown_filter.filter_text (docstring)
-        rendered_text = translator.json_to_html (json.dumps
-                (json_doc)).decode('utf-8')
+        docstring = self.__legacy_translator.translate (docstring)
+        rendered_text = translator.markdown_to_html (docstring.encode('utf-8')).decode ('utf-8')
         return rendered_text
 
     def __format_doc (self, comment):

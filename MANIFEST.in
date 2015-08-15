@@ -1,11 +1,10 @@
 include better_doc_tool/lexer_parsers/doxygen_parser/doxenizer.h
 include better_doc_tool/lexer_parsers/doxygen_parser/doxparser.h
 include better_doc_tool/lexer_parsers/doxygen_parser/doxenizer.l
-include better_doc_tool/lexer_parsers/gtkdoc_parser/lexer.l
-include better_doc_tool/lexer_parsers/gtkdoc_parser/parser.y
+include better_doc_tool/lexer_parsers/scanner.l
+include better_doc_tool/lexer_parsers/scanner.h
 include better_doc_tool/core/pandoc_interface/translator.hs
 include better_doc_tool/core/pandoc_interface/doc_translator.c
-include better_doc_tool/lexer_parsers/gtkdoc_parser/comment_module_interface.h
 include better_doc_tool/formatters/templates/*
 include better_doc_tool/formatters/style.css
 include requirements.txt

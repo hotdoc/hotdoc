@@ -282,8 +282,15 @@ class ProgressBar:
 class ProgressBarWrapper (object):
     def __init__(self):
         self.progress_bar = None
+        debug = os.environ.get ("DOC_DEBUG")
+        self.__no_progress_bar = False
+        if debug and debug != '0':
+            self.__no_progress_bar = True
 
     def get_progress_bar (self):
+        if self.__no_progress_bar:
+            return None
+
         if self.progress_bar:
             return self.progress_bar
 

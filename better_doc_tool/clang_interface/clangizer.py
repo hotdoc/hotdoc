@@ -2,14 +2,15 @@
 
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 import clang.cindex
 from clang.cindex import *
 from ctypes import *
 from fnmatch import fnmatch
 
 from better_doc_tool.utils.loggable import Loggable, progress_bar
-from better_doc_tool.lexer_parsers.gtkdoc_parser.gtkdoc_parser import parse_comment_blocks
+from better_doc_tool.lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
+from better_doc_tool.clang_interface.new_shot import DumbParser
 
 def ast_node_is_function_pointer (ast_node):
     if ast_node.kind == clang.cindex.TypeKind.POINTER and \
@@ -24,6 +25,7 @@ class ClangScanner(Loggable):
         Loggable.__init__(self)
         clang_options = os.getenv("CLANG_OPTIONS")
 
+        gcp = DumbParser()
         self.full_scan = full_scan
         if clang_options:
             clang_options = clang_options.split(' ')
@@ -56,8 +58,13 @@ class ClangScanner(Loggable):
         for filename in self.filenames:
             if not full_scan:
                 with open (filename, 'r') as f:
-                    for block in parse_comment_blocks (f.read(), filename):
+                    cs = get_comments (filename)
+                    for c in cs:
+                        block = gcp.parse_comment (c[0], c[1])
                         self.comments[block.name] = block
+
+                    #for block in parse_comment_blocks (f.read(), filename):
+                    #    self.comments[block.name] = block
 
             if os.path.abspath(filename) in self.parsed:
                 continue
@@ -66,7 +73,7 @@ class ClangScanner(Loggable):
             if do_full_scan:
                 tu = index.parse(filename, args=args, options=flags)
                 for diag in tu.diagnostics:
-                    self.warning ("Clang issue : %s" % str (diag))
+                    self.error ("Clang issue : %s" % str (diag))
                 self.__parse_file (filename, tu)
                 for include in tu.get_includes():
                     self.__parse_file (os.path.abspath(str(include.source)), tu)
@@ -131,7 +138,8 @@ class ClangScanner(Loggable):
         for node in nodes:
             if node.kind in [clang.cindex.CursorKind.FUNCTION_DECL,
                             clang.cindex.CursorKind.TYPEDEF_DECL,
-                            clang.cindex.CursorKind.MACRO_DEFINITION]:
+                            clang.cindex.CursorKind.MACRO_DEFINITION,
+                            clang.cindex.CursorKind.VAR_DECL]:
                 if self.full_scan and not node.raw_comment:
                     self.debug ("Discarding symbol %s at location %s as it has no doc" %
                             (node.spelling, str(node.location)))

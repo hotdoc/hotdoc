@@ -53,7 +53,7 @@ parse_comment (PyObject *comments, const char *filename)
   c2 = input();
 
   comment_lineno = yylineno - 1;
-  if (c2 != EOF && (c1 == '*' && c2 != '*' && c2 != '/')) {
+  if (c2 != EOF && (c1 != '/' && c2 != '*' && c2 != '/')) {
     char *comment = (char *) malloc(sizeof(char) * 3);
     char buf[BUFSIZE];
     cursor = 0;
@@ -62,34 +62,34 @@ parse_comment (PyObject *comments, const char *filename)
     comment[1] = '*';
     comment[2] = '\0';
     while (c2 != EOF && !(c1 == '*' && c2 == '/'))
-      {
-	buf[cursor++] = c1;
+    {
+      buf[cursor++] = c1;
 
-	if (cursor >= BUFSIZE - 1) {
-	  buf[cursor] = 0;
-	  comment = realloc_and_concat (comment, buf);
-	  cursor = 0;
-	}
-
-        c1 = c2;
-        c2 = input();
+      if (cursor >= BUFSIZE - 1) {
+        buf[cursor] = 0;
+        comment = realloc_and_concat (comment, buf);
+        cursor = 0;
       }
+
+      c1 = c2;
+      c2 = input();
+    }
 
     buf[cursor] = 0;
     comment = realloc_and_concat (comment, buf);
     comment = realloc_and_concat (comment, "*/");
 
     PyObject *item = Py_BuildValue ("(ssii)", comment,
-    				    strdup(filename), /* Sic .. */
-                                    comment_lineno,
-                                    yylineno);
+        strdup(filename), /* Sic .. */
+        comment_lineno,
+        yylineno);
     PyList_Append (comments, item);
   } else {
     while (c2 != EOF && !(c1 == '*' && c2 == '/'))
-      {
-        c1 = c2;
-        c2 = input();
-      }
+    {
+      c1 = c2;
+      c2 = input();
+    }
 
     return;
   }

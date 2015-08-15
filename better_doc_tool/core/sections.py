@@ -30,6 +30,7 @@ class SectionSymbol (Symbol):
         self.typed_symbols[CallbackSymbol] = TypedSymbolsList ("Callback Functions")
         self.typed_symbols[FunctionMacroSymbol] = TypedSymbolsList ("Function Macros")
         self.typed_symbols[ConstantSymbol] = TypedSymbolsList ("Constants")
+        self.typed_symbols[ExportedVariableSymbol] = TypedSymbolsList ("Exported Variables")
         self.typed_symbols[StructSymbol] = TypedSymbolsList ("Data Structures")
         self.typed_symbols[EnumSymbol] = TypedSymbolsList ("Enumerations")
         self.typed_symbols[AliasSymbol] = TypedSymbolsList ("Aliases")

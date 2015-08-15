@@ -10,8 +10,9 @@ import re
 from datetime import datetime
 import os
 
-from .pandoc_interface import translator
-from .links import link_resolver
+import better_doc_tool.core.main
+from better_doc_tool.core.pandoc_interface import translator
+from better_doc_tool.core.links import link_resolver
 
 class GnomeMarkdownFilter(object):
     def __init__(self, directory=None):
@@ -46,7 +47,7 @@ class GnomeMarkdownFilter(object):
                 link[0] = actual_link.get_link()
         return None
 
-    def parse_header (self):
+    def parse_header (self, key, value, format_, meta):
         return None
 
     def parse_include (self, key, value, format_, meta):
@@ -81,5 +82,6 @@ if __name__ == "__main__":
 
     n = datetime.now()
     new_doc = gmf.filter_text (contents)
-    html = pandoc_converter.convert ("json", "html", json.dumps (new_doc))
+    print new_doc
+    html = translator.json_to_html (json.dumps (new_doc))
     print html

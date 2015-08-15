@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 
 from subprocess import PIPE, Popen
@@ -5,6 +6,7 @@ import sys
 import re
 
 from datetime import datetime
+from better_doc_tool.core.links import link_resolver
 
 class DocScanner(object):
     def __init__(self):
@@ -26,7 +28,6 @@ class DocScanner(object):
             ('parameter', r'@<<param_name:alpha>>'),
             ('function_call', r'<<symbol_name:alpha>>\s*\(\)'),
             ('include', r'{{\s*<<include_name:anything>>\s*}}'),
-            ('heading', r'#+\s+<<heading:anything>>'),
         ]
         self.specs = self.unmangle_specs(specs)
         self.regex = self.make_regex(self.specs)
@@ -95,20 +96,38 @@ def format_other(match, props):
 def format_property (match, props):
     type_name = props['type_name']
     property_name = props['property_name']
-    return "[%s:%s](property)" % (type_name, property_name)
+    linkname = "%s:::%s---property" % (type_name, property_name)
+    link = link_resolver.get_named_link (linkname)
+    if link:
+        return u"[“%s”](%s)" % (property_name, link.get_link())
+    else:
+        return u"the %s's “%s” property" % (type_name, property_name)
 
 def format_signal (match, props):
     type_name = props['type_name']
     signal_name = props['signal_name']
-    return "[%s:%s](signal)" % (type_name, signal_name)
+    linkname = "%s:::%s---signal" % (type_name, signal_name)
+    link = link_resolver.get_named_link (linkname)
+    if link:
+        return u"[“%s”](%s)" % (signal_name, link.get_link())
+    else:
+        return u"the %s's “%s” signal" % (type_name, signal_name)
 
 def format_type_name (match, props):
     type_name = props['type_name']
-    return "[%s]()" % type_name
+    link = link_resolver.get_named_link (type_name)
+    if link:
+        return "[%s](%s)" % (type_name, link.get_link())
+    else:
+        return type_name
 
 def format_enum_value (match, props):
     member_name = props['member_name']
-    return "[%s]()" % member_name
+    link = link_resolver.get_named_link (member_name)
+    if link:
+        return "[%s](%s)" % (member_name, link.get_link ())
+    else:
+        return member_name
 
 def format_parameter (match, props):
     param_name = props['param_name']
@@ -116,22 +135,20 @@ def format_parameter (match, props):
 
 def format_function_call (match, props):
     func_name = props['symbol_name']
-    return "[%s]()" % func_name
+    link = link_resolver.get_named_link (func_name)
+    if link:
+        return "[%s()](%s)" % (func_name, link.get_link ())
+    else:
+        return func_name
 
 def format_code_start (match, props):
-    return "```"
+    return "\n```\n"
 
 def format_code_start_with_language (match, props):
-    return "```%s" % props["language_name"] 
+    return "\n```%s\n" % props["language_name"] 
 
 def format_code_end (match, props):
-    return "```"
-
-def format_heading (match, props):
-    heading_level = 0
-    while match[heading_level] == '#':
-        heading_level += 1
-    return "%s%s" % ('#' * heading_level, props["heading"])
+    return "\n```\n"
 
 class LegacyTranslator (object):
     def __init__(self):
@@ -150,14 +167,13 @@ class LegacyTranslator (object):
             'code_start': format_code_start,
             'code_start_with_language': format_code_start_with_language,
             'code_end': format_code_end,
-            'heading': format_heading
         }
 
 
     def translate (self, text):
         if not text:
             return ""
-        out = ""
+        out = u''
         _scanner = DocScanner ()
         tokens = _scanner.scan (text)
         in_code = False
@@ -180,5 +196,6 @@ if __name__ == "__main__":
     with open (sys.argv[1], 'r') as f:
         contents = f.read ()
         out = lt.translate (contents)
+        print out
 
     sys.exit (0)

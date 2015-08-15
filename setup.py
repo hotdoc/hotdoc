@@ -82,11 +82,10 @@ class build_ext(_build_ext):
         return True
 
 
-class FlexBisonExtension (Extension):
-    def __init__(self, flex_sources, bison_sources, *args, **kwargs):
+class FlexExtension (Extension):
+    def __init__(self, flex_sources, *args, **kwargs):
         Extension.__init__(self, *args, **kwargs)
         self.__flex_sources = [src(s) for s in flex_sources]
-        self.__bison_sources = [src(s) for s in bison_sources]
 
     def __build_flex(self):
         src_dir = os.path.dirname (self.__flex_sources[0])
@@ -104,28 +103,9 @@ class FlexBisonExtension (Extension):
                 raise DistutilsExecError,\
                         ("Make sure flex is installed on your system")
 
-    def __build_bison(self):
-        src_dir = os.path.dirname (self.__bison_sources[0])
-        built_parser_path = src(os.path.join (src_dir, 'parser.c'))
-        print 'parser_path : ', built_parser_path
-        self.sources.append (built_parser_path)
-
-        if newer_group(self.__bison_sources, built_parser_path):
-            cmd = ['bison', '-o', built_parser_path]
-            for s in self.__bison_sources:
-                cmd.append (s)
-            print "biosn cmd baby", cmd
-            try:
-                spawn(cmd, verbose=1)
-            except DistutilsExecError:
-                raise DistutilsExecError,\
-                        ("Make sure bison is installed on your system")
-
     def build_custom (self):
         if self.__flex_sources:
             self.__build_flex()
-        if self.__bison_sources:
-            self.__build_bison()
 
 try:
     ghc_version = subprocess.check_output(['ghc', "--numeric-version"]).strip()
@@ -157,9 +137,8 @@ class HaskellExtension (Extension):
 glib_cflags = [flag for flag in PkgConfig ('glib-2.0', ['--cflags']) if flag]
 glib_libs = [flag for flag in PkgConfig ('glib-2.0', ['--libs']) if flag]
 
-doxygen_block_parser_module = FlexBisonExtension(
+doxygen_block_parser_module = FlexExtension(
                                 ['better_doc_tool/lexer_parsers/doxygen_parser/doxenizer.l'],
-                                [],
                                 'better_doc_tool.lexer_parsers.doxygen_parser.doxygen_parser',
                                 sources =
                                 ['better_doc_tool/lexer_parsers/doxygen_parser/doxparser_module.c',
@@ -171,22 +150,8 @@ doxygen_block_parser_module = FlexBisonExtension(
                                 extra_compile_args = glib_cflags,
                                 extra_link_args = glib_libs)
 
-gtk_doc_parser_module = FlexBisonExtension(
-                                ['better_doc_tool/lexer_parsers/gtkdoc_parser/lexer.l'],
-                                ['better_doc_tool/lexer_parsers/gtkdoc_parser/parser.y'],
-                                'better_doc_tool.lexer_parsers.gtkdoc_parser.gtkdoc_parser',
-                                sources =
-                                ['better_doc_tool/lexer_parsers/gtkdoc_parser/gtkdoc_parser_module.c',
-                                 'better_doc_tool/lexer_parsers/gtkdoc_parser/comment_module_interface.c'],
-                                depends =
-                                ['better_doc_tool/lexer_parsers/gtkdoc_parser/comment_module_interface.h',
-                                 'better_doc_tool/lexer_parsers/gtkdoc_parser/lexer.l',
-                                 'better_doc_tool/lexer_parsers/gtkdoc_parser/parser.y'])
-
-
-c_comment_scanner_module = FlexBisonExtension(
+c_comment_scanner_module = FlexExtension(
                             ['better_doc_tool/lexer_parsers/c_comment_scanner/scanner.l'],
-                            [],
                             'better_doc_tool.lexer_parsers.c_comment_scanner.c_comment_scanner',
                             sources =
                             ['better_doc_tool/lexer_parsers/c_comment_scanner/scannermodule.c'],
@@ -217,12 +182,11 @@ setup(name='better_doc_tool',
                 'better_doc_tool.clang_interface',
                 'better_doc_tool.formatters',
                 'better_doc_tool.lexer_parsers',
-                'better_doc_tool.lexer_parsers.gtkdoc_parser',
                 'better_doc_tool.lexer_parsers.doxygen_parser',
                 'better_doc_tool.extensions',
                 'better_doc_tool.utils'],
       cmdclass = {'build_ext': build_ext},
-      ext_modules = [doxygen_block_parser_module, gtk_doc_parser_module,
+      ext_modules = [doxygen_block_parser_module,
           pandoc_translator_module, c_comment_scanner_module],
       scripts =
       ['bdt.py',

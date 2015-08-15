@@ -42,6 +42,7 @@ class HtmlFormatter (Formatter):
                 FunctionMacroSymbol: self._format_function_macro,
                 CallbackSymbol: self._format_callback,
                 ConstantSymbol: self._format_constant,
+                ExportedVariableSymbol: self._format_constant,
                 AliasSymbol: self._format_alias,
                 StructSymbol: self._format_struct,
                 EnumSymbol: self._format_enum,
@@ -59,6 +60,7 @@ class HtmlFormatter (Formatter):
                 FunctionMacroSymbol: self._format_function_macro_summary,
                 CallbackSymbol: self._format_callback_summary,
                 ConstantSymbol: self._format_constant_summary,
+                ExportedVariableSymbol: self._format_exported_variable_summary,
                 AliasSymbol: self._format_alias_summary,
                 StructSymbol: self._format_struct_summary,
                 EnumSymbol: self._format_enum_summary,
@@ -170,6 +172,11 @@ class HtmlFormatter (Formatter):
         constant_link = self._format_linked_symbol (constant)
         return template.render({'constant': constant_link})
 
+    def _format_exported_variable_summary (self, extern):
+        template = self.engine.get_template('exported_variable_summary.html')
+        extern_link = self._format_linked_symbol (extern)
+        return template.render({'extern': extern_link})
+
     def _format_alias_summary (self, alias):
         template = self.engine.get_template('alias_summary.html')
         alias_link = self._format_linked_symbol (alias)
@@ -253,7 +260,8 @@ class HtmlFormatter (Formatter):
         # Enforce our ordering
         for symbols_type in [FunctionSymbol, FunctionMacroSymbol,
                 GIPropertySymbol, GISignalSymbol, StructSymbol,
-                EnumSymbol, ConstantSymbol, AliasSymbol, CallbackSymbol]:
+                EnumSymbol, ConstantSymbol, ExportedVariableSymbol,
+                AliasSymbol, CallbackSymbol]:
             symbols_list = klass.typed_symbols.get(symbols_type)
             if not symbols_list:
                 continue

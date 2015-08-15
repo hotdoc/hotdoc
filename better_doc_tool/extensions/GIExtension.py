@@ -5,7 +5,7 @@ import clang.cindex
 
 from ..core.symbols import Symbol, FunctionSymbol, ClassSymbol, ParameterSymbol, ReturnValueSymbol
 from ..core.comment_block import GtkDocParameter
-from ..core.links import link_resolver, Link, ExternalLink
+from better_doc_tool.core.links import link_resolver, Link, ExternalLink
 
 # Copy pasted from giscanner/gdumpparser to remove any dependency on gi
 G_PARAM_READABLE = 1 << 0
@@ -97,8 +97,9 @@ class GIFlaggedSymbol(GISymbol):
 class GIPropertySymbol (GIFlaggedSymbol):
     def _make_unique_id(self):
         parent_name = self._symbol.getparent().attrib['name']
-        return "%s:::%s---%s" % (parent_name, self._symbol.attrib["name"],
+        res = "%s:::%s---%s" % (parent_name, self._symbol.attrib["name"],
                 'property')
+        return res
 
     def do_format (self):
         flags = int(self._symbol.attrib["flags"])
@@ -318,10 +319,10 @@ class GIExtension(object):
                     split_line = l.split('"')
                     filename = split_line[3].split('/', 1)[-1]
                     title = split_line[1].replace('-', '_')
-                    link = ExternalLink (split_line[1], dir_, remote_prefix,
-                            filename, title)
                     if title.endswith (":CAPS"):
                         title = title [:-5]
+                    link = ExternalLink (split_line[1], dir_, remote_prefix,
+                            filename, title)
                     link_resolver.add_external_link (link)
 
     def __create_chilren_map (self, root):
@@ -432,7 +433,7 @@ class GIExtension(object):
                 continue
             annotation = self.__create_annotation (ann, val.argument)
             if not annotation:
-                print "This parameter annotation is unknown :[" + ann + "]", val
+                print "This parameter annotation is unknown :[" + ann + "]", val.argument
                 continue
             annotations.append (annotation)
 

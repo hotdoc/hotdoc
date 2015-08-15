@@ -8,7 +8,7 @@ import uuid
 import clang.cindex
 
 from ..clang_interface.clangizer import ast_node_is_function_pointer
-from .links import link_resolver, LocalLink
+from .links import link_resolver, LocalLink, Link
 from ..utils.simple_signals import Signal
 
 class Symbol (object):
@@ -289,6 +289,10 @@ class ConstantSymbol (MacroSymbol):
     pass
 
 
+class ExportedVariableSymbol (MacroSymbol):
+    pass
+
+
 class QualifiedSymbol (Symbol):
     def __init__(self, tokens, *args):
         self.type_tokens = tokens
@@ -360,6 +364,7 @@ class SymbolFactory (object):
                 tokens.append (link)
             else:
                 tokens.append (d.displayname + ' ')
+            self.__apply_qualifiers(type_, tokens)
         else:
             link = link_resolver.get_named_link (type_.spelling)
             if link:
@@ -367,17 +372,20 @@ class SymbolFactory (object):
             else:
                 tokens.append (type_.spelling + ' ')
 
-        self.__apply_qualifiers(type_, tokens)
-
         tokens.reverse()
         return tokens
 
     def __signal_new_symbol (self, symbol):
+        link_resolver.add_local_link (symbol.link)
         self.new_symbol_signals[type(symbol)](symbol)
         return symbol
 
     def make_parameter_symbol (self, type_, comment, argname):
         tokens = self.__make_c_style_type_name (type_)
+        do_it = False
+        for t in tokens:
+            if not isinstance (t, Link) and "char" in t:
+                do_it = True
         return self.__signal_new_symbol(ParameterSymbol (argname, tokens, type_, comment,
                 self.__doc_formatter, self))
 
@@ -425,6 +433,8 @@ class SymbolFactory (object):
                 klass = ConstantSymbol
         elif symbol.kind == clang.cindex.CursorKind.FUNCTION_DECL:
             klass = FunctionSymbol
+        elif symbol.kind == clang.cindex.CursorKind.VAR_DECL:
+            klass = ExportedVariableSymbol
         elif symbol.kind == clang.cindex.CursorKind.TYPEDEF_DECL:
             t = symbol.underlying_typedef_type
             if ast_node_is_function_pointer (t):
@@ -442,7 +452,6 @@ class SymbolFactory (object):
         if klass:
             res = klass (symbol, comment, self.__doc_formatter, self)
 
-        link_resolver.add_local_link (res.link)
         if res:
             return self.__signal_new_symbol (res)
 

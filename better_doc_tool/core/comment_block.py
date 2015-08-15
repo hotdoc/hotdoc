@@ -35,7 +35,6 @@ class GtkDocCommentBlock(CommentBlock):
         for tag in tags:
             self.tags[tag.name.lower()] = tag
 
-
 class GtkDocAnnotation(object):
     def __init__ (self, name, argument):
         self.name = name
