@@ -1,4 +1,4 @@
-@require(prototype, callable, return_value, return_annotations, parameters, callable_type, flags)
+@require(prototype, callable, return_value, parameters, callable_type, flags)
 <div class="refsect2">
 	<a name=@callable.link.id_></a>
 	<h3 class="method">
@@ -26,26 +26,8 @@
 		</div>
 	@end
 
-	@if return_value and return_value.formatted_doc:
-		<div class="refsect3">
-			<h4>Returns</h4>
-			@return_value.formatted_doc
-		</div>
-		@if return_annotations:
-		<p>
-			@for annotation in return_annotations:
-				<span class="annotation">[\
-				<acronym title="@annotation.help_text">\
-				<span class="acronym">@annotation.nick</span>\
-				</acronym>\
-				@if annotation.value:
-				 @annotation.value\
-				@end
-				]\
-				</span>
-			@end
-		</p>
-		@end
+	@if return_value:
+		@return_value
 	@end
 
 	@if flags:

@@ -8,6 +8,7 @@ from datetime import datetime
 
 from .symbols import *
 from .gnome_markdown_filter import GnomeMarkdownFilter
+from .doc_tool import doc_tool
 from ..lexer_parsers.doxygen_block_parser import parse_doxygen_comment
 from ..utils.loggable import Loggable, ProgressBar
 from .pandoc_interface import translator
@@ -71,18 +72,15 @@ class SectionSymbol (Symbol):
 
 
 class SectionFilter (GnomeMarkdownFilter, Loggable):
-    def __init__(self, directory, symbols, comment_blocks, doc_formatter,
-            dependency_tree, symbol_factory=None):
+    def __init__(self, directory, doc_formatter, symbol_factory=None):
         GnomeMarkdownFilter.__init__(self, directory)
         Loggable.__init__(self)
         self.sections = []
         self.__current_section = None
-        self.__symbols = symbols
-        self.__comment_blocks = comment_blocks
+        self.__symbols = doc_tool.source_scanner.symbols
         self.__symbol_factory = symbol_factory
         self.__doc_formatter = doc_formatter
         self.__created_section_names = []
-        self.__dependency_tree = dependency_tree
 
     def parse_extensions (self, key, value, format_, meta):
         if key == "BulletList" and not "ignore_bullet_points" in meta['unMeta']:
@@ -94,10 +92,7 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
                     symbol = self.__symbols.get(symbol_name)
 
                     if symbol:
-                        if self.__comment_blocks:
-                            comment_block = self.__comment_blocks.get (symbol_name)
-                        else:
-                            comment_block = parse_doxygen_comment (symbol.raw_comment)
+                        comment_block = doc_tool.comments.get (symbol_name)
                         if comment_block:
                             sym = self.__symbol_factory.make (symbol,
                                     comment_block)
@@ -164,9 +159,8 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
         if section_name is None:
             section_name = name
 
-        if self.__comment_blocks:
-            comment = self.__comment_blocks.get("SECTION:%s" %
-                    section_name.lower())
+        comment = doc_tool.comments.get("SECTION:%s" %
+                section_name.lower())
 
         symbol = self.__symbols.get(name)
         if not symbol:
@@ -200,16 +194,16 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
     def __update_dependencies (self, sections):
         for s in sections:
             if not s.symbols:
-                self.__dependency_tree.add_dependency (s.source_file,
+                doc_tool.dependency_tree.add_dependency (s.source_file,
                         None)
             for sym in s.symbols:
                 if not hasattr (sym._symbol, "location"):
                     continue
 
                 filename = str (sym._symbol.location.file)
-                self.__dependency_tree.add_dependency (s.source_file, filename)
+                doc_tool.dependency_tree.add_dependency (s.source_file, filename)
                 comment_filename = sym._comment.filename
-                self.__dependency_tree.add_dependency (s.source_file, comment_filename)
+                doc_tool.dependency_tree.add_dependency (s.source_file, comment_filename)
 
             self.__update_dependencies (s.sections)
 
@@ -217,10 +211,10 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
         n = datetime.now()
 
         self.info ("starting")
-        if self.__dependency_tree.initial:
+        if doc_tool.dependency_tree.initial:
             self.parse_file (os.path.join(self.directory, filename))
         else:
-            for filename in self.__dependency_tree.stale_sections:
+            for filename in doc_tool.dependency_tree.stale_sections:
                 self.parse_file (filename)
 
         n = datetime.now()

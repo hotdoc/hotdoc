@@ -61,6 +61,7 @@ div.informaltable table
 {
   border-collapse: separate;
   border-spacing: 1em 0.3em;
+  width: 100%;
   border: none;
 }
 
@@ -81,6 +82,11 @@ div.informaltable table td, div.informaltable table th
 .typedef_keyword
 {
   text-align: right;
+}
+
+.function_name
+{
+	text-align: left;
 }
 
 /* dim non-primary columns */

@@ -3,7 +3,7 @@
     <td class="function_type">
 	    <span>@return_value</span>
     </td>
-    <td class="function_name">
+    <td class="function_name", style="text-align: left;">
 	    <span>\
 @if is_pointer:
 <span class="c_punctuation">(*</span>\
@@ -19,7 +19,7 @@
 </span>
 </td>
 @if flags:
-<td class="signal_flags">
+<td class="signal_flags" style="text-align:right;">
 @for flag in flags:
 
 @if flag.link:

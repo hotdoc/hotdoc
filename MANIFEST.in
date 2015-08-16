@@ -5,6 +5,6 @@ include better_doc_tool/lexer_parsers/scanner.l
 include better_doc_tool/lexer_parsers/scanner.h
 include better_doc_tool/core/pandoc_interface/translator.hs
 include better_doc_tool/core/pandoc_interface/doc_translator.c
-include better_doc_tool/formatters/templates/*
-include better_doc_tool/formatters/style.css
+include better_doc_tool/formatters/html_formatter/templates/*
+include better_doc_tool/formatters/html_formatter/style.css
 include requirements.txt

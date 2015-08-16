@@ -18,23 +18,11 @@
 # 02110-1301, USA.
 #
 
-import os
-import sys
-import __builtin__
+from better_doc_tool.core.doc_tool import doc_tool, ConfigError
+from better_doc_tool.extensions import *
 
-if os.name == 'nt':
-    datadir = os.path.join(os.path.dirname(__file__), '..', 'share')
-else:
-    datadir = "/usr/share"
-
-__builtin__.__dict__['DATADIR'] = datadir
-
-sys.path = [p for p in sys.path if not "python3" in p]
-
-#dir_ = os.path.dirname(os.path.abspath(__file__))
-#source_dir = os.path.join (dir_, "better_doc_tool")
-#sys.path.append(source_dir)
-
-from better_doc_tool.core.main import main
-
-sys.exit(main(sys.argv))
+if __name__=="__main__":
+    try:
+        doc_tool.parse_and_format()
+    except ConfigError as e:
+        print e

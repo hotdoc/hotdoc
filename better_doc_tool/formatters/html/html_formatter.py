@@ -8,13 +8,10 @@ from wheezy.template.engine import Engine
 from wheezy.template.ext.core import CoreExtension
 from wheezy.template.loader import FileLoader
 
-from ..core.symbols import *
-from ..core.base_formatter import Formatter
-from ..core.links import Link
-from ..core.pandoc_interface import translator
-
-# We support the GNOME extension
-from ..extensions.GIExtension import *
+from ...core.symbols import *
+from ...core.base_formatter import Formatter
+from ...core.links import Link
+from ...core.pandoc_interface import translator
 
 
 class Callable(object):
@@ -35,9 +32,9 @@ class SymbolDescriptions (object):
         self.name = name
 
 class HtmlFormatter (Formatter):
-    def __init__(self, *args, **kwargs):
-        Formatter.__init__(self, *args, **kwargs)
-        self.__symbol_formatters = {
+    def __init__(self, searchpath):
+        Formatter.__init__(self)
+        self._symbol_formatters = {
                 FunctionSymbol: self._format_function,
                 FunctionMacroSymbol: self._format_function_macro,
                 CallbackSymbol: self._format_callback,
@@ -46,16 +43,14 @@ class HtmlFormatter (Formatter):
                 AliasSymbol: self._format_alias,
                 StructSymbol: self._format_struct,
                 EnumSymbol: self._format_enum,
-                GIClassSymbol: self._format_class,
-                GIPropertySymbol: self._format_gi_property,
-                GISignalSymbol: self._format_gi_signal,
                 ClassSymbol: self._format_class,
                 SectionSymbol: self._format_class,
                 ParameterSymbol: self._format_parameter_symbol,
+                ReturnValueSymbol : self._format_return_value_symbol,
                 FieldSymbol: self._format_field_symbol,
                 }
 
-        self.__summary_formatters = {
+        self._summary_formatters = {
                 FunctionSymbol: self._format_function_summary,
                 FunctionMacroSymbol: self._format_function_macro_summary,
                 CallbackSymbol: self._format_callback_summary,
@@ -64,12 +59,14 @@ class HtmlFormatter (Formatter):
                 AliasSymbol: self._format_alias_summary,
                 StructSymbol: self._format_struct_summary,
                 EnumSymbol: self._format_enum_summary,
-                GIPropertySymbol: self._format_gi_property_summary,
-                GISignalSymbol: self._format_gi_signal_summary,
                 }
 
+        self._ordering = [FunctionSymbol, FunctionMacroSymbol,
+                StructSymbol, EnumSymbol, ConstantSymbol, ExportedVariableSymbol,
+                AliasSymbol, CallbackSymbol]
+
         module_path = os.path.dirname(__file__)
-        searchpath = [os.path.join(module_path, "templates")]
+        searchpath.append (os.path.join(module_path, "templates"))
         self.engine = Engine(
             loader=FileLoader(searchpath, encoding='UTF-8'),
             extensions=[CoreExtension()]
@@ -123,13 +120,10 @@ class HtmlFormatter (Formatter):
                                  'is_pointer': is_pointer,
                                 })
 
-    def _format_parameter_detail (self, name, detail, annotations):
+    def __format_parameter_detail (self, name, detail):
         template = self.engine.get_template('parameter_detail.html')
-        if not annotations:
-            annotations = []
         return template.render ({'name': name,
                                  'detail': detail,
-                                 'annotations': annotations,
                                 })
 
     def _format_callable_summary (self, return_value, function_name,
@@ -201,7 +195,7 @@ class HtmlFormatter (Formatter):
                             })
 
     def _format_symbols_toc_section (self, symbols_type, symbols_list):
-        summary_formatter = self.__summary_formatters.get(symbols_type)
+        summary_formatter = self._summary_formatters.get(symbols_type)
         if not summary_formatter:
             return (None, None)
 
@@ -257,11 +251,7 @@ class HtmlFormatter (Formatter):
         toc_sections = []
         symbols_details = []
 
-        # Enforce our ordering
-        for symbols_type in [FunctionSymbol, FunctionMacroSymbol,
-                GIPropertySymbol, GISignalSymbol, StructSymbol,
-                EnumSymbol, ConstantSymbol, ExportedVariableSymbol,
-                AliasSymbol, CallbackSymbol]:
+        for symbols_type in self._ordering:
             symbols_list = klass.typed_symbols.get(symbols_type)
             if not symbols_list:
                 continue
@@ -300,15 +290,12 @@ class HtmlFormatter (Formatter):
 
         return (out, True)
 
-    def _format_prototype (self, function, is_pointer):
+    def _format_prototype (self, function, is_pointer, title):
         return_value = self._format_linked_symbol (function.return_value)
         parameters = []
         for param in function.parameters:
             parameters.append (self._format_linked_symbol(param))
 
-        title = function.link.title
-        if type (function) == GISignalSymbol:
-            title = "%s_callback" % re.sub ('-', '_', title)
         return self._format_callable_prototype (return_value,
                 title, parameters, is_pointer)
 
@@ -317,30 +304,31 @@ class HtmlFormatter (Formatter):
         return template.render ({'code': code})
 
     def _format_parameter_symbol (self, parameter):
-        annotations = parameter.get_extension_attribute (GIExtension, "annotations")
-        return (self._format_parameter_detail (parameter.argname,
-                parameter.formatted_doc, annotations), False)
+        return (self.__format_parameter_detail (parameter.argname,
+                parameter.formatted_doc), False)
 
     def _format_field_symbol (self, field):
         field_id = self._format_linked_symbol (field) 
-        return (self._format_parameter_detail (field_id,
-            field.formatted_doc, []), False)
+        return (self.__format_parameter_detail (field_id,
+            field.formatted_doc), False)
 
-    def _format_callable(self, callable_, callable_type, is_pointer=False, flags=None):
+    def _format_return_value_symbol(self, return_value):
+        if not return_value or not return_value.formatted_doc:
+            return ('', False)
+        template = self.engine.get_template('return_value.html')
+        return (template.render ({'return_value': return_value}), False)
+
+    def _format_callable(self, callable_, callable_type, title, is_pointer=False, flags=None):
         template = self.engine.get_template('callable.html')
-        prototype = self._format_prototype (callable_, is_pointer)
+        prototype = self._format_prototype (callable_, is_pointer, title)
         parameters = [p.detailed_description for p in callable_.parameters]
 
-        return_annotations = []
+        return_value_detail = None
         if callable_.return_value:
-            annotations = callable_.return_value.get_extension_attribute (GIExtension, "annotations")
-            if annotations:
-                return_annotations = annotations
-
+            return_value_detail = callable_.return_value.detailed_description
         out = template.render ({'prototype': prototype,
                                 'callable': callable_,
-                                'return_value': callable_.return_value,
-                                'return_annotations': return_annotations,
+                                'return_value': return_value_detail,
                                 'parameters': parameters,
                                 'callable_type': callable_type,
                                 'flags': flags})
@@ -352,20 +340,23 @@ class HtmlFormatter (Formatter):
         return template.render ({'members': members})
 
     def _format_function(self, function):
-        return self._format_callable (function, "method")
+        return self._format_callable (function, "method", function.link.title)
 
     def _format_callback (self, callback):
-        return self._format_callable (callback, "callback", is_pointer=True)
+        return self._format_callable (callback, "callback",
+                callback.link.title, is_pointer=True)
 
     def _format_function_macro(self, function_macro):
         template = self.engine.get_template('callable.html')
         prototype = self._format_raw_code (function_macro.original_text)
         parameters = [p.detailed_description for p in function_macro.parameters]
 
+        return_value_detail = None
+        if function_macro.return_value:
+            return_value_detail = function_macro.return_value.detailed_description
         out = template.render ({'prototype': prototype,
                                 'callable': function_macro,
-                                'return_value': function_macro.return_value,
-                                'return_annotations': None,
+                                'return_value': return_value_detail,
                                 'parameters': parameters,
                                 'callable_type': "function macro",
                                 'flags': None})
@@ -386,43 +377,10 @@ class HtmlFormatter (Formatter):
         return (out, False)
 
     def _format_symbol (self, symbol):
-        format_function = self.__symbol_formatters.get(type(symbol))
+        format_function = self._symbol_formatters.get(type(symbol))
         if format_function:
             return format_function (symbol)
         return (None, False)
-
-    # GNOME extension
-
-    def _format_gi_property_summary (self, prop):
-        template = self.engine.get_template('property_summary.html')
-        property_type = self._format_linked_symbol (prop.type_)
-        prop_link = self._format_linked_symbol (prop)
-
-        return template.render({'property_type': property_type,
-                                'property_link': prop_link,
-                                'flags': prop.flags,
-                               })
-
-    def _format_gi_signal_summary (self, signal):
-        return self._format_callable_summary (
-                self._format_linked_symbol (signal.return_value),
-                self._format_linked_symbol (signal),
-                True,
-                False,
-                signal.flags)
-
-    def _format_gi_signal (self, signal):
-        return self._format_callable (signal, "signal", flags=signal.flags)
-
-    def _format_gi_property(self, prop):
-        type_link = self._format_linked_symbol (prop.type_)
-        template = self.engine.get_template('property_prototype.html')
-        prototype = template.render ({'property_name': prop.link.title,
-                                      'property_type': type_link})
-        template = self.engine.get_template ('property.html')
-        res = template.render ({'prototype': prototype,
-                               'property': prop})
-        return (res, False)
 
     def _get_extra_files (self):
         dir_ = os.path.dirname(__file__)

@@ -6,7 +6,7 @@ import sys
 import re
 
 from datetime import datetime
-from better_doc_tool.core.links import link_resolver
+from better_doc_tool.core.doc_tool import doc_tool
 
 class DocScanner(object):
     def __init__(self):
@@ -97,7 +97,7 @@ def format_property (match, props):
     type_name = props['type_name']
     property_name = props['property_name']
     linkname = "%s:::%s---property" % (type_name, property_name)
-    link = link_resolver.get_named_link (linkname)
+    link = doc_tool.link_resolver.get_named_link (linkname)
     if link:
         return u"[“%s”](%s)" % (property_name, link.get_link())
     else:
@@ -107,7 +107,7 @@ def format_signal (match, props):
     type_name = props['type_name']
     signal_name = props['signal_name']
     linkname = "%s:::%s---signal" % (type_name, signal_name)
-    link = link_resolver.get_named_link (linkname)
+    link = doc_tool.link_resolver.get_named_link (linkname)
     if link:
         return u"[“%s”](%s)" % (signal_name, link.get_link())
     else:
@@ -115,7 +115,7 @@ def format_signal (match, props):
 
 def format_type_name (match, props):
     type_name = props['type_name']
-    link = link_resolver.get_named_link (type_name)
+    link = doc_tool.link_resolver.get_named_link (type_name)
     if link:
         return "[%s](%s)" % (type_name, link.get_link())
     else:
@@ -123,7 +123,7 @@ def format_type_name (match, props):
 
 def format_enum_value (match, props):
     member_name = props['member_name']
-    link = link_resolver.get_named_link (member_name)
+    link = doc_tool.link_resolver.get_named_link (member_name)
     if link:
         return "[%s](%s)" % (member_name, link.get_link ())
     else:
@@ -135,7 +135,7 @@ def format_parameter (match, props):
 
 def format_function_call (match, props):
     func_name = props['symbol_name']
-    link = link_resolver.get_named_link (func_name)
+    link = doc_tool.link_resolver.get_named_link (func_name)
     if link:
         return "[%s()](%s)" % (func_name, link.get_link ())
     else:
@@ -150,7 +150,7 @@ def format_code_start_with_language (match, props):
 def format_code_end (match, props):
     return "\n```\n"
 
-class LegacyTranslator (object):
+class GtkDocParser (object):
     def __init__(self):
         self.funcs = {
             'other': format_other,
@@ -192,10 +192,10 @@ class LegacyTranslator (object):
 
 
 if __name__ == "__main__":
-    lt = LegacyTranslator()
+    gdp = GtkDocParser()
     with open (sys.argv[1], 'r') as f:
         contents = f.read ()
-        out = lt.translate (contents)
+        out = gdp.translate (contents)
         print out
 
     sys.exit (0)

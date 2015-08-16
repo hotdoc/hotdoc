@@ -189,7 +189,7 @@ setup(name='better_doc_tool',
       ext_modules = [doxygen_block_parser_module,
           pandoc_translator_module, c_comment_scanner_module],
       scripts =
-      ['bdt.py',
+      ['bdt',
        'better_doc_tool/transition_scripts/sgml_to_sections.py',
        'better_doc_tool/transition_scripts/translate_sections.sh'],
       package_data = {

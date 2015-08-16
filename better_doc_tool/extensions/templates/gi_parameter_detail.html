@@ -1,12 +1,8 @@
-@require(name, detail, annotations)
-<tr>
-	<td class="parameter_name">
-		<p>
-		@name
-		</p>
-	</td>
-	<td class="parameter_description"><p>@detail</p></td>
-	<td class="parameter_annotations">
+@require(annotations)
+@extends('parameter_detail.html')
+
+@def extension():
+<td class="parameter_annotations">
 @for annotation in annotations:
 <span class="annotation">[\
 <acronym title="@annotation.help_text">\
@@ -18,5 +14,5 @@
 ]\
 </span>
 @end
-	<td>
-</tr>
+<td>
+@end

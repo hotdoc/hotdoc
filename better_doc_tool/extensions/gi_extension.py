@@ -5,7 +5,11 @@ import clang.cindex
 
 from ..core.symbols import Symbol, FunctionSymbol, ClassSymbol, ParameterSymbol, ReturnValueSymbol
 from ..core.comment_block import GtkDocParameter
-from better_doc_tool.core.links import link_resolver, Link, ExternalLink
+from ..core.doc_tool import doc_tool
+from ..core.base_extension import BaseExtension
+from .gi_raw_parser import GtkDocRawCommentParser
+from .gi_html_formatter import GIHtmlFormatter
+from better_doc_tool.core.links import Link, ExternalLink
 
 # Copy pasted from giscanner/gdumpparser to remove any dependency on gi
 G_PARAM_READABLE = 1 << 0
@@ -71,13 +75,13 @@ class ConstructOnlyFlag (Flag):
 
 class GISymbol(Symbol):
     def make_qualified_symbol (self, type_name):
-        type_link = link_resolver.get_named_link (type_name)
+        type_link = doc_tool.link_resolver.get_named_link (type_name)
         if type_link:
             tokens = [type_link]
         else:
             tokens = [type_name]
 
-        utype = self._symbol_factory.source_scanner.lookup_underlying_type(type_name)
+        utype = doc_tool.source_scanner.lookup_underlying_type(type_name)
         if utype == clang.cindex.CursorKind.STRUCT_DECL:
             tokens.append('*')
 
@@ -167,7 +171,7 @@ class GISignalSymbol (GIFlaggedSymbol, FunctionSymbol):
 
 
 class GIClassSymbol (GISymbol, ClassSymbol):
-    def symbol_init (self, comments, extra_args):
+    def symbol_init (self, extra_args):
         xml_node = extra_args['xml_node']
         self.__children_names = extra_args['children']
         self.xml_node = xml_node
@@ -177,13 +181,13 @@ class GIClassSymbol (GISymbol, ClassSymbol):
         for prop_node in xml_node.findall('property'):
             parent_name = prop_node.getparent().attrib['name']
             block_name = '%s:%s' % (parent_name, prop_node.attrib['name'])
-            comment = comments.get(block_name)
+            comment = doc_tool.comments.get(block_name)
             self.add_symbol (self._symbol_factory.make_custom (prop_node,
                 comment, GIPropertySymbol))
         for prop_node in xml_node.findall('signal'):
             parent_name = prop_node.getparent().attrib['name']
             block_name = '%s::%s' % (parent_name, prop_node.attrib['name'])
-            comment = comments.get(block_name)
+            comment = doc_tool.comments.get(block_name)
             if not comment: # We do need a comment here
                 continue
             self.add_symbol (self._symbol_factory.make_custom (prop_node,
@@ -197,13 +201,13 @@ class GIClassSymbol (GISymbol, ClassSymbol):
     def __create_hierarchy (self, symbol):
         for parent in self.xml_node.attrib['parents'].split(','):
             cursor = \
-                    self._symbol_factory.source_scanner.lookup_ast_node(parent)
+                    doc_tool.source_scanner.lookup_ast_node(parent)
             if not cursor:
                 continue
             parent_symbol = self._symbol_factory.make_qualified_symbol (cursor.type, None)
             self.hierarchy.append (parent_symbol)
         for child in self.__children_names:
-            cursor = self._symbol_factory.source_scanner.lookup_ast_node(child)
+            cursor = doc_tool.source_scanner.lookup_ast_node(child)
             if not cursor:
                 continue
             child_symbol = self._symbol_factory.make_qualified_symbol (cursor.type, None)
@@ -266,8 +270,12 @@ OPTIONAL_HELP = \
 TYPE_HELP = \
 "Override the parsed C type with given type"
 
-class GIExtension(object):
-    def __init__(self, xml_dump):
+class GIExtension(BaseExtension):
+    EXTENSION_NAME = "gi-extension"
+
+    def __init__(self, args):
+        BaseExtension.__init__(self, args)
+        xml_dump = args.gi_dump
         self._gi_classes = {}
         root = etree.parse (xml_dump).getroot()
 
@@ -294,14 +302,22 @@ class GIExtension(object):
 
         self.__create_chilren_map(root)
         self.__gather_gtk_doc_links()
+        self.__raw_comment_parser = GtkDocRawCommentParser()
+        self._formatters["html"] = GIHtmlFormatter (self)
+
+    @staticmethod
+    def add_arguments (parser):
+        parser.add_argument ("--gi-dump", action="store",
+                dest="gi_dump")
 
     def __gather_gtk_doc_links (self):
-        if not os.path.exists(os.path.join("/usr/share/gtk-doc/html")):
-            print "no gtk doc to look at"
+        sgml_dir = os.path.join(doc_tool.datadir, "gtk-doc", "html")
+        if not os.path.exists(sgml_dir):
+            self.error("no gtk doc to gather links from in %s" % sgml_dir)
             return
 
-        for node in os.listdir(os.path.join(DATADIR, "gtk-doc", "html")):
-            dir_ = os.path.join(DATADIR, "gtk-doc/html", node)
+        for node in os.listdir(sgml_dir):
+            dir_ = os.path.join(sgml_dir, node)
             if os.path.isdir(dir_):
                 try:
                     self.__parse_sgml_index(dir_)
@@ -323,7 +339,7 @@ class GIExtension(object):
                         title = title [:-5]
                     link = ExternalLink (split_line[1], dir_, remote_prefix,
                             filename, title)
-                    link_resolver.add_external_link (link)
+                    doc_tool.link_resolver.add_external_link (link)
 
     def __create_chilren_map (self, root):
         for klass in root.findall ("class"):
@@ -419,12 +435,12 @@ class GIExtension(object):
             return None
         return factory (annotation_name, annotation_value)
 
-    def parameter_formatted (self, parameter):
+    def get_annotations (self, parameter):
         if not parameter._comment:
-            return
+            return []
 
         if not parameter._comment.annotations:
-            return
+            return []
 
         annotations = []
 
@@ -437,10 +453,4 @@ class GIExtension(object):
                 continue
             annotations.append (annotation)
 
-        parameter.add_extension_attribute (GIExtension, "annotations", annotations)
-
-    def setup (self, doc_formatter, symbol_factory):
-        doc_formatter.formatting_symbol_signals[ParameterSymbol].connect (
-                self.parameter_formatted)
-        doc_formatter.formatting_symbol_signals[ReturnValueSymbol].connect (
-                self.parameter_formatted)
+        return annotations

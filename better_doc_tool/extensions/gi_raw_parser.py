@@ -8,7 +8,7 @@ def grouper(iterable, n, fillvalue=None):
     args = [iter(iterable)] * n
     return izip_longest(*args, fillvalue=fillvalue)
 
-class DumbParser (object):
+class GtkDocRawCommentParser (object):
     def __init__(self):
         """
         Lifted from
@@ -148,7 +148,7 @@ class DumbParser (object):
         return block
 
 if __name__ == "__main__":
-    dp = DumbParser()
+    dp = GtkDocRawCommentParser()
     with open (sys.argv[1], 'r') as f:
         c = f.read()
         n = datetime.now()

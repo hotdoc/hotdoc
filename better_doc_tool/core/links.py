@@ -68,5 +68,3 @@ class LinkResolver(object):
 
     def add_external_link (self, link):
         self.__external_links[link.title] = link
-
-link_resolver = LinkResolver()

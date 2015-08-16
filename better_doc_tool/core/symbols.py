@@ -8,8 +8,10 @@ import uuid
 import clang.cindex
 
 from ..clang_interface.clangizer import ast_node_is_function_pointer
-from .links import link_resolver, LocalLink, Link
+from .links import LocalLink, Link
 from ..utils.simple_signals import Signal
+from ..utils.utils import all_subclasses
+from .doc_tool import doc_tool
 
 class Symbol (object):
     def __init__(self, symbol, comment, doc_formatter, symbol_factory=None):
@@ -135,7 +137,7 @@ class EnumSymbol (Symbol):
             member = self._symbol_factory.make_simple_symbol (member,
                     member_comment)
             member.enum_value = member_value
-            link_resolver.add_local_link (member.link)
+            doc_tool.link_resolver.add_local_link (member.link)
             self.members.append (member)
 
     def get_extra_links (self):
@@ -331,11 +333,8 @@ def all_subclasses(cls):
                                        for g in all_subclasses(s)]
 
 class SymbolFactory (object):
-    def __init__(self, doc_formatter, extensions, comments, source_scanner):
-        self.__comments = comments
+    def __init__(self, doc_formatter):
         self.__doc_formatter = doc_formatter
-        self.source_scanner = source_scanner
-        self.__extensions = extensions
         self.symbol_subclasses = all_subclasses (Symbol)
         self.symbol_subclasses.append(Symbol)
         self.new_symbol_signals = {}
@@ -359,14 +358,14 @@ class SymbolFactory (object):
 
         if type_.kind == clang.cindex.TypeKind.TYPEDEF:
             d = type_.get_declaration ()
-            link = link_resolver.get_named_link (d.displayname)
+            link = doc_tool.link_resolver.get_named_link (d.displayname)
             if link:
                 tokens.append (link)
             else:
                 tokens.append (d.displayname + ' ')
             self.__apply_qualifiers(type_, tokens)
         else:
-            link = link_resolver.get_named_link (type_.spelling)
+            link = doc_tool.link_resolver.get_named_link (type_.spelling)
             if link:
                 tokens.append (link)
             else:
@@ -376,7 +375,7 @@ class SymbolFactory (object):
         return tokens
 
     def __signal_new_symbol (self, symbol):
-        link_resolver.add_local_link (symbol.link)
+        doc_tool.link_resolver.add_local_link (symbol.link)
         self.new_symbol_signals[type(symbol)](symbol)
         return symbol
 
@@ -463,16 +462,16 @@ class SymbolFactory (object):
 
     def make_section(self, symbol, comment):
         res = None
-        for extension in self.__extensions:
+        for extension in doc_tool.extensions:
             klass, extra_args = extension.get_section_type (symbol)
             if klass:
                 res = klass (symbol, comment, self.__doc_formatter, self)
-                res.symbol_init (self.__comments, extra_args)
+                res.symbol_init (extra_args)
 
         if not res:
             res = SectionSymbol (symbol, comment, self.__doc_formatter, self)
 
-        link_resolver.add_local_link (res.link)
+        doc_tool.link_resolver.add_local_link (res.link)
         return self.__signal_new_symbol(res)
 
 

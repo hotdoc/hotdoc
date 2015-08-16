@@ -10,13 +10,11 @@ import re
 from datetime import datetime
 import os
 
-import better_doc_tool.core.main
+from better_doc_tool.core.doc_tool import doc_tool
 from better_doc_tool.core.pandoc_interface import translator
-from better_doc_tool.core.links import link_resolver
 
 class GnomeMarkdownFilter(object):
     def __init__(self, directory=None):
-        self.__include_pattern = re.compile(r'{{(?P<include>[^ ]*)}}')
         self.directory = directory
         self.__links = {}
         self.__formatter = None
@@ -28,8 +26,6 @@ class GnomeMarkdownFilter(object):
     def parse_extensions (self, key, value, format_, meta):
         if key == "Link":
             return self.parse_link (key, value, format_, meta)
-        elif key == "Para" and len (value) == 1:
-            return self.parse_include (key, value, format_, meta)
         elif key == "Header":
             return self.parse_header (key, value, format_, meta)
 
@@ -42,28 +38,12 @@ class GnomeMarkdownFilter(object):
         link = value[1]
         if not link[0] or link[0] in ['signal', 'property']:
             linkname = value[0][0]['c']
-            actual_link = link_resolver.get_named_link (linkname)
+            actual_link = doc_tool.link_resolver.get_named_link (linkname)
             if actual_link:
                 link[0] = actual_link.get_link()
         return None
 
     def parse_header (self, key, value, format_, meta):
-        return None
-
-    def parse_include (self, key, value, format_, meta):
-        val = value[0]
-        if val['t'] == "Str":
-            content = val['c']
-            m = self.__include_pattern.match (content)
-            if m:
-                filename = m.groups()[0]
-                if self.directory:
-                    filename = os.path.join (self.directory, filename)
-                if os.path.exists (filename):
-                    with open (filename, 'r') as f:
-                        contents = f.read()
-                        new_doc = self.filter_text (contents)
-                        return new_doc[1]
         return None
 
     def filter_text (self, text):
