@@ -1,7 +1,7 @@
 import sys, re
 from itertools import izip_longest
 from datetime import datetime
-from better_doc_tool.core.comment_block import *
+from hotdoc.core.comment_block import *
 
 #http://stackoverflow.com/questions/434287/what-is-the-most-pythonic-way-to-iterate-over-a-list-in-chunks
 def grouper(iterable, n, fillvalue=None):

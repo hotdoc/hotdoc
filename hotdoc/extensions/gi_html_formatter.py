@@ -1,9 +1,9 @@
 import re, os
-from better_doc_tool.formatters.html.html_formatter import HtmlFormatter
+from hotdoc.formatters.html.html_formatter import HtmlFormatter
 
 class GIHtmlFormatter(HtmlFormatter):
     def __init__(self, gi_extension):
-        from better_doc_tool.extensions.gi_extension import (GIClassSymbol,
+        from hotdoc.extensions.gi_extension import (GIClassSymbol,
                 GIPropertySymbol, GISignalSymbol)
 
         module_path = os.path.dirname(__file__)

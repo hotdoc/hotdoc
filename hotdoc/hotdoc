@@ -20,8 +20,8 @@
 
 import os
 
-from better_doc_tool.core.doc_tool import doc_tool, ConfigError
-from better_doc_tool.extensions import *
+from hotdoc.core.doc_tool import doc_tool, ConfigError
+from hotdoc.extensions import *
 
 if __name__=="__main__":
     extension_dirs = os.getenv ("HOTDOC_EXTENSION_PATH")

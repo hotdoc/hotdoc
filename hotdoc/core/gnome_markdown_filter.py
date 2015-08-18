@@ -10,8 +10,8 @@ import re
 from datetime import datetime
 import os
 
-from better_doc_tool.core.doc_tool import doc_tool
-from better_doc_tool.core.pandoc_interface import translator
+from hotdoc.core.doc_tool import doc_tool
+from hotdoc.core.pandoc_interface import translator
 
 class GnomeMarkdownFilter(object):
     def __init__(self, directory=None):

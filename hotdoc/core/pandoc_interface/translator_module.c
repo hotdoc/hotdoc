@@ -82,7 +82,7 @@ PyMODINIT_FUNC
 inittranslator(void)
 {
   (void) Py_InitModule("translator", TranslatorMethods);
-  PyObject *toplevel_module = PyImport_ImportModule ("better_doc_tool.core.doc_tool");
+  PyObject *toplevel_module = PyImport_ImportModule ("hotdoc.core.doc_tool");
   PyObject *source_file = PyObject_GetAttrString (toplevel_module, "__file__");
 
   PyObject *path_module = PyImport_ImportModule("os.path");

@@ -7,9 +7,8 @@ import clang.cindex
 from ctypes import *
 from fnmatch import fnmatch
 
-from better_doc_tool.utils.loggable import Loggable, progress_bar
-from better_doc_tool.lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
-from better_doc_tool.clang_interface.new_shot import DumbParser
+from hotdoc.utils.loggable import Loggable, progress_bar
+from hotdoc.lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
 
 def ast_node_is_function_pointer (ast_node):
     if ast_node.kind == clang.cindex.TypeKind.POINTER and \
@@ -26,7 +25,6 @@ class ClangScanner(Loggable):
 
         self.__config = config
 
-        gcp = DumbParser()
         if clang_options:
             clang_options = clang_options.split(' ')
         index = clang.cindex.Index.create()

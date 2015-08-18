@@ -138,37 +138,37 @@ glib_cflags = [flag for flag in PkgConfig ('glib-2.0', ['--cflags']) if flag]
 glib_libs = [flag for flag in PkgConfig ('glib-2.0', ['--libs']) if flag]
 
 doxygen_block_parser_module = FlexExtension(
-                                ['better_doc_tool/lexer_parsers/doxygen_parser/doxenizer.l'],
-                                'better_doc_tool.lexer_parsers.doxygen_parser.doxygen_parser',
+                                ['hotdoc/lexer_parsers/doxygen_parser/doxenizer.l'],
+                                'hotdoc.lexer_parsers.doxygen_parser.doxygen_parser',
                                 sources =
-                                ['better_doc_tool/lexer_parsers/doxygen_parser/doxparser_module.c',
-                                 'better_doc_tool/lexer_parsers/doxygen_parser/doxparser.c'],
+                                ['hotdoc/lexer_parsers/doxygen_parser/doxparser_module.c',
+                                 'hotdoc/lexer_parsers/doxygen_parser/doxparser.c'],
                                 depends =
-                                ['better_doc_tool/lexer_parsers/doxygen_parser/doxenizer.h',
-                                 'better_doc_tool/lexer_parsers/doxygen_parser/doxparser.h',
-                                 'better_doc_tool/lexer_parsers/doxygen_parser/doxenizer.l'],
+                                ['hotdoc/lexer_parsers/doxygen_parser/doxenizer.h',
+                                 'hotdoc/lexer_parsers/doxygen_parser/doxparser.h',
+                                 'hotdoc/lexer_parsers/doxygen_parser/doxenizer.l'],
                                 extra_compile_args = glib_cflags,
                                 extra_link_args = glib_libs)
 
 c_comment_scanner_module = FlexExtension(
-                            ['better_doc_tool/lexer_parsers/c_comment_scanner/scanner.l'],
-                            'better_doc_tool.lexer_parsers.c_comment_scanner.c_comment_scanner',
+                            ['hotdoc/lexer_parsers/c_comment_scanner/scanner.l'],
+                            'hotdoc.lexer_parsers.c_comment_scanner.c_comment_scanner',
                             sources =
-                            ['better_doc_tool/lexer_parsers/c_comment_scanner/scannermodule.c'],
+                            ['hotdoc/lexer_parsers/c_comment_scanner/scannermodule.c'],
                             depends =
-                            ['better_doc_tool/lexer_parsers/c_comment_scanner/scanner.l',
-                            'better_doc_tool/lexer_parsers/c_comment_scanner/scanner.h'])
+                            ['hotdoc/lexer_parsers/c_comment_scanner/scanner.l',
+                            'hotdoc/lexer_parsers/c_comment_scanner/scanner.h'])
 
 pandoc_translator_module = HaskellExtension(
-        ['better_doc_tool/core/pandoc_interface/translator.hs',
-        'better_doc_tool/core/pandoc_interface/doc_translator.c'],
-        'better_doc_tool.core.pandoc_interface.translator',
-        sources = ['better_doc_tool/core/pandoc_interface/translator_module.c'],
+        ['hotdoc/core/pandoc_interface/translator.hs',
+        'hotdoc/core/pandoc_interface/doc_translator.c'],
+        'hotdoc.core.pandoc_interface.translator',
+        sources = ['hotdoc/core/pandoc_interface/translator_module.c'],
         depends=
-            ['better_doc_tool/core/pandoc_interface/translator.hs',
-            'better_doc_tool/core/pandoc_interface/doc_translator.c'])
+            ['hotdoc/core/pandoc_interface/translator.hs',
+            'hotdoc/core/pandoc_interface/doc_translator.c'])
 
-setup(name='better_doc_tool',
+setup(name='hotdoc',
       version='0.2.4',
       description='A documentation tool based on pandoc',
       keywords='documentation gnome pandoc doxygen',
@@ -176,25 +176,25 @@ setup(name='better_doc_tool',
       author='Mathieu Duponchelle',
       author_email='mathieu.duponchelle@opencreed.com',
       license='LGPL',
-      packages=['better_doc_tool',
-                'better_doc_tool.core',
-                'better_doc_tool.core.pandoc_interface',
-                'better_doc_tool.clang_interface',
-                'better_doc_tool.formatters',
-                'better_doc_tool.lexer_parsers',
-                'better_doc_tool.lexer_parsers.doxygen_parser',
-                'better_doc_tool.extensions',
-                'better_doc_tool.utils'],
+      packages=['hotdoc',
+                'hotdoc.core',
+                'hotdoc.core.pandoc_interface',
+                'hotdoc.clang_interface',
+                'hotdoc.formatters',
+                'hotdoc.lexer_parsers',
+                'hotdoc.lexer_parsers.doxygen_parser',
+                'hotdoc.extensions',
+                'hotdoc.utils'],
       cmdclass = {'build_ext': build_ext},
       ext_modules = [doxygen_block_parser_module,
           pandoc_translator_module, c_comment_scanner_module],
       scripts =
-      ['bdt',
-       'better_doc_tool/transition_scripts/sgml_to_sections.py',
-       'better_doc_tool/transition_scripts/translate_sections.sh'],
+      ['hotdoc/hotdoc',
+       'hotdoc/transition_scripts/sgml_to_sections.py',
+       'hotdoc/transition_scripts/translate_sections.sh'],
       package_data = {
-          'better_doc_tool.core.pandoc_interface': ['libConvert.*'],
-          'better_doc_tool.formatters': ['templates/*', 'style.css'],
+          'hotdoc.core.pandoc_interface': ['libConvert.*'],
+          'hotdoc.formatters': ['templates/*', 'style.css'],
           },
       install_requires = ['wheezy.template',
                           'pandocfilters',

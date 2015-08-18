@@ -192,7 +192,7 @@ dox_parser_new (void)
 {
   DoxParser *ret = (DoxParser *) g_malloc0 (sizeof (DoxParser));
 
-  PyObject *comment_module = PyImport_ImportModule("better_doc_tool.core.comment_block");
+  PyObject *comment_module = PyImport_ImportModule("hotdoc.core.comment_block");
   comment_block_class = PyObject_GetAttrString (comment_module, "CommentBlock");
   add_param_block_pyname = PyString_FromString ("add_param_block");
   set_description_pyname = PyString_FromString ("set_description");

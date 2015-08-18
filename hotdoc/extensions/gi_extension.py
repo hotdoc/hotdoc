@@ -9,7 +9,7 @@ from ..core.doc_tool import doc_tool
 from ..core.base_extension import BaseExtension
 from .gi_raw_parser import GtkDocRawCommentParser
 from .gi_html_formatter import GIHtmlFormatter
-from better_doc_tool.core.links import Link, ExternalLink
+from hotdoc.core.links import Link, ExternalLink
 
 # Copy pasted from giscanner/gdumpparser to remove any dependency on gi
 G_PARAM_READABLE = 1 << 0

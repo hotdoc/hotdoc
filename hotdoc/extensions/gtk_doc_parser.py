@@ -6,7 +6,7 @@ import sys
 import re
 
 from datetime import datetime
-from better_doc_tool.core.doc_tool import doc_tool
+from hotdoc.core.doc_tool import doc_tool
 
 class DocScanner(object):
     def __init__(self):
