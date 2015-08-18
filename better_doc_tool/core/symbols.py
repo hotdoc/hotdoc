@@ -18,21 +18,20 @@ class Symbol (object):
         self.__doc_formatter = doc_formatter
         self._symbol_factory = symbol_factory
         self._symbol = symbol
-        self._comment = comment
+        self.comment = comment
         self.original_text = None
         self.detailed_description = None
         self.link = LocalLink (self._make_unique_id(), "", self._make_name())
-        self.__extension_attributes = {}
 
     def parse_tags(self):
-        if not self._comment:
+        if not self.comment:
             return []
 
-        if not hasattr (self._comment, "tags"):
+        if not hasattr (self.comment, "tags"):
             return []
 
         tags = []
-        for tag, value in self._comment.tags.iteritems():
+        for tag, value in self.comment.tags.iteritems():
             tags.append (Tag (tag, value.value))
         return tags
 
@@ -40,21 +39,6 @@ class Symbol (object):
         self.tags = self.parse_tags ()
         self.__doc_formatter.format_symbol (self)
         return True
-
-    def add_extension_attribute (self, extension_type, attribute, value):
-        attributes = self.__extension_attributes.get(extension_type)
-        if not attributes:
-            attributes = {}
-            self.__extension_attributes[extension_type] = attributes
-
-        attributes[attribute] = value
-
-    def get_extension_attribute (self, extension_type, attribute):
-        attributes = self.__extension_attributes.get(extension_type)
-        if not attributes:
-            return None
-
-        return attributes.get(attribute)
 
     def _make_name (self):
         if type(self._symbol) in [clang.cindex.Cursor, clang.cindex.Type]:
@@ -84,9 +68,9 @@ class Tag:
 
 class FunctionSymbol (Symbol):
     def do_format (self):
-        return_comment = self._comment.tags.get('returns')
+        return_comment = self.comment.tags.get('returns')
         if return_comment:
-            self._comment.tags.pop('returns', None)
+            self.comment.tags.pop('returns', None)
 
         self.return_value = \
                 self._symbol_factory.make_return_value_symbol(self._symbol.result_type,
@@ -95,7 +79,7 @@ class FunctionSymbol (Symbol):
         self.return_value.do_format()
         self.parameters = []
         for param in self._symbol.get_arguments():
-            param_comment = self._comment.params.get (param.displayname)
+            param_comment = self.comment.params.get (param.displayname)
             parameter = self._symbol_factory.make_parameter_symbol \
                     (param.type, param_comment, param.displayname)
             parameter.do_format()
@@ -112,16 +96,16 @@ class CallbackSymbol (FunctionSymbol):
             if not self.return_value:
                 self.return_value = \
                 self._symbol_factory.make_return_value_symbol (child.type,
-                        self._comment.tags.get("returns"))
+                        self.comment.tags.get("returns"))
                 self.return_value.do_format()
             else:
-                param_comment = self._comment.params.get (child.spelling)
+                param_comment = self.comment.params.get (child.spelling)
                 parameter = self._symbol_factory.make_parameter_symbol \
                         (child.type, param_comment, child.displayname)
                 parameter.do_format()
                 self.parameters.append (parameter)
 
-        self._comment.tags.pop('returns', None)
+        self.comment.tags.pop('returns', None)
         return Symbol.do_format (self)
 
 
@@ -132,7 +116,7 @@ class EnumSymbol (Symbol):
         underlying = self._symbol.underlying_typedef_type
         decl = underlying.get_declaration()
         for member in decl.get_children():
-            member_comment = self._comment.params.get (member.spelling)
+            member_comment = self.comment.params.get (member.spelling)
             member_value = member.enum_value
             member = self._symbol_factory.make_simple_symbol (member,
                     member_comment)
@@ -160,7 +144,7 @@ class StructSymbol (Symbol):
         self.raw_text, public_fields = self.__parse_public_fields (decl)
         self.members = []
         for field in public_fields:
-            member_comment = self._comment.params.get (field.spelling)
+            member_comment = self.comment.params.get (field.spelling)
             
             member = self._symbol_factory.make_field_symbol (
                     field.type, member_comment, field.spelling)
@@ -272,15 +256,15 @@ class FunctionMacroSymbol (MacroSymbol):
         self.parameters = []
 
     def do_format (self):
-        return_comment = self._comment.tags.get ('returns')
+        return_comment = self.comment.tags.get ('returns')
         self.return_value = None
         if return_comment:
-            self._comment.tags.pop ('returns')
+            self.comment.tags.pop ('returns')
             self.return_value = \
                 self._symbol_factory.make_untyped_return_value_symbol (return_comment)
             self.return_value.do_format ()
 
-        for param_name, comment in self._comment.params.iteritems():
+        for param_name, comment in self.comment.params.iteritems():
             parameter = self._symbol_factory.make_custom_parameter_symbol(comment, [], param_name)
             parameter.do_format ()
             self.parameters.append (parameter)

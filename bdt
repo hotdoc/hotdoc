@@ -18,10 +18,19 @@
 # 02110-1301, USA.
 #
 
+import os
+
 from better_doc_tool.core.doc_tool import doc_tool, ConfigError
 from better_doc_tool.extensions import *
 
 if __name__=="__main__":
+    extension_dirs = os.getenv ("HOTDOC_EXTENSION_PATH")
+    if extension_dirs:
+        for dir_ in extension_dirs.split(':'):
+            for f in os.listdir (dir_):
+                if f.endswith (".py"):
+                    __import__ ("%s.%s" % (dir_, f[:-3]))
+
     try:
         doc_tool.parse_and_format()
     except ConfigError as e:

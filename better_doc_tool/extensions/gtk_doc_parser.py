@@ -119,7 +119,7 @@ def format_type_name (match, props):
     if link:
         return "[%s](%s)" % (type_name, link.get_link())
     else:
-        return type_name
+        return match
 
 def format_enum_value (match, props):
     member_name = props['member_name']
@@ -127,7 +127,7 @@ def format_enum_value (match, props):
     if link:
         return "[%s](%s)" % (member_name, link.get_link ())
     else:
-        return member_name
+        return match
 
 def format_parameter (match, props):
     param_name = props['param_name']
@@ -139,7 +139,7 @@ def format_function_call (match, props):
     if link:
         return "[%s()](%s)" % (func_name, link.get_link ())
     else:
-        return func_name
+        return match
 
 def format_code_start (match, props):
     return "\n```\n"

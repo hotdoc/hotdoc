@@ -62,7 +62,7 @@ class ClangScanner(Loggable):
                 with open (filename, 'r') as f:
                     cs = get_comments (filename)
                     for c in cs:
-                        block = self.__config.raw_comment_parser.parse_comment (c[0], c[1])
+                        block = self.__config.raw_comment_parser.parse_comment(c[0], c[1], c[2])
                         self.comments[block.name] = block
 
                     #for block in parse_comment_blocks (f.read(), filename):
@@ -152,7 +152,7 @@ class ClangScanner(Loggable):
 
                     self.comments[node.spelling] = \
                         self.__config.raw_comment_parser.parse_comment \
-                                (node.raw_comment, str(node.location.file))
+                                (node.raw_comment, str(node.location.file), 0)
 
                 self.symbols[node.spelling] = node
                 self.debug ("Found internal symbol [%s] of kind %s at location %s" %

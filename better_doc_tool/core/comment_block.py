@@ -14,11 +14,12 @@ class CommentBlock(object):
         self.description = description.strip();
 
 class GtkDocCommentBlock(CommentBlock):
-    def __init__(self, name, filename, annotations, params, description, tags):
+    def __init__(self, name, filename, lineno, annotations, params, description, tags):
         CommentBlock.__init__(self)
         self.short_description = None
         self.title = None
         self.filename = filename
+        self.lineno = lineno
 
         for param in params:
             if param.name.lower() == 'short_description':

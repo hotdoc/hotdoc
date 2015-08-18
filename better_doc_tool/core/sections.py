@@ -37,8 +37,8 @@ class SectionSymbol (Symbol):
         self.typed_symbols[AliasSymbol] = TypedSymbolsList ("Aliases")
         self.parsed_contents = None
         self.formatted_contents = None
-        if self._comment is not None and self._comment.title is not None:
-            self.link.title = self._comment.title
+        if self.comment is not None and self.comment.title is not None:
+            self.link.title = self.comment.title
 
     def _register_typed_symbol (self, symbol_type, symbol_type_name):
         self.typed_symbols[symbol_type] = TypedSymbolsList (symbol_type_name)
@@ -57,18 +57,18 @@ class SectionSymbol (Symbol):
         self.symbols.append (symbol)
 
     def get_short_description (self):
-        if not self._comment:
+        if not self.comment:
             return ""
-        if not self._comment.short_description:
+        if not self.comment.short_description:
             return ""
-        return self._comment.short_description
+        return self.comment.short_description
 
     def get_title (self):
-        if not self._comment:
+        if not self.comment:
             return ""
-        if not self._comment.title:
+        if not self.comment.title:
             return ""
-        return self._comment.title
+        return self.comment.title
 
 
 class SectionFilter (GnomeMarkdownFilter, Loggable):
@@ -202,7 +202,7 @@ class SectionFilter (GnomeMarkdownFilter, Loggable):
 
                 filename = str (sym._symbol.location.file)
                 doc_tool.dependency_tree.add_dependency (s.source_file, filename)
-                comment_filename = sym._comment.filename
+                comment_filename = sym.comment.filename
                 doc_tool.dependency_tree.add_dependency (s.source_file, comment_filename)
 
             self.__update_dependencies (s.sections)

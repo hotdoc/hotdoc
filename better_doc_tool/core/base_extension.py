@@ -25,3 +25,6 @@ class BaseExtension(Loggable):
 
     def setup (self):
         pass
+
+    def get_section_type (self, symbol):
+        return (None, None)

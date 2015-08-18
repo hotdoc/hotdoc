@@ -64,7 +64,7 @@ class Formatter(object):
 
     def format_symbol (self, symbol):
         self.formatting_symbol_signals[type(symbol)](symbol)
-        symbol.formatted_doc = self.__format_doc (symbol._comment)
+        symbol.formatted_doc = self.__format_doc (symbol.comment)
         out, standalone = self._format_symbol (symbol)
         symbol.detailed_description = out
         if standalone:

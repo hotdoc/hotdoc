@@ -147,7 +147,7 @@ class GISignalSymbol (GIFlaggedSymbol, FunctionSymbol):
 
         i = 0
         dumped_params = list (self._symbol.findall ('param'))
-        for param_name, param_comment in self._comment.params.iteritems():
+        for param_name, param_comment in self.comment.params.iteritems():
             if i == 0:
                 type_ = self.make_qualified_symbol (parent_name)
             else:
@@ -436,15 +436,15 @@ class GIExtension(BaseExtension):
         return factory (annotation_name, annotation_value)
 
     def get_annotations (self, parameter):
-        if not parameter._comment:
+        if not parameter.comment:
             return []
 
-        if not parameter._comment.annotations:
+        if not parameter.comment.annotations:
             return []
 
         annotations = []
 
-        for ann, val in parameter._comment.annotations.iteritems():
+        for ann, val in parameter.comment.annotations.iteritems():
             if ann == "skip":
                 continue
             annotation = self.__create_annotation (ann, val.argument)
