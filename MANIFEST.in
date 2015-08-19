@@ -3,8 +3,11 @@ include hotdoc/lexer_parsers/doxygen_parser/doxparser.h
 include hotdoc/lexer_parsers/doxygen_parser/doxenizer.l
 include hotdoc/lexer_parsers/scanner.l
 include hotdoc/lexer_parsers/scanner.h
+include hotdoc/lexer_parsers/c_comment_scanner/scanner.l
+include hotdoc/lexer_parsers/c_comment_scanner/scanner.h
 include hotdoc/core/pandoc_interface/translator.hs
 include hotdoc/core/pandoc_interface/doc_translator.c
-include hotdoc/formatters/html_formatter/templates/*
-include hotdoc/formatters/html_formatter/style.css
+include hotdoc/formatters/html/templates/*
+include hotdoc/formatters/html/style.css
+include hotdoc/extensions/templates/*
 include requirements.txt

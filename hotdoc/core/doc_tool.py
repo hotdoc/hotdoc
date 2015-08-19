@@ -1,5 +1,8 @@
 import os, sys, argparse
 
+reload(sys)  
+sys.setdefaultencoding('utf8')
+
 from .dependencies import DependencyTree
 from .naive_index import NaiveIndexFormatter
 from .links import LinkResolver

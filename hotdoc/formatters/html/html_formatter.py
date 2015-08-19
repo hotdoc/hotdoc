@@ -67,6 +67,7 @@ class HtmlFormatter (Formatter):
 
         module_path = os.path.dirname(__file__)
         searchpath.append (os.path.join(module_path, "templates"))
+        print searchpath
         self.engine = Engine(
             loader=FileLoader(searchpath, encoding='UTF-8'),
             extensions=[CoreExtension()]

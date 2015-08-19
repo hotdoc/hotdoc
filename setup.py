@@ -75,8 +75,14 @@ def check_pkgconfig():
 class build_ext(_build_ext):
     def run(self):
         for extension in self.extensions:
+            build_path = None
+            for output in self.get_outputs():
+                name = os.path.splitext(os.path.basename (output))[0]
+                if extension.name.endswith(name):
+                    build_path = os.path.dirname(output)
+
             if hasattr (extension, 'build_custom'):
-                extension.build_custom ()
+                extension.build_custom (build_path)
 
         _build_ext.run(self)
         return True
@@ -96,14 +102,13 @@ class FlexExtension (Extension):
             cmd = ['flex', '-o', built_scanner_path]
             for s in self.__flex_sources:
                 cmd.append (s)
-            print "flex cmd baby", cmd
             try:
                 spawn(cmd, verbose=1)
             except DistutilsExecError:
                 raise DistutilsExecError,\
                         ("Make sure flex is installed on your system")
 
-    def build_custom (self):
+    def build_custom (self, build_path):
         if self.__flex_sources:
             self.__build_flex()
 
@@ -118,9 +123,11 @@ class HaskellExtension (Extension):
         Extension.__init__(self, *args, **kwargs)
         self.__haskell_sources = [src(s) for s in haskell_sources]
 
-    def build_custom (self):
+    def build_custom (self, build_path):
         src_dir = os.path.dirname (self.__haskell_sources[0])
-        bindings_lib = src (os.path.join (src_dir, "libConvert.so"))
+        bindings_lib = src (os.path.join (build_path, "libConvert.so"))
+        # We sneakily put our extra library in the build path,
+        # to be copied along at install-time
         cmd = ['ghc', '-O2', '-dynamic', '-shared', '-fPIC',
                     '-o', bindings_lib, '-lHSrts-ghc%s' % str (ghc_version)]
         for s in self.__haskell_sources:
@@ -169,10 +176,10 @@ pandoc_translator_module = HaskellExtension(
             'hotdoc/core/pandoc_interface/doc_translator.c'])
 
 setup(name='hotdoc',
-      version='0.2.4',
-      description='A documentation tool based on pandoc',
-      keywords='documentation gnome pandoc doxygen',
-      url='https://github.com/MathieuDuponchelle/better_doctool',
+      version='0.3',
+      description='A documentation tool based on pandoc and clang',
+      keywords='documentation gnome pandoc clang doxygen',
+      url='https://github.com/MathieuDuponchelle/hotdoc',
       author='Mathieu Duponchelle',
       author_email='mathieu.duponchelle@opencreed.com',
       license='LGPL',
@@ -181,8 +188,10 @@ setup(name='hotdoc',
                 'hotdoc.core.pandoc_interface',
                 'hotdoc.clang_interface',
                 'hotdoc.formatters',
+                'hotdoc.formatters.html',
                 'hotdoc.lexer_parsers',
                 'hotdoc.lexer_parsers.doxygen_parser',
+                'hotdoc.lexer_parsers.c_comment_scanner',
                 'hotdoc.extensions',
                 'hotdoc.utils'],
       cmdclass = {'build_ext': build_ext},
@@ -193,8 +202,8 @@ setup(name='hotdoc',
        'hotdoc/transition_scripts/sgml_to_sections.py',
        'hotdoc/transition_scripts/translate_sections.sh'],
       package_data = {
-          'hotdoc.core.pandoc_interface': ['libConvert.*'],
-          'hotdoc.formatters': ['templates/*', 'style.css'],
+          'hotdoc.formatters.html': ['templates/*', 'style.css'],
+          'hotdoc.extensions': ['templates/*'],
           },
       install_requires = ['wheezy.template',
                           'pandocfilters',
