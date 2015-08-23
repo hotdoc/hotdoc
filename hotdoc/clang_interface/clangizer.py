@@ -74,7 +74,10 @@ class ClangScanner(Loggable):
                 tu = index.parse(filename, args=args, options=flags)
                 self.tus.append (tu)
                 for diag in tu.diagnostics:
-                    self.error ("Clang issue : %s" % str (diag))
+                    if diag.severity <= 2 and str(diag.location.file) not in self.filenames:
+                        self.warning ("Clang issue : %s" % str (diag))
+                    else:
+                        self.error ("Clang issue : %s" % str (diag))
                 self.__parse_file (filename, tu)
                 for include in tu.get_includes():
                     self.__parse_file (os.path.abspath(str(include.source)), tu)
