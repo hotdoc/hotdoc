@@ -67,7 +67,6 @@ class HtmlFormatter (Formatter):
 
         module_path = os.path.dirname(__file__)
         searchpath.append (os.path.join(module_path, "templates"))
-        print searchpath
         self.engine = Engine(
             loader=FileLoader(searchpath, encoding='UTF-8'),
             extensions=[CoreExtension()]
@@ -79,21 +78,32 @@ class HtmlFormatter (Formatter):
     def _get_pandoc_format (self):
         return "html"
 
-    def _format_linked_symbol (self, symbol):
+    def _format_link (self, link, title):
+        out = ''
         template = self.engine.get_template('link.html')
+        out += '%s' % template.render ({'link': link,
+                                         'link_title': title})
+        return out
+
+    def _format_type_tokens (self, type_tokens):
+        out = ''
+
+        for tok in type_tokens:
+            if isinstance (tok, Link):
+                out += self._format_link (tok.get_link(), tok.title)
+            else:
+                out += tok
+
+        return out
+
+    def _format_linked_symbol (self, symbol):
         out = ""
 
         if isinstance (symbol, QualifiedSymbol):
-            for tok in symbol.type_tokens:
-                if isinstance (tok, Link):
-                    out += '%s ' % template.render ({'link': tok.get_link(),
-                                                     'link_title': tok.title,
-                                            })
-                else:
-                    out += tok
+            out += self._format_type_tokens (symbol.type_tokens)
+
         elif hasattr (symbol, "link"):
-            out += template.render ({'link': symbol.link.get_link(),
-                                     'link_title': symbol.link.title})
+            out += self._format_link (symbol.link.get_link(), symbol.link.title)
 
         if type (symbol) == ParameterSymbol:
             out += symbol.argname
@@ -105,7 +115,7 @@ class HtmlFormatter (Formatter):
                 out = member_name
                 out += "()"
             else:
-                out += member_name
+                out += ' ' + member_name
 
         return out
 
@@ -226,7 +236,7 @@ class HtmlFormatter (Formatter):
 
     def _format_struct (self, struct):
         raw_code = self._format_raw_code (struct.raw_text)
-        members_list = self._format_members_list (struct.members)
+        members_list = self._format_members_list (struct.members, 'Fields')
 
         template = self.engine.get_template ("struct.html")
         out = template.render ({"struct": struct,
@@ -242,13 +252,16 @@ class HtmlFormatter (Formatter):
                                     'detail': member.formatted_doc,
                                     'value': str (member.enum_value)})
 
-        members_list = self._format_members_list (enum.members)
+        members_list = self._format_members_list (enum.members, 'Members')
         template = self.engine.get_template ("enum.html")
         out = template.render ({"enum": enum,
                                 "members_list": members_list})
         return (out, False)
 
     def _format_class(self, klass):
+        if klass.ast:
+            klass.formatted_contents = doc_tool.page_parser.render_ast (klass.ast)
+
         toc_sections = []
         symbols_details = []
 
@@ -281,12 +294,11 @@ class HtmlFormatter (Formatter):
                                           'klass': klass})
 
         template = self.engine.get_template('class.html')
-        if klass.parsed_contents:
-            klass.formatted_contents = translator.json_to_html (json.dumps(klass.parsed_contents)).decode('utf-8')
 
         out = template.render ({'klass': klass,
                                 'hierarchy': hierarchy,
                                 'toc_sections': toc_sections,
+                                'stylesheet': self.__stylesheet,
                                 'symbols_details': symbols_details})
 
         return (out, True)
@@ -336,9 +348,10 @@ class HtmlFormatter (Formatter):
 
         return (out, False)
 
-    def _format_members_list(self, members):
+    def _format_members_list(self, members, member_designation):
         template = self.engine.get_template('member_list.html')
-        return template.render ({'members': members})
+        return template.render ({'members': members,
+            'member_designation': member_designation})
 
     def _format_function(self, function):
         return self._format_callable (function, "method", function.link.title)
@@ -383,6 +396,13 @@ class HtmlFormatter (Formatter):
             return format_function (symbol)
         return (None, False)
 
+    def _get_style_sheet (self):
+        return "style.css"
+
     def _get_extra_files (self):
         dir_ = os.path.dirname(__file__)
-        return [os.path.join (dir_, "style.css")]
+        return [os.path.join (dir_, self.__stylesheet)]
+
+    def format (self):
+        self.__stylesheet = self._get_style_sheet()
+        Formatter.format(self)

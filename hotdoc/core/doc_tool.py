@@ -29,15 +29,26 @@ class DocTool(Loggable):
         self.dependency_tree = None
         self.raw_comment_parser = None
         self.doc_parser = None
+        self.symbol_factory = None
+        self.page_parser = None
         self.extensions = []
+        self.sections = []
         self.comments = {}
         self.full_scan = False
         self.full_scan_patterns = ['*.h']
         self.link_resolver = LinkResolver()
 
     def parse_and_format (self):
+        from .symbols import SymbolFactory
+        self.symbol_factory = SymbolFactory()
+
         self.__setup()
         self.parse_args ()
+
+        # We're done setting up, extensions can setup too
+        for extension in self.extensions:
+            extension.setup ()
+
         self.formatter.format()
         self.finalize()
 
@@ -103,6 +114,22 @@ class DocTool(Loggable):
                 args = self.parser.parse_known_args (args[1])
                 self.__parse_extensions (args)
 
+    def __create_symbols (self):
+        from .sections import SectionFilter
+        from .base_page_parser import PageParser
+
+        self.page_parser = PageParser ()
+
+        self.page_parser.create_symbols ()
+        self.sections = self.page_parser.sections
+
+        """
+        page_parser = SectionFilter (os.path.dirname (self.index_file), self.formatter,
+                self.symbol_factory)
+        page_parser.create_symbols (os.path.basename (self.index_file))
+        self.sections = page_parser.sections
+        """
+
     def parse_args (self):
         args = self.parser.parse_known_args()
 
@@ -129,6 +156,8 @@ class DocTool(Loggable):
             nif = NaiveIndexFormatter (self.source_scanner.symbols)
             args[0].index = "tmp_markdown_files/tmp_index.markdown"
         self.index_file = args[0].index
+
+        self.__create_symbols ()
 
     def finalize (self):
         self.dependency_tree.dump()

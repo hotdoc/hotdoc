@@ -99,7 +99,7 @@ def format_property (match, props):
     linkname = "%s:::%s---property" % (type_name, property_name)
     link = doc_tool.link_resolver.get_named_link (linkname)
     if link:
-        return u"[“%s”](%s)" % (property_name, link.get_link())
+        return u"[“%s”](%s)" % (link.title, link.get_link())
     else:
         return u"the %s's “%s” property" % (type_name, property_name)
 
@@ -109,7 +109,7 @@ def format_signal (match, props):
     linkname = "%s:::%s---signal" % (type_name, signal_name)
     link = doc_tool.link_resolver.get_named_link (linkname)
     if link:
-        return u"[“%s”](%s)" % (signal_name, link.get_link())
+        return u"[“%s”](%s)" % (link.title, link.get_link())
     else:
         return u"the %s's “%s” signal" % (type_name, signal_name)
 
@@ -117,7 +117,7 @@ def format_type_name (match, props):
     type_name = props['type_name']
     link = doc_tool.link_resolver.get_named_link (type_name)
     if link:
-        return "[%s](%s)" % (type_name, link.get_link())
+        return "[%s](%s)" % (link.title, link.get_link())
     else:
         return match
 
@@ -125,7 +125,7 @@ def format_enum_value (match, props):
     member_name = props['member_name']
     link = doc_tool.link_resolver.get_named_link (member_name)
     if link:
-        return "[%s](%s)" % (member_name, link.get_link ())
+        return "[%s](%s)" % (link.title, link.get_link ())
     else:
         return match
 
@@ -137,7 +137,7 @@ def format_function_call (match, props):
     func_name = props['symbol_name']
     link = doc_tool.link_resolver.get_named_link (func_name)
     if link:
-        return "[%s()](%s)" % (func_name, link.get_link ())
+        return "[%s()](%s)" % (link.title, link.get_link ())
     else:
         return match
 

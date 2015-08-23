@@ -35,7 +35,7 @@ class SectionSymbol (Symbol):
         self.typed_symbols[StructSymbol] = TypedSymbolsList ("Data Structures")
         self.typed_symbols[EnumSymbol] = TypedSymbolsList ("Enumerations")
         self.typed_symbols[AliasSymbol] = TypedSymbolsList ("Aliases")
-        self.parsed_contents = None
+        self.ast = None
         self.formatted_contents = None
         if self.comment is not None and self.comment.title is not None:
             self.link.title = self.comment.title
@@ -44,6 +44,10 @@ class SectionSymbol (Symbol):
         self.typed_symbols[symbol_type] = TypedSymbolsList (symbol_type_name)
 
     def do_format (self):
+        # Reset at each run
+        for symbol_type, tsl in self.typed_symbols.iteritems():
+            tsl.symbols = []
+
         for symbol in self.symbols:
             if symbol.do_format ():
                 typed_symbols_list = self.typed_symbols [type (symbol)]

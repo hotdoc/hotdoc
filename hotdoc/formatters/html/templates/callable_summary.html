@@ -1,8 +1,10 @@
 @require(return_value, function_name, is_callable, is_pointer, flags)
 <tr>
+    @if return_value:
     <td class="function_type">
 	    <span>@return_value</span>
     </td>
+    @end
     <td class="function_name", style="text-align: left;">
 	    <span>\
 @if is_pointer:

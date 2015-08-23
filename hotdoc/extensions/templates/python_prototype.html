@@ -1,0 +1,34 @@
+@require(return_value, function_name, parameters, c_name, throws)
+<pre class="programlisting">
+@if parameters:
+@@accepts (\
+\
+@for i, parameter in enumerate (parameters):
+\
+@if i != 0:
+, \
+@end
+@parameter.formatted_link\
+@end
+)
+\
+@if return_value:
+@@returns(@return_value.formatted_link)
+@end
+\
+@if throws:
+@@raises(<a href="https://developer.gnome.org/glib/stable/glib-Error-Reporting.html">GLib.GError</a>)
+@end
+\
+def @function_name\
+ (\
+@if parameters:
+\
+@for i, parameter in enumerate (parameters):
+@if i != 0:
+, \
+@end
+@parameter.argname\
+@end
+):
+    #Python wrapper for @c_name</pre>

@@ -3,7 +3,8 @@ import os
 from lxml import etree
 import clang.cindex
 
-from ..core.symbols import Symbol, FunctionSymbol, ClassSymbol, ParameterSymbol, ReturnValueSymbol
+from ..core.symbols import (Symbol, FunctionSymbol, ClassSymbol,
+        ParameterSymbol, ReturnValueSymbol, FunctionMacroSymbol, ConstantSymbol)
 from ..core.comment_block import GtkDocParameter
 from ..core.doc_tool import doc_tool
 from ..core.base_extension import BaseExtension
@@ -106,6 +107,7 @@ class GIPropertySymbol (GIFlaggedSymbol):
         return res
 
     def do_format (self):
+        self.flags = []
         flags = int(self._symbol.attrib["flags"])
         if flags & G_PARAM_READABLE:
             self.flags.append (ReadableFlag())
@@ -133,6 +135,7 @@ class GISignalSymbol (GIFlaggedSymbol, FunctionSymbol):
         self.return_value.do_format()
         self.parameters = []
 
+        self.flags = []
         when = self._symbol.attrib.get('when')
         if when == "first":
             self.flags.append (RunFirstFlag())
@@ -194,6 +197,8 @@ class GIClassSymbol (GISymbol, ClassSymbol):
                 comment, GISignalSymbol))
 
     def do_format (self):
+        self.hierarchy = []
+        self.children = []
         self.__create_hierarchy(self._symbol)
         self.hierarchy.reverse()
         return ClassSymbol.do_format(self)
@@ -276,13 +281,30 @@ class GIExtension(BaseExtension):
     def __init__(self, args):
         BaseExtension.__init__(self, args)
         xml_dump = args.gi_dump
+        gir_file = args.gir_file
+        self.languages = [l.lower() for l in args.languages]
+
+        # Make sure C always gets formatted first
+        if 'c' in self.languages:
+            self.languages.remove ('c')
+            self.languages.insert (0, 'c')
+
         self._gi_classes = {}
         root = etree.parse (xml_dump).getroot()
+
+        self.python_names = {}
+
+        self.python_links = {}
+
+        self.unintrospectable_symbols = {}
 
         self.children_map = {}
         for klass in root.findall("class"):
             self._gi_classes[klass.attrib["name"]] = klass
             self.children_map[klass.attrib["name"]] = []
+
+        if gir_file:
+            self.__quickscan_gir_file (gir_file)
 
         self.__annotation_factories = \
                 {"allow-none": self.__make_allow_none_annotation,
@@ -309,6 +331,87 @@ class GIExtension(BaseExtension):
     def add_arguments (parser):
         parser.add_argument ("--gi-dump", action="store",
                 dest="gi_dump")
+        parser.add_argument ("--gir-file", action="store",
+                dest="gir_file")
+        parser.add_argument ("--languages", action="store",
+                nargs='*', default=['c'])
+
+    def __quickscan_gir_file (self, gir_file):
+        tree = etree.parse (gir_file)
+        root = tree.getroot()
+        nsmap = {k:v for k,v in root.nsmap.iteritems() if k}
+        for child in root:
+            if child.tag == "{http://www.gtk.org/introspection/core/1.0}namespace":
+                self.__quickscan_namespace(nsmap, child)
+            elif child.tag == "{http://www.gtk.org/introspection/core/1.0}include":
+                inc_name = child.attrib["name"]
+                inc_version = child.attrib["version"]
+                gir_file = os.path.join (doc_tool.datadir, 'gir-1.0', '%s-%s.gir' % (inc_name,
+                    inc_version))
+                self.__quickscan_gir_file (gir_file)
+
+    def __quickscan_namespace (self, nsmap, ns):
+        ns_name = ns.attrib["name"]
+        for child in ns:
+            if child.tag in ["{http://www.gtk.org/introspection/core/1.0}class",
+                    "{http://www.gtk.org/introspection/core/1.0}record"]:
+                self.__quickscan_gir_class(nsmap, ns_name, child)
+            elif child.tag == "{http://www.gtk.org/introspection/core/1.0}function":
+                self.__quickscan_gir_method (nsmap, ns_name, child)
+            elif child.tag == "{http://www.gtk.org/introspection/core/1.0}callback":
+                self.__quickscan_gir_callback (nsmap, ns_name, child)
+            elif child.tag == "{http://www.gtk.org/introspection/core/1.0}enumeration":
+                self.__quickscan_gir_enum (nsmap, ns_name, child)
+            elif child.tag == "{http://www.gtk.org/introspection/core/1.0}bitfield":
+                self.__quickscan_gir_enum (nsmap, ns_name, child)
+            elif child.tag == "{http://www.gtk.org/introspection/core/1.0}constant":
+                self.__quickscan_gir_constant (nsmap, ns_name, child)
+
+    def __quickscan_gir_class (self, nsmap, ns_name, klass):
+        name = '%s.%s' % (ns_name, klass.attrib["name"])
+        c_name = klass.attrib.get('{%s}type' % nsmap['c'])
+        if not c_name:
+            return
+
+        self.python_names[c_name] = name
+        for child in klass:
+            if child.tag == "{http://www.gtk.org/introspection/core/1.0}method":
+                self.__quickscan_gir_method (nsmap, name, child)
+            elif child.tag == "{http://www.gtk.org/introspection/core/1.0}function":
+                self.__quickscan_gir_method (nsmap, name, child)
+            elif child.tag == "{http://www.gtk.org/introspection/core/1.0}constructor":
+                self.__quickscan_gir_method (nsmap, name, child)
+
+    def __quickscan_gir_constant (self, nsmap, class_name, constant):
+        name = '%s.%s' % (class_name, constant.attrib['name'])
+        c_name = constant.attrib['{%s}type' % nsmap['c']]
+        self.python_names[c_name] = name
+
+    def __quickscan_gir_enum (self, nsmap, class_name, enum):
+        name = '%s.%s' % (class_name, enum.attrib['name'])
+        c_name = enum.attrib['{%s}type' % nsmap['c']]
+        self.python_names[c_name] = name
+        for c in enum:
+            if c.tag == "{http://www.gtk.org/introspection/core/1.0}member":
+                m_name = '%s.%s' % (name, c.attrib["name"].upper())
+                c_name = c.attrib['{%s}identifier' % nsmap['c']]
+                self.python_names[c_name] = m_name
+
+    def __quickscan_gir_method (self, nsmap, class_name, method):
+        name = '%s.%s' % (class_name, method.attrib['name'])
+        c_name = method.attrib['{%s}identifier' % nsmap['c']]
+        introspectable = method.attrib.get('introspectable')
+        if introspectable == '0':
+            self.unintrospectable_symbols[c_name] = True
+        self.python_names[c_name] = name
+
+    def __quickscan_gir_callback (self, nsmap, class_name, method):
+        name = '%s.%s' % (class_name, method.attrib['name'])
+        c_name = method.attrib['{%s}type' % nsmap['c']]
+        introspectable = method.attrib.get('introspectable')
+        if introspectable == '0':
+            self.unintrospectable_symbols[c_name] = True
+        self.python_names[c_name] = name
 
     def __gather_gtk_doc_links (self):
         sgml_dir = os.path.join(doc_tool.datadir, "gtk-doc", "html")
@@ -454,3 +557,30 @@ class GIExtension(BaseExtension):
             annotations.append (annotation)
 
         return annotations
+
+    def __formatting_symbol(self, symbol):
+        c_name = symbol._make_name ()
+        # We discard symbols at formatting time because they might be exposed
+        # in other languages
+        if self.language != 'c':
+            if c_name in self.unintrospectable_symbols:
+                return False
+            if type (symbol) in [FunctionMacroSymbol, ConstantSymbol]:
+                return False
+
+        return True
+
+    def setup_language (self, language):
+        print "setting up language"
+        self.language = language
+        if language == 'c':
+            return
+
+        if language == 'python':
+            for c_name, python_name in self.python_names.iteritems():
+                l = doc_tool.link_resolver.get_named_link (c_name)
+                if l:
+                    l.title = python_name
+
+    def setup (self):
+        doc_tool.formatter.formatting_symbol_signals[Symbol].connect (self.__formatting_symbol)

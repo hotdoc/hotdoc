@@ -9,14 +9,16 @@ class Signal(object):
         self._methods = WeakKeyDictionary()
 
     def __call__(self, *args, **kargs):
+        res = []
         # Call handler functions
         for func in self._functions:
-            func(*args, **kargs)
+            res.append (func(*args, **kargs))
 
         # Call handler methods
         for obj, funcs in self._methods.items():
             for func in funcs:
-                func(obj, *args, **kargs)
+                res.append (func(obj, *args, **kargs))
+        return res
 
     def connect(self, slot):
         if inspect.ismethod(slot):

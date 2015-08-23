@@ -3,16 +3,30 @@ import cPickle as pickle
 from datetime import datetime
 
 class Link (object):
+    def __init__(self):
+        self._title = ''
+
+    @property
+    def title (self):
+        return self._title
+
+    @title.setter
+    def title (self, value):
+        self._title = value
+
     def get_link (self):
         raise NotImplementedError
 
 class ExternalLink (Link):
     def __init__ (self, symbol, local_prefix, remote_prefix, filename, title):
+        Link.__init__(self)
+
         self.symbol = symbol
         self.local_prefix = local_prefix
         self.remote_prefix = remote_prefix
         self.filename = filename
-        self.title = title
+        self._title = title
+        self.id_ = title
 
     def get_link (self):
         return "%s/%s" % (self.remote_prefix, self.filename)
@@ -20,9 +34,11 @@ class ExternalLink (Link):
 
 class LocalLink (Link):
     def __init__(self, id_, pagename, title):
+        Link.__init__(self)
+
         self.id_ = id_
         self.pagename = pagename
-        self.title = title
+        self._title = title
 
     def get_link (self):
         if (self.id_):
@@ -67,4 +83,4 @@ class LinkResolver(object):
             self.__local_links[link.id_] = link
 
     def add_external_link (self, link):
-        self.__external_links[link.title] = link
+        self.__external_links[link.id_] = link

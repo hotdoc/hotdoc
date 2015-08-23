@@ -1,8 +1,10 @@
 @require(property_type, property_link, flags)
 <tr>
+    @if property_type:
     <td class="property_type">
 	    <span>@property_type</span>
     </td>
+    @end
     <td class="property_name">
 	    <span>@property_link</span>
     </td>

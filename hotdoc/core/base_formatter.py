@@ -2,42 +2,39 @@
 
 import os
 import shutil
+import CommonMark
 
 from xml.sax.saxutils import unescape
 
 from .pandoc_interface import translator
-from .sections import SectionFilter
-from .symbols import SymbolFactory
 from .doc_tool import doc_tool, ConfigError
+from .symbols import Symbol
 from ..utils.simple_signals import Signal
 from ..utils.loggable import progress_bar
 
 class Formatter(object):
     def __init__ (self):
-        self.__symbol_factory = SymbolFactory (self)
-
         # Used to warn subclasses a method isn't implemented
         self.__not_implemented_methods = {}
 
         self.formatting_symbol_signals = {}
-        for klass in self.__symbol_factory.symbol_subclasses:
+        for klass in doc_tool.symbol_factory.symbol_subclasses:
             self.formatting_symbol_signals[klass] = Signal()
+        self._output = doc_tool.output
+
+        self.__cmp = CommonMark.DocParser()
+        self.__cmr = CommonMark.HTMLRenderer()
 
     def format (self):
-        for extension in doc_tool.extensions:
-            extension.setup ()
-
         if doc_tool.output_format == "html":
             self.__translate_func = translator.markdown_to_html
         else:
             self.error ("This should not happen")
             return
 
-        sections = self.__create_symbols ()
-
         self.__total_sections = 0
         self.__total_rendered_sections = 0
-        for section in sections:
+        for section in doc_tool.sections:
             self.__total_sections += self.__get_subsections_count (section)
 
         self.__progress_bar = progress_bar.get_progress_bar ()
@@ -46,7 +43,7 @@ class Formatter(object):
             self.__progress_bar.clear()
             self.__update_progress ()
         
-        for section in sections:
+        for section in doc_tool.sections:
             self.__format_section (section)
 
         self.__copy_extra_files ()
@@ -63,17 +60,23 @@ class Formatter(object):
                 (self.__total_rendered_sections, self.__total_sections))
 
     def format_symbol (self, symbol):
-        self.formatting_symbol_signals[type(symbol)](symbol)
+        res = self.formatting_symbol_signals[type(symbol)](symbol)
+
+        if False in res:
+            return False
+
+        res = self.formatting_symbol_signals[Symbol](symbol)
+
+        if False in res:
+            return False
+
         symbol.formatted_doc = self.__format_doc (symbol.comment)
         out, standalone = self._format_symbol (symbol)
         symbol.detailed_description = out
         if standalone:
             self.__write_symbol (symbol)
 
-    def __create_symbols(self):
-        sf = SectionFilter (os.path.dirname(doc_tool.index_file), self, self.__symbol_factory)
-        sf.create_symbols (os.path.basename(doc_tool.index_file))
-        return sf.sections
+        return True
 
     def __get_subsections_count (self, section):
         count = 1
@@ -93,14 +96,13 @@ class Formatter(object):
     def __copy_extra_files (self):
         for f in self._get_extra_files():
             basename = os.path.basename (f)
-            shutil.copy (f, os.path.join (doc_tool.output, basename))
+            shutil.copy (f, os.path.join (self._output, basename))
 
     def __write_symbol (self, symbol):
-        path = os.path.join (doc_tool.output, symbol.link.pagename)
+        path = os.path.join (self._output, symbol.link.pagename)
         with open (path, 'w') as f:
             out = symbol.detailed_description
             f.write (out.encode('utf-8'))
-
 
     def __format_doc_string (self, docstring):
         if not docstring:
@@ -109,7 +111,9 @@ class Formatter(object):
         out = ""
         docstring = unescape (docstring)
         docstring = doc_tool.doc_parser.translate (docstring)
-        rendered_text = self.__translate_func (docstring.encode('utf-8')).decode ('utf-8')
+        #rendered_text = self.__translate_func (docstring.encode('utf-8')).decode ('utf-8')
+        ast = self.__cmp.parse (docstring.encode('utf-8'))
+        rendered_text = self.__cmr.render(ast)
         return rendered_text
 
     def __format_doc (self, comment):
