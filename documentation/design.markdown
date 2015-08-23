@@ -25,14 +25,9 @@ Two steps:
 
 *   Modeling of the exposed interface:
     For C and C++ files, we parse all the provided headers for
-    function, struct, enums etc declarations. We store the
-    AST nodes in the symbol database, possibly updating existing
-    ones.
+    function, struct, enums etc declarations.
 
-*   Extract comments everywhere (as fast as possible). We store
-    them in the comments database.
-
-We also clean the databases if a file has been removed.
+*   Extract comments everywhere (as fast as possible).
 
 > This is a mandatory stage
 
@@ -46,15 +41,11 @@ the pages concerned. (If a source file changed, we will only rebuild the
 page(s) that included its symbols, and if a standalone file changed, we
 will of course only rebuild this one)
 
-Documentation is parsed to pandoc's native format and three filters
+Documentation is parsed to pandoc's native format and two filters
 are applied (in one pass):
 
 *   Link filter: If the link points to a local path, the file pointed
     to is recursively scanned.
-
-*   Include filter (only in markdown): If a string contains a {{include\_this\_file}}
-    paragraph, the contents of the file are scanned and included in place.
-Hopefully this can be deprecated once inclusion is standardized.
 
 *   BulletPoint filter: If and only if the bullet point contains only a link,
     we check if the contents of its title match a symbol that we know about.
@@ -63,8 +54,7 @@ If this is the case, the bullet point is ignored and the symbol is
 considered as belonging to the current section.
 
 The rest is left unchanged, we don't store anything for that phase, but
-we update the dependency DAG with symbol -> page dependencies, and
-page -> page dependencies in the include case.
+we update the dependency DAG with symbol -> page dependencies.
 
 We explicitly don't track dead links, it is up to the user to figure them out.
 
@@ -78,14 +68,12 @@ and in which pages symbols will be documented.
 
 Two things happen then:
 
-*   We query the symbol database for the AST nodes associated with
-    the symbol identifiers, and prepare a high-level representation for them
+*   We prepare a high-level representation for the
+    AST nodes associated with the symbol identifiers
 (a FUNCTION\_DECL node is translated to a "FunctionSymbol" for example)
 
-*   We query the comments database for the comment blocks associated
-    with the symbol identifiers, parse them first with the gtk-doc comment
-    block parser, then parse the resulting documentation chunks to
-    pandoc's native format.
+*   We match comments with their high-level symbols, splitting them
+    in parameter, block and return value descriptions.
 
     For example, this comment block:
 
@@ -106,21 +94,8 @@ Two things happen then:
     will be split in three separate chunks, one for the return value,
     one for the parameter, and one for the function description.
 
-    Each of these chunks will then be parsed to pandoc's native format,
-    with two filters applied:
-
-    * An include filter, same as the separate documentation one.
-
-    * A link filter, which will parse the title of the link and
-      insert the correct link if the title matches a documented symbol
-      and the (link) part of the markdown link was empty or contained
-      one of the `[function | symbol | signal | ...]` specifiers.
-
-    We possibly add the included files to the comment's dependencies
-    field in the comments' database.
-
-We then save our updated dependency DAG, and dot it for possible
-examination.
+    Each of these chunks are then possibly preprocessed to translate
+    syntax to markdown and apply links.
 
 > This is a mandatory stage
 
@@ -128,19 +103,5 @@ Final rendering.
 ----------------
 
 We can now use pandoc to render to the final targeted format.
-
-At this stage, what we have is a list of files to be created,
-and a certain amount of typed documentation in pandoc's format
-associated to them (for example the index page only contains
-its original markdown translated to pandoc with the links
-updated, but a "leaf" page for a class contains a list of
-function symbols, which in turn contain a list of parameter
-symbols etc ..
-
-These are the objects that get passed to the formatter
-subclass, which can choose to render them in any way it sees
-fit, using pandoc, possible filters, pandoc's templates or
-its own templating mechanism.
-
 
 > This is an optional stage
