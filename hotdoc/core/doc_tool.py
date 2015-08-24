@@ -45,10 +45,6 @@ class DocTool(Loggable):
         self.__setup()
         self.parse_args ()
 
-        # We're done setting up, extensions can setup too
-        for extension in self.extensions:
-            extension.setup ()
-
         self.formatter.format()
         self.finalize()
 
@@ -156,6 +152,10 @@ class DocTool(Loggable):
             nif = NaiveIndexFormatter (self.source_scanner.symbols)
             args[0].index = "tmp_markdown_files/tmp_index.markdown"
         self.index_file = args[0].index
+
+        # We're done setting up, extensions can setup too
+        for extension in self.extensions:
+            extension.setup ()
 
         self.__create_symbols ()
 

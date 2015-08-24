@@ -1,10 +1,12 @@
 @require(name, detail)
 <tr>
+	@if name:
 	<td class="parameter_name">
 		<p>
 		@name
 		</p>
 	</td>
+	@end
 	<td class="parameter_description"><p>@detail</p></td>
 @def extension():
 @end

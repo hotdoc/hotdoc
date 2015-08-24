@@ -1,4 +1,4 @@
-@require(return_value, function_name, parameters, c_name, throws)
+@require(return_value, function_name, parameters, c_name, throws, out_params)
 <pre class="programlisting">
 @if parameters:
 @@accepts (\
@@ -13,7 +13,13 @@
 )
 \
 @if return_value:
-@@returns(@return_value.formatted_link)
+@@returns(@return_value.formatted_link\
+@for p in out_params:
+, \
+@p.formatted_link\
+@end
+\
+)
 @end
 \
 @if throws:

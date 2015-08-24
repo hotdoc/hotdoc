@@ -30,43 +30,60 @@ class GIHtmlFormatter(HtmlFormatter):
         self._summary_formatters[GISignalSymbol] = self._format_gi_signal_summary
         self._ordering.insert (2, GIPropertySymbol)
         self._ordering.insert (3, GISignalSymbol)
+        self.python_fundamentals = self.__create_python_fundamentals()
 
-        self.python_fundamentals = {
-                'gchar*':
+    def __create_python_fundamentals(self):
+        string_link = \
                 PythonLink('https://docs.python.org/2.7/library/functions.html#str',
-                    'str'),
-
-                'char*':
-                PythonLink('https://docs.python.org/2.7/library/functions.html#str',
-                    'str'),
-
-                'gboolean':
+                    'str')
+        boolean_link = \
                 PythonLink('https://docs.python.org/2.7/library/functions.html#bool',
-                    'bool'),
-
-                'TRUE':
+                        'bool')
+        true_link = \
                 PythonLink('https://docs.python.org/2/library/constants.html#True',
-                    'True'),
-
-                'FALSE':
+                    'True')
+        false_link = \
                 PythonLink('https://docs.python.org/2/library/constants.html#False',
-                    'False'),
-
-                'gpointer':
+                    'False')
+        pointer_link = \
                 PythonLink('https://docs.python.org/2.7/library/functions.html#object',
-                    'object'),
+                    'object')
+        integer_link = \
+                PythonLink('https://docs.python.org/2/library/functions.html#int',
+                        'int')
+        float_link = \
+                PythonLink('https://docs.python.org/2/library/functions.html#float',
+                        'float')
 
-                'void*':
-                PythonLink('https://docs.python.org/2.7/library/functions.html#object',
-                    'object'),
+        fundamentals = {
+                'gchar': string_link,
+                'gchar*': string_link,
+                'char*': string_link,
+                'guchar': string_link,
+                'guchar*': string_link,
+                'gchararray': string_link,
+                'guint': integer_link,
+                'glong': integer_link,
+                'gulong': integer_link,
+                'gint64': integer_link,
+                'guint64': integer_link,
+                'gfloat': float_link,
+                'gdouble': float_link,
+                'gboolean': boolean_link,
+                'TRUE': true_link,
+                'FALSE': false_link,
+                'gpointer': pointer_link,
+                'void*': pointer_link
                 }
+        return fundamentals
 
     def _format_parameter_symbol (self, parameter):
         template = self.engine.get_template('gi_parameter_detail.html')
 
-        if self.__gi_extension.language == 'c':
-            annotations = self.__gi_extension.get_annotations (parameter)
-        else:
+        annotations = self.__gi_extension.get_annotations (parameter)
+        if self.__gi_extension.language == 'python':
+            if parameter.out:
+                return (None, False)
             annotations = []
 
         return (template.render ({'name': parameter.argname,
@@ -80,13 +97,20 @@ class GIHtmlFormatter(HtmlFormatter):
 
         template = self.engine.get_template('gi_return_value.html')
 
+        out_parameters = []
+
         if self.__gi_extension.language == "c":
             annotations = self.__gi_extension.get_annotations (return_value)
         else:
+            ptemplate = self.engine.get_template('gi_parameter_detail.html')
             annotations = []
+            for param in return_value.out_parameters:
+                out_parameters.append (ptemplate.render ({'name': None,
+                    'detail': param.formatted_doc, 'annotations': []}))
 
         return (template.render ({'return_value': return_value,
-                                  'annotations': annotations}), False)
+                                  'annotations': annotations,
+                                  'out_parameters': out_parameters}), False)
 
     def _format_callable_summary (self, return_value, function_name,
             is_callable, is_pointer, flags):
@@ -102,32 +126,46 @@ class GIHtmlFormatter(HtmlFormatter):
 
         callable_.throws = False
         if self.__gi_extension.language == "python":
+            callable_.return_value.out_parameters = []
             if callable_.parameters:
                 last_param = callable_.parameters[-1]
                 last_param_name = ''.join (last_param._make_name().split())
                 if last_param_name == "GError**":
                     callable_.parameters.pop()
                     callable_.throws = True
+                for param in callable_.parameters:
+                    annotations = self.__gi_extension.get_annotations (param)
+                    if param.out:
+                        callable_.return_value.out_parameters.append (param)
 
         return HtmlFormatter._format_callable (self, callable_, callable_type, title,
                 is_pointer, flags)
 
     def _format_prototype (self, function, is_pointer, title):
         if self.__gi_extension.language == "python":
-            python_params = function.parameters
+            python_params = []
+            out_params = []
             retval = function.return_value
-            for param in python_params:
+            for param in function.parameters:
                 param.formatted_link = self._format_type_tokens(param.type_tokens)
-            retval.formatted_link = self._format_type_tokens(retval.type_tokens)
+                if param.detailed_description is not None:
+                    python_params.append (param)
+                else:
+                    out_params.append (param)
+
+            if retval:
+                retval.formatted_link = self._format_type_tokens(retval.type_tokens)
+                if retval.link.title == 'void':
+                    retval = None
+
             template = self.engine.get_template('python_prototype.html')
             c_name = function._make_name()
 
-            if retval.link.title == 'void':
-                retval = None
 
             return template.render ({'return_value': retval,
                 'function_name': function.link.title, 'parameters':
-                python_params, 'c_name': c_name, 'throws': function.throws})
+                python_params, 'c_name': c_name, 'throws': function.throws,
+                'out_params': out_params})
 
         return HtmlFormatter._format_prototype (self, function,
             is_pointer, title)

@@ -92,6 +92,8 @@ class HtmlFormatter (Formatter):
             if isinstance (tok, Link):
                 out += self._format_link (tok.get_link(), tok.title)
             else:
+                if out:
+                    out += ' '
                 out += tok
 
         return out
@@ -106,7 +108,7 @@ class HtmlFormatter (Formatter):
             out += self._format_link (symbol.link.get_link(), symbol.link.title)
 
         if type (symbol) == ParameterSymbol:
-            out += symbol.argname
+            out += ' ' + symbol.argname
 
         if type (symbol) == FieldSymbol and symbol.member_name:
             template = self.engine.get_template('inline_code.html')
@@ -285,7 +287,7 @@ class HtmlFormatter (Formatter):
             children = []
             for p in klass.hierarchy:
                 hierarchy.append(self._format_linked_symbol (p))
-            for c in klass.children:
+            for c in klass.children.itervalues():
                 children.append(self._format_linked_symbol (c))
 
             template = self.engine.get_template ("hierarchy.html")
@@ -333,11 +335,18 @@ class HtmlFormatter (Formatter):
 
     def _format_callable(self, callable_, callable_type, title, is_pointer=False, flags=None):
         template = self.engine.get_template('callable.html')
+
+        for p in callable_.parameters:
+            p.do_format()
+
+        parameters = [p.detailed_description for p in callable_.parameters if
+                p.detailed_description is not None]
+
         prototype = self._format_prototype (callable_, is_pointer, title)
-        parameters = [p.detailed_description for p in callable_.parameters]
 
         return_value_detail = None
         if callable_.return_value:
+            callable_.return_value.do_format()
             return_value_detail = callable_.return_value.detailed_description
         out = template.render ({'prototype': prototype,
                                 'callable': callable_,
@@ -363,11 +372,18 @@ class HtmlFormatter (Formatter):
     def _format_function_macro(self, function_macro):
         template = self.engine.get_template('callable.html')
         prototype = self._format_raw_code (function_macro.original_text)
-        parameters = [p.detailed_description for p in function_macro.parameters]
+
+        for p in function_macro.parameters:
+            p.do_format()
+
+        parameters = [p.detailed_description for p in function_macro.parameters
+                if p.detailed_description is not None]
 
         return_value_detail = None
         if function_macro.return_value:
+            function_macro.return_value.do_format()
             return_value_detail = function_macro.return_value.detailed_description
+
         out = template.render ({'prototype': prototype,
                                 'callable': function_macro,
                                 'return_value': return_value_detail,

@@ -66,22 +66,25 @@ class Tag:
 
 
 class FunctionSymbol (Symbol):
+    def __init__(self, *args):
+        Symbol.__init__(self, *args)
+        self.return_value = None
+
     def do_format (self):
         return_comment = self.comment.tags.get('returns')
         if return_comment:
             self.comment.tags.pop('returns', None)
 
-        self.return_value = \
-                self._symbol_factory.make_return_value_symbol(self._symbol.result_type,
-                        return_comment)
+        if not self.return_value:
+            self.return_value = \
+                    self._symbol_factory.make_return_value_symbol(self._symbol.result_type,
+                            return_comment)
 
-        self.return_value.do_format()
         self.parameters = []
         for param in self._symbol.get_arguments():
             param_comment = self.comment.params.get (param.displayname)
             parameter = self._symbol_factory.make_parameter_symbol \
                     (param.type, param_comment, param.displayname)
-            parameter.do_format()
             self.parameters.append (parameter)
 
         return Symbol.do_format (self)
@@ -89,19 +92,16 @@ class FunctionSymbol (Symbol):
 
 class CallbackSymbol (FunctionSymbol):
     def do_format (self):
-        self.return_value = None
         self.parameters = []
         for child in self._symbol.get_children():
             if not self.return_value:
                 self.return_value = \
                 self._symbol_factory.make_return_value_symbol (child.type,
                         self.comment.tags.get("returns"))
-                self.return_value.do_format()
             else:
                 param_comment = self.comment.params.get (child.spelling)
                 parameter = self._symbol_factory.make_parameter_symbol \
                         (child.type, param_comment, child.displayname)
-                parameter.do_format()
                 self.parameters.append (parameter)
 
         self.comment.tags.pop('returns', None)
@@ -252,20 +252,18 @@ class MacroSymbol (Symbol):
 class FunctionMacroSymbol (MacroSymbol):
     def __init__(self, *args):
         MacroSymbol.__init__(self, *args)
+        self.return_value = None
         self.parameters = []
 
     def do_format (self):
         return_comment = self.comment.tags.get ('returns')
-        self.return_value = None
         if return_comment:
             self.comment.tags.pop ('returns')
             self.return_value = \
                 self._symbol_factory.make_untyped_return_value_symbol (return_comment)
-            self.return_value.do_format ()
 
         for param_name, comment in self.comment.params.iteritems():
             parameter = self._symbol_factory.make_custom_parameter_symbol(comment, [], param_name)
-            parameter.do_format ()
             self.parameters.append (parameter)
         return Symbol.do_format(self)
 

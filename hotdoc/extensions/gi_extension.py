@@ -12,12 +12,6 @@ from .gi_raw_parser import GtkDocRawCommentParser
 from .gi_html_formatter import GIHtmlFormatter
 from hotdoc.core.links import Link, ExternalLink
 
-# Copy pasted from giscanner/gdumpparser to remove any dependency on gi
-G_PARAM_READABLE = 1 << 0
-G_PARAM_WRITABLE = 1 << 1
-G_PARAM_CONSTRUCT = 1 << 2
-G_PARAM_CONSTRUCT_ONLY = 1 << 3
-
 class Annotation (object):
     def __init__(self, nick, help_text, value=None):
         self.nick = nick
@@ -88,6 +82,19 @@ class GISymbol(Symbol):
 
         return self._symbol_factory.make_qualified_symbol (type_name, None, tokens)
 
+    def workaround_stupid_gir (self, ns_name, type_name):
+        namespaced = '%s%s' % (self.ns_name, type_name)
+        l = doc_tool.link_resolver.get_named_link (namespaced)
+        if l:
+            type_ = self.make_qualified_symbol (namespaced)
+        else:
+            # More stupidity
+            if type_name == 'utf8':
+                type_name = 'gchararray'
+            type_ = self.make_qualified_symbol (type_name)
+        return type_
+
+
     def do_format (self):
         return Symbol.do_format(self)
 
@@ -98,41 +105,51 @@ class GIFlaggedSymbol(GISymbol):
     def __init__(self, *args):
         self.flags = []
         GISymbol.__init__(self, *args)
+        self.ns_name = self._symbol.getparent().getparent().attrib['name']
 
 class GIPropertySymbol (GIFlaggedSymbol):
     def _make_unique_id(self):
-        parent_name = self._symbol.getparent().attrib['name']
+        parent_name = self._symbol.getparent().attrib['{%s}type-name' %
+                'http://www.gtk.org/introspection/glib/1.0']
         res = "%s:::%s---%s" % (parent_name, self._symbol.attrib["name"],
                 'property')
         return res
 
     def do_format (self):
         self.flags = []
-        flags = int(self._symbol.attrib["flags"])
-        if flags & G_PARAM_READABLE:
-            self.flags.append (ReadableFlag())
-        if flags & G_PARAM_WRITABLE:
+        writable = self._symbol.attrib.get('writable')
+        construct = self._symbol.attrib.get('construct')
+        construct_only = self._symbol.attrib.get('construct-only')
+
+        self.flags.append (ReadableFlag())
+        if writable == '1':
             self.flags.append (WritableFlag())
-        if flags & G_PARAM_CONSTRUCT_ONLY:
+        if construct_only == '1':
             self.flags.append (ConstructOnlyFlag())
-        elif flags & G_PARAM_CONSTRUCT:
+        elif construct == '1':
             self.flags.append (ConstructFlag())
-        type_name = self._symbol.attrib["type"]
-        self.type_ = self.make_qualified_symbol(type_name)
+        type_ = self._symbol.find ('{http://www.gtk.org/introspection/core/1.0}type')
+        type_name = type_.attrib['name']
+
+        self.type_ = self.workaround_stupid_gir (self.ns_name, type_name)
+
         return GIFlaggedSymbol.do_format(self)
 
 
 class GISignalSymbol (GIFlaggedSymbol, FunctionSymbol):
     def _make_unique_id(self):
-        parent_name = self._symbol.getparent().attrib['name']
+        parent_name = self._symbol.getparent().attrib['{%s}type-name' %
+                'http://www.gtk.org/introspection/glib/1.0']
         return "%s:::%s---%s" % (parent_name, self._symbol.attrib["name"],
                 'signal')
 
     def do_format (self):
-        parent_name = self._symbol.getparent().attrib['name']
-        rtype_name = self._symbol.attrib["return"]
-        self.return_value = self.make_qualified_symbol (rtype_name)
-        self.return_value.do_format()
+        parent_name = self._symbol.getparent().attrib['{%s}type-name' %
+                'http://www.gtk.org/introspection/glib/1.0']
+        retval = self._symbol.find('{http://www.gtk.org/introspection/core/1.0}return-value')
+        rtype_ = retval.find('{http://www.gtk.org/introspection/core/1.0}type')
+        rtype_name = rtype_.attrib["name"]
+        self.return_value = self.workaround_stupid_gir (self.ns_name, rtype_name)
         self.parameters = []
 
         self.flags = []
@@ -149,16 +166,22 @@ class GISignalSymbol (GIFlaggedSymbol, FunctionSymbol):
             self.flags.append (NoHooksFlag())
 
         i = 0
-        dumped_params = list (self._symbol.findall ('param'))
+        parameters = self._symbol.find('{http://www.gtk.org/introspection/core/1.0}parameters')
+
+        if parameters is None:
+            parameters = []
+        else:
+            parameters = parameters.findall ('{http://www.gtk.org/introspection/core/1.0}parameter')
+
         for param_name, param_comment in self.comment.params.iteritems():
             if i == 0:
                 type_ = self.make_qualified_symbol (parent_name)
             else:
-                type_ = self.make_qualified_symbol(
-                        dumped_params[i - 1].attrib['type'])
+                ptype_ = parameters[i - 1].find('{http://www.gtk.org/introspection/core/1.0}type')
+                ptype_name = ptype_.attrib['name']
+                type_ = self.workaround_stupid_gir (self.ns_name, ptype_name)
             parameter = self._symbol_factory.make_custom_parameter_symbol\
                     (param_comment, type_.type_tokens, param_name)
-            parameter.do_format()
             self.parameters.append(parameter)
             i += 1
 
@@ -167,7 +190,6 @@ class GISignalSymbol (GIFlaggedSymbol, FunctionSymbol):
                 "user data set when the signal handler was connected.")
         udata_param = self._symbol_factory.make_custom_parameter_symbol\
                 (udata_comment, udata_type.type_tokens, 'user_data')
-        udata_param.do_format()
         self.parameters.append (udata_param)
 
         return GIFlaggedSymbol.do_format(self)
@@ -175,49 +197,33 @@ class GISignalSymbol (GIFlaggedSymbol, FunctionSymbol):
 
 class GIClassSymbol (GISymbol, ClassSymbol):
     def symbol_init (self, extra_args):
-        xml_node = extra_args['xml_node']
-        self.__children_names = extra_args['children']
-        self.xml_node = xml_node
+        gir_class = extra_args['gir_class']
+        self.__gi_name = extra_args['gi-name']
+        self.__gi_extension = extra_args['gi-extension']
+        self.gir_class = gir_class
         self._register_typed_symbol (GIPropertySymbol, "Properties")
         self._register_typed_symbol (GISignalSymbol, "Signals")
 
-        for prop_node in xml_node.findall('property'):
-            parent_name = prop_node.getparent().attrib['name']
-            block_name = '%s:%s' % (parent_name, prop_node.attrib['name'])
-            comment = doc_tool.comments.get(block_name)
-            self.add_symbol (self._symbol_factory.make_custom (prop_node,
-                comment, GIPropertySymbol))
-        for prop_node in xml_node.findall('signal'):
-            parent_name = prop_node.getparent().attrib['name']
-            block_name = '%s::%s' % (parent_name, prop_node.attrib['name'])
-            comment = doc_tool.comments.get(block_name)
-            if not comment: # We do need a comment here
-                continue
-            self.add_symbol (self._symbol_factory.make_custom (prop_node,
-                comment, GISignalSymbol))
+        klass_name = gir_class.attrib['{%s}type-name' %
+                'http://www.gtk.org/introspection/glib/1.0']
+        for child in gir_class:
+            if child.tag == "{http://www.gtk.org/introspection/core/1.0}property":
+                block_name = '%s:%s' % (klass_name, child.attrib['name'])
+                comment = doc_tool.comments.get(block_name)
+                self.add_symbol (self._symbol_factory.make_custom (child,
+                    comment, GIPropertySymbol))
+            elif child.tag == "{http://www.gtk.org/introspection/glib/1.0}signal":
+                block_name = '%s::%s' % (klass_name, child.attrib['name'])
+                comment = doc_tool.comments.get(block_name)
+                if not comment: # We do need a comment here
+                    continue
+                self.add_symbol (self._symbol_factory.make_custom (child,
+                    comment, GISignalSymbol))
 
     def do_format (self):
-        self.hierarchy = []
-        self.children = []
-        self.__create_hierarchy(self._symbol)
-        self.hierarchy.reverse()
+        self.children = self.__gi_extension.gir_children_map[self.__gi_name]
+        self.hierarchy = self.__gi_extension.gir_hierarchies[self.__gi_name]
         return ClassSymbol.do_format(self)
-
-    def __create_hierarchy (self, symbol):
-        for parent in self.xml_node.attrib['parents'].split(','):
-            cursor = \
-                    doc_tool.source_scanner.lookup_ast_node(parent)
-            if not cursor:
-                continue
-            parent_symbol = self._symbol_factory.make_qualified_symbol (cursor.type, None)
-            self.hierarchy.append (parent_symbol)
-        for child in self.__children_names:
-            cursor = doc_tool.source_scanner.lookup_ast_node(child)
-            if not cursor:
-                continue
-            child_symbol = self._symbol_factory.make_qualified_symbol (cursor.type, None)
-            self.children.append (child_symbol)
-
 
 ALLOW_NONE_HELP = \
 "NULL is OK, both for passing and returning"
@@ -280,17 +286,14 @@ class GIExtension(BaseExtension):
 
     def __init__(self, args):
         BaseExtension.__init__(self, args)
-        xml_dump = args.gi_dump
         gir_file = args.gir_file
         self.languages = [l.lower() for l in args.languages]
+        self.__namespace = None
 
         # Make sure C always gets formatted first
         if 'c' in self.languages:
             self.languages.remove ('c')
             self.languages.insert (0, 'c')
-
-        self._gi_classes = {}
-        root = etree.parse (xml_dump).getroot()
 
         self.python_names = {}
 
@@ -298,10 +301,9 @@ class GIExtension(BaseExtension):
 
         self.unintrospectable_symbols = {}
 
-        self.children_map = {}
-        for klass in root.findall("class"):
-            self._gi_classes[klass.attrib["name"]] = klass
-            self.children_map[klass.attrib["name"]] = []
+        self._gir_classes =   {}
+        self.gir_children_map = {}
+        self.gir_hierarchies = {}
 
         if gir_file:
             self.__quickscan_gir_file (gir_file)
@@ -322,15 +324,12 @@ class GIExtension(BaseExtension):
                  "default": self.__make_default_annotation,
                 }
 
-        self.__create_chilren_map(root)
         self.__gather_gtk_doc_links()
         self.__raw_comment_parser = GtkDocRawCommentParser()
         self._formatters["html"] = GIHtmlFormatter (self)
 
     @staticmethod
     def add_arguments (parser):
-        parser.add_argument ("--gi-dump", action="store",
-                dest="gi_dump")
         parser.add_argument ("--gir-file", action="store",
                 dest="gir_file")
         parser.add_argument ("--languages", action="store",
@@ -340,6 +339,7 @@ class GIExtension(BaseExtension):
         tree = etree.parse (gir_file)
         root = tree.getroot()
         nsmap = {k:v for k,v in root.nsmap.iteritems() if k}
+        self.nsmap = nsmap
         for child in root:
             if child.tag == "{http://www.gtk.org/introspection/core/1.0}namespace":
                 self.__quickscan_namespace(nsmap, child)
@@ -352,10 +352,12 @@ class GIExtension(BaseExtension):
 
     def __quickscan_namespace (self, nsmap, ns):
         ns_name = ns.attrib["name"]
+        self.__namespace = ns_name
         for child in ns:
-            if child.tag in ["{http://www.gtk.org/introspection/core/1.0}class",
-                    "{http://www.gtk.org/introspection/core/1.0}record"]:
+            if child.tag == "{http://www.gtk.org/introspection/core/1.0}class":
                 self.__quickscan_gir_class(nsmap, ns_name, child)
+            elif child.tag == "{http://www.gtk.org/introspection/core/1.0}record":
+                self.__quickscan_gir_record(nsmap, ns_name, child)
             elif child.tag == "{http://www.gtk.org/introspection/core/1.0}function":
                 self.__quickscan_gir_method (nsmap, ns_name, child)
             elif child.tag == "{http://www.gtk.org/introspection/core/1.0}callback":
@@ -367,7 +369,7 @@ class GIExtension(BaseExtension):
             elif child.tag == "{http://www.gtk.org/introspection/core/1.0}constant":
                 self.__quickscan_gir_constant (nsmap, ns_name, child)
 
-    def __quickscan_gir_class (self, nsmap, ns_name, klass):
+    def __quickscan_gir_record (self, nsmap, ns_name, klass):
         name = '%s.%s' % (ns_name, klass.attrib["name"])
         c_name = klass.attrib.get('{%s}type' % nsmap['c'])
         if not c_name:
@@ -381,6 +383,12 @@ class GIExtension(BaseExtension):
                 self.__quickscan_gir_method (nsmap, name, child)
             elif child.tag == "{http://www.gtk.org/introspection/core/1.0}constructor":
                 self.__quickscan_gir_method (nsmap, name, child)
+
+    def __quickscan_gir_class (self, nsmap, ns_name, klass):
+        name = '%s.%s' % (ns_name, klass.attrib["name"])
+        self._gir_classes[name] = klass
+        self.gir_children_map[name] = {}
+        self.__quickscan_gir_record (nsmap, ns_name, klass)
 
     def __quickscan_gir_constant (self, nsmap, class_name, constant):
         name = '%s.%s' % (class_name, constant.attrib['name'])
@@ -444,23 +452,55 @@ class GIExtension(BaseExtension):
                             filename, title)
                     doc_tool.link_resolver.add_external_link (link)
 
-    def __create_chilren_map (self, root):
-        for klass in root.findall ("class"):
-            parent = klass.attrib["parents"].split(',')[0]
-            children = self.children_map.get(parent)
-            if not type(children) == list: # External parents
-                continue
-            children.append (klass.attrib['name'])
+    def __create_hierarchy (self, klass):
+        klaass = klass
+        hierarchy = []
+        while (True):
+            parent_name = klass.attrib.get('parent')
+            if not parent_name:
+                break
+            if not '.' in parent_name:
+                namespace = klass.getparent().attrib['name']
+                parent_name = '%s.%s' % (namespace, parent_name)
+            parent_class = self._gir_classes[parent_name]
+            children = self.gir_children_map.get(parent_name)
+            klass_name = klass.attrib['{%s}type-name' % self.nsmap['glib']]
+
+            if not klass_name in children:
+                cursor = \
+                        doc_tool.source_scanner.lookup_ast_node(klass_name)
+                if cursor:
+                    symbol = doc_tool.symbol_factory.make_qualified_symbol (cursor.type, None)
+                    children[klass_name] = symbol
+
+            c_name = parent_class.attrib['{%s}type-name' % self.nsmap['glib']]
+            cursor = \
+                    doc_tool.source_scanner.lookup_ast_node(c_name)
+            if not cursor:
+                break
+
+            parent_symbol = doc_tool.symbol_factory.make_qualified_symbol (cursor.type, None)
+            hierarchy.append (parent_symbol)
+            klass = parent_class
+
+        hierarchy.reverse()
+        return hierarchy
 
     def get_section_type (self, symbol):
         if type (symbol) != clang.cindex.Cursor:
             return (None, None)
 
-        if not symbol.spelling in self._gi_classes:
+        split = symbol.spelling.split(self.__namespace)
+        if len (split) < 2:
             return (None, None)
 
-        extra_args = {'xml_node': self._gi_classes[symbol.spelling],
-                      'children': self.children_map[symbol.spelling]}
+        gi_name = '%s.%s' % (self.__namespace, split[1])
+        if not gi_name in self._gir_classes:
+            return (None, None)
+
+        extra_args = {'gir_class': self._gir_classes[gi_name],
+                      'gi-name': gi_name,
+                      'gi-extension': self}
         return (GIClassSymbol, extra_args)
 
     def __make_type_annotation (self, annotation, value):
@@ -539,6 +579,8 @@ class GIExtension(BaseExtension):
         return factory (annotation_name, annotation_value)
 
     def get_annotations (self, parameter):
+        parameter.out = False
+
         if not parameter.comment:
             return []
 
@@ -555,6 +597,8 @@ class GIExtension(BaseExtension):
                 print "This parameter annotation is unknown :[" + ann + "]", val.argument
                 continue
             annotations.append (annotation)
+            if ann == "out":
+                parameter.out = True
 
         return annotations
 
@@ -571,7 +615,10 @@ class GIExtension(BaseExtension):
         return True
 
     def setup_language (self, language):
-        print "setting up language"
+        for gi_name, klass in self._gir_classes.iteritems():
+            hierarchy = self.__create_hierarchy (klass)
+            self.gir_hierarchies[gi_name] = hierarchy
+
         self.language = language
         if language == 'c':
             return
