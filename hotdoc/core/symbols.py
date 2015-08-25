@@ -69,6 +69,7 @@ class FunctionSymbol (Symbol):
     def __init__(self, *args):
         Symbol.__init__(self, *args)
         self.return_value = None
+        self.is_method = False
 
     def do_format (self):
         return_comment = self.comment.tags.get('returns')
@@ -394,6 +395,10 @@ class SymbolFactory (object):
         tokens = self.__make_c_style_type_name (type_)
         return self.__signal_new_symbol(ReturnValueSymbol (tokens, type_,
             comment, doc_tool.formatter, self))
+
+    def make_custom_return_value_symbol (self, comment, type_tokens):
+        return self.__signal_new_symbol(ReturnValueSymbol (type_tokens, '', comment,
+                doc_tool.formatter, self))
 
     def make_custom_parameter_symbol (self, comment, type_tokens, argname):
         return self.__signal_new_symbol(ParameterSymbol (argname, type_tokens, argname, comment,

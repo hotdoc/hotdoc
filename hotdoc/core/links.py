@@ -29,7 +29,10 @@ class ExternalLink (Link):
         self.id_ = title
 
     def get_link (self):
-        return "%s/%s" % (self.remote_prefix, self.filename)
+        if self.remote_prefix:
+            return "%s/%s" % (self.remote_prefix, self.filename)
+        else:
+            return self.filename
 
 
 class LocalLink (Link):

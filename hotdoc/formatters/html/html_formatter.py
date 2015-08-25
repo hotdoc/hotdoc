@@ -87,14 +87,17 @@ class HtmlFormatter (Formatter):
 
     def _format_type_tokens (self, type_tokens):
         out = ''
+        link_before = False
 
         for tok in type_tokens:
             if isinstance (tok, Link):
                 out += self._format_link (tok.get_link(), tok.title)
+                link_before = True
             else:
-                if out:
+                if link_before:
                     out += ' '
                 out += tok
+                link_before = False
 
         return out
 

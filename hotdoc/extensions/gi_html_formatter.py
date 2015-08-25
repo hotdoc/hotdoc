@@ -3,11 +3,12 @@ from hotdoc.core.doc_tool import doc_tool
 from hotdoc.formatters.html.html_formatter import HtmlFormatter
 from hotdoc.core.links import Link, ExternalLink
 
-class PythonLink (Link):
+class OverridenLink (Link):
     def __init__(self, link, title):
         Link.__init__(self)
         self.link = link
         self._title = title
+        self.id_ = None
 
     def get_link(self):
         return self.link
@@ -31,49 +32,127 @@ class GIHtmlFormatter(HtmlFormatter):
         self._ordering.insert (2, GIPropertySymbol)
         self._ordering.insert (3, GISignalSymbol)
         self.python_fundamentals = self.__create_python_fundamentals()
+        self.javascript_fundamentals = self.__create_javascript_fundamentals()
+
+    def __create_javascript_fundamentals(self):
+        string_link = \
+                OverridenLink('https://developer.mozilla.org/en-US/docs/Web/'
+                        'JavaScript/Reference/Global_Objects/String',
+                        'String')
+        boolean_link = \
+                OverridenLink('https://developer.mozilla.org/en-US/docs/Web/'
+                        'JavaScript/Reference/Global_Objects/Boolean',
+                        'Boolean')
+        pointer_link = \
+                OverridenLink('', 'void')
+        true_link = \
+                OverridenLink('https://developer.mozilla.org/en-US/docs/Web/'
+                        'JavaScript/Reference/Global_Objects/Boolean',
+                        'true')
+        false_link = \
+                OverridenLink('https://developer.mozilla.org/en-US/docs/Web/'
+                        'JavaScript/Reference/Global_Objects/Boolean',
+                        'false')
+        number_link = \
+                OverridenLink('https://developer.mozilla.org/en-US/docs/Glossary/Number',
+                        'Number')
+        null_link = \
+                OverridenLink('https://developer.mozilla.org/en-US/docs/Web/'
+                        'JavaScript/Reference/Global_Objects/null',
+                        'null')
+
+        fundamentals = {
+                'gchararray': string_link,
+                'gunichar': string_link,
+                'utf8': string_link,
+                'gchar': number_link,
+                'guchar': number_link,
+                'gint8': number_link,
+                'guint8': number_link,
+                'gint16': number_link,
+                'guint16': number_link,
+                'gint32': number_link,
+                'guint32': number_link,
+                'gint64': number_link,
+                'guint64': number_link,
+                'gshort': number_link,
+                'gint': number_link,
+                'guint': number_link,
+                'glong': number_link,
+                'gulong': number_link,
+                'gsize': number_link,
+                'gssize': number_link,
+                'gintptr': number_link,
+                'guintptr': number_link,
+                'gfloat': number_link,
+                'gdouble': number_link,
+                'gboolean': number_link,
+                'TRUE': true_link,
+                'FALSE': false_link,
+                'gpointer': pointer_link,
+                'NULL': null_link,
+                }
+        return fundamentals
 
     def __create_python_fundamentals(self):
         string_link = \
-                PythonLink('https://docs.python.org/2.7/library/functions.html#str',
+                OverridenLink('https://docs.python.org/2.7/library/functions.html#str',
                     'str')
         boolean_link = \
-                PythonLink('https://docs.python.org/2.7/library/functions.html#bool',
+                OverridenLink('https://docs.python.org/2.7/library/functions.html#bool',
                         'bool')
         true_link = \
-                PythonLink('https://docs.python.org/2/library/constants.html#True',
+                OverridenLink('https://docs.python.org/2/library/constants.html#True',
                     'True')
         false_link = \
-                PythonLink('https://docs.python.org/2/library/constants.html#False',
+                OverridenLink('https://docs.python.org/2/library/constants.html#False',
                     'False')
         pointer_link = \
-                PythonLink('https://docs.python.org/2.7/library/functions.html#object',
+                OverridenLink('https://docs.python.org/2.7/library/functions.html#object',
                     'object')
         integer_link = \
-                PythonLink('https://docs.python.org/2/library/functions.html#int',
+                OverridenLink('https://docs.python.org/2/library/functions.html#int',
                         'int')
         float_link = \
-                PythonLink('https://docs.python.org/2/library/functions.html#float',
+                OverridenLink('https://docs.python.org/2/library/functions.html#float',
                         'float')
+        none_link = \
+                OverridenLink('https://docs.python.org/2/library/constants.html#None',
+                        'None')
+        unicode_link = \
+                OverridenLink('https://docs.python.org/2/library/functions.html#unicode',
+                        'unicode')
 
         fundamentals = {
                 'gchar': string_link,
-                'gchar*': string_link,
-                'char*': string_link,
                 'guchar': string_link,
-                'guchar*': string_link,
                 'gchararray': string_link,
+                'gunichar': string_link,
+                'utf8': unicode_link,
+                'gint8': integer_link,
+                'guint8': integer_link,
+                'gint16': integer_link,
+                'guint16': integer_link,
+                'gint32': integer_link,
+                'guint32': integer_link,
+                'gint64': integer_link,
+                'guint64': integer_link,
+                'gshort': integer_link,
+                'gint': integer_link,
                 'guint': integer_link,
                 'glong': integer_link,
                 'gulong': integer_link,
-                'gint64': integer_link,
-                'guint64': integer_link,
+                'gsize': integer_link,
+                'gssize': integer_link,
+                'gintptr': integer_link,
+                'guintptr': integer_link,
                 'gfloat': float_link,
                 'gdouble': float_link,
                 'gboolean': boolean_link,
                 'TRUE': true_link,
                 'FALSE': false_link,
+                'NULL': none_link,
                 'gpointer': pointer_link,
-                'void*': pointer_link
                 }
         return fundamentals
 
@@ -81,8 +160,8 @@ class GIHtmlFormatter(HtmlFormatter):
         template = self.engine.get_template('gi_parameter_detail.html')
 
         annotations = self.__gi_extension.get_annotations (parameter)
-        if self.__gi_extension.language == 'python':
-            if parameter.out:
+        if self.__gi_extension.language in ['python', 'javascript']:
+            if hasattr(parameter, 'out') and parameter.out:
                 return (None, False)
             annotations = []
 
@@ -114,35 +193,26 @@ class GIHtmlFormatter(HtmlFormatter):
 
     def _format_callable_summary (self, return_value, function_name,
             is_callable, is_pointer, flags):
-        if self.__gi_extension.language == "python":
+        if self.__gi_extension.language in ["python", "javascript"]:
             is_pointer = False
             return_value = None
 
         return HtmlFormatter._format_callable_summary (self, return_value,
                 function_name, is_callable, is_pointer, flags)
 
-    def _format_callable (self, callable_, callable_type, title,
-            is_pointer=False, flags=False):
-
-        callable_.throws = False
-        if self.__gi_extension.language == "python":
-            callable_.return_value.out_parameters = []
-            if callable_.parameters:
-                last_param = callable_.parameters[-1]
-                last_param_name = ''.join (last_param._make_name().split())
-                if last_param_name == "GError**":
-                    callable_.parameters.pop()
-                    callable_.throws = True
-                for param in callable_.parameters:
-                    annotations = self.__gi_extension.get_annotations (param)
-                    if param.out:
-                        callable_.return_value.out_parameters.append (param)
-
-        return HtmlFormatter._format_callable (self, callable_, callable_type, title,
-                is_pointer, flags)
+    def _format_type_tokens (self, type_tokens):
+        if self.__gi_extension.language != 'c':
+            new_tokens = []
+            for tok in type_tokens:
+                if tok not in ['*', 'const', 'restrict', 'volatile']:
+                    new_tokens.append (tok)
+            return HtmlFormatter._format_type_tokens (self, new_tokens)
+        return HtmlFormatter._format_type_tokens (self, type_tokens)
 
     def _format_prototype (self, function, is_pointer, title):
-        if self.__gi_extension.language == "python":
+        from hotdoc.extensions.gi_extension import GISignalSymbol
+
+        if self.__gi_extension.language in ["python", "javascript"]:
             python_params = []
             out_params = []
             retval = function.return_value
@@ -161,39 +231,22 @@ class GIHtmlFormatter(HtmlFormatter):
             template = self.engine.get_template('python_prototype.html')
             c_name = function._make_name()
 
+            if type (function) == GISignalSymbol:
+                comment = "Python callback for the '%s' signal" % c_name
+            else:
+                comment = "Python wrapper for '%s'" % c_name
 
             return template.render ({'return_value': retval,
-                'function_name': function.link.title, 'parameters':
-                python_params, 'c_name': c_name, 'throws': function.throws,
-                'out_params': out_params})
+                'function_name': title, 'parameters':
+                python_params, 'comment': comment, 'throws': function.throws,
+                'out_params': out_params, 'is_method': function.is_method})
 
         return HtmlFormatter._format_prototype (self, function,
             is_pointer, title)
 
-    def _format_type_tokens (self, type_tokens):
-        if self.__gi_extension.language == "python":
-            actual_type = ''
-            new_tokens = []
-            for tok in type_tokens:
-                if not tok in ['*', 'const ', 'restrict ', 'volatile ']:
-                    new_tokens.append (tok)
-                if not tok in ['const ', 'restrict ', 'volatile ']:
-                    if isinstance (tok, Link):
-                        actual_type += tok.title
-                    else:
-                        actual_type += tok
-
-            python_link = self.python_fundamentals.get (actual_type)
-            if python_link:
-                type_tokens = [python_link]
-            else:
-                type_tokens = new_tokens
-
-        return HtmlFormatter._format_type_tokens (self, type_tokens)
-
     def _format_gi_property_summary (self, prop):
         template = self.engine.get_template('property_summary.html')
-        if self.__gi_extension.language == "python":
+        if self.__gi_extension.language in ["python", "javascript"]:
             property_type = None
         else:
             property_type = self._format_linked_symbol (prop.type_)
@@ -219,19 +272,32 @@ class GIHtmlFormatter(HtmlFormatter):
         return template.render({'compound': link})
 
     def _format_struct_summary (self, struct):
+        if self.__gi_extension.language == 'c':
+            return HtmlFormatter._format_struct_summary (self, struct)
         return self._format_compound_summary (struct)
 
     def _format_enum_summary (self, enum):
+        if self.__gi_extension.language == 'c':
+            return HtmlFormatter._format_enum_summary (self, enum)
         return self._format_compound_summary (enum)
 
     def _format_alias_summary (self, alias):
+        if self.__gi_extension.language == 'c':
+            return HtmlFormatter._format_alias_summary (self, alias)
         return self._format_compound_summary (alias)
+
+    def _format_constant_summary (self, constant):
+        if self.__gi_extension.language == 'c':
+            return HtmlFormatter._format_constant_summary (self, constant)
+        return self._format_compound_summary (constant)
 
     def _format_gi_signal (self, signal):
         title = "%s_callback" % re.sub ('-', '_', signal.link.title)
         return self._format_callable (signal, "signal", title, flags=signal.flags)
 
     def _format_struct (self, struct):
+        if self.__gi_extension.language == 'c':
+            return HtmlFormatter._format_struct (self, struct)
         members_list = self._format_members_list (struct.members, 'Fields')
 
         template = self.engine.get_template ("python_compound.html")
@@ -240,6 +306,9 @@ class GIHtmlFormatter(HtmlFormatter):
         return (out, False)
 
     def _format_enum (self, enum):
+        if self.__gi_extension.language == 'c':
+            return HtmlFormatter._format_enum (self, enum)
+
         for member in enum.members:
             template = self.engine.get_template ("enum_member.html")
             member.detailed_description = template.render ({
@@ -251,6 +320,15 @@ class GIHtmlFormatter(HtmlFormatter):
         template = self.engine.get_template ("python_compound.html")
         out = template.render ({"compound": enum,
                                 "members_list": members_list})
+        return (out, False)
+
+    def _format_constant(self, constant):
+        if self.__gi_extension.language == 'c':
+            return HtmlFormatter._format_constant (self, constant)
+
+        template = self.engine.get_template('constant.html')
+        out = template.render ({'definition': None,
+                                'constant': constant})
         return (out, False)
 
     def _format_gi_property(self, prop):
@@ -272,10 +350,24 @@ class GIHtmlFormatter(HtmlFormatter):
         if self.__gi_extension.language == 'python':
             doc_tool.page_parser.rename_labels(klass,
                     self.__gi_extension.python_names)
+        elif self.__gi_extension.language == 'javascript':
+            doc_tool.page_parser.rename_labels(klass,
+                    self.__gi_extension.javascript_names)
         return HtmlFormatter._format_class (self, klass)
 
     def format (self):
         for l in self.__gi_extension.languages:
+            if l == 'python':
+                self.fundamentals = self.python_fundamentals
+            elif l == 'javascript':
+                self.fundamentals = self.javascript_fundamentals
+            else:
+                self.fundamentals = {}
+
+            for c_name, link in self.fundamentals.iteritems():
+                link.id_ = c_name
+                doc_tool.link_resolver.add_external_link (link)
+
             self.__gi_extension.setup_language (l)
             self._output = os.path.join (doc_tool.output, l)
             if not os.path.exists (self._output):
