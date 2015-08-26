@@ -5,7 +5,7 @@ import clang.cindex
 
 from ..core.symbols import (Symbol, FunctionSymbol, ClassSymbol,
         ParameterSymbol, ReturnValueSymbol, FunctionMacroSymbol, ConstantSymbol,
-        ExportedVariableSymbol)
+        ExportedVariableSymbol, StructSymbol)
 from ..core.comment_block import GtkDocParameter
 from ..core.doc_tool import doc_tool
 from ..core.base_extension import BaseExtension
@@ -169,21 +169,12 @@ class GISignalSymbol (GIFlaggedSymbol, FunctionSymbol):
         if no_hooks == '1':
             self.flags.append (NoHooksFlag())
 
-        """
-        udata_type = self.make_qualified_symbol ("gpointer")
-        udata_comment = GtkDocParameter ("user_data", [],
-                "user data set when the signal handler was connected.")
-        udata_param = self._symbol_factory.make_custom_parameter_symbol\
-                (udata_comment, udata_type.type_tokens, 'user_data')
-        self.parameters.append (udata_param)
-        """
-
         return GIFlaggedSymbol.do_format(self)
 
 
 class GIClassSymbol (GISymbol, ClassSymbol):
     def symbol_init (self, extra_args):
-        gir_class = extra_args['gir_class']
+        gir_class = extra_args['gir-class']
         self.__gi_name = extra_args['gi-name']
         self.__gi_extension = extra_args['gi-extension']
         self.gir_class = gir_class
@@ -279,6 +270,7 @@ class GIInfo(object):
         self.throws = throws
         self.parent_name = parent_name
         self.is_method = is_method
+        self.virtual_methods = {}
 
 class GIParamInfo(object):
     def __init__(self, param_name, type_name, out, ctype_name, array_nesting):
@@ -315,7 +307,7 @@ class GIExtension(BaseExtension):
 
         self._gir_types = {}
         self.gir_children_map = {}
-
+        self.gir_class_map = {}
         self.gir_hierarchies = {}
 
         if gir_file:
@@ -368,7 +360,7 @@ class GIExtension(BaseExtension):
         self.__namespace = ns_name
         for child in ns:
             if child.tag == "{http://www.gtk.org/introspection/core/1.0}class":
-                self.__quickscan_gir_record(nsmap, ns_name, child, is_class=True)
+                self.__quickscan_gir_record(nsmap, ns_name, child)
             elif child.tag == "{http://www.gtk.org/introspection/core/1.0}record":
                 self.__quickscan_gir_record(nsmap, ns_name, child)
             elif child.tag == "{http://www.gtk.org/introspection/core/1.0}function":
@@ -382,7 +374,7 @@ class GIExtension(BaseExtension):
             elif child.tag == "{http://www.gtk.org/introspection/core/1.0}constant":
                 self.__quickscan_gir_constant (nsmap, ns_name, child)
 
-    def __quickscan_gir_record (self, nsmap, ns_name, klass, is_class=False):
+    def __quickscan_gir_record (self, nsmap, ns_name, klass):
         name = '%s.%s' % (ns_name, klass.attrib["name"])
         self._gir_types[name] = klass
         self.gir_children_map[name] = {}
@@ -390,7 +382,17 @@ class GIExtension(BaseExtension):
         if not c_name:
             return
 
-        self.gi_infos[c_name] = GIInfo (klass, name, name)
+        #symbol = doc_tool.source_scanner.symbols.get (c_name)
+        #comment = doc_tool.comments.get (c_name)
+        #print c_name, symbol, comment
+        class_struct = klass.attrib.get('{http://www.gtk.org/introspection/glib/1.0}type-struct')
+
+        gi_class_info = GIInfo (klass, name, name)
+
+        if class_struct:
+            self.gir_class_map['%s%s' % (ns_name, class_struct)] = gi_class_info
+
+        self.gi_infos[c_name] = gi_class_info
         self.python_names[c_name] = name
         self.javascript_names[c_name] = name
         for child in klass:
@@ -403,12 +405,18 @@ class GIExtension(BaseExtension):
                 self.__quickscan_gir_function (nsmap, name, child)
             elif child.tag == "{http://www.gtk.org/introspection/glib/1.0}signal":
                 self.__quickscan_gir_signal (nsmap, c_name, child)
+            elif child.tag == "{http://www.gtk.org/introspection/core/1.0}virtual-method":
+                self.__quickscan_gir_vmethod (nsmap, gi_class_info, child)
 
         c_name += '-struct'
 
         self.gi_infos[c_name] = GIInfo (klass, name, name)
         self.python_names[c_name] = name
         self.javascript_names[c_name] = name
+
+    def __quickscan_gir_vmethod(self, nsmap, gi_class_info, vmethod):
+        gi_vmethod_info = GIInfo (vmethod, vmethod.attrib['name'], vmethod.attrib['name'])
+        gi_class_info.virtual_methods[vmethod.attrib['name']] = vmethod
 
     def __unnest_type (self, parameter):
         array_nesting = 0
@@ -605,7 +613,9 @@ class GIExtension(BaseExtension):
         if not gi_name in self._gir_types:
             return (None, None)
 
-        extra_args = {'gir_class': self._gir_types[gi_name],
+        gi_class_info = self.gi_infos[symbol.spelling]
+
+        extra_args = {'gir-class': self._gir_types[gi_name],
                       'gi-name': gi_name,
                       'gi-extension': self}
         return (GIClassSymbol, extra_args)
@@ -844,11 +854,23 @@ class GIExtension(BaseExtension):
             self.__check_throws (callable_)
             self.__update_array_nesting (callable_)
 
+    def __update_virtual_methods (self, struct):
+        members = []
+        gir_struct = self.gir_class_map.get(struct._make_name())
+        if gir_struct:
+            for m in struct.members:
+                if not m.member_name in gir_struct.virtual_methods:
+                    members.append (m)
+            struct.members = members
+
     def __formatting_symbol(self, symbol):
         c_name = symbol._make_name ()
 
         if isinstance (symbol, FunctionSymbol):
             self.__update_callable (symbol)
+
+        if type (symbol) == StructSymbol:
+            self.__update_virtual_methods (symbol)
 
         # We discard symbols at formatting time because they might be exposed
         # in other languages
@@ -866,6 +888,7 @@ class GIExtension(BaseExtension):
             self.gir_hierarchies[gi_name] = hierarchy
 
         self.language = language
+
         if language == 'c':
             return
 
