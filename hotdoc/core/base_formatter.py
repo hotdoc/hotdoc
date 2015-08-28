@@ -6,7 +6,6 @@ import CommonMark
 
 from xml.sax.saxutils import unescape
 
-from .pandoc_interface import translator
 from .doc_tool import doc_tool, ConfigError
 from .symbols import Symbol
 from ..utils.simple_signals import Signal
@@ -22,16 +21,11 @@ class Formatter(object):
             self.formatting_symbol_signals[klass] = Signal()
         self._output = doc_tool.output
 
+        # Hardcoded for now
         self.__cmp = CommonMark.DocParser()
         self.__cmr = CommonMark.HTMLRenderer()
 
     def format (self):
-        if doc_tool.output_format == "html":
-            self.__translate_func = translator.markdown_to_html
-        else:
-            self.error ("This should not happen")
-            return
-
         self.__total_sections = 0
         self.__total_rendered_sections = 0
         for section in doc_tool.sections:
@@ -111,7 +105,6 @@ class Formatter(object):
         out = ""
         docstring = unescape (docstring)
         docstring = doc_tool.doc_parser.translate (docstring)
-        #rendered_text = self.__translate_func (docstring.encode('utf-8')).decode ('utf-8')
         ast = self.__cmp.parse (docstring.encode('utf-8'))
         rendered_text = self.__cmr.render(ast)
         return rendered_text

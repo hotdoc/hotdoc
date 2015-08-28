@@ -390,12 +390,14 @@ class GIHtmlFormatter(HtmlFormatter):
         return 'style.css'
 
     def _format_class (self, klass):
+        new_names = None
         if self.__gi_extension.language == 'python':
-            doc_tool.page_parser.rename_labels(klass,
-                    self.__gi_extension.gir_parser.python_names)
+            new_names = self.__gi_extension.gir_parser.python_names
         elif self.__gi_extension.language == 'javascript':
-            doc_tool.page_parser.rename_labels(klass,
-                    self.__gi_extension.gir_parser.javascript_names)
+            new_names = self.__gi_extension.gir_parser.javascript_names
+
+        if new_names is not None:
+            doc_tool.page_parser.rename_headers (klass.parsed_page, new_names)
         return HtmlFormatter._format_class (self, klass)
 
     def format (self):

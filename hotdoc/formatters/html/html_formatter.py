@@ -264,8 +264,8 @@ class HtmlFormatter (Formatter):
         return (out, False)
 
     def _format_class(self, klass):
-        if klass.ast:
-            klass.formatted_contents = doc_tool.page_parser.render_ast (klass.ast)
+        if klass.parsed_page:
+            klass.formatted_contents = doc_tool.page_parser.render_parsed_page(klass.parsed_page)
 
         toc_sections = []
         symbols_details = []

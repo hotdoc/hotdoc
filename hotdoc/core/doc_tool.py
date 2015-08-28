@@ -114,9 +114,10 @@ class DocTool(Loggable):
 
     def __create_symbols (self):
         from .sections import SectionFilter
-        from .base_page_parser import PageParser
+        # Hardcoded for now
+        from ..extensions.common_mark_parser import CommonMarkParser
 
-        self.page_parser = PageParser ()
+        self.page_parser = CommonMarkParser ()
 
         self.page_parser.create_symbols ()
         self.sections = self.page_parser.sections
