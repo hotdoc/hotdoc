@@ -9,5 +9,7 @@ include hotdoc/core/pandoc_interface/translator.hs
 include hotdoc/core/pandoc_interface/doc_translator.c
 include hotdoc/formatters/html/templates/*
 include hotdoc/formatters/html/style.css
+include hotdoc/formatters/html/redstyle.css
+include hotdoc/formatters/html/greenstyle.css
 include hotdoc/extensions/templates/*
 include requirements.txt
