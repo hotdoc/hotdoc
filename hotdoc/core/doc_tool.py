@@ -9,6 +9,7 @@ from .links import LinkResolver
 from .base_extension import BaseExtension
 
 from ..utils.utils import all_subclasses
+from ..utils.simple_signals import Signal
 from ..utils.loggable import Loggable
 from ..utils.loggable import init as loggable_init
 from ..clang_interface.clangizer import ClangScanner
@@ -37,6 +38,7 @@ class DocTool(Loggable):
         self.full_scan = False
         self.full_scan_patterns = ['*.h']
         self.link_resolver = LinkResolver()
+        self.symbols_created_signal = Signal()
 
     def parse_and_format (self):
         from .symbols import SymbolFactory
@@ -158,6 +160,7 @@ class DocTool(Loggable):
             extension.setup ()
 
         self.__create_symbols ()
+        self.symbols_created_signal()
 
     def finalize (self):
         self.dependency_tree.dump()

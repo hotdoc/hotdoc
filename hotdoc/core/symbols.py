@@ -14,8 +14,7 @@ from ..utils.utils import all_subclasses
 from .doc_tool import doc_tool
 
 class Symbol (object):
-    def __init__(self, symbol, comment, doc_formatter, symbol_factory=None):
-        self._symbol_factory = symbol_factory
+    def __init__(self, symbol, comment):
         self._symbol = symbol
         self.comment = comment
         self.original_text = None
@@ -78,13 +77,13 @@ class FunctionSymbol (Symbol):
 
         if not self.return_value:
             self.return_value = \
-                    self._symbol_factory.make_return_value_symbol(self._symbol.result_type,
+                    doc_tool.symbol_factory.make_return_value_symbol(self._symbol.result_type,
                             return_comment)
 
         self.parameters = []
         for param in self._symbol.get_arguments():
             param_comment = self.comment.params.get (param.displayname)
-            parameter = self._symbol_factory.make_parameter_symbol \
+            parameter = doc_tool.symbol_factory.make_parameter_symbol \
                     (param.type, param_comment, param.displayname)
             self.parameters.append (parameter)
 
@@ -97,11 +96,11 @@ class CallbackSymbol (FunctionSymbol):
         for child in self._symbol.get_children():
             if not self.return_value:
                 self.return_value = \
-                self._symbol_factory.make_return_value_symbol (child.type,
+                doc_tool.symbol_factory.make_return_value_symbol (child.type,
                         self.comment.tags.get("returns"))
             else:
                 param_comment = self.comment.params.get (child.spelling)
-                parameter = self._symbol_factory.make_parameter_symbol \
+                parameter = doc_tool.symbol_factory.make_parameter_symbol \
                         (child.type, param_comment, child.displayname)
                 self.parameters.append (parameter)
 
@@ -118,7 +117,7 @@ class EnumSymbol (Symbol):
         for member in decl.get_children():
             member_comment = self.comment.params.get (member.spelling)
             member_value = member.enum_value
-            member = self._symbol_factory.make_simple_symbol (member,
+            member = doc_tool.symbol_factory.make_simple_symbol (member,
                     member_comment)
             member.enum_value = member_value
             doc_tool.link_resolver.add_local_link (member.link)
@@ -146,7 +145,7 @@ class StructSymbol (Symbol):
         for field in public_fields:
             member_comment = self.comment.params.get (field.spelling)
             
-            member = self._symbol_factory.make_field_symbol (
+            member = doc_tool.symbol_factory.make_field_symbol (
                     field.type, member_comment, field.spelling)
             member.do_format()
             self.members.append (member)
@@ -261,10 +260,10 @@ class FunctionMacroSymbol (MacroSymbol):
         if return_comment:
             self.comment.tags.pop ('returns')
             self.return_value = \
-                self._symbol_factory.make_untyped_return_value_symbol (return_comment)
+                doc_tool.symbol_factory.make_untyped_return_value_symbol (return_comment)
 
         for param_name, comment in self.comment.params.iteritems():
-            parameter = self._symbol_factory.make_custom_parameter_symbol(comment, [], param_name)
+            parameter = doc_tool.symbol_factory.make_custom_parameter_symbol(comment, [], param_name)
             self.parameters.append (parameter)
         return Symbol.do_format(self)
 
@@ -305,7 +304,7 @@ class FieldSymbol (QualifiedSymbol):
 
 class AliasSymbol (Symbol):
     def do_format (self):
-        self.aliased_type = self._symbol_factory.make_qualified_symbol (
+        self.aliased_type = doc_tool.symbol_factory.make_qualified_symbol (
                 self._symbol.underlying_typedef_type, None)
         return Symbol.do_format (self)
 
@@ -356,13 +355,14 @@ class SymbolFactory (object):
         return tokens
 
     def __signal_new_symbol (self, symbol):
-        doc_tool.link_resolver.add_local_link (symbol.link)
         res = self.new_symbol_signals[type(symbol)](symbol)
         if False in res:
             return None
         res = self.new_symbol_signals[Symbol](symbol)
         if False in res:
             return None
+
+        doc_tool.link_resolver.add_local_link (symbol.link)
         return symbol
 
     def make_parameter_symbol (self, type_, comment, argname):
@@ -371,42 +371,37 @@ class SymbolFactory (object):
         for t in tokens:
             if not isinstance (t, Link) and "char" in t:
                 do_it = True
-        return self.__signal_new_symbol(ParameterSymbol (argname, tokens, type_, comment,
-                doc_tool.formatter, self))
+        return self.__signal_new_symbol(ParameterSymbol (argname, tokens, type_, comment))
 
     def make_qualified_symbol (self, type_, comment, tokens=None):
         if tokens is None:
             tokens = self.__make_c_style_type_name (type_)
-        return self.__signal_new_symbol(QualifiedSymbol (tokens, type_, comment,
-                doc_tool.formatter, self))
+        return self.__signal_new_symbol(QualifiedSymbol (tokens, type_, comment))
 
     def make_field_symbol (self, ast_node, comment, member_name):
         is_function_pointer = ast_node_is_function_pointer (ast_node)
         tokens = self.__make_c_style_type_name (ast_node)
 
         return self.__signal_new_symbol(FieldSymbol (is_function_pointer,
-            member_name, tokens, ast_node, comment, doc_tool.formatter, self))
+            member_name, tokens, ast_node, comment))
 
     def make_simple_symbol (self, symbol, comment):
-        return self.__signal_new_symbol(Symbol (symbol, comment, doc_tool.formatter,
-                self))
+        return self.__signal_new_symbol(Symbol (symbol, comment))
 
     def make_return_value_symbol (self, type_, comment):
         tokens = self.__make_c_style_type_name (type_)
         return self.__signal_new_symbol(ReturnValueSymbol (tokens, type_,
-            comment, doc_tool.formatter, self))
+            comment))
 
     def make_custom_return_value_symbol (self, comment, type_tokens):
-        return self.__signal_new_symbol(ReturnValueSymbol (type_tokens, '', comment,
-                doc_tool.formatter, self))
+        return self.__signal_new_symbol(ReturnValueSymbol (type_tokens, '', comment))
 
     def make_custom_parameter_symbol (self, comment, type_tokens, argname):
-        return self.__signal_new_symbol(ParameterSymbol (argname, type_tokens, argname, comment,
-                doc_tool.formatter, self))
+        return self.__signal_new_symbol(ParameterSymbol (argname, type_tokens, argname, comment))
 
     def make_untyped_return_value_symbol (self, comment):
         return self.__signal_new_symbol (ReturnValueSymbol ([],
-            "", comment, doc_tool.formatter, self))
+            "", comment))
 
     def make (self, symbol, comment):
         klass = None
@@ -439,7 +434,7 @@ class SymbolFactory (object):
 
         res = None
         if klass:
-            res = klass (symbol, comment, doc_tool.formatter, self)
+            res = klass (symbol, comment)
 
         if res:
             return self.__signal_new_symbol (res)
@@ -447,19 +442,18 @@ class SymbolFactory (object):
         return None
 
     def make_custom (self, symbol, comment, klass):
-        return self.__signal_new_symbol(klass (symbol, comment,
-            doc_tool.formatter, self))
+        return self.__signal_new_symbol(klass (symbol, comment))
 
     def make_section(self, symbol, comment):
         res = None
         for extension in doc_tool.extensions:
             klass, extra_args = extension.get_section_type (symbol)
             if klass:
-                res = klass (symbol, comment, doc_tool.formatter, self)
+                res = klass (symbol, comment)
                 res.symbol_init (extra_args)
 
         if not res:
-            res = SectionSymbol (symbol, comment, doc_tool.formatter, self)
+            res = SectionSymbol (symbol, comment)
 
         doc_tool.link_resolver.add_local_link (res.link)
         return self.__signal_new_symbol(res)

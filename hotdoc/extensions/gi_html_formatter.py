@@ -17,7 +17,7 @@ class OverridenLink (Link):
 class GIHtmlFormatter(HtmlFormatter):
     def __init__(self, gi_extension):
         from hotdoc.extensions.gi_extension import (GIClassSymbol,
-                GIPropertySymbol, GISignalSymbol)
+                GIPropertySymbol, GISignalSymbol, GIVFunctionSymbol)
         from hotdoc.core.symbols import FunctionMacroSymbol
 
         module_path = os.path.dirname(__file__)
@@ -29,8 +29,11 @@ class GIHtmlFormatter(HtmlFormatter):
         self._summary_formatters[GIPropertySymbol] = self._format_gi_property_summary
         self._symbol_formatters[GISignalSymbol] = self._format_gi_signal
         self._summary_formatters[GISignalSymbol] = self._format_gi_signal_summary
+        self._symbol_formatters[GIVFunctionSymbol] = self._format_gi_vmethod
+        self._summary_formatters[GIVFunctionSymbol] = self._format_gi_vmethod_summary
         self._ordering.insert (2, GIPropertySymbol)
         self._ordering.insert (3, GISignalSymbol)
+        self._ordering.insert (4, GIVFunctionSymbol)
         self.python_fundamentals = self.__create_python_fundamentals()
         self.javascript_fundamentals = self.__create_javascript_fundamentals()
 
@@ -44,7 +47,8 @@ class GIHtmlFormatter(HtmlFormatter):
                         'JavaScript/Reference/Global_Objects/Boolean',
                         'Boolean')
         pointer_link = \
-                OverridenLink('', 'void')
+                OverridenLink('https://developer.mozilla.org/en-US/docs/Web/'
+                        'JavaScript/Reference/Global_Objects/Object', 'Object')
         true_link = \
                 OverridenLink('https://developer.mozilla.org/en-US/docs/Web/'
                         'JavaScript/Reference/Global_Objects/Boolean',
@@ -170,6 +174,12 @@ class GIHtmlFormatter(HtmlFormatter):
                                  'annotations': annotations,
                                 }), False)
 
+    def _format_callable (self, callable_, callable_type, title,
+            is_pointer=False, flags=None):
+
+        return HtmlFormatter._format_callable (self, callable_, callable_type, title,
+                is_pointer, flags)
+
     def _format_return_value_symbol (self, return_value):
         if not return_value or not return_value.formatted_doc:
             return ('', False)
@@ -210,16 +220,16 @@ class GIHtmlFormatter(HtmlFormatter):
         return HtmlFormatter._format_type_tokens (self, type_tokens)
 
     def _format_prototype (self, function, is_pointer, title):
-        from hotdoc.extensions.gi_extension import GISignalSymbol
+        from hotdoc.extensions.gi_extension import GISignalSymbol, GIVFunctionSymbol
 
         if self.__gi_extension.language in ["python", "javascript"]:
-            python_params = []
+            params = []
             out_params = []
             retval = function.return_value
             for param in function.parameters:
                 param.formatted_link = self._format_type_tokens(param.type_tokens)
                 if param.detailed_description is not None:
-                    python_params.append (param)
+                    params.append (param)
                 else:
                     out_params.append (param)
 
@@ -228,17 +238,25 @@ class GIHtmlFormatter(HtmlFormatter):
                 if retval.link.title == 'void':
                     retval = None
 
-            template = self.engine.get_template('python_prototype.html')
             c_name = function._make_name()
 
-            if type (function) == GISignalSymbol:
-                comment = "Python callback for the '%s' signal" % c_name
+            if self.__gi_extension.language == 'python':
+                template = self.engine.get_template('python_prototype.html')
             else:
-                comment = "Python wrapper for '%s'" % c_name
+                template = self.engine.get_template('javascript_prototype.html')
+
+            if type (function) == GISignalSymbol:
+                comment = "%s callback for the '%s' signal" % (self.__gi_extension.language, c_name)
+            elif type (function) == GIVFunctionSymbol:
+                comment = "%s implementation of the '%s' virtual method" % \
+                        (self.__gi_extension.language, c_name)
+            else:
+                comment = "%s wrapper for '%s'" % (self.__gi_extension.language,
+                        c_name)
 
             return template.render ({'return_value': retval,
                 'function_name': title, 'parameters':
-                python_params, 'comment': comment, 'throws': function.throws,
+                params, 'comment': comment, 'throws': function.throws,
                 'out_params': out_params, 'is_method': function.is_method})
 
         return HtmlFormatter._format_prototype (self, function,
@@ -265,6 +283,18 @@ class GIHtmlFormatter(HtmlFormatter):
                 True,
                 False,
                 signal.flags)
+
+    def _format_gi_vmethod_summary (self, vmethod):
+        if self.__gi_extension.language == 'python':
+            vmethod.link.title = 'do_%s' % vmethod._make_name()
+        elif self.__gi_extension.language == 'javascript':
+            vmethod.link.title = '%s::%s' % (vmethod.gi_parent_name, vmethod._make_name())
+        return self._format_callable_summary (
+                self._format_linked_symbol (vmethod.return_value),
+                self._format_linked_symbol (vmethod),
+                True,
+                True,
+                [])
 
     def _format_compound_summary (self, compound):
         template = self.engine.get_template('python_compound_summary.html')
@@ -295,10 +325,21 @@ class GIHtmlFormatter(HtmlFormatter):
         title = "%s_callback" % re.sub ('-', '_', signal.link.title)
         return self._format_callable (signal, "signal", title, flags=signal.flags)
 
+    def _format_gi_vmethod (self, vmethod):
+        title = vmethod.link.title
+        if self.__gi_extension.language == 'python':
+            vmethod.link.title = 'do_%s' % vmethod._make_name()
+            title = 'do_%s' % title
+        elif self.__gi_extension.language == 'javascript':
+            vmethod.link.title = '%s::%s' % (vmethod.gi_parent_name, vmethod._make_name())
+            title = 'vfunc_%s' % title
+        return self._format_callable (vmethod, "virtual method",
+                title)
+
     def _format_struct (self, struct):
         if self.__gi_extension.language == 'c':
             return HtmlFormatter._format_struct (self, struct)
-        members_list = self._format_members_list (struct.members, 'Fields')
+        members_list = self._format_members_list (struct.members, 'Attributes')
 
         template = self.engine.get_template ("python_compound.html")
         out = template.render ({"compound": struct,
@@ -344,15 +385,17 @@ class GIHtmlFormatter(HtmlFormatter):
     def _get_style_sheet (self):
         if self.__gi_extension.language == 'python':
             return 'redstyle.css'
+        elif self.__gi_extension.language == 'javascript':
+            return 'greenstyle.css'
         return 'style.css'
 
     def _format_class (self, klass):
         if self.__gi_extension.language == 'python':
             doc_tool.page_parser.rename_labels(klass,
-                    self.__gi_extension.python_names)
+                    self.__gi_extension.gir_parser.python_names)
         elif self.__gi_extension.language == 'javascript':
             doc_tool.page_parser.rename_labels(klass,
-                    self.__gi_extension.javascript_names)
+                    self.__gi_extension.gir_parser.javascript_names)
         return HtmlFormatter._format_class (self, klass)
 
     def format (self):

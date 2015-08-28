@@ -1,0 +1,35 @@
+@require(return_value, function_name, parameters, comment, throws, out_params, is_method)
+<pre class="programlisting">
+function @function_name\
+(\
+@if parameters:
+\
+@for i, parameter in enumerate (parameters):
+\
+@if i != 0:
+, \
+@end
+\
+@for j in range (parameter.array_nesting):
+Array(\
+@end
+@parameter.argname: \
+@parameter.formatted_link\
+@for j in range (parameter.array_nesting):
+)\
+@end
+\
+@end
+@end
+):\
+@if return_value:
+ [@return_value.formatted_link\
+@for p in out_params:
+, \
+@p.formatted_link\
+@end
+]\
+@end
+{
+    // @comment
+}</pre>
