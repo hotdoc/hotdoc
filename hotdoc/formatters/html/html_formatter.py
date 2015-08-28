@@ -11,7 +11,6 @@ from wheezy.template.loader import FileLoader
 from ...core.symbols import *
 from ...core.base_formatter import Formatter
 from ...core.links import Link
-from ...core.pandoc_interface import translator
 
 
 class Callable(object):
@@ -73,9 +72,6 @@ class HtmlFormatter (Formatter):
         )
 
     def _get_extension (self):
-        return "html"
-
-    def _get_pandoc_format (self):
         return "html"
 
     def _format_link (self, link, title):

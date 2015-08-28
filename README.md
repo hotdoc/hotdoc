@@ -9,8 +9,12 @@ Read [this](documentation/setup.markdown) if you just want to use hotdoc.
 HotDoc aims at being a highly modular API documentation tool / library for
 C and C++ libraries (initially).
 
-It is based on clang for the source code parsing, and pandoc for the
+It is based on clang for the source code parsing, and CommonMark for the
 formatting.
+
+It was previously based on pandoc, and a pandoc backend will be available
+again soon, but the dependency tree with a hard pandoc dependency was just too
+deep.
 
 It features:
 

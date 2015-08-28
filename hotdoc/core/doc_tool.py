@@ -113,7 +113,6 @@ class DocTool(Loggable):
                 self.__parse_extensions (args)
 
     def __create_symbols (self):
-        from .sections import SectionFilter
         # Hardcoded for now
         from ..extensions.common_mark_parser import CommonMarkParser
 
@@ -121,13 +120,6 @@ class DocTool(Loggable):
 
         self.page_parser.create_symbols ()
         self.sections = self.page_parser.sections
-
-        """
-        page_parser = SectionFilter (os.path.dirname (self.index_file), self.formatter,
-                self.symbol_factory)
-        page_parser.create_symbols (os.path.basename (self.index_file))
-        self.sections = page_parser.sections
-        """
 
     def parse_args (self):
         args = self.parser.parse_known_args()

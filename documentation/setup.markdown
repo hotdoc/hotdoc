@@ -2,7 +2,7 @@
 
 To install hotdoc, you will first need to satisfy the dependencies, on fedora 22 this can be done with:
 
-sudo dnf install haskell-platform glib2-devel flex python-devel libxml2-devel libxslt-devel clang-devel ghc-pandoc-devel
+sudo dnf install glib2-devel flex python-devel libxml2-devel libxslt-devel clang-devel
 
 Adapt to your distribution.
 

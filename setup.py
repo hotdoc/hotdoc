@@ -112,35 +112,6 @@ class FlexExtension (Extension):
         if self.__flex_sources:
             self.__build_flex()
 
-try:
-    ghc_version = subprocess.check_output(['ghc', "--numeric-version"]).strip()
-except:
-    raise DistutilsExecError,\
-            ("Make sure you have a haskell compiler named ghc")
-
-class HaskellExtension (Extension):
-    def __init__(self, haskell_sources, *args, **kwargs):
-        Extension.__init__(self, *args, **kwargs)
-        self.__haskell_sources = [src(s) for s in haskell_sources]
-
-    def build_custom (self, build_path):
-        src_dir = os.path.dirname (self.__haskell_sources[0])
-        bindings_lib = src (os.path.join (build_path, "libConvert.so"))
-        # We sneakily put our extra library in the build path,
-        # to be copied along at install-time
-        cmd = ['ghc', '-O2', '-dynamic', '-shared', '-fPIC',
-                    '-o', bindings_lib, '-lHSrts-ghc%s' % str (ghc_version)]
-        for s in self.__haskell_sources:
-            cmd.append (s)
-        try:
-            spawn (cmd, verbose=1)
-        except DistutilsExecError:
-            raise DistutilsExecError,\
-                    ("Compiling the python bindings for pandoc failed, make"
-                     "sure you have a haskell compiler named ghc, and that"
-                     "the pandoc development package is installed")
-
-
 glib_cflags = [flag for flag in PkgConfig ('glib-2.0', ['--cflags']) if flag]
 glib_libs = [flag for flag in PkgConfig ('glib-2.0', ['--libs']) if flag]
 
@@ -166,26 +137,16 @@ c_comment_scanner_module = FlexExtension(
                             ['hotdoc/lexer_parsers/c_comment_scanner/scanner.l',
                             'hotdoc/lexer_parsers/c_comment_scanner/scanner.h'])
 
-pandoc_translator_module = HaskellExtension(
-        ['hotdoc/core/pandoc_interface/translator.hs',
-        'hotdoc/core/pandoc_interface/doc_translator.c'],
-        'hotdoc.core.pandoc_interface.translator',
-        sources = ['hotdoc/core/pandoc_interface/translator_module.c'],
-        depends=
-            ['hotdoc/core/pandoc_interface/translator.hs',
-            'hotdoc/core/pandoc_interface/doc_translator.c'])
-
 setup(name='hotdoc',
       version='0.3',
-      description='A documentation tool based on pandoc and clang',
-      keywords='documentation gnome pandoc clang doxygen',
+      description='A documentation tool based on clang',
+      keywords='documentation gnome clang doxygen',
       url='https://github.com/MathieuDuponchelle/hotdoc',
       author='Mathieu Duponchelle',
       author_email='mathieu.duponchelle@opencreed.com',
       license='LGPL',
       packages=['hotdoc',
                 'hotdoc.core',
-                'hotdoc.core.pandoc_interface',
                 'hotdoc.clang_interface',
                 'hotdoc.formatters',
                 'hotdoc.formatters.html',
@@ -195,8 +156,7 @@ setup(name='hotdoc',
                 'hotdoc.extensions',
                 'hotdoc.utils'],
       cmdclass = {'build_ext': build_ext},
-      ext_modules = [doxygen_block_parser_module,
-          pandoc_translator_module, c_comment_scanner_module],
+      ext_modules = [doxygen_block_parser_module, c_comment_scanner_module],
       scripts =
       ['hotdoc/hotdoc',
        'hotdoc/transition_scripts/sgml_to_sections.py',
@@ -206,6 +166,6 @@ setup(name='hotdoc',
           'hotdoc.extensions': ['templates/*'],
           },
       install_requires = ['wheezy.template',
-                          'pandocfilters',
+                          'CommonMark',
                           'lxml'],
       zip_safe=False)
