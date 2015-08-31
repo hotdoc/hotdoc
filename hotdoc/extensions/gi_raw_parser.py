@@ -137,7 +137,7 @@ class GtkDocRawCommentParser (object):
 
     def parse_comment (self, comment, filename, lineno):
         comment = self.strip_comment (comment)
-        split = comment.split ('\n\n', 1)
+        split = re.split (r'\n[\W]*\n', comment, maxsplit=1)
         block_name, parameters, annotations = self.parse_title_and_parameters (split[0])
         description = ""
         tags = []
@@ -152,5 +152,4 @@ if __name__ == "__main__":
     with open (sys.argv[1], 'r') as f:
         c = f.read()
         n = datetime.now()
-        block = dp.parse_comment (c, sys.argv[1])
-        print "took me", datetime.now() - n, "who cares really ?"
+        block = dp.parse_comment (c, sys.argv[1], 0)
