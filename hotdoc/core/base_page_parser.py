@@ -2,18 +2,21 @@
 
 import os
 from .doc_tool import doc_tool
+from ..utils.loggable import Loggable
 
 class ParsedPage(object):
     def __init__(self):
         self.ast = None
         self.headers = []
 
-class PageParser(object):
+class PageParser(Loggable):
     def __init__(self):
+        Loggable.__init__(self)
         self.sections = []
         self._current_section = None
         self.__parsed_pages = []
         self._prefix = ""
+        self.__total_documented_symbols = 0
 
     def create_section (self, section_name, filename):
         comment = doc_tool.comments.get("SECTION:%s" % section_name.lower())
@@ -43,6 +46,7 @@ class PageParser(object):
                         comment_block)
                 if sym:
                     self._current_section.add_symbol (sym)
+                    self.__total_documented_symbols += 1
 
     def __update_dependencies (self, sections):
         for s in sections:
@@ -88,3 +92,5 @@ class PageParser(object):
                 section_name = os.path.splitext(os.path.basename (filename))[0]
                 self._parse_page (filename, section_name)
         self.__update_dependencies (self.sections)
+        self.info ("total documented symbols : %d" %
+                self.__total_documented_symbols)
