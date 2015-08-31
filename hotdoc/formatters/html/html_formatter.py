@@ -260,7 +260,7 @@ class HtmlFormatter (Formatter):
         return (out, False)
 
     def _format_class(self, klass):
-        if klass.parsed_page:
+        if klass.parsed_page and not klass.symbols:
             klass.formatted_contents = doc_tool.page_parser.render_parsed_page(klass.parsed_page)
 
         toc_sections = []
