@@ -4,6 +4,10 @@ To install hotdoc, you will first need to satisfy the dependencies, on fedora 22
 
 sudo dnf install glib2-devel flex python-devel libxml2-devel libxslt-devel clang-devel
 
+And on ubuntu:
+
+sudo apt-get install python-dev libglib2.0-dev flex libxml2-dev libxslt1-dev libclang-3.5-dev
+
 Adapt to your distribution.
 
 You will also need to manually install the clang bindings adapted to your clang installation, for example if clang 3.5
