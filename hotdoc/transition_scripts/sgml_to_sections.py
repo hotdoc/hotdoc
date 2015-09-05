@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import pandocfilters
 import os
 
 dir_ = os.path.dirname(os.path.abspath(__file__))
@@ -10,18 +9,25 @@ sys.path.append (os.path.abspath(os.path.join(dir_, os.pardir, "src")))
 
 import StringIO
 from lxml import etree as ET
-import hotdoc.core.main
-from hotdoc.core.pandoc_interface import translator
 import subprocess
 
 OUTPUT=sys.argv[3]
+
+def db_to_md (content):
+    with open ("tmpfile", 'w') as f:
+        f.write (content)
+    cmd = ['pandoc', '-s', '-f', 'docbook', '-t', 'markdown']
+    cmd.append ("tmpfile")
+    converted = subprocess.check_output (cmd)
+    os.unlink ('tmpfile')
+    return converted
 
 def convert_file (filename, new_name):
     with open(os.devnull, 'w') as f:
         xincluded = subprocess.check_output (["xmllint", "--xinclude",
             filename], stderr=f)
 
-    converted = translator.docbook_to_markdown (xincluded)
+    converted = db_to_md (xincluded)
     print "writing conversion to", new_name
     with open (os.path.join (OUTPUT, new_name + ".markdown"), 'w') as f:
         f.write (converted)
