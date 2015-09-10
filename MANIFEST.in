@@ -11,5 +11,7 @@ include hotdoc/formatters/html/templates/*
 include hotdoc/formatters/html/style.css
 include hotdoc/formatters/html/redstyle.css
 include hotdoc/formatters/html/greenstyle.css
+include hotdoc/formatters/html/API_index.js
+include hotdoc/formatters/html/home.png
 include hotdoc/extensions/templates/*
 include requirements.txt
