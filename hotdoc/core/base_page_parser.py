@@ -17,6 +17,8 @@ class PageParser(Loggable):
         self.__parsed_pages = []
         self._prefix = ""
         self.__total_documented_symbols = 0
+        self.create_object_hierarchy = False
+        self.create_api_index = False
 
     def create_section (self, section_name, filename):
         comment = doc_tool.comments.get("SECTION:%s" % section_name.lower())
@@ -34,6 +36,15 @@ class PageParser(Loggable):
 
         self._current_section = section
 
+    def create_section_from_well_known_name (self, section_name):
+        if section_name.lower() == 'object hierarchy':
+            self.create_object_hierarchy = True
+            return 'object_hierarchy.html'
+        elif section_name.lower() == 'api index':
+            self.create_api_index = True
+            return 'api_index.html'
+        return ''
+
     def create_symbol (self, symbol_name):
         if not self._current_section:
             return
@@ -47,6 +58,10 @@ class PageParser(Loggable):
                 if sym:
                     self._current_section.add_symbol (sym)
                     self.__total_documented_symbols += 1
+            else:
+                self.warning ("No comment in sources for symbol with name %s", symbol_name)
+        else:
+            self.warning ("No symbol in sources with name %s", symbol_name)
 
     def __update_dependencies (self, sections):
         for s in sections:

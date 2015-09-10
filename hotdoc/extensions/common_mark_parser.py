@@ -2,6 +2,7 @@
 
 import os
 import CommonMark
+from ..core.doc_tool import doc_tool
 from ..core.base_page_parser import PageParser, ParsedPage
 
 class CommonMarkParser (PageParser):
@@ -20,6 +21,7 @@ class CommonMarkParser (PageParser):
     def parse_para(self, ic):
         if ic.t != "Link":
             return
+
         if not ic.destination and ic.label:
             l = ''.join ([l.c for l in ic.label])
             self.create_symbol (l)
@@ -31,6 +33,11 @@ class CommonMarkParser (PageParser):
             return None
 
         section_name = ''.join ([l.c for l in ic.label])
+
+        if not ic.destination:
+            ic.destination = self.create_section_from_well_known_name(section_name)
+            return None
+
         filename = os.path.join (self._prefix, ic.destination)
 
         new_section = self._parse_page (filename, section_name)

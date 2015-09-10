@@ -58,6 +58,9 @@ class Symbol (object):
         self.annotations.append (annotation)
 
 
+    def get_type_name (self):
+        return ''
+
 class Tag:
     def __init__(self, name, value):
         self.name = name
@@ -90,6 +93,11 @@ class FunctionSymbol (Symbol):
         return Symbol.do_format (self)
 
 
+    def get_type_name (self):
+        if self.is_method:
+            return 'Method'
+        return 'Function'
+
 class CallbackSymbol (FunctionSymbol):
     def do_format (self):
         self.parameters = []
@@ -107,6 +115,8 @@ class CallbackSymbol (FunctionSymbol):
         self.comment.tags.pop('returns', None)
         return Symbol.do_format (self)
 
+    def get_type_name (self):
+        return "Callback"
 
 class EnumSymbol (Symbol):
     def __init__(self, *args):
@@ -131,6 +141,8 @@ class EnumSymbol (Symbol):
             member.do_format ()
         return Symbol.do_format (self)
 
+    def get_type_name (self):
+        return "Enumeration"
 
 class StructSymbol (Symbol):
     public_pattern = re.compile('\s*/\*\<\s*public\s*\>\*/.*')
@@ -236,6 +248,8 @@ class StructSymbol (Symbol):
     def _make_unique_id (self):
         return self._symbol.spelling + "-struct"
 
+    def get_type_name (self):
+        return "Structure"
 
 class MacroSymbol (Symbol):
     def __init__(self, *args):
@@ -247,7 +261,6 @@ class MacroSymbol (Symbol):
         original_lines = [linecache.getline(filename, i).rstrip() for i in range(start,
             end)]
         self.original_text = '\n'.join(original_lines)
-
 
 class FunctionMacroSymbol (MacroSymbol):
     def __init__(self, *args):
@@ -267,13 +280,17 @@ class FunctionMacroSymbol (MacroSymbol):
             self.parameters.append (parameter)
         return Symbol.do_format(self)
 
+    def get_type_name (self):
+        return "Function macro"
 
 class ConstantSymbol (MacroSymbol):
-    pass
+    def get_type_name (self):
+        return "Constant"
 
 
 class ExportedVariableSymbol (MacroSymbol):
-    pass
+    def get_type_name (self):
+        return "Exported variable"
 
 
 class QualifiedSymbol (Symbol):
@@ -281,6 +298,11 @@ class QualifiedSymbol (Symbol):
         self.type_tokens = tokens
         Symbol.__init__(self, *args)
 
+    def get_type_link (self):
+        for tok in self.type_tokens:
+            if isinstance(tok, Link):
+                return tok
+        return None
 
 class ReturnValueSymbol (QualifiedSymbol):
     pass
@@ -301,6 +323,8 @@ class FieldSymbol (QualifiedSymbol):
     def _make_name (self):
         return self.member_name
 
+    def get_type_name (self):
+        return "Attribute"
 
 class AliasSymbol (Symbol):
     def do_format (self):
@@ -308,6 +332,8 @@ class AliasSymbol (Symbol):
                 self._symbol.underlying_typedef_type, None)
         return Symbol.do_format (self)
 
+    def get_type_name (self):
+        return "Alias"
 
 def all_subclasses(cls):
         return cls.__subclasses__() + [g for s in cls.__subclasses__()
@@ -449,8 +475,7 @@ class SymbolFactory (object):
         for extension in doc_tool.extensions:
             klass, extra_args = extension.get_section_type (symbol)
             if klass:
-                res = klass (symbol, comment)
-                res.symbol_init (extra_args)
+                res = klass (extra_args, symbol, comment)
 
         if not res:
             res = SectionSymbol (symbol, comment)
@@ -466,3 +491,6 @@ class ClassSymbol (SectionSymbol):
         self.hierarchy = []
         self.children = []
         SectionSymbol.__init__(self, *args)
+
+    def get_type_name (self):
+        return "Class"

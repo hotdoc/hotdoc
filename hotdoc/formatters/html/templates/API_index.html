@@ -1,0 +1,57 @@
+@require(columns, rows)
+@extends('page.html')
+
+@def content():
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.9/css/jquery.dataTables.min.css" type="text/css" />
+
+<div style="margin-bottom:10px">Only show symbols if their version is
+
+<select id="filter_comparator">
+	<option value="eq">=</option>
+	<option value="gt">&gt;=</option>
+	<option value="lt">&lt;=</option>
+	<option value="ne">!=</option>
+</select>
+
+<input type="text" placeholder="version (1.4, 1.6 ...)" id="filter_value">
+
+</div>
+
+<table id="symbols" class="display" cellspacing="0">
+	<thead>
+		<tr>
+			@for column in columns:
+			<th>@column</th>
+			@end
+		</tr>
+	</thead>
+
+	<tbody>
+		@for row in rows:
+		<tr>
+			@for field in row:
+			<td>@field</td>
+			@end
+		</tr>
+		@end
+	</tbody>
+
+	<tfoot>
+		<tr>
+			@for column in columns:
+			<th>@column</th>
+			@end
+		</tr>
+	</tfoot>
+</table>
+
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js">
+</script>
+<script type="text/javascript" src="https://cdn.datatables.net/1.10.9/js/jquery.dataTables.min.js">
+</script>
+
+<script type="text/javascript" src="API_index.js">
+</script>
+
+@end

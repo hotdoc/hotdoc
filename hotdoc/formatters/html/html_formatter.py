@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import tempfile
 
 from wheezy.template.engine import Engine
 from wheezy.template.ext.core import CoreExtension
@@ -411,12 +412,47 @@ class HtmlFormatter (Formatter):
             return format_function (symbol)
         return (None, False)
 
+    def _format_api_index (self, columns, rows):
+        template = self.engine.get_template('API_index.html')
+        rows.sort (key=lambda row: row[0].title)
+
+        formatted_rows = []
+        for row in rows:
+            formatted_row = []
+            for field in row:
+                if isinstance(field, Link):
+                    formatted_row.append (self._format_link(field.get_link(),
+                        field.title))
+                else:
+                    formatted_row.append (field)
+            formatted_rows.append (formatted_row)
+
+        out = template.render ({'columns': columns,
+                                'rows': formatted_rows,
+                                'stylesheet': self.__stylesheet})
+
+        return out
+
+    def _format_class_hierarchy (self, dot_graph):
+        f = tempfile.NamedTemporaryFile(suffix='.svg', delete=False)
+        dot_graph.draw(f, prog='dot', format='svg', args="-Grankdir=LR")
+        f.close()
+        with open (f.name, 'r') as f:
+            contents = f.read()
+        os.unlink(f.name)
+
+        template = self.engine.get_template('object_hierarchy.html')
+        return template.render ({'graph': contents,
+                                 'stylesheet': self.__stylesheet})
+
     def _get_style_sheet (self):
         return "style.css"
 
     def _get_extra_files (self):
         dir_ = os.path.dirname(__file__)
-        return [os.path.join (dir_, self.__stylesheet)]
+        return [os.path.join (dir_, self.__stylesheet),
+                os.path.join (dir_, "API_index.js"),
+                os.path.join (dir_, "home.png"),]
 
     def format (self):
         self.__stylesheet = self._get_style_sheet()

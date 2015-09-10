@@ -3,11 +3,14 @@
 import os
 import shutil
 import CommonMark
+import pygraphviz as pg
 
 from xml.sax.saxutils import unescape
 
 from .doc_tool import doc_tool, ConfigError
-from .symbols import Symbol
+from .symbols import (Symbol, ReturnValueSymbol, ParameterSymbol, FieldSymbol,
+        ClassSymbol)
+from .sections import SectionSymbol
 from ..utils.simple_signals import Signal
 from ..utils.loggable import progress_bar
 
@@ -19,11 +22,23 @@ class Formatter(object):
         self.formatting_symbol_signals = {}
         for klass in doc_tool.symbol_factory.symbol_subclasses:
             self.formatting_symbol_signals[klass] = Signal()
+
+        self.fill_index_columns_signal = Signal()
+        self.fill_index_row_signal = Signal()
         self._output = doc_tool.output
 
         # Hardcoded for now
         self.__cmp = CommonMark.DocParser()
         self.__cmr = CommonMark.HTMLRenderer()
+        self.__global_hierarchy = []
+
+    def set_global_hierarchy (self, hierarchy):
+        """
+        A bit ugly for now, will be changed when C++ support is
+        implemented.
+        For now the extension provides a list of 2-tuple (parent->child)
+        """
+        self.__global_hierarchy = hierarchy
 
     def format (self):
         self.__total_sections = 0
@@ -37,10 +52,41 @@ class Formatter(object):
             self.__progress_bar.clear()
             self.__update_progress ()
         
+        index_columns = ['Name', 'Type', 'In']
+        self.__index_rows = []
+        self.fill_index_columns_signal (index_columns)
+
         for section in doc_tool.sections:
             self.__format_section (section)
 
+        if doc_tool.page_parser.create_object_hierarchy:
+            graph = self.__create_hierarchy_graph ()
+            hierarchy = self._format_class_hierarchy (graph)
+            if hierarchy:
+                self.__write_hierarchy (hierarchy)
+
+        if doc_tool.page_parser.create_api_index:
+            api_index = self._format_api_index (index_columns, self.__index_rows)
+            if api_index:
+                self.__write_API_index (api_index)
+
         self.__copy_extra_files ()
+
+    def __create_hierarchy_graph (self):
+        graph = pg.AGraph(directed=True, strict=True)
+
+        for pair in self.__global_hierarchy:
+            parent_link = pair[0].get_type_link()
+            child_link = pair[1].get_type_link()
+
+            graph.add_node(parent_link.title, URL=parent_link.get_link(),
+                    style="rounded", shape="box")
+            graph.add_node(child_link.title, URL=child_link.get_link(),
+                    style="rounded", shape="box")
+
+            graph.add_edge (parent_link.title, child_link.title)
+
+        return graph
 
     def __update_progress (self):
         if self.__progress_bar is None:
@@ -70,6 +116,16 @@ class Formatter(object):
         if standalone:
             self.__write_symbol (symbol)
 
+        if out and type(symbol) not in [SectionSymbol, ReturnValueSymbol,
+                ParameterSymbol, FieldSymbol]:
+            row = [symbol.link, symbol.get_type_name()]
+            if symbol.comment:
+                row.append (os.path.basename(symbol.comment.filename))
+            else:
+                row.append ('')
+            self.fill_index_row_signal (symbol, row)
+            self.__index_rows.append (row)
+
         return True
 
     def __get_subsections_count (self, section):
@@ -91,6 +147,16 @@ class Formatter(object):
         for f in self._get_extra_files():
             basename = os.path.basename (f)
             shutil.copy (f, os.path.join (self._output, basename))
+
+    def __write_API_index (self, content):
+        path = os.path.join (self._output, 'api_index.html')
+        with open (path, 'w') as f:
+            f.write (content.encode('utf-8'))
+
+    def __write_hierarchy (self, content):
+        path = os.path.join (self._output, 'object_hierarchy.html')
+        with open (path, 'w') as f:
+            f.write (content.encode('utf-8'))
 
     def __write_symbol (self, symbol):
         path = os.path.join (self._output, symbol.link.pagename)

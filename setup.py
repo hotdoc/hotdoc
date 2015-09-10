@@ -168,5 +168,6 @@ setup(name='hotdoc',
           },
       install_requires = ['wheezy.template',
                           'CommonMark',
-                          'lxml'],
+                          'lxml',
+                          'pygraphviz'],
       zip_safe=False)

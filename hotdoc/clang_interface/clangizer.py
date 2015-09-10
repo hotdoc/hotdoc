@@ -35,7 +35,7 @@ class ClangScanner(Loggable):
         self.filenames = [os.path.abspath(filename) for filename in
                 config.dependency_tree.stale_sources]
 
-        args = ["-I/usr/lib/clang/3.5.0/include/"]
+        args = ["-I/usr/lib/clang/3.5.0/include/", "-Wno-attributes"]
         args.extend (clang_options)
 
         self.symbols = {}

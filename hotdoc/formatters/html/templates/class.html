@@ -1,31 +1,25 @@
 @require(klass, toc_sections, symbols_details, hierarchy)
 @extends('page.html')
 
+@def header_links():
+
+@for toc_section in toc_sections:
+<span id="nav_@toc_section.name">
+	<span class="dim">|</span>
+	<a href="#@toc_section.id_">@toc_section.name</a>
+</span>
+@end
+
+@if hierarchy:
+<span id="nav_hierarchy">
+	<span class="dim">|</span>
+	<a href="#hierarchy">Object Hierarchy</a>
+</span>
+@end
+\
+@end
+
 @def content():
-
-<table class="navigation" id="top" summary="Navigation header" width="100%" cellpadding="2" cellspacing="5">
-	<tbody>
-	<tr valign="middle">
-		<td class="shortcuts" align="left" width=100%>
-			<a class="shortcut" href="#">Top</a>
-
-			@for toc_section in toc_sections:
-			<span id="nav_@toc_section.name">
-				<span class="dim">|</span>
-				<a href="#@toc_section.id_">@toc_section.name</a>
-			</span>
-			@end
-
-			@if hierarchy:
-			<span id="nav_hierarchy">
-				<span class="dim">|</span>
-				<a href="#hierarchy">Object Hierarchy</a>
-			</span>
-			@end
-		</td>
-	</tr>
-	</tbody>
-</table>
 
 <div class="refentry">
 	<div class="refnamediv">
