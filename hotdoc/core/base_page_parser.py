@@ -22,7 +22,7 @@ class PageParser(Loggable):
 
     def create_section (self, section_name, filename):
         comment = doc_tool.comments.get("SECTION:%s" % section_name.lower())
-        symbol = doc_tool.source_scanner.symbols.get(section_name)
+        symbol = doc_tool.c_source_scanner.symbols.get(section_name)
         if not symbol:
             symbol = section_name
         section = doc_tool.symbol_factory.make_section (symbol, comment)
@@ -49,7 +49,7 @@ class PageParser(Loggable):
         if not self._current_section:
             return
 
-        symbol = doc_tool.source_scanner.symbols.get (symbol_name)
+        symbol = doc_tool.c_source_scanner.symbols.get (symbol_name)
         if symbol:
             comment_block = doc_tool.comments.get (symbol_name)
             if comment_block:

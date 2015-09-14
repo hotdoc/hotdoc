@@ -13,6 +13,7 @@ from ..utils.simple_signals import Signal
 from ..utils.loggable import Loggable
 from ..utils.loggable import init as loggable_init
 from ..clang_interface.clangizer import ClangScanner
+from ..dbusizer import DBusScanner
 
 class ConfigError(Exception):
     pass
@@ -24,7 +25,7 @@ class DocTool(Loggable):
         self.formatter = None
         self.output = None
         self.deps_file = None
-        self.filenames = None
+        self.c_sources = None
         self.style = None
         self.index_file = None
         self.dependency_tree = None
@@ -59,8 +60,11 @@ class DocTool(Loggable):
         self.parser = argparse.ArgumentParser()
         self.parser.add_argument("-s", "--style", action="store", default="gnome",
                 dest="style")
-        self.parser.add_argument ("-f", "--filenames", action="store", nargs="+",
-                dest="filenames", help="source code files to parse")
+        self.parser.add_argument ("--c-sources", action="store", nargs="+",
+                dest="c_sources", help="C source files to parse", default=[])
+        self.parser.add_argument ("--dbus-sources", action="store", nargs="+",
+                dest="dbus_sources", help="DBus interface files to parse",
+                default=[])
         self.parser.add_argument ("-i", "--index", action="store",
                 dest="index", help="location of the index file")
         self.parser.add_argument ("-o", "--output", action="store", default='doc',
@@ -92,10 +96,11 @@ class DocTool(Loggable):
 
     def __setup_dependency_tree(self):
         self.dependency_tree = DependencyTree (os.path.join(self.output, self.deps_file),
-                [os.path.abspath (f) for f in self.filenames])
+                [os.path.abspath (f) for f in self.c_sources])
 
-    def __setup_source_scanner(self):
-        self.source_scanner = ClangScanner (self)
+    def __setup_source_scanners(self):
+        self.c_source_scanner = ClangScanner (self)
+        self.dbus_source_scanner = DBusScanner()
 
     def __parse_extensions (self, args):
         if args[0].extension_name:
@@ -126,7 +131,8 @@ class DocTool(Loggable):
 
         self.output = args[0].output
         self.output_format = args[0].output_format
-        self.filenames = args[0].filenames
+        self.c_sources = args[0].c_sources
+        self.dbus_sources = args[0].dbus_sources
         self.deps_file = args[0].deps_file
         self.style = args[0].style
 
@@ -139,12 +145,12 @@ class DocTool(Loggable):
         self.__setup_output ()
         self.__setup_dependency_tree ()
         self.__parse_extensions (args)
-        self.__setup_source_scanner ()
+        self.__setup_source_scanners ()
 
-        self.comments = self.source_scanner.comments
+        self.comments = self.c_source_scanner.comments
 
         if not args[0].index:
-            nif = NaiveIndexFormatter (self.source_scanner.symbols)
+            nif = NaiveIndexFormatter (self.c_source_scanner.symbols)
             args[0].index = "tmp_markdown_files/tmp_index.markdown"
         self.index_file = args[0].index
 
@@ -158,6 +164,6 @@ class DocTool(Loggable):
     def finalize (self):
         self.dependency_tree.dump()
         self.link_resolver.pickle (self.output)
-        self.source_scanner.finalize()
+        self.c_source_scanner.finalize()
 
 doc_tool = DocTool()

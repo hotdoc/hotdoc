@@ -361,7 +361,7 @@ class GIRParser(object):
             gi_name = '%s.%s' % (klass.parent_name, klass.node.attrib['name'])
             klass_name = klass.node.attrib['{%s}type-name' % self.nsmap['glib']]
             cursor = \
-                    doc_tool.source_scanner.lookup_ast_node(klass_name)
+                    doc_tool.c_source_scanner.lookup_ast_node(klass_name)
             if cursor:
                 symbol = doc_tool.symbol_factory.make_qualified_symbol(cursor.type, None)
                 parents = reversed(self.gir_hierarchies[gi_name])
@@ -388,14 +388,14 @@ class GIRParser(object):
 
             if not klass_name in children:
                 cursor = \
-                        doc_tool.source_scanner.lookup_ast_node(klass_name)
+                        doc_tool.c_source_scanner.lookup_ast_node(klass_name)
                 if cursor:
                     symbol = doc_tool.symbol_factory.make_qualified_symbol (cursor.type, None)
                     children[klass_name] = symbol
 
             c_name = parent_class.attrib['{%s}type-name' % self.nsmap['glib']]
             cursor = \
-                    doc_tool.source_scanner.lookup_ast_node(c_name)
+                    doc_tool.c_source_scanner.lookup_ast_node(c_name)
             if not cursor:
                 break
 
