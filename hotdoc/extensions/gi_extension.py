@@ -187,8 +187,14 @@ class GIClassSymbol (ClassSymbol, Loggable):
         self._register_typed_symbol (GIPropertySymbol, "Properties")
         self._register_typed_symbol (GISignalSymbol, "Signals")
         self._register_typed_symbol (GIVFunctionSymbol, "Virtual Functions")
+        self.__parsed_gir_class_info = False
 
     def parse_gir_class_info (self):
+        if self.__parsed_gir_class_info:
+            return
+
+        self.__parsed_gir_class_info = True
+
         gir_node = self.gir_class_info.node
 
         klass_name = gir_node.attrib.get('{%s}type-name' %
