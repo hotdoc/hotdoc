@@ -19,14 +19,14 @@ def ast_node_is_function_pointer (ast_node):
 
 
 class ClangScanner(Loggable):
-    def __init__(self, config):
+    def __init__(self, config, options):
         Loggable.__init__(self)
-        clang_options = os.getenv("CLANG_OPTIONS")
 
         self.__config = config
 
-        if clang_options:
-            clang_options = clang_options.split(' ')
+        if options:
+            options = options[0].split(' ')
+
         index = clang.cindex.Index.create()
         flags = clang.cindex.TranslationUnit.PARSE_SKIP_FUNCTION_BODIES |\
                 clang.cindex.TranslationUnit.PARSE_INCOMPLETE |\
@@ -36,9 +36,11 @@ class ClangScanner(Loggable):
                 config.dependency_tree.stale_sources]
 
         args = ["-I/usr/lib/clang/3.5.0/include/", "-Wno-attributes"]
-        args.extend (clang_options)
+        args.extend (options)
 
         self.symbols = {}
+        self.new_symbols = {}
+
         self.external_symbols = {}
         self.comments = {}
         self.token_groups = []
@@ -192,5 +194,5 @@ class ClangScanner(Loggable):
         del self.tus
 
 if __name__=="__main__": 
-    css = ClangScanner ([sys.argv[1]])
+    css = ClangScanner ([sys.argv[1]], '')
     print css.comments

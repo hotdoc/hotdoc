@@ -62,6 +62,8 @@ class DocTool(Loggable):
                 dest="style")
         self.parser.add_argument ("--c-sources", action="store", nargs="+",
                 dest="c_sources", help="C source files to parse", default=[])
+        self.parser.add_argument ("--clang-options", action="store", nargs="+",
+                dest="clang_options", help="Flags to pass to clang", default="")
         self.parser.add_argument ("--dbus-sources", action="store", nargs="+",
                 dest="dbus_sources", help="DBus interface files to parse",
                 default=[])
@@ -98,8 +100,8 @@ class DocTool(Loggable):
         self.dependency_tree = DependencyTree (os.path.join(self.output, self.deps_file),
                 [os.path.abspath (f) for f in self.c_sources])
 
-    def __setup_source_scanners(self):
-        self.c_source_scanner = ClangScanner (self)
+    def __setup_source_scanners(self, clang_options):
+        self.c_source_scanner = ClangScanner (self, clang_options)
         self.dbus_source_scanner = DBusScanner()
 
     def __parse_extensions (self, args):
@@ -145,7 +147,7 @@ class DocTool(Loggable):
         self.__setup_output ()
         self.__setup_dependency_tree ()
         self.__parse_extensions (args)
-        self.__setup_source_scanners ()
+        self.__setup_source_scanners (args[0].clang_options)
 
         self.comments = self.c_source_scanner.comments
 
