@@ -48,6 +48,8 @@ class Symbol (object):
     def _make_unique_id (self):
         if type(self._symbol) == clang.cindex.Cursor:
             return self._symbol.spelling
+        elif type (self._symbol) == str:
+            return self._symbol
         res = uuid.uuid4()
         return str(res)
 
