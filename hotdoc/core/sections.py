@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from .symbols import *
+from hotdoc.clang_interface.clangizer import (ClangFunctionSymbol)
 
 class TypedSymbolsList (object):
     def __init__ (self, name):
@@ -15,7 +16,7 @@ class SectionSymbol (Symbol):
         self.sections = []
 
         self.typed_symbols = {}
-        self.typed_symbols[FunctionSymbol] = TypedSymbolsList ("Functions")
+        self.typed_symbols[ClangFunctionSymbol] = TypedSymbolsList ("Functions")
         self.typed_symbols[CallbackSymbol] = TypedSymbolsList ("Callback Functions")
         self.typed_symbols[FunctionMacroSymbol] = TypedSymbolsList ("Function Macros")
         self.typed_symbols[ConstantSymbol] = TypedSymbolsList ("Constants")

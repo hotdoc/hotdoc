@@ -10,6 +10,7 @@ from fnmatch import fnmatch
 
 from hotdoc.utils.loggable import Loggable, progress_bar
 from hotdoc.lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
+from hotdoc.core.links import LocalLink
 
 def ast_node_is_function_pointer (ast_node):
     if ast_node.kind == clang.cindex.TypeKind.POINTER and \
@@ -18,6 +19,170 @@ def ast_node_is_function_pointer (ast_node):
         return True
     return False
 
+class Tag:
+    def __init__(self, name, value):
+        self.name = name
+        self.description = value
+
+class Symbol (object):
+    def __init__(self, comment):
+        from hotdoc.core.doc_tool import doc_tool
+        self.comment = comment
+        self.original_text = None
+        self.detailed_description = None
+        self.link = LocalLink (self._make_unique_id(), "", self._make_name())
+        doc_tool.link_resolver.add_local_link (self.link)
+
+    def parse_tags(self):
+        if not self.comment:
+            return []
+
+        if not hasattr (self.comment, "tags"):
+            return []
+
+        tags = []
+        for tag, value in self.comment.tags.iteritems():
+            tags.append (Tag (tag, value.value))
+        return tags
+
+    def do_format (self):
+        from hotdoc.core.doc_tool import doc_tool
+        self.tags = self.parse_tags ()
+        return doc_tool.formatter.format_symbol (self)
+
+    def _make_name (self):
+        raise NotImplementedError
+
+    def _make_unique_id (self):
+        raise NotImplementedError
+
+    def get_extra_links (self):
+        return []
+
+    def add_annotation (self, annotation):
+        self.annotations.append (annotation)
+
+    def get_type_name (self):
+        return ''
+
+    def __apply_qualifiers (self, type_, tokens):
+        if type_.is_const_qualified():
+            tokens.append ('const ')
+        if type_.is_restrict_qualified():
+            tokens.append ('restrict ')
+        if type_.is_volatile_qualified():
+            tokens.append ('volatile ')
+
+    def _make_c_style_type_name (self, type_):
+        from hotdoc.core.doc_tool import doc_tool
+        tokens = []
+        while (type_.kind == clang.cindex.TypeKind.POINTER):
+            self.__apply_qualifiers(type_, tokens)
+            tokens.append ('*')
+            type_ = type_.get_pointee()
+
+        if type_.kind == clang.cindex.TypeKind.TYPEDEF:
+            d = type_.get_declaration ()
+            link = doc_tool.link_resolver.get_named_link (d.displayname)
+            if link:
+                tokens.append (link)
+            else:
+                tokens.append (d.displayname + ' ')
+            self.__apply_qualifiers(type_, tokens)
+        else:
+            link = doc_tool.link_resolver.get_named_link (type_.spelling)
+            if link:
+                tokens.append (link)
+            else:
+                tokens.append (type_.spelling + ' ')
+
+        tokens.reverse()
+        return tokens
+
+    def get_source_location (self):
+        raise NotImplementedError
+
+class QualifiedSymbol (Symbol):
+    def __init__(self, tokens, comment):
+        Symbol.__init__(self, comment)
+        self.type_tokens = tokens
+        print self.type_tokens
+
+    def get_type_link (self):
+        for tok in self.type_tokens:
+            if isinstance(tok, Link):
+                return tok
+        return None
+
+class ReturnValueSymbol (QualifiedSymbol):
+    pass
+
+
+class ParameterSymbol (QualifiedSymbol):
+    def __init__(self, argname, tokens, comment):
+        QualifiedSymbol.__init__(self, tokens, comment)
+        self.argname = argname
+        self.array_nesting = 0
+
+class FunctionSymbol (Symbol):
+    def __init__(self, comment, parameters, return_value):
+        Symbol.__init__(self, comment)
+        self.parameters = parameters
+        self.return_value = return_value
+        self.throws = False
+        self.is_method = False
+        self.return_value = None
+
+class ClangSymbol (Symbol):
+    def __init__(self, node, comment):
+        self.node = node
+        Symbol.__init__(self, comment)
+
+    def _make_name (self):
+        return self.node.spelling
+
+    def _make_unique_id (self):
+        return self.node.spelling
+
+    def get_source_location (self):
+        return self.node.location
+
+class ClangParameterSymbol (ParameterSymbol, ClangSymbol):
+    def __init__(self, node, argname, comment):
+        ClangSymbol.__init__(self, node, comment)
+        tokens = self._make_c_style_type_name (node)
+        ParameterSymbol.__init__(self, argname, tokens, comment)
+
+class ClangReturnValueSymbol (ReturnValueSymbol, ClangSymbol):
+    def __init__(self, node, comment):
+        ClangSymbol.__init__(self, node, comment)
+        tokens = self._make_c_style_type_name (node)
+        ReturnValueSymbol.__init__(self, tokens, comment)
+
+class ClangFunctionSymbol (FunctionSymbol, ClangSymbol):
+    def __init__(self, node, comment):
+        ClangSymbol.__init__(self, node, comment)
+
+        parameters = []
+
+        if self.comment:
+            return_comment = self.comment.tags.pop('returns', None) 
+        else:
+            return_comment = None
+
+        return_value = ClangReturnValueSymbol (self.node.result_type,
+                return_comment)
+
+        for param in self.node.get_arguments():
+            if self.comment:
+                param_comment = self.comment.params.get (param.displayname)
+            else:
+                param_comment = None
+
+            parameter = ClangParameterSymbol (param.type, param.displayname, param_comment)
+            parameters.append (parameter)
+
+        FunctionSymbol.__init__(self, comment, parameters, return_value)
 
 class ClangScanner(Loggable):
     def __init__(self, config, options):
@@ -91,8 +256,6 @@ class ClangScanner(Loggable):
         self.info ("%d internal symbols found" % len (self.symbols))
         self.info ("%d external symbols found" % len (self.external_symbols))
         self.info ("%d comments found" % len (self.comments))
-
-        print self.new_symbols
 
     def __update_progress (self):
         if self.__progress_bar is None:
@@ -207,8 +370,8 @@ class ClangScanner(Loggable):
         return sym
 
     def __create_function_symbol (self, node):
-        from hotdoc.core.symbols import FunctionSymbol
-        sym = FunctionSymbol (node, self.comments.get (node.spelling))
+        comment = self.comments.get (node.spelling)
+        sym = ClangFunctionSymbol (node, comment)
         return sym
 
     def __create_exported_variable_symbol (self, node):

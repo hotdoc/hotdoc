@@ -10,6 +10,8 @@ from wheezy.template.ext.core import CoreExtension
 from wheezy.template.loader import FileLoader
 
 from ...core.symbols import *
+from hotdoc.clang_interface.clangizer import (ClangFunctionSymbol, ClangParameterSymbol,
+        ClangReturnValueSymbol, QualifiedSymbol)
 from ...core.base_formatter import Formatter
 from ...core.links import Link
 
@@ -35,7 +37,7 @@ class HtmlFormatter (Formatter):
     def __init__(self, searchpath):
         Formatter.__init__(self)
         self._symbol_formatters = {
-                FunctionSymbol: self._format_function,
+                ClangFunctionSymbol: self._format_function,
                 FunctionMacroSymbol: self._format_function_macro,
                 CallbackSymbol: self._format_callback,
                 ConstantSymbol: self._format_constant,
@@ -45,13 +47,13 @@ class HtmlFormatter (Formatter):
                 EnumSymbol: self._format_enum,
                 ClassSymbol: self._format_class,
                 SectionSymbol: self._format_class,
-                ParameterSymbol: self._format_parameter_symbol,
-                ReturnValueSymbol : self._format_return_value_symbol,
+                ClangParameterSymbol: self._format_parameter_symbol,
+                ClangReturnValueSymbol : self._format_return_value_symbol,
                 FieldSymbol: self._format_field_symbol,
                 }
 
         self._summary_formatters = {
-                FunctionSymbol: self._format_function_summary,
+                ClangFunctionSymbol: self._format_function_summary,
                 FunctionMacroSymbol: self._format_function_macro_summary,
                 CallbackSymbol: self._format_callback_summary,
                 ConstantSymbol: self._format_constant_summary,
@@ -61,7 +63,7 @@ class HtmlFormatter (Formatter):
                 EnumSymbol: self._format_enum_summary,
                 }
 
-        self._ordering = [FunctionSymbol, FunctionMacroSymbol,
+        self._ordering = [ClangFunctionSymbol, FunctionMacroSymbol,
                 StructSymbol, EnumSymbol, ConstantSymbol, ExportedVariableSymbol,
                 AliasSymbol, CallbackSymbol]
 
@@ -107,7 +109,7 @@ class HtmlFormatter (Formatter):
         elif hasattr (symbol, "link"):
             out += self._format_link (symbol.link.get_link(), symbol.link.title)
 
-        if type (symbol) == ParameterSymbol:
+        if type (symbol) == ClangParameterSymbol:
             out += ' ' + symbol.argname
 
         if type (symbol) == FieldSymbol and symbol.member_name:
@@ -333,7 +335,8 @@ class HtmlFormatter (Formatter):
         template = self.engine.get_template('return_value.html')
         return (template.render ({'return_value': return_value}), False)
 
-    def _format_callable(self, callable_, callable_type, title, is_pointer=False, flags=None):
+    def _format_callable(self, callable_, callable_type, title,
+            is_pointer=False, flags=None):
         template = self.engine.get_template('callable.html')
 
         for p in callable_.parameters:

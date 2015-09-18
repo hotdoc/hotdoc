@@ -69,6 +69,11 @@ class Symbol (object):
     def get_type_name (self):
         return ''
 
+    def get_source_location (self):
+        if hasattr (self._symbol, "location"):
+            return self._symbol.location
+        return None
+
 class Tag:
     def __init__(self, name, value):
         self.name = name
@@ -389,6 +394,9 @@ class SymbolFactory (object):
         return tokens
 
     def __signal_new_symbol (self, symbol):
+        if not type (symbol) in self.new_symbol_signals:
+            return symbol
+
         res = self.new_symbol_signals[type(symbol)](symbol)
         if False in res:
             return None

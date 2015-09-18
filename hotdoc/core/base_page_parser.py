@@ -69,10 +69,11 @@ class PageParser(Loggable):
                 doc_tool.dependency_tree.add_dependency (s.source_file,
                         None)
             for sym in s.symbols:
-                if not hasattr (sym._symbol, "location"):
+                location = sym.get_source_location()
+                if location is None:
                     continue
 
-                filename = str (sym._symbol.location.file)
+                filename = str (location.file)
                 doc_tool.dependency_tree.add_dependency (s.source_file, filename)
                 comment_filename = sym.comment.filename
                 doc_tool.dependency_tree.add_dependency (s.source_file, comment_filename)
