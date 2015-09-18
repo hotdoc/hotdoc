@@ -7,11 +7,17 @@ import uuid
 # FIXME: This will have to be abstracted, might be involved :)
 import clang.cindex
 
-from ..clang_interface.clangizer import ast_node_is_function_pointer
 from .links import LocalLink, Link
 from ..utils.simple_signals import Signal
 from ..utils.utils import all_subclasses
 from .doc_tool import doc_tool
+
+def ast_node_is_function_pointer (ast_node):
+    if ast_node.kind == clang.cindex.TypeKind.POINTER and \
+            ast_node.get_pointee().get_result().kind != \
+            clang.cindex.TypeKind.INVALID:
+        return True
+    return False
 
 class Symbol (object):
     def __init__(self, symbol, comment):
@@ -434,38 +440,9 @@ class SymbolFactory (object):
     def make (self, symbol, comment):
         klass = None
 
-        if symbol.kind == clang.cindex.CursorKind.MACRO_DEFINITION:
-            l = linecache.getline (str(symbol.location.file), symbol.location.line)
-            # FIXME: hack, seems there's no better way to figure out if a macro is
-            # function-like
-            split = l.split()
-            if '(' in split[1]:
-                klass = FunctionMacroSymbol 
-            else:
-                klass = ConstantSymbol
-        elif symbol.kind == clang.cindex.CursorKind.FUNCTION_DECL:
-            klass = FunctionSymbol
-        elif symbol.kind == clang.cindex.CursorKind.VAR_DECL:
-            klass = ExportedVariableSymbol
-        elif symbol.kind == clang.cindex.CursorKind.TYPEDEF_DECL:
-            t = symbol.underlying_typedef_type
-            if ast_node_is_function_pointer (t):
-                klass = CallbackSymbol
-            else:
-                d = t.get_declaration()
-                if d.kind == clang.cindex.CursorKind.STRUCT_DECL:
-                    klass = StructSymbol
-                elif d.kind == clang.cindex.CursorKind.ENUM_DECL:
-                    klass = EnumSymbol
-                else:
-                    klass = AliasSymbol
-
-        res = None
-        if klass:
-            res = klass (symbol, comment)
-
-        if res:
-            return self.__signal_new_symbol (res)
+        if symbol.spelling in doc_tool.c_source_scanner.new_symbols:
+            sym = doc_tool.c_source_scanner.new_symbols[symbol.spelling]
+            return self.__signal_new_symbol (sym)
 
         return None
 

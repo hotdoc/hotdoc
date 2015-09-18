@@ -2,6 +2,7 @@
 
 import os
 import sys
+import linecache
 from datetime import datetime, timedelta
 import clang.cindex
 from ctypes import *
@@ -57,17 +58,16 @@ class ClangScanner(Loggable):
         self.parsed = set({})
 
         n = datetime.now()
-        for filename in self.filenames:
-            if not self.__config.full_scan:
+
+        if not self.__config.full_scan:
+            for filename in self.filenames:
                 with open (filename, 'r') as f:
                     cs = get_comments (filename)
                     for c in cs:
                         block = self.__config.raw_comment_parser.parse_comment(c[0], c[1], c[2])
                         self.comments[block.name] = block
 
-                    #for block in parse_comment_blocks (f.read(), filename):
-                    #    self.comments[block.name] = block
-
+        for filename in self.filenames:
             if os.path.abspath(filename) in self.parsed:
                 continue
 
@@ -92,6 +92,7 @@ class ClangScanner(Loggable):
         self.info ("%d external symbols found" % len (self.external_symbols))
         self.info ("%d comments found" % len (self.comments))
 
+        print self.new_symbols
 
     def __update_progress (self):
         if self.__progress_bar is None:
@@ -160,6 +161,60 @@ class ClangScanner(Loggable):
                 self.symbols[node.spelling] = node
                 self.debug ("Found internal symbol [%s] of kind %s at location %s" %
                         (node.spelling, str(node.kind), str (node.location)))
+
+            if node.spelling in self.new_symbols:
+                continue
+
+            sym = None
+            if node.kind == clang.cindex.CursorKind.FUNCTION_DECL:
+                sym = self.__create_function_symbol (node)
+            elif node.kind == clang.cindex.CursorKind.VAR_DECL:
+                sym = self.__create_exported_variable_symbol (node)
+            elif node.kind == clang.cindex.CursorKind.MACRO_DEFINITION:
+                sym = self.__create_macro_symbol (node)
+            elif node.kind == clang.cindex.CursorKind.TYPEDEF_DECL:
+                sym = self.__create_typedef_symbol (node)
+
+            if sym is not None:
+                self.new_symbols[node.spelling] = sym
+
+    def __create_typedef_symbol (self, node): 
+        from hotdoc.core.symbols import (CallbackSymbol, StructSymbol,
+                EnumSymbol, AliasSymbol)
+        t = node.underlying_typedef_type
+        if ast_node_is_function_pointer (t):
+            sym = CallbackSymbol (node, self.comments.get (node.spelling))
+        else:
+            d = t.get_declaration()
+            if d.kind == clang.cindex.CursorKind.STRUCT_DECL:
+                sym = StructSymbol (node, self.comments.get (node.spelling))
+            elif d.kind == clang.cindex.CursorKind.ENUM_DECL:
+                sym = EnumSymbol (node, self.comments.get (node.spelling))
+            else:
+                sym = AliasSymbol (node, self.comments.get (node.spelling))
+        return sym
+
+    def __create_macro_symbol (self, node):
+        from hotdoc.core.symbols import FunctionMacroSymbol, ConstantSymbol
+
+        l = linecache.getline (str(node.location.file), node.location.line)
+        split = l.split()
+        if '(' in split[1]:
+            sym = FunctionMacroSymbol (node, self.comments.get (node.spelling))
+        else:
+            sym = ConstantSymbol (node, self.comments.get (node.spelling))
+
+        return sym
+
+    def __create_function_symbol (self, node):
+        from hotdoc.core.symbols import FunctionSymbol
+        sym = FunctionSymbol (node, self.comments.get (node.spelling))
+        return sym
+
+    def __create_exported_variable_symbol (self, node):
+        from hotdoc.core.symbols import ExportedVariableSymbol
+        sym = ExportedVariableSymbol (node, self.comments.get (node.spelling))
+        return sym
 
     def find_external_symbols(self, nodes, tu):
         for node in nodes:
