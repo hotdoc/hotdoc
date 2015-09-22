@@ -10,10 +10,9 @@ from wheezy.template.ext.core import CoreExtension
 from wheezy.template.loader import FileLoader
 
 from ...core.symbols import *
-from hotdoc.clang_interface.clangizer import (ClangFunctionSymbol, ClangParameterSymbol,
-        ClangReturnValueSymbol, QualifiedSymbol)
 from ...core.base_formatter import Formatter
 from ...core.links import Link
+from ...core.sections import SectionSymbol
 
 
 class Callable(object):
@@ -37,7 +36,7 @@ class HtmlFormatter (Formatter):
     def __init__(self, searchpath):
         Formatter.__init__(self)
         self._symbol_formatters = {
-                ClangFunctionSymbol: self._format_function,
+                FunctionSymbol: self._format_function,
                 FunctionMacroSymbol: self._format_function_macro,
                 CallbackSymbol: self._format_callback,
                 ConstantSymbol: self._format_constant,
@@ -47,13 +46,16 @@ class HtmlFormatter (Formatter):
                 EnumSymbol: self._format_enum,
                 ClassSymbol: self._format_class,
                 SectionSymbol: self._format_class,
-                ClangParameterSymbol: self._format_parameter_symbol,
-                ClangReturnValueSymbol : self._format_return_value_symbol,
+                ParameterSymbol: self._format_parameter_symbol,
+                ReturnValueSymbol : self._format_return_value_symbol,
                 FieldSymbol: self._format_field_symbol,
+                SignalSymbol: self._format_signal_symbol,
+                VFunctionSymbol: self._format_vfunction_symbol,
+                PropertySymbol: self._format_property_symbol,
                 }
 
         self._summary_formatters = {
-                ClangFunctionSymbol: self._format_function_summary,
+                FunctionSymbol: self._format_function_summary,
                 FunctionMacroSymbol: self._format_function_macro_summary,
                 CallbackSymbol: self._format_callback_summary,
                 ConstantSymbol: self._format_constant_summary,
@@ -61,11 +63,14 @@ class HtmlFormatter (Formatter):
                 AliasSymbol: self._format_alias_summary,
                 StructSymbol: self._format_struct_summary,
                 EnumSymbol: self._format_enum_summary,
+                SignalSymbol: self._format_signal_summary,
+                VFunctionSymbol: self._format_vfunction_summary,
+                PropertySymbol: self._format_property_summary,
                 }
 
-        self._ordering = [ClangFunctionSymbol, FunctionMacroSymbol,
-                StructSymbol, EnumSymbol, ConstantSymbol, ExportedVariableSymbol,
-                AliasSymbol, CallbackSymbol]
+        self._ordering = [FunctionSymbol, FunctionMacroSymbol, SignalSymbol,
+                PropertySymbol, StructSymbol, VFunctionSymbol, EnumSymbol, ConstantSymbol,
+                ExportedVariableSymbol, AliasSymbol, CallbackSymbol]
 
         module_path = os.path.dirname(__file__)
         searchpath.append (os.path.join(module_path, "templates"))
@@ -109,7 +114,7 @@ class HtmlFormatter (Formatter):
         elif hasattr (symbol, "link"):
             out += self._format_link (symbol.link.get_link(), symbol.link.title)
 
-        if type (symbol) == ClangParameterSymbol:
+        if type (symbol) == ParameterSymbol:
             out += ' ' + symbol.argname
 
         if type (symbol) == FieldSymbol and symbol.member_name:
@@ -201,6 +206,33 @@ class HtmlFormatter (Formatter):
         enum_link = self._format_linked_symbol (enum)
         return template.render({'enum': enum_link})
 
+    def _format_signal_summary (self, signal):
+        return self._format_callable_summary (
+                self._format_linked_symbol (signal.return_value),
+                self._format_linked_symbol (signal),
+                True,
+                False,
+                signal.flags)
+
+    def _format_vfunction_summary (self, vmethod):
+        return self._format_callable_summary (
+                self._format_linked_symbol (vmethod.return_value),
+                self._format_linked_symbol (vmethod),
+                True,
+                True,
+                vmethod.flags)
+
+    def _format_property_summary (self, prop):
+        template = self.engine.get_template('property_summary.html')
+        property_type = self._format_linked_symbol (prop.type_)
+
+        prop_link = self._format_linked_symbol (prop)
+
+        return template.render({'property_type': property_type,
+                                'property_link': prop_link,
+                                'flags': prop.flags,
+                               })
+
     def _format_summary (self, summaries, summary_type):
         if not summaries:
             return None
@@ -240,6 +272,8 @@ class HtmlFormatter (Formatter):
 
     def _format_struct (self, struct):
         raw_code = self._format_raw_code (struct.raw_text)
+        for member in struct.members:
+            member.do_format()
         members_list = self._format_members_list (struct.members, 'Fields')
 
         template = self.engine.get_template ("struct.html")
@@ -251,6 +285,7 @@ class HtmlFormatter (Formatter):
     def _format_enum (self, enum):
         for member in enum.members:
             template = self.engine.get_template ("enum_member.html")
+            member.do_format()
             member.detailed_description = template.render ({
                                     'link': member.link,
                                     'detail': member.formatted_doc,
@@ -359,6 +394,25 @@ class HtmlFormatter (Formatter):
                                 'flags': flags})
 
         return (out, False)
+
+    def _format_signal_symbol (self, signal):
+        title = "%s_callback" % re.sub ('-', '_', signal.link.title)
+        return self._format_callable (signal, "signal", title,
+                flags=signal.flags)
+
+    def _format_vfunction_symbol (self, vmethod):
+        return self._format_callable (vmethod, "virtual method", vmethod.link.title,
+                flags=vmethod.flags)
+
+    def _format_property_symbol (self, prop):
+        type_link = self._format_linked_symbol (prop.type_)
+        template = self.engine.get_template ('property_prototype.html')
+        prototype = template.render ({'property_name': prop.link.title,
+                                      'property_type': type_link})
+        template = self.engine.get_template ('property.html')
+        res = template.render ({'prototype': prototype,
+                               'property': prop})
+        return (res, False)
 
     def _format_members_list(self, members, member_designation):
         template = self.engine.get_template('member_list.html')

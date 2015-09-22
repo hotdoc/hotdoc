@@ -11,6 +11,7 @@ from fnmatch import fnmatch
 from hotdoc.utils.loggable import Loggable, progress_bar
 from hotdoc.lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
 from hotdoc.core.links import LocalLink
+from hotdoc.core.symbols import *
 
 def ast_node_is_function_pointer (ast_node):
     if ast_node.kind == clang.cindex.TypeKind.POINTER and \
@@ -19,170 +20,6 @@ def ast_node_is_function_pointer (ast_node):
         return True
     return False
 
-class Tag:
-    def __init__(self, name, value):
-        self.name = name
-        self.description = value
-
-class Symbol (object):
-    def __init__(self, comment):
-        from hotdoc.core.doc_tool import doc_tool
-        self.comment = comment
-        self.original_text = None
-        self.detailed_description = None
-        self.link = LocalLink (self._make_unique_id(), "", self._make_name())
-        doc_tool.link_resolver.add_local_link (self.link)
-
-    def parse_tags(self):
-        if not self.comment:
-            return []
-
-        if not hasattr (self.comment, "tags"):
-            return []
-
-        tags = []
-        for tag, value in self.comment.tags.iteritems():
-            tags.append (Tag (tag, value.value))
-        return tags
-
-    def do_format (self):
-        from hotdoc.core.doc_tool import doc_tool
-        self.tags = self.parse_tags ()
-        return doc_tool.formatter.format_symbol (self)
-
-    def _make_name (self):
-        raise NotImplementedError
-
-    def _make_unique_id (self):
-        raise NotImplementedError
-
-    def get_extra_links (self):
-        return []
-
-    def add_annotation (self, annotation):
-        self.annotations.append (annotation)
-
-    def get_type_name (self):
-        return ''
-
-    def __apply_qualifiers (self, type_, tokens):
-        if type_.is_const_qualified():
-            tokens.append ('const ')
-        if type_.is_restrict_qualified():
-            tokens.append ('restrict ')
-        if type_.is_volatile_qualified():
-            tokens.append ('volatile ')
-
-    def _make_c_style_type_name (self, type_):
-        from hotdoc.core.doc_tool import doc_tool
-        tokens = []
-        while (type_.kind == clang.cindex.TypeKind.POINTER):
-            self.__apply_qualifiers(type_, tokens)
-            tokens.append ('*')
-            type_ = type_.get_pointee()
-
-        if type_.kind == clang.cindex.TypeKind.TYPEDEF:
-            d = type_.get_declaration ()
-            link = doc_tool.link_resolver.get_named_link (d.displayname)
-            if link:
-                tokens.append (link)
-            else:
-                tokens.append (d.displayname + ' ')
-            self.__apply_qualifiers(type_, tokens)
-        else:
-            link = doc_tool.link_resolver.get_named_link (type_.spelling)
-            if link:
-                tokens.append (link)
-            else:
-                tokens.append (type_.spelling + ' ')
-
-        tokens.reverse()
-        return tokens
-
-    def get_source_location (self):
-        raise NotImplementedError
-
-class QualifiedSymbol (Symbol):
-    def __init__(self, tokens, comment):
-        Symbol.__init__(self, comment)
-        self.type_tokens = tokens
-        print self.type_tokens
-
-    def get_type_link (self):
-        for tok in self.type_tokens:
-            if isinstance(tok, Link):
-                return tok
-        return None
-
-class ReturnValueSymbol (QualifiedSymbol):
-    pass
-
-
-class ParameterSymbol (QualifiedSymbol):
-    def __init__(self, argname, tokens, comment):
-        QualifiedSymbol.__init__(self, tokens, comment)
-        self.argname = argname
-        self.array_nesting = 0
-
-class FunctionSymbol (Symbol):
-    def __init__(self, comment, parameters, return_value):
-        Symbol.__init__(self, comment)
-        self.parameters = parameters
-        self.return_value = return_value
-        self.throws = False
-        self.is_method = False
-        self.return_value = None
-
-class ClangSymbol (Symbol):
-    def __init__(self, node, comment):
-        self.node = node
-        Symbol.__init__(self, comment)
-
-    def _make_name (self):
-        return self.node.spelling
-
-    def _make_unique_id (self):
-        return self.node.spelling
-
-    def get_source_location (self):
-        return self.node.location
-
-class ClangParameterSymbol (ParameterSymbol, ClangSymbol):
-    def __init__(self, node, argname, comment):
-        ClangSymbol.__init__(self, node, comment)
-        tokens = self._make_c_style_type_name (node)
-        ParameterSymbol.__init__(self, argname, tokens, comment)
-
-class ClangReturnValueSymbol (ReturnValueSymbol, ClangSymbol):
-    def __init__(self, node, comment):
-        ClangSymbol.__init__(self, node, comment)
-        tokens = self._make_c_style_type_name (node)
-        ReturnValueSymbol.__init__(self, tokens, comment)
-
-class ClangFunctionSymbol (FunctionSymbol, ClangSymbol):
-    def __init__(self, node, comment):
-        ClangSymbol.__init__(self, node, comment)
-
-        parameters = []
-
-        if self.comment:
-            return_comment = self.comment.tags.pop('returns', None) 
-        else:
-            return_comment = None
-
-        return_value = ClangReturnValueSymbol (self.node.result_type,
-                return_comment)
-
-        for param in self.node.get_arguments():
-            if self.comment:
-                param_comment = self.comment.params.get (param.displayname)
-            else:
-                param_comment = None
-
-            parameter = ClangParameterSymbol (param.type, param.displayname, param_comment)
-            parameters.append (parameter)
-
-        FunctionSymbol.__init__(self, comment, parameters, return_value)
 
 class ClangScanner(Loggable):
     def __init__(self, config, options):
@@ -341,42 +178,265 @@ class ClangScanner(Loggable):
             if sym is not None:
                 self.new_symbols[node.spelling] = sym
 
+    def __apply_qualifiers (self, type_, tokens):
+        if type_.is_const_qualified():
+            tokens.append ('const ')
+        if type_.is_restrict_qualified():
+            tokens.append ('restrict ')
+        if type_.is_volatile_qualified():
+            tokens.append ('volatile ')
+
+    def make_c_style_type_name (self, type_):
+        tokens = []
+        while (type_.kind == clang.cindex.TypeKind.POINTER):
+            self.__apply_qualifiers(type_, tokens)
+            tokens.append ('*')
+            type_ = type_.get_pointee()
+
+        if type_.kind == clang.cindex.TypeKind.TYPEDEF:
+            d = type_.get_declaration ()
+            link = doc_tool.link_resolver.get_named_link (d.displayname)
+            if link:
+                tokens.append (link)
+            else:
+                tokens.append (d.displayname + ' ')
+            self.__apply_qualifiers(type_, tokens)
+        else:
+            link = doc_tool.link_resolver.get_named_link (type_.spelling)
+            if link:
+                tokens.append (link)
+            else:
+                tokens.append (type_.spelling + ' ')
+
+        tokens.reverse()
+        return tokens
+
+    def __create_callback_symbol (self, node, comment):
+        parameters = []
+
+        if comment:
+            return_comment = comment.tags.pop('returns', None) 
+        else:
+            return_comment = None
+
+        type_tokens = self.make_c_style_type_name (node.result_type)
+        return_value = ReturnValueSymbol (type_tokens, return_comment)
+
+        for param in node.get_arguments():
+            if comment:
+                param_comment = comment.params.get (param.displayname)
+            else:
+                param_comment = None
+
+            type_tokens = self.make_c_style_type_name (param.type)
+            parameter = ParameterSymbol (param.displayname, type_tokens, param_comment)
+            parameters.append (parameter)
+        sym = CallbackSymbol (parameters, return_value, comment, node.spelling, node.location)
+        return sym
+
+    def __parse_public_fields (self, decl):
+        tokens = decl.translation_unit.get_tokens(extent=decl.extent)
+        delimiters = []
+
+        filename = str(decl.location.file)
+
+        start = decl.extent.start.line
+        end = decl.extent.end.line + 1
+        original_lines = [linecache.getline(filename, i).rstrip() for i in range(start,
+            end)]
+
+        public = True
+        if (self.__locate_delimiters(tokens, delimiters)):
+            public = False
+
+        children = []
+        for child in decl.get_children():
+            children.append(child)
+
+        delimiters.reverse()
+        if not delimiters:
+            return '\n'.join (original_lines), children
+
+        public_children = []
+        children = []
+        for child in decl.get_children():
+            children.append(child)
+        children.reverse()
+        if children:
+            next_child = children.pop()
+        else:
+            next_child = None
+        next_delimiter = delimiters.pop()
+
+        final_text = []
+
+        found_first_child = False
+
+        for i, line in enumerate(original_lines):
+            lineno = i + start
+            if next_delimiter and lineno == next_delimiter[1]:
+                public = next_delimiter[0]
+                if delimiters:
+                    next_delimiter = delimiters.pop()
+                else:
+                    next_delimiter = None
+                continue
+
+            if not next_child or lineno < next_child.location.line:
+                if public or not found_first_child:
+                    final_text.append (line)
+                continue
+
+            if lineno == next_child.location.line:
+                found_first_child = True
+                if public:
+                    final_text.append (line)
+                    public_children.append (next_child)
+                while next_child.location.line == lineno:
+                    if not children:
+                        public = True
+                        next_child = None
+                        break
+                    next_child = children.pop()
+
+        return ('\n'.join(final_text), public_children)
+
+    def __locate_delimiters (self, tokens, delimiters):
+        public_pattern = re.compile('\s*/\*\<\s*public\s*\>\*/.*')
+        private_pattern = re.compile('\s*/\*\<\s*private\s*\>\*/.*')
+        protected_pattern = re.compile('\s*/\*\<\s*protected\s*\>\*/.*')
+        had_public = False
+        for tok in tokens:
+            if tok.kind == clang.cindex.TokenKind.COMMENT:
+                if public_pattern.match (tok.spelling):
+                    had_public = True
+                    delimiters.append((True, tok.location.line))
+                elif private_pattern.match (tok.spelling):
+                    delimiters.append((False, tok.location.line))
+                elif protected_pattern.match (tok.spelling):
+                    delimiters.append((False, tok.location.line))
+        return had_public
+
+    def __create_struct_symbol (self, node, comment):
+        underlying = node.underlying_typedef_type
+        decl = underlying.get_declaration()
+        raw_text, public_fields = self.__parse_public_fields (decl)
+        members = []
+        for field in public_fields:
+            member_comment = comment.params.get (field.spelling)
+
+            type_tokens = self.make_c_style_type_name (field.type)
+            is_function_pointer = ast_node_is_function_pointer (field.type)
+            member = FieldSymbol (is_function_pointer, field.spelling,
+                    type_tokens, member_comment)
+            members.append (member)
+
+        return StructSymbol (raw_text, members, comment, node.spelling,
+                node.location)
+
+    def __create_enum_symbol (self, node, comment):
+        members = []
+        underlying = node.underlying_typedef_type
+        decl = underlying.get_declaration()
+        for member in decl.get_children():
+            member_comment = comment.params.get (member.spelling)
+            print "creating member", member.spelling, member_comment
+            member_value = member.enum_value
+            member = doc_tool.symbol_factory.make_simple_symbol (member_comment,
+                    member.spelling, member.location)
+            member.enum_value = member_value
+            doc_tool.link_resolver.add_local_link (member.link)
+            members.append (member)
+
+        return EnumSymbol (members, comment, node.spelling, node.location)
+
+    def __create_alias_symbol (self, node, comment):
+        type_tokens = self.make_c_style_type_name(node.underlying_typedef_type)
+        aliased_type = QualifiedSymbol (type_tokens, None)
+        return AliasSymbol (aliased_type, comment, node.spelling, node.location)
+
     def __create_typedef_symbol (self, node): 
-        from hotdoc.core.symbols import (CallbackSymbol, StructSymbol,
-                EnumSymbol, AliasSymbol)
         t = node.underlying_typedef_type
+        comment = self.comments.get (node.spelling)
         if ast_node_is_function_pointer (t):
-            sym = CallbackSymbol (node, self.comments.get (node.spelling))
+            sym = self.__create_callback_symbol (node, comment)
         else:
             d = t.get_declaration()
             if d.kind == clang.cindex.CursorKind.STRUCT_DECL:
-                sym = StructSymbol (node, self.comments.get (node.spelling))
+                sym = self.__create_struct_symbol (node, comment)
             elif d.kind == clang.cindex.CursorKind.ENUM_DECL:
-                sym = EnumSymbol (node, self.comments.get (node.spelling))
+                sym = self.__create_enum_symbol (node, comment)
             else:
-                sym = AliasSymbol (node, self.comments.get (node.spelling))
+                sym = self.__create_alias_symbol (node, comment)
         return sym
 
-    def __create_macro_symbol (self, node):
-        from hotdoc.core.symbols import FunctionMacroSymbol, ConstantSymbol
+    def __create_function_macro_symbol (self, node, comment, original_text): 
+        return_value = None
+        if comment:
+            return_comment = comment.tags.get ('returns')
+            if return_comment:
+                comment.tags.pop ('returns')
+                return_value = ReturnValueSymbol ([], return_comment)
 
+        parameters = []
+        if comment:
+            for param_name, param_comment in comment.params.iteritems():
+                parameter = ParameterSymbol (param_name, [], param_comment)
+                parameters.append (parameter)
+
+        sym = FunctionMacroSymbol (return_value, parameters, original_text,
+                comment, node.spelling, node.location)
+        return sym
+
+    def __create_constant_symbol (self, node, comment, original_text):
+        return ConstantSymbol (original_text, comment, node.spelling,
+                node.location)
+
+    def __create_macro_symbol (self, node):
         l = linecache.getline (str(node.location.file), node.location.line)
         split = l.split()
+
+        start = node.extent.start.line
+        end = node.extent.end.line + 1
+        filename = str(node.location.file)
+        original_lines = [linecache.getline(filename, i).rstrip() for i in range(start,
+            end)]
+        original_text = '\n'.join(original_lines)
+        comment = self.comments.get (node.spelling)
         if '(' in split[1]:
-            sym = FunctionMacroSymbol (node, self.comments.get (node.spelling))
+            sym = self.__create_function_macro_symbol (node, comment, original_text)
         else:
-            sym = ConstantSymbol (node, self.comments.get (node.spelling))
+            sym = self.__create_constant_symbol (node, comment, original_text)
 
         return sym
 
     def __create_function_symbol (self, node):
         comment = self.comments.get (node.spelling)
-        sym = ClangFunctionSymbol (node, comment)
+        parameters = []
+
+        if comment:
+            return_comment = comment.tags.pop('returns', None) 
+        else:
+            return_comment = None
+
+        type_tokens = self.make_c_style_type_name (node.result_type)
+        return_value = ReturnValueSymbol (type_tokens, return_comment)
+
+        for param in node.get_arguments():
+            if comment:
+                param_comment = comment.params.get (param.displayname)
+            else:
+                param_comment = None
+
+            type_tokens = self.make_c_style_type_name (param.type)
+            parameter = ParameterSymbol (param.displayname, type_tokens, param_comment)
+            parameters.append (parameter)
+        sym = FunctionSymbol (parameters, return_value, comment, node.spelling, node.location)
         return sym
 
     def __create_exported_variable_symbol (self, node):
-        from hotdoc.core.symbols import ExportedVariableSymbol
-        sym = ExportedVariableSymbol (node, self.comments.get (node.spelling))
+        sym = ExportedVariableSymbol ("lol", self.comments.get (node.spelling),
+                node.spelling, node.location)
         return sym
 
     def find_external_symbols(self, nodes, tu):

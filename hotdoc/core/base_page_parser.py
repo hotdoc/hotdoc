@@ -3,6 +3,7 @@
 import os
 from .doc_tool import doc_tool
 from ..utils.loggable import Loggable
+from ..utils.simple_signals import Signal
 
 class ParsedPage(object):
     def __init__(self):
@@ -19,13 +20,14 @@ class PageParser(Loggable):
         self.__total_documented_symbols = 0
         self.create_object_hierarchy = False
         self.create_api_index = False
+        self.symbol_added_signal = Signal()
 
     def create_section (self, section_name, filename):
         comment = doc_tool.comments.get("SECTION:%s" % section_name.lower())
         symbol = doc_tool.c_source_scanner.symbols.get(section_name)
         if not symbol:
             symbol = section_name
-        section = doc_tool.symbol_factory.make_section (symbol, comment)
+        section = doc_tool.symbol_factory.make_section (comment, section_name)
         section.source_file = filename
         section.link.pagename = "%s.%s" % (section_name, "html")
 
@@ -58,6 +60,10 @@ class PageParser(Loggable):
                 if sym:
                     self._current_section.add_symbol (sym)
                     self.__total_documented_symbols += 1
+                    new_symbols = sum(self.symbol_added_signal (sym), [])
+                    for symbol in new_symbols:
+                        self._current_section.add_symbol (symbol)
+                        self.__total_documented_symbols += 1
             else:
                 self.warning ("No comment in sources for symbol with name %s", symbol_name)
         else:

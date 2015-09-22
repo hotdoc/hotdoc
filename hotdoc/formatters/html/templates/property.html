@@ -1,0 +1,27 @@
+@require(prototype, property)
+
+<div class="refsect2">
+	<a name=@property.link.id_></a>
+	<h3 class="method">
+		<span class="entry">The <code>“@property.link.title”</code> property</span>
+	</h3>
+	@prototype
+	@property.formatted_doc
+
+@if property.flags:
+<p>Flags:\
+@for i, flag in enumerate (property.flags):
+
+@if i != 0:
+/\
+@end
+
+@if flag.link:
+<a href="@flag.link">@flag.nick</a>
+@else:
+@flag.nick
+@end
+@end
+@end
+</p>
+</div>

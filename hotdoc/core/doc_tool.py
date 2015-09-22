@@ -12,8 +12,6 @@ from ..utils.utils import all_subclasses
 from ..utils.simple_signals import Signal
 from ..utils.loggable import Loggable
 from ..utils.loggable import init as loggable_init
-from ..clang_interface.clangizer import ClangScanner
-from ..dbusizer import DBusScanner
 
 class ConfigError(Exception):
     pass
@@ -76,6 +74,10 @@ class DocTool(Loggable):
         self.parser.add_argument ("--output-format", action="store",
                 default="html", dest="output_format")
 
+        # Hardcoded for now
+        from ..extensions.common_mark_parser import CommonMarkParser
+        self.page_parser = CommonMarkParser ()
+
         extension_subclasses = all_subclasses (BaseExtension)
         subparsers = self.parser.add_subparsers (title="extensions",
                                             help="Extensions for parsing and formatting documentation",
@@ -101,6 +103,8 @@ class DocTool(Loggable):
                 [os.path.abspath (f) for f in self.c_sources])
 
     def __setup_source_scanners(self, clang_options):
+        from ..clang_interface.clangizer import ClangScanner
+        from ..dbusizer import DBusScanner
         self.c_source_scanner = ClangScanner (self, clang_options)
         self.dbus_source_scanner = DBusScanner()
 
@@ -120,11 +124,6 @@ class DocTool(Loggable):
                 self.__parse_extensions (args)
 
     def __create_symbols (self):
-        # Hardcoded for now
-        from ..extensions.common_mark_parser import CommonMarkParser
-
-        self.page_parser = CommonMarkParser ()
-
         self.page_parser.create_symbols ()
         self.sections = self.page_parser.sections
 

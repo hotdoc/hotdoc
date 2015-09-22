@@ -10,8 +10,6 @@ from xml.sax.saxutils import unescape
 from .doc_tool import doc_tool, ConfigError
 from .symbols import (Symbol, ReturnValueSymbol, ParameterSymbol, FieldSymbol,
         ClassSymbol)
-from hotdoc.clang_interface.clangizer import (ClangParameterSymbol,
-        ClangReturnValueSymbol)
 from .sections import SectionSymbol
 from ..utils.simple_signals import Signal
 from ..utils.loggable import progress_bar
@@ -120,8 +118,7 @@ class Formatter(object):
             self.__write_symbol (symbol)
 
         if out and type(symbol) not in [SectionSymbol, ReturnValueSymbol,
-                ParameterSymbol, FieldSymbol, ClangParameterSymbol,
-                ClangReturnValueSymbol]:
+                ParameterSymbol, FieldSymbol]:
             row = [symbol.link, symbol.get_type_name()]
             if symbol.comment:
                 row.append (os.path.basename(symbol.comment.filename))

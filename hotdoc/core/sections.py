@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from .symbols import *
-from hotdoc.clang_interface.clangizer import (ClangFunctionSymbol)
 
 class TypedSymbolsList (object):
     def __init__ (self, name):
@@ -16,7 +15,7 @@ class SectionSymbol (Symbol):
         self.sections = []
 
         self.typed_symbols = {}
-        self.typed_symbols[ClangFunctionSymbol] = TypedSymbolsList ("Functions")
+        self.typed_symbols[FunctionSymbol] = TypedSymbolsList ("Functions")
         self.typed_symbols[CallbackSymbol] = TypedSymbolsList ("Callback Functions")
         self.typed_symbols[FunctionMacroSymbol] = TypedSymbolsList ("Function Macros")
         self.typed_symbols[ConstantSymbol] = TypedSymbolsList ("Constants")
@@ -24,6 +23,9 @@ class SectionSymbol (Symbol):
         self.typed_symbols[StructSymbol] = TypedSymbolsList ("Data Structures")
         self.typed_symbols[EnumSymbol] = TypedSymbolsList ("Enumerations")
         self.typed_symbols[AliasSymbol] = TypedSymbolsList ("Aliases")
+        self.typed_symbols[SignalSymbol] = TypedSymbolsList ("Signals")
+        self.typed_symbols[PropertySymbol] = TypedSymbolsList ("Properties")
+        self.typed_symbols[VFunctionSymbol] = TypedSymbolsList ("Virtual Methods")
         self.ast = None
         self.formatted_contents = None
         if self.comment is not None and self.comment.title is not None:

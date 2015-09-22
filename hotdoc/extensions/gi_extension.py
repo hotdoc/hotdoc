@@ -5,9 +5,7 @@ from lxml import etree
 import clang.cindex
 import pygraphviz as pg
 
-from ..core.symbols import (Symbol, FunctionSymbol, ClassSymbol,
-        ParameterSymbol, ReturnValueSymbol, FunctionMacroSymbol, ConstantSymbol,
-        ExportedVariableSymbol, StructSymbol)
+from ..core.symbols import *
 from ..core.comment_block import GtkDocParameter, GtkDocCommentBlock
 from ..core.doc_tool import doc_tool
 from ..core.base_extension import BaseExtension
@@ -369,7 +367,8 @@ class GIRParser(object):
             cursor = \
                     doc_tool.c_source_scanner.lookup_ast_node(klass_name)
             if cursor:
-                symbol = doc_tool.symbol_factory.make_qualified_symbol(cursor.type, None)
+                type_tokens = doc_tool.c_source_scanner.make_c_style_type_name (cursor.type)
+                symbol = QualifiedSymbol(type_tokens, None)
                 parents = reversed(self.gir_hierarchies[gi_name])
                 for parent in parents:
                     hierarchy.append ((parent, symbol))
@@ -396,7 +395,8 @@ class GIRParser(object):
                 cursor = \
                         doc_tool.c_source_scanner.lookup_ast_node(klass_name)
                 if cursor:
-                    symbol = doc_tool.symbol_factory.make_qualified_symbol (cursor.type, None)
+                    type_tokens = doc_tool.c_source_scanner.make_c_style_type_name (cursor.type)
+                    symbol = QualifiedSymbol (type_tokens, None)
                     children[klass_name] = symbol
 
             c_name = parent_class.attrib['{%s}type-name' % self.nsmap['glib']]
@@ -405,7 +405,8 @@ class GIRParser(object):
             if not cursor:
                 break
 
-            parent_symbol = doc_tool.symbol_factory.make_qualified_symbol (cursor.type, None)
+            type_tokens = doc_tool.c_source_scanner.make_c_style_type_name (cursor.type)
+            parent_symbol = QualifiedSymbol (type_tokens, None)
             hierarchy.append (parent_symbol)
             klass = parent_class
 
@@ -573,7 +574,7 @@ class GIRParser(object):
         name = signal.attrib["name"]
         c_name = "%s:::%s---%s" % (class_name, name, 'signal')
         self.__parse_gir_callable_common (signal, c_name, name, name, class_name)
-        return c_name
+        return name
 
     def __parse_gir_property (self, nsmap, class_name, prop):
         name = prop.attrib["name"]
@@ -641,11 +642,10 @@ class GIRParser(object):
         for i in range(indirection):
             tokens.append ('*')
 
-        qs = doc_tool.symbol_factory.make_qualified_symbol (ctype, None,
-                tokens)
+        qs = QualifiedSymbol (tokens, None)
         return qs
 
-    def qualified_symbol_from_gitype (self, ptype_name, language=None):
+    def type_tokens_from_gitype (self, ptype_name):
         qs = None
 
         if ptype_name == 'none':
@@ -659,15 +659,11 @@ class GIRParser(object):
         type_link = doc_tool.link_resolver.get_named_link (ptype_name)
         if type_link:
             tokens = [type_link]
-            if language == 'c' and ptype_name in self.gir_class_infos:
-                tokens += '*'
+            tokens += '*'
         else:
             tokens = [ptype_name]
 
-        qs = doc_tool.symbol_factory.make_qualified_symbol (ptype_name, None,
-                tokens)
-        return qs
-
+        return tokens
 
 class GIExtension(BaseExtension):
     EXTENSION_NAME = "gi-extension"
@@ -855,8 +851,7 @@ class GIExtension(BaseExtension):
                     comment = callable_.return_value.comment
                 else:
                     comment = callable_.comment.tags.get('returns')
-                retval = doc_tool.symbol_factory.make_custom_return_value_symbol\
-                            (comment, qs.type_tokens)
+                retval = ReturnValueSymbol (qs.type_tokens, comment)
                 callable_.return_value = retval
 
         parameters = []
@@ -867,8 +862,8 @@ class GIExtension(BaseExtension):
                 qs = self.gir_parser.qualified_symbol_from_gitype (parameter.type_name)
             comment = callable_.comment.params.get(parameter.param_name)
             if qs:
-                param = doc_tool.symbol_factory.make_custom_parameter_symbol\
-                            (comment, qs.type_tokens, parameter.param_name)
+                param = ParameterSymbol (parameter.param_name, qs.type_tokens,
+                        comment)
                 param.out = parameter.out
                 param.array_nesting = parameter.array_nesting
                 parameters.append (param)
@@ -887,14 +882,15 @@ class GIExtension(BaseExtension):
                 self.language)
         instance_comment = GtkDocParameter ("object", [],
                 "The object that emitted the signal")
-        instance_param = doc_tool.symbol_factory.make_custom_parameter_symbol\
-                (instance_comment, instance_type.type_tokens, 'object')
+        instance_param = ParameterSymbol ('object', instance_type.type_tokens,
+                instance_comment)
         signal.parameters.insert (0, instance_param)
 
         udata_comment = GtkDocParameter ("user_data", [],
                 "user data set when the signal handler was connected.")
-        udata_param = doc_tool.symbol_factory.make_custom_parameter_symbol\
-                (udata_comment, udata_type.type_tokens, 'user_data')
+
+        udata_param = ParameterSymbol ('user_data', udata_type.type_tokens,
+                udata_comment)
         signal.parameters.append (udata_param)
 
     def __create_vmethod_parameters(self, vmethod, gi_info):
@@ -904,8 +900,8 @@ class GIExtension(BaseExtension):
                 self.language)
         instance_comment = GtkDocParameter ("object", [],
                 "An instance of the class implementing the virtual method")
-        instance_param = doc_tool.symbol_factory.make_custom_parameter_symbol\
-                (instance_comment, instance_type.type_tokens, 'object')
+        instance_param = ParameterSymbol ('object', instance_type.type_tokens,
+                instance_comment)
         vmethod.parameters.insert (0, instance_param)
 
     def __sort_out_parameters (self, callable_):
@@ -1036,7 +1032,149 @@ class GIExtension(BaseExtension):
             return
         row.append (symbol.comment.tags.get ('since').value)
 
+    def __unnest_type (self, parameter):
+        array_nesting = 0
+        array = parameter.find('{http://www.gtk.org/introspection/core/1.0}array')
+        while array is not None:
+            array_nesting += 1
+            parameter = array
+            array = parameter.find('{http://www.gtk.org/introspection/core/1.0}array')
+
+        return parameter, array_nesting
+
+    def __type_tokens_from_cdecl (self, cdecl):
+        indirection = cdecl.count ('*')
+        qualified_type = cdecl.strip ('*')
+        tokens = []
+        for token in qualified_type.split ():
+            if token in ["const", "restrict", "volatile"]:
+                tokens.append(token)
+            else:
+                link = doc_tool.link_resolver.get_named_link (token) 
+                if link:
+                    tokens.append (link)
+                else:
+                    tokens.append (token)
+
+        for i in range(indirection):
+            tokens.append ('*')
+
+        return tokens
+
+    def __type_tokens_from_gi_node (self, gi_node):
+        type_, array_nesting = self.__unnest_type (gi_node)
+        ptype_ = type_.find('{http://www.gtk.org/introspection/core/1.0}type')
+
+        ctype_name = ptype_.attrib.get('{http://www.gtk.org/introspection/c/1.0}type')
+        ptype_name = ptype_.attrib.get('name')
+        if ctype_name is not None:
+            type_tokens = self.__type_tokens_from_cdecl (ctype_name)
+        elif ptype_name is not None:
+            type_tokens = self.gir_parser.type_tokens_from_gitype (ptype_name)
+        else:
+            type_tokens = []
+
+        return type_tokens
+
+    def __create_parameter_symbol (self, gi_parameter, comment):
+        param_name = gi_parameter.attrib['name']
+        param_comment = comment.params.get (param_name)
+        type_tokens = self.__type_tokens_from_gi_node (gi_parameter)
+
+        return ParameterSymbol (param_name, type_tokens, param_comment)
+
+    def __create_return_value_symbol (self, gi_retval, comment):
+        return_comment = comment.tags.get ('returns')
+        type_tokens = self.__type_tokens_from_gi_node (gi_retval)
+
+        return ReturnValueSymbol (type_tokens, return_comment)
+
+    def __create_parameters_and_retval (self, node, comment):
+        gi_parameters = node.find('{http://www.gtk.org/introspection/core/1.0}parameters')
+        if gi_parameters is None:
+            gi_parameters = []
+        else:
+            gi_parameters = gi_parameters.findall('{http://www.gtk.org/introspection/core/1.0}parameter')
+
+        parameters = []
+
+        for gi_parameter in gi_parameters:
+            parameters.append (self.__create_parameter_symbol (gi_parameter, comment))
+
+        retval = node.find('{http://www.gtk.org/introspection/core/1.0}return-value')
+        retval = self.__create_return_value_symbol (retval, comment)
+
+        return (parameters, retval)
+
+    def __create_signal_symbol (self, node, comment, object_name, name):
+        parameters, retval = self.__create_parameters_and_retval (node, comment)
+        return SignalSymbol (object_name, parameters, retval, comment, name, None)
+
+    def __create_property_symbol (self, node, comment, object_name, name):
+        type_tokens = self.__type_tokens_from_gi_node (node)
+        type_ = QualifiedSymbol (type_tokens, None)
+        return PropertySymbol (type_, object_name, comment, name)
+
+    def __create_vfunc_symbol (self, node, comment, object_name, name):
+        parameters, retval = self.__create_parameters_and_retval (node, comment)
+        return VFunctionSymbol (object_name, parameters, retval, comment, name,
+                None)
+
+    def __adding_symbol (self, symbol):
+        if type (symbol) != StructSymbol:
+            return []
+
+        split = symbol.name.split(self.gir_parser.namespace)
+        if len (split) < 2:
+            return []
+
+        gi_name = '%s.%s' % (self.gir_parser.namespace, split[1])
+        if not symbol.name in self.gir_parser.gir_class_infos:
+            return []
+
+        gi_class_info = self.gir_parser.gir_class_infos[symbol.name]
+
+        symbols = []
+        gir_node = gi_class_info.node
+
+        klass_name = gir_node.attrib.get('{%s}type-name' %
+                'http://www.gtk.org/introspection/glib/1.0')
+
+        if klass_name:
+            for signal_name, signal_node in gi_class_info.signals.iteritems():
+                block_name = '%s::%s' % (klass_name, signal_name)
+                comment = doc_tool.comments.get(block_name)
+                sym = self.__create_signal_symbol (signal_node, comment,
+                        klass_name, signal_name)
+                symbols.append (sym)
+
+            for prop_name, prop_node in gi_class_info.properties.iteritems():
+                block_name = '%s:%s' % (klass_name, prop_name)
+                comment = doc_tool.comments.get(block_name)
+                sym = self.__create_property_symbol (prop_node, comment,
+                        klass_name, prop_name)
+                symbols.append (sym)
+
+        class_struct_name = gi_class_info.class_struct_name
+        if class_struct_name:
+            for vfunc_name, vfunc_node in gi_class_info.vmethods.iteritems():
+                parent_comment = doc_tool.comments.get (class_struct_name)
+                comment = None
+                if parent_comment:
+                    comment = parent_comment.params.get (vfunc_node.attrib['name'])
+                if not comment:
+                    continue
+
+                block = GtkDocCommentBlock(vfunc_node.attrib['name'], '', 0,
+                        [], [], comment.description, [])
+                sym = self.__create_vfunc_symbol (vfunc_node, block,
+                        klass_name, vfunc_name)
+                symbols.append (sym)
+
+        return symbols
+
     def setup (self):
+        doc_tool.page_parser.symbol_added_signal.connect (self.__adding_symbol)
         doc_tool.formatter.formatting_symbol_signals[Symbol].connect(self.__formatting_symbol)
         doc_tool.formatter.fill_index_columns_signal.connect(self.__fill_index_columns)
         doc_tool.formatter.fill_index_row_signal.connect(self.__fill_index_row)
