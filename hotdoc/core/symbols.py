@@ -4,20 +4,10 @@ import re
 import linecache
 import uuid
 
-# FIXME: This will have to be abstracted, might be involved :)
-import clang.cindex
-
 from .links import LocalLink, Link
 from ..utils.simple_signals import Signal
 from ..utils.utils import all_subclasses
 from .doc_tool import doc_tool
-
-def ast_node_is_function_pointer (ast_node):
-    if ast_node.kind == clang.cindex.TypeKind.POINTER and \
-            ast_node.get_pointee().get_result().kind != \
-            clang.cindex.TypeKind.INVALID:
-        return True
-    return False
 
 class Symbol (object):
     def __init__(self, comment, name, location):
@@ -69,32 +59,6 @@ class Symbol (object):
             tokens.append ('restrict ')
         if type_.is_volatile_qualified():
             tokens.append ('volatile ')
-
-    def _make_c_style_type_name (self, type_):
-        from hotdoc.core.doc_tool import doc_tool
-        tokens = []
-        while (type_.kind == clang.cindex.TypeKind.POINTER):
-            self.__apply_qualifiers(type_, tokens)
-            tokens.append ('*')
-            type_ = type_.get_pointee()
-
-        if type_.kind == clang.cindex.TypeKind.TYPEDEF:
-            d = type_.get_declaration ()
-            link = doc_tool.link_resolver.get_named_link (d.displayname)
-            if link:
-                tokens.append (link)
-            else:
-                tokens.append (d.displayname + ' ')
-            self.__apply_qualifiers(type_, tokens)
-        else:
-            link = doc_tool.link_resolver.get_named_link (type_.spelling)
-            if link:
-                tokens.append (link)
-            else:
-                tokens.append (type_.spelling + ' ')
-
-        tokens.reverse()
-        return tokens
 
     def get_source_location (self):
         return self.location
