@@ -1,9 +1,9 @@
-## Step by Step porting of [gstreamer](http://gstreamer.freedesktop.org/) from gtk-doc to gi-doc.
+## Step by Step porting of [gstreamer](http://gstreamer.freedesktop.org/) from gtk-doc to hotdoc.
 
 ### Translating the sgml files.
 
 Some words of warning: we will now translate gstreamer's docbook files to markdown. This step wouldn't be strictly necessary if pandoc's
-coverage of docbook was complete, as gi-doc can handle all sorts of formats as an input.
+coverage of docbook was complete, as hotdoc can handle all sorts of formats as an input.
 
 As these limitations exist, I've taken the pragmatic approach of parsing the top-level sgml file with a custom made script, and use pandoc
 to do the heavy lifting of parsing the various xincluded files. There will however be some contents lost in translation, and some parts
@@ -43,9 +43,9 @@ If it didn't, please open an issue with a link to the project you are porting (o
 The porting is now done, head to the next chapter to learn how to build your new doc, and figure out how to
 fix the artefacts introduced by the translation.
 
-## Building doc with gi-doc
+## Building doc with hotdoc
 
 ```shell
 mkdir new_doc
-/home/meh/devel/better_doctool/doctool.py ../../gst/Gst-1.0.gir -o new_doc -i markdown_files/index.markdown
+hotdoc ../../gst/Gst-1.0.gir -o new_doc -i markdown_files/index.markdown
 ```
