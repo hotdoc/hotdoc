@@ -1,64 +1,15 @@
-@require(klass, toc_sections, symbols_details, hierarchy)
-@extends('page.html')
-
-@def header_links():
-
-@for toc_section in toc_sections:
-<span id="nav_@toc_section.name">
-	<span class="dim">|</span>
-	<a href="#@toc_section.id_">@toc_section.name</a>
-</span>
-@end
+@require(klass, hierarchy)
 
 @if hierarchy:
-<span id="nav_hierarchy">
-	<span class="dim">|</span>
-	<a href="#hierarchy">Object Hierarchy</a>
-</span>
-@end
-\
-@end
-
-@def content():
-
-<div class="refentry">
-	@for toc_section in toc_sections:
-	<div class="refsect1">
-		<a name=@toc_section.id_></a>
-		@toc_section.summary
-	</div>
-	@end
-
-	@if hierarchy:
-	<div class="refsect1">
+<div class="refsect1">
 	<a name="hierarchy"></a>
 	@hierarchy
-	</div>
-	@end
+</div>
+@end
 
-	@if klass.formatted_doc:
-	<div class="refsect1">
-		<h2>Instance description</h2>
-		@klass.formatted_doc
-	</div>
-	@end
-
-	@if klass.formatted_contents:
-	@klass.formatted_contents
-	@end
-
-	@for symbols_detail in symbols_details:
-	<div class="refsect1">
-		<a name="@symbols_detail.name"></a>
-		<h2>@symbols_detail.name</h2>
-		@for i, description in enumerate(symbols_detail.descriptions):
-
-		@if i != 0:
-		<hr></hr>
-		@end
-		@description
-		@end
-	</div>
-	@end
+@if klass.formatted_doc:
+<div class="refsect1">
+	<h2>Instance description</h2>
+	@klass.formatted_doc
 </div>
 @end

@@ -1,4 +1,4 @@
-@require(property_type, property_link, flags)
+@require(property_type, property_link, extra)
 <tr>
     @if property_type:
     <td class="property_type">
@@ -9,20 +9,10 @@
 	    <span>@property_link</span>
     </td>
 
-@if flags:
-<td class="signal_flags" style="text-align:right;">
-@for i, flag in enumerate (flags):
+    @for name, ex in extra.iteritems():
+    <td>
+    @ex
+    </td>
+    @end
 
-@if i != 0:
-/\
-@end
-
-@if flag.link:
-<a href="@flag.link">@flag.nick</a>
-@else:
-@flag.nick
-@end
-@end
-</td>
-@end
 </tr>

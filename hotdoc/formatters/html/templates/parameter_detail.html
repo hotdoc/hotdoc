@@ -1,4 +1,4 @@
-@require(name, detail)
+@require(name, detail, extra)
 <tr>
 	@if name:
 	<td class="parameter_name">
@@ -8,7 +8,7 @@
 	</td>
 	@end
 	<td class="parameter_description"><p>@detail</p></td>
-@def extension():
+@for name, ex in extra.iteritems():
+@ex
 @end
-@extension()
 </tr>

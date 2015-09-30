@@ -22,6 +22,8 @@ class Symbol (object):
 
         doc_tool.link_resolver.add_local_link (self.link)
         self.location = location
+        self.extension_contents = {}
+        self.extension_attributes = {}
 
     def parse_tags(self):
         if not self.comment:
@@ -236,6 +238,7 @@ class ClassSymbol (Symbol):
         Symbol.__init__(self, *args)
         self.hierarchy = hierarchy
         self.children = children
+        print self.hierarchy, self.children
 
     def get_type_name (self):
         return "Class"

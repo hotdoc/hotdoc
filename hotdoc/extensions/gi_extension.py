@@ -117,42 +117,6 @@ class GIPropertySymbol (GIFlaggedSymbol):
     def get_type_name (self):
         return "Property"
 
-class GISignalSymbol (GIFlaggedSymbol, FunctionSymbol):
-    def __init__(self, *args):
-        GIFlaggedSymbol.__init__(self, *args)
-        FunctionSymbol.__init__(self, *args)
-
-    def _make_unique_id(self):
-        parent_name = self._symbol.getparent().attrib['{%s}type-name' %
-                'http://www.gtk.org/introspection/glib/1.0']
-        return "%s:::%s---%s" % (parent_name, self._symbol.attrib["name"],
-                'signal')
-
-    def do_format (self):
-        parent_name = self._symbol.getparent().attrib['{%s}type-name' %
-                'http://www.gtk.org/introspection/glib/1.0']
-
-        self.flags = []
-        self.return_value = None
-        self.parameters = []
-
-        when = self._symbol.attrib.get('when')
-        if when == "first":
-            self.flags.append (RunFirstFlag())
-        elif when == "last":
-            self.flags.append (RunLastFlag())
-        elif when == "cleanup":
-            self.flags.append (CleanupFlag())
-
-        no_hooks = self._symbol.attrib.get('no-hooks')
-        if no_hooks == '1':
-            self.flags.append (NoHooksFlag())
-
-        return GIFlaggedSymbol.do_format(self)
-
-    def get_type_name (self):
-        return "Signal"
-
 class GIVFunctionSymbol (GIFlaggedSymbol, FunctionSymbol):
     def __init__(self, *args):
         GIFlaggedSymbol.__init__(self, *args)
@@ -345,8 +309,7 @@ class GIRParser(object):
         self.gir_class_map = {}
 
         self.__parse_gir_file (gir_file)
-
-        doc_tool.symbols_created_signal.connect (self.__symbols_created)
+        self.__symbols_created()
 
     def __symbols_created(self):
         for gi_name, klass in self.gir_types.iteritems():
@@ -929,9 +892,7 @@ class GIExtension(BaseExtension):
         callable_.throws = False
         if gi_info and gi_info.is_method:
             callable_.is_method = True
-        if type(callable_) == GISignalSymbol:
-            self.__create_signal_parameters(callable_, gi_info)
-        elif type(callable_) == GIVFunctionSymbol:
+        if type(callable_) == GIVFunctionSymbol:
             self.__create_vmethod_parameters(callable_, gi_info)
         elif self.language in ["python", "javascript"]:
             self.__update_parameters(callable_, gi_info)
@@ -955,7 +916,15 @@ class GIExtension(BaseExtension):
                 members.append(m)
         symbol.members = members
 
+    def __add_annotations (self, symbol):
+        annotations = self.get_annotations (symbol)
+        extra_content = doc_tool.formatter._format_annotations (annotations)
+        symbol.extension_contents['Annotations'] = extra_content
+
     def __formatting_symbol(self, symbol):
+        if type(symbol) in [ReturnValueSymbol, ParameterSymbol]:
+            self.__add_annotations (symbol)
+
         c_name = symbol._make_name ()
 
         if isinstance (symbol, FunctionSymbol):
@@ -1108,17 +1077,63 @@ class GIExtension(BaseExtension):
 
     def __create_signal_symbol (self, node, comment, object_name, name):
         parameters, retval = self.__create_parameters_and_retval (node, comment)
-        return SignalSymbol (object_name, parameters, retval, comment, name, None)
+        res = SignalSymbol (object_name, parameters, retval, comment, name, None)
+
+        flags = []
+
+        when = node.attrib.get('when')
+        if when == "first":
+            flags.append (RunFirstFlag())
+        elif when == "last":
+            flags.append (RunLastFlag())
+        elif when == "cleanup":
+            flags.append (RunCleanupFlag())
+
+        no_hooks = node.attrib.get('no-hooks')
+        if no_hooks == '1':
+            flags.append (NoHooksFlag())
+
+        extra_content = doc_tool.formatter._format_flags (flags)
+        res.extension_contents['Flags'] = extra_content
+
+        return res
 
     def __create_property_symbol (self, node, comment, object_name, name):
         type_tokens = self.__type_tokens_from_gi_node (node)
         type_ = QualifiedSymbol (type_tokens, None)
-        return PropertySymbol (type_, object_name, comment, name)
+
+        flags = []
+        writable = node.attrib.get('writable')
+        construct = node.attrib.get('construct')
+        construct_only = node.attrib.get('construct-only')
+
+        flags.append (ReadableFlag())
+        if writable == '1':
+            flags.append (WritableFlag())
+        if construct_only == '1':
+            flags.append (ConstructOnlyFlag())
+        elif construct == '1':
+            flags.append (ConstructFlag())
+
+        res = PropertySymbol (type_, object_name, comment, name)
+
+        extra_content = doc_tool.formatter._format_flags (flags)
+        res.extension_contents['Flags'] = extra_content
+
+        return res
 
     def __create_vfunc_symbol (self, node, comment, object_name, name):
         parameters, retval = self.__create_parameters_and_retval (node, comment)
         return VFunctionSymbol (object_name, parameters, retval, comment, name,
                 None)
+
+    def __create_class_symbol (self, symbol, gi_name):
+        class_comment = doc_tool.comments.get ('SECTION:%s' %
+                symbol.name.lower())
+        hierarchy = self.gir_parser.gir_hierarchies.get (gi_name)
+        children = self.gir_parser.gir_children_map.get (gi_name)
+        class_symbol = ClassSymbol (hierarchy, children, class_comment, symbol.name, None)
+        return class_symbol
 
     def __adding_symbol (self, symbol):
         if type (symbol) != StructSymbol:
@@ -1137,9 +1152,8 @@ class GIExtension(BaseExtension):
         symbols = []
         gir_node = gi_class_info.node
 
-        class_comment = doc_tool.comments.get ('SECTION:%s' %
-                symbol.name.lower())
-        class_symbol = ClassSymbol ([], [], class_comment, symbol.name, None)
+        class_symbol = self.__create_class_symbol (symbol, gi_name)
+
         symbols.append (class_symbol)
 
         klass_name = gir_node.attrib.get('{%s}type-name' %

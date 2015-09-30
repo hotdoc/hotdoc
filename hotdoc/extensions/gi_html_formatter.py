@@ -16,24 +16,11 @@ class OverridenLink (Link):
 
 class GIHtmlFormatter(HtmlFormatter):
     def __init__(self, gi_extension):
-        from hotdoc.extensions.gi_extension import (GIClassSymbol,
-                GIPropertySymbol, GISignalSymbol, GIVFunctionSymbol)
-        from hotdoc.core.symbols import FunctionMacroSymbol
 
         module_path = os.path.dirname(__file__)
         searchpath = [os.path.join(module_path, "templates")]
         self.__gi_extension = gi_extension
         HtmlFormatter.__init__(self, searchpath)
-        self._symbol_formatters[GIClassSymbol] = self._format_class
-        self._symbol_formatters[GIPropertySymbol] = self._format_gi_property
-        self._summary_formatters[GIPropertySymbol] = self._format_gi_property_summary
-        self._symbol_formatters[GISignalSymbol] = self._format_gi_signal
-        self._summary_formatters[GISignalSymbol] = self._format_gi_signal_summary
-        self._symbol_formatters[GIVFunctionSymbol] = self._format_gi_vmethod
-        self._summary_formatters[GIVFunctionSymbol] = self._format_gi_vmethod_summary
-        self._ordering.insert (2, GIPropertySymbol)
-        self._ordering.insert (3, GISignalSymbol)
-        self._ordering.insert (4, GIVFunctionSymbol)
         self.python_fundamentals = self.__create_python_fundamentals()
         self.javascript_fundamentals = self.__create_javascript_fundamentals()
 
@@ -160,7 +147,11 @@ class GIHtmlFormatter(HtmlFormatter):
                 }
         return fundamentals
 
-    def _format_parameter_symbol (self, parameter):
+    def _format_annotations (self, annotations):
+        template = self.engine.get_template('gi_annotations.html')
+        return template.render ({'annotations': annotations})
+
+    def _format_parameter_symbol_backup (self, parameter):
         template = self.engine.get_template('gi_parameter_detail.html')
 
         annotations = self.__gi_extension.get_annotations (parameter)
@@ -174,11 +165,10 @@ class GIHtmlFormatter(HtmlFormatter):
                                  'annotations': annotations,
                                 }), False)
 
-    def _format_callable (self, callable_, callable_type, title,
-            is_pointer=False, flags=None):
-
-        return HtmlFormatter._format_callable (self, callable_, callable_type, title,
-                is_pointer, flags)
+    def _format_flags (self, flags):
+        template = self.engine.get_template('gi_flags.html')
+        out = template.render ({'flags': flags})
+        return out
 
     def _format_return_value_symbol (self, return_value):
         if not return_value or not return_value.formatted_doc:
@@ -202,13 +192,13 @@ class GIHtmlFormatter(HtmlFormatter):
                                   'out_parameters': out_parameters}), False)
 
     def _format_callable_summary (self, return_value, function_name,
-            is_callable, is_pointer, flags):
+            is_callable, is_pointer):
         if self.__gi_extension.language in ["python", "javascript"]:
             is_pointer = False
             return_value = None
 
         return HtmlFormatter._format_callable_summary (self, return_value,
-                function_name, is_callable, is_pointer, flags)
+                function_name, is_callable, is_pointer)
 
     def _format_type_tokens (self, type_tokens):
         if self.__gi_extension.language != 'c':
@@ -220,7 +210,7 @@ class GIHtmlFormatter(HtmlFormatter):
         return HtmlFormatter._format_type_tokens (self, type_tokens)
 
     def _format_prototype (self, function, is_pointer, title):
-        from hotdoc.extensions.gi_extension import GISignalSymbol, GIVFunctionSymbol
+        from hotdoc.extensions.gi_extension import GIVFunctionSymbol
 
         if self.__gi_extension.language in ["python", "javascript"]:
             params = []

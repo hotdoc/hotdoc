@@ -141,21 +141,21 @@ class HtmlFormatter (Formatter):
                                  'is_pointer': is_pointer,
                                 })
 
-    def __format_parameter_detail (self, name, detail):
+    def __format_parameter_detail (self, name, detail, extra={}):
         template = self.engine.get_template('parameter_detail.html')
         return template.render ({'name': name,
                                  'detail': detail,
+                                 'extra': extra
                                 })
 
     def _format_callable_summary (self, return_value, function_name,
-            is_callable, is_pointer, flags):
+            is_callable, is_pointer):
         template = self.engine.get_template('callable_summary.html')
 
         return template.render({'return_value': return_value,
                                 'function_name': function_name,
                                 'is_callable': is_callable,
                                 'is_pointer': is_pointer,
-                                'flags': flags
                                })
 
     def _format_function_summary (self, func):
@@ -163,24 +163,21 @@ class HtmlFormatter (Formatter):
                 self._format_linked_symbol (func.return_value),
                 self._format_linked_symbol (func),
                 True,
-                False,
-                [])
+                False)
 
     def _format_callback_summary (self, callback):
         return self._format_callable_summary (
                 self._format_linked_symbol (callback.return_value),
                 self._format_linked_symbol (callback),
                 True,
-                True,
-                [])
+                True)
 
     def _format_function_macro_summary (self, func):
         return self._format_callable_summary (
                 "#define ",
                 self._format_linked_symbol (func),
                 True,
-                False,
-                [])
+                False)
 
     def _format_constant_summary (self, constant):
         template = self.engine.get_template('constant_summary.html')
@@ -212,16 +209,14 @@ class HtmlFormatter (Formatter):
                 self._format_linked_symbol (signal.return_value),
                 self._format_linked_symbol (signal),
                 True,
-                False,
-                signal.flags)
+                False)
 
     def _format_vfunction_summary (self, vmethod):
         return self._format_callable_summary (
                 self._format_linked_symbol (vmethod.return_value),
                 self._format_linked_symbol (vmethod),
                 True,
-                True,
-                vmethod.flags)
+                True)
 
     def _format_property_summary (self, prop):
         template = self.engine.get_template('property_summary.html')
@@ -231,7 +226,7 @@ class HtmlFormatter (Formatter):
 
         return template.render({'property_type': property_type,
                                 'property_link': prop_link,
-                                'flags': prop.flags,
+                                'extra': prop.extension_contents,
                                })
 
     def _format_class_summary (self, klass):
@@ -302,15 +297,15 @@ class HtmlFormatter (Formatter):
                                 "members_list": members_list})
         return (out, False)
 
-    def _format_page(self, klass):
-        if klass.parsed_page and not klass.symbols:
-            klass.formatted_contents = doc_tool.page_parser.render_parsed_page(klass.parsed_page)
+    def _format_page(self, page):
+        if page.parsed_page and not page.symbols:
+            page.formatted_contents = doc_tool.page_parser.render_parsed_page(page.parsed_page)
 
         toc_sections = []
         symbols_details = []
 
         for symbols_type in self._ordering:
-            symbols_list = klass.typed_symbols.get(symbols_type)
+            symbols_list = page.typed_symbols.get(symbols_type)
             if not symbols_list:
                 continue
 
@@ -323,24 +318,9 @@ class HtmlFormatter (Formatter):
             if symbols_descriptions:
                 symbols_details.append (symbols_descriptions) 
 
-        hierarchy = None
-        if hasattr (klass, 'hierarchy') and klass.hierarchy:
-            hierarchy = []
-            children = []
-            for p in klass.hierarchy:
-                hierarchy.append(self._format_linked_symbol (p))
-            for c in klass.children.itervalues():
-                children.append(self._format_linked_symbol (c))
+        template = self.engine.get_template('page.html')
 
-            template = self.engine.get_template ("hierarchy.html")
-            hierarchy = template.render ({'hierarchy': hierarchy,
-                                          'children': children,
-                                          'klass': klass})
-
-        template = self.engine.get_template('class.html')
-
-        out = template.render ({'klass': klass,
-                                'hierarchy': hierarchy,
+        out = template.render ({'page': page,
                                 'toc_sections': toc_sections,
                                 'stylesheet': self.__stylesheet,
                                 'symbols_details': symbols_details})
@@ -362,7 +342,7 @@ class HtmlFormatter (Formatter):
 
     def _format_parameter_symbol (self, parameter):
         return (self.__format_parameter_detail (parameter.argname,
-                parameter.formatted_doc), False)
+                parameter.formatted_doc, extra=parameter.extension_contents), False)
 
     def _format_field_symbol (self, field):
         field_id = self._format_linked_symbol (field) 
@@ -376,7 +356,7 @@ class HtmlFormatter (Formatter):
         return (template.render ({'return_value': return_value}), False)
 
     def _format_callable(self, callable_, callable_type, title,
-            is_pointer=False, flags=None):
+            is_pointer=False):
         template = self.engine.get_template('callable.html')
 
         for p in callable_.parameters:
@@ -396,18 +376,16 @@ class HtmlFormatter (Formatter):
                                 'return_value': return_value_detail,
                                 'parameters': parameters,
                                 'callable_type': callable_type,
-                                'flags': flags})
+                                'extra': callable_.extension_contents})
 
         return (out, False)
 
     def _format_signal_symbol (self, signal):
         title = "%s_callback" % re.sub ('-', '_', signal.link.title)
-        return self._format_callable (signal, "signal", title,
-                flags=signal.flags)
+        return self._format_callable (signal, "signal", title)
 
     def _format_vfunction_symbol (self, vmethod):
-        return self._format_callable (vmethod, "virtual method", vmethod.link.title,
-                flags=vmethod.flags)
+        return self._format_callable (vmethod, "virtual method", vmethod.link.title)
 
     def _format_property_symbol (self, prop):
         type_link = self._format_linked_symbol (prop.type_)
@@ -416,11 +394,27 @@ class HtmlFormatter (Formatter):
                                       'property_type': type_link})
         template = self.engine.get_template ('property.html')
         res = template.render ({'prototype': prototype,
-                               'property': prop})
+                               'property': prop,
+                               'extra': prop.extension_contents})
         return (res, False)
 
     def _format_class_symbol (self, klass):
-        return ("plop", False)
+        hierarchy = []
+        children = []
+        for p in klass.hierarchy:
+            hierarchy.append(self._format_linked_symbol (p))
+        for c in klass.children.itervalues():
+            children.append(self._format_linked_symbol (c))
+
+        template = self.engine.get_template ("hierarchy.html")
+        hierarchy = template.render ({'hierarchy': hierarchy,
+                                      'children': children,
+                                      'klass': klass})
+
+        template = self.engine.get_template ('class.html')
+        return (template.render ({'klass': klass,
+                                  'hierarchy': hierarchy}),
+                False)
 
     def _format_members_list(self, members, member_designation):
         template = self.engine.get_template('member_list.html')
@@ -454,7 +448,8 @@ class HtmlFormatter (Formatter):
                                 'return_value': return_value_detail,
                                 'parameters': parameters,
                                 'callable_type': "function macro",
-                                'flags': None})
+                                'flags': None,
+                                'extra': function_macro.extension_contents})
 
         return (out, False)
 

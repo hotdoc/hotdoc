@@ -1,4 +1,4 @@
-@require(return_value, function_name, is_callable, is_pointer, flags)
+@require(return_value, function_name, is_callable, is_pointer)
 <tr>
     @if return_value:
     <td class="function_type">
@@ -20,7 +20,7 @@
 @end
 </span>
 </td>
-@if flags:
+@if False:
 <td class="signal_flags" style="text-align:right;">
 @for flag in flags:
 

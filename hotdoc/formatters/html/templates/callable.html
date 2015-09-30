@@ -1,4 +1,4 @@
-@require(prototype, callable, return_value, parameters, callable_type, flags)
+@require(prototype, callable, return_value, parameters, callable_type, extra)
 <div class="refsect2">
 	<a name=@callable.link.id_></a>
 	<h3 class="method">
@@ -30,20 +30,14 @@
 		@return_value
 	@end
 
-	@if flags:
-		<p>Flags:\
-		@for i, flag in enumerate (flags):
-
-			@if i != 0:
-			/\
-			@end
-
-			@if flag.link:
-			<a href="@flag.link">@flag.nick</a>
-			@else:
-			@flag.nick
-			@end
-		@end
+	@if extra:
+	\
+	@for name, ex in extra.iteritems():
+	<p>
+		@name :\
+		@ex
+	</p>
+	@end
 	@end
 
 	@for tag in callable.tags:
