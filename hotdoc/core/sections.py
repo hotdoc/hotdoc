@@ -1,12 +1,66 @@
 # -*- coding: utf-8 -*-
 
 from .symbols import *
+from .links import LocalLink
 
 class TypedSymbolsList (object):
     def __init__ (self, name):
         self.name = name
         self.symbols = []
 
+class Page:
+    def __init__(self, name, comment):
+        self.symbols = []
+        self.subpages = []
+        self.comment = comment
+        pagename = '%s.html' % name
+        self.link = LocalLink (name, pagename, name) 
+
+        self.formatted_contents = None
+        self.formatted_doc = ''
+
+        self.typed_symbols = {}
+        self.typed_symbols[FunctionSymbol] = TypedSymbolsList ("Functions")
+        self.typed_symbols[CallbackSymbol] = TypedSymbolsList ("Callback Functions")
+        self.typed_symbols[FunctionMacroSymbol] = TypedSymbolsList ("Function Macros")
+        self.typed_symbols[ConstantSymbol] = TypedSymbolsList ("Constants")
+        self.typed_symbols[ExportedVariableSymbol] = TypedSymbolsList ("Exported Variables")
+        self.typed_symbols[StructSymbol] = TypedSymbolsList ("Data Structures")
+        self.typed_symbols[EnumSymbol] = TypedSymbolsList ("Enumerations")
+        self.typed_symbols[AliasSymbol] = TypedSymbolsList ("Aliases")
+        self.typed_symbols[SignalSymbol] = TypedSymbolsList ("Signals")
+        self.typed_symbols[PropertySymbol] = TypedSymbolsList ("Properties")
+        self.typed_symbols[VFunctionSymbol] = TypedSymbolsList ("Virtual Methods")
+        self.typed_symbols[ClassSymbol] = TypedSymbolsList ("Classes")
+
+        self.ast = None
+
+    def add_symbol (self, symbol):
+        symbol.link.pagename = self.link.pagename
+        for l in symbol.get_extra_links():
+            l.pagename = self.link.pagename
+        tsl = self.typed_symbols[type(symbol)]
+        tsl.symbols.append (symbol)
+        self.symbols.append (symbol)
+
+    def get_short_description (self):
+        if not self.comment:
+            return ""
+        if not self.comment.short_description:
+            return ""
+        return self.comment.short_description
+
+    def get_title (self):
+        if not self.comment:
+            return ""
+        if not self.comment.title:
+            return ""
+        return self.comment.title
+
+    def format_symbols (self):
+        for type_, tsl in self.typed_symbols.iteritems():
+            for symbol in tsl.symbols:
+                symbol.do_format ()
 
 class SectionSymbol (Symbol):
     def __init__(self, *args):

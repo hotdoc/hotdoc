@@ -10,7 +10,7 @@ from xml.sax.saxutils import unescape
 from .doc_tool import doc_tool, ConfigError
 from .symbols import (Symbol, ReturnValueSymbol, ParameterSymbol, FieldSymbol,
         ClassSymbol)
-from .sections import SectionSymbol
+from .sections import Page
 from ..utils.simple_signals import Signal
 from ..utils.loggable import progress_bar
 
@@ -41,10 +41,10 @@ class Formatter(object):
         self.__global_hierarchy = hierarchy
 
     def format (self):
-        self.__total_sections = 0
-        self.__total_rendered_sections = 0
-        for section in doc_tool.sections:
-            self.__total_sections += self.__get_subsections_count (section)
+        self.__total_pages = 0
+        self.__total_rendered_pages = 0
+        for page in doc_tool.pages:
+            self.__total_pages += self.__get_subpages_count (page)
 
         self.__progress_bar = progress_bar.get_progress_bar ()
         if self.__progress_bar is not None:
@@ -56,8 +56,8 @@ class Formatter(object):
         self.__index_rows = []
         self.fill_index_columns_signal (index_columns)
 
-        for section in doc_tool.sections:
-            self.__format_section (section)
+        for page in doc_tool.pages:
+            self.__format_page (page)
 
         if doc_tool.page_parser.create_object_hierarchy:
             graph = self.__create_hierarchy_graph ()
@@ -92,12 +92,12 @@ class Formatter(object):
         if self.__progress_bar is None:
             return
 
-        if self.__total_sections == 0:
+        if self.__total_pages == 0:
             return
 
-        percent = float (self.__total_rendered_sections) / float (self.__total_sections)
+        percent = float (self.__total_rendered_pages) / float (self.__total_pages)
         self.__progress_bar.update (percent, "%d / %d" %
-                (self.__total_rendered_sections, self.__total_sections))
+                (self.__total_rendered_pages, self.__total_pages))
 
     def format_symbol (self, symbol):
         if type (symbol) in self.formatting_symbol_signals:
@@ -117,7 +117,7 @@ class Formatter(object):
         if standalone:
             self.__write_symbol (symbol)
 
-        if out and type(symbol) not in [SectionSymbol, ReturnValueSymbol,
+        if out and type(symbol) not in [ReturnValueSymbol,
                 ParameterSymbol, FieldSymbol]:
             row = [symbol.link, symbol.get_type_name()]
             if symbol.comment:
@@ -129,20 +129,22 @@ class Formatter(object):
 
         return True
 
-    def __get_subsections_count (self, section):
+    def __get_subpages_count (self, page):
         count = 1
-        for subsection in section.sections:
-            count += self.__get_subsections_count (subsection)
+        for subpage in page.subpages:
+            count += self.__get_subpages_count (subpage)
         return count
 
-    def __format_section (self, section):
+    def __format_page (self, page):
         out = ""
-        section.do_format ()
-        self.__total_rendered_sections += 1
+        page.format_symbols ()
+        page.detailed_description = self._format_page (page)[0]
+        self.__write_symbol (page)
+        self.__total_rendered_pages += 1
         self.__update_progress()
 
-        for section in section.sections:
-            self.__format_section (section)
+        for page in page.subpages:
+            self.__format_page (page)
 
     def __copy_extra_files (self):
         for f in self._get_extra_files():

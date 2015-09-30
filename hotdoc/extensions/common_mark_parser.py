@@ -35,7 +35,7 @@ class CommonMarkParser (PageParser):
         section_name = ''.join ([l.c for l in ic.label])
 
         if not ic.destination:
-            ic.destination = self.create_section_from_well_known_name(section_name)
+            ic.destination = self.create_page_from_well_known_name(section_name)
             return None
 
         filename = os.path.join (self._prefix, ic.destination)

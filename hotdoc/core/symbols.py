@@ -16,7 +16,10 @@ class Symbol (object):
         self.name = name
         self.original_text = None
         self.detailed_description = None
-        self.link = LocalLink (self._make_unique_id(), "", self._make_name())
+        self.link = doc_tool.link_resolver.get_named_link (self._make_unique_id())
+        if not self.link:
+            self.link = LocalLink (self._make_unique_id(), "", self._make_name())
+
         doc_tool.link_resolver.add_local_link (self.link)
         self.location = location
 
@@ -218,48 +221,15 @@ class SymbolFactory (object):
         for klass in self.symbol_subclasses:
             self.new_symbol_signals [klass] = Signal()
 
-    def __signal_new_symbol (self, symbol):
-        if not type (symbol) in self.new_symbol_signals:
-            return symbol
-
-        res = self.new_symbol_signals[type(symbol)](symbol)
-        if False in res:
-            return None
-        res = self.new_symbol_signals[Symbol](symbol)
-        if False in res:
-            return None
-
-        doc_tool.link_resolver.add_local_link (symbol.link)
-        return symbol
-
-    def make_simple_symbol (self, comment, name, location):
-        return self.__signal_new_symbol(Symbol (comment, name, location))
-
     def make (self, symbol, comment):
         klass = None
 
         if symbol.spelling in doc_tool.c_source_scanner.new_symbols:
             sym = doc_tool.c_source_scanner.new_symbols[symbol.spelling]
-            return self.__signal_new_symbol (sym)
+            return sym
 
         return None
 
-    def make_custom (self, symbol, comment, klass):
-        return self.__signal_new_symbol(klass (symbol, comment))
-
-    def make_section(self, comment, name):
-        from ..core.sections import SectionSymbol
-        res = None
-        #for extension in doc_tool.extensions:
-        #    klass, extra_args = extension.get_section_type (symbol)
-        #    if klass:
-        #        res = klass (extra_args, symbol, comment)
-
-        if not res:
-            res = SectionSymbol (comment, name, None)
-
-        doc_tool.link_resolver.add_local_link (res.link)
-        return self.__signal_new_symbol(res)
 
 class ClassSymbol (Symbol):
     def __init__(self, hierarchy, children, *args):

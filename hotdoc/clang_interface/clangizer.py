@@ -196,10 +196,11 @@ class ClangScanner(Loggable):
         if type_.kind == clang.cindex.TypeKind.TYPEDEF:
             d = type_.get_declaration ()
             link = doc_tool.link_resolver.get_named_link (d.displayname)
-            if link:
-                tokens.append (link)
-            else:
-                tokens.append (d.displayname + ' ')
+            if not link:
+                link = LocalLink (d.displayname, None, d.displayname)
+                doc_tool.link_resolver.add_local_link (link)
+
+            tokens.append (link)
             self.__apply_qualifiers(type_, tokens)
         else:
             link = doc_tool.link_resolver.get_named_link (type_.spelling)
@@ -340,10 +341,8 @@ class ClangScanner(Loggable):
         decl = underlying.get_declaration()
         for member in decl.get_children():
             member_comment = comment.params.get (member.spelling)
-            print "creating member", member.spelling, member_comment
             member_value = member.enum_value
-            member = doc_tool.symbol_factory.make_simple_symbol (member_comment,
-                    member.spelling, member.location)
+            member = Symbol (member_comment, member.spelling, member.location)
             member.enum_value = member_value
             doc_tool.link_resolver.add_local_link (member.link)
             members.append (member)

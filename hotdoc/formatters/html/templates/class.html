@@ -22,14 +22,6 @@
 @def content():
 
 <div class="refentry">
-	<div class="refnamediv">
-		<a name="@klass.link.id_"></a>
-		@if klass.symbols:
-		<h1 class="class">@klass.link.title</h1>
-		<p>@klass.get_short_description()</p>
-		@end
-	</div>
-
 	@for toc_section in toc_sections:
 	<div class="refsect1">
 		<a name=@toc_section.id_></a>

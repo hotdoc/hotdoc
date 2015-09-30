@@ -35,6 +35,7 @@ class SymbolDescriptions (object):
 class HtmlFormatter (Formatter):
     def __init__(self, searchpath):
         Formatter.__init__(self)
+
         self._symbol_formatters = {
                 FunctionSymbol: self._format_function,
                 FunctionMacroSymbol: self._format_function_macro,
@@ -44,14 +45,13 @@ class HtmlFormatter (Formatter):
                 AliasSymbol: self._format_alias,
                 StructSymbol: self._format_struct,
                 EnumSymbol: self._format_enum,
-                ClassSymbol: self._format_class,
-                SectionSymbol: self._format_class,
                 ParameterSymbol: self._format_parameter_symbol,
                 ReturnValueSymbol : self._format_return_value_symbol,
                 FieldSymbol: self._format_field_symbol,
                 SignalSymbol: self._format_signal_symbol,
                 VFunctionSymbol: self._format_vfunction_symbol,
                 PropertySymbol: self._format_property_symbol,
+                ClassSymbol: self._format_class_symbol,
                 }
 
         self._summary_formatters = {
@@ -66,9 +66,10 @@ class HtmlFormatter (Formatter):
                 SignalSymbol: self._format_signal_summary,
                 VFunctionSymbol: self._format_vfunction_summary,
                 PropertySymbol: self._format_property_summary,
+                ClassSymbol: self._format_class_summary,
                 }
 
-        self._ordering = [FunctionSymbol, FunctionMacroSymbol, SignalSymbol,
+        self._ordering = [ClassSymbol, FunctionSymbol, FunctionMacroSymbol, SignalSymbol,
                 PropertySymbol, StructSymbol, VFunctionSymbol, EnumSymbol, ConstantSymbol,
                 ExportedVariableSymbol, AliasSymbol, CallbackSymbol]
 
@@ -233,6 +234,10 @@ class HtmlFormatter (Formatter):
                                 'flags': prop.flags,
                                })
 
+    def _format_class_summary (self, klass):
+        template = self.engine.get_template('class_summary.html')
+        return template.render({'klass': klass})
+
     def _format_summary (self, summaries, summary_type):
         if not summaries:
             return None
@@ -297,7 +302,7 @@ class HtmlFormatter (Formatter):
                                 "members_list": members_list})
         return (out, False)
 
-    def _format_class(self, klass):
+    def _format_page(self, klass):
         if klass.parsed_page and not klass.symbols:
             klass.formatted_contents = doc_tool.page_parser.render_parsed_page(klass.parsed_page)
 
@@ -413,6 +418,9 @@ class HtmlFormatter (Formatter):
         res = template.render ({'prototype': prototype,
                                'property': prop})
         return (res, False)
+
+    def _format_class_symbol (self, klass):
+        return ("plop", False)
 
     def _format_members_list(self, members, member_designation):
         template = self.engine.get_template('member_list.html')

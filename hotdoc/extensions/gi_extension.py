@@ -1137,6 +1137,11 @@ class GIExtension(BaseExtension):
         symbols = []
         gir_node = gi_class_info.node
 
+        class_comment = doc_tool.comments.get ('SECTION:%s' %
+                symbol.name.lower())
+        class_symbol = ClassSymbol ([], [], class_comment, symbol.name, None)
+        symbols.append (class_symbol)
+
         klass_name = gir_node.attrib.get('{%s}type-name' %
                 'http://www.gtk.org/introspection/glib/1.0')
 

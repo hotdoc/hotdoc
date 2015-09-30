@@ -32,7 +32,7 @@ class DocTool(Loggable):
         self.symbol_factory = None
         self.page_parser = None
         self.extensions = []
-        self.sections = []
+        self.pages = []
         self.comments = {}
         self.full_scan = False
         self.full_scan_patterns = ['*.h']
@@ -125,7 +125,7 @@ class DocTool(Loggable):
 
     def __create_symbols (self):
         self.page_parser.create_symbols ()
-        self.sections = self.page_parser.sections
+        self.pages = self.page_parser.pages
 
     def parse_args (self):
         args = self.parser.parse_known_args()
