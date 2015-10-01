@@ -55,8 +55,13 @@ class DependencyTree (object):
                     else:
                         self.stale_sections[name] = node
 
+        stale = []
         for filename in source_filenames:
             self.add_dependency (None, filename)
+            if filename in self.stale_sources:
+                stale.append (filename)
+
+        self.stale_sources = stale
 
     def __mark_stale_nodes (self, node):
         parents = node.get_parents()

@@ -171,8 +171,6 @@ class GIRParser(object):
                 continue
             if not klass.node.tag.endswith (('class', 'interface')):
                 continue
-            if c_name.endswith ('-struct'):
-                continue
 
             gi_name = '%s.%s' % (klass.parent_name, klass.node.attrib['name'])
             klass_name = klass.node.attrib['{%s}type-name' % self.nsmap['glib']]
@@ -283,7 +281,6 @@ class GIRParser(object):
         self.javascript_names[c_name] = name
 
         struct_name = c_name + '-struct'
-        self.gir_class_infos[struct_name] = gi_class_info
         self.python_names[struct_name] = name
         self.javascript_names[struct_name] = name
 
@@ -495,6 +492,7 @@ class GIExtension(BaseExtension):
                         title = title [:-5]
                     link = ExternalLink (split_line[1], dir_, remote_prefix,
                             filename, title)
+
                     doc_tool.link_resolver.add_external_link (link)
 
     def __make_type_annotation (self, annotation, value):
@@ -700,10 +698,16 @@ class GIExtension(BaseExtension):
 
     def __type_tokens_and_gi_name_from_gi_node (self, gi_node):
         type_, array_nesting = self.__unnest_type (gi_node)
-        ptype_ = type_.find('{http://www.gtk.org/introspection/core/1.0}type')
 
-        ctype_name = ptype_.attrib.get('{http://www.gtk.org/introspection/c/1.0}type')
-        ptype_name = ptype_.attrib.get('name')
+        varargs = type_.find('{http://www.gtk.org/introspection/core/1.0}varargs')
+        if varargs is not None:
+            ctype_name = '...'
+            ptype_name = 'valist'
+        else:
+            ptype_ = type_.find('{http://www.gtk.org/introspection/core/1.0}type')
+            ctype_name = ptype_.attrib.get('{http://www.gtk.org/introspection/c/1.0}type')
+            ptype_name = ptype_.attrib.get('name')
+
         if ctype_name is not None:
             type_tokens = self.__type_tokens_from_cdecl (ctype_name)
         elif ptype_name is not None:
@@ -718,7 +722,11 @@ class GIExtension(BaseExtension):
 
     def __create_parameter_symbol (self, gi_parameter, comment):
         param_name = gi_parameter.attrib['name']
-        param_comment = comment.params.get (param_name)
+        if comment:
+            param_comment = comment.params.get (param_name)
+        else:
+            param_comment = None
+
         type_tokens, gi_name = self.__type_tokens_and_gi_name_from_gi_node (gi_parameter)
 
         res = ParameterSymbol (param_name, type_tokens, param_comment)
@@ -727,7 +735,11 @@ class GIExtension(BaseExtension):
         return res
 
     def __create_return_value_symbol (self, gi_retval, comment):
-        return_comment = comment.tags.get ('returns')
+        if comment:
+            return_comment = comment.tags.get ('returns')
+        else:
+            return_comment = None
+
         type_tokens, gi_name = self.__type_tokens_and_gi_name_from_gi_node(gi_retval)
 
         res = ReturnValueSymbol (type_tokens, return_comment)
@@ -825,12 +837,15 @@ class GIExtension(BaseExtension):
         gi_info = self.gir_parser.gir_callable_infos.get(func.link.id_)
         gi_params, retval = self.__create_parameters_and_retval (gi_info.node,
                 func.comment)
+
+        if 'throws' in gi_info.node.attrib:
+            func.parameters = func.parameters[:-1]
+
         for i, param in enumerate (func.parameters):
             gi_param = gi_params[i]
             gi_name = gi_param.get_extension_attribute ('gi-extension',
                     'gi_name')
             param.add_extension_attribute ('gi-extension', 'gi_name', gi_name)
-
 
         gi_name = retval.get_extension_attribute ('gi-extension',
                 'gi_name')
