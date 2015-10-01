@@ -15,6 +15,12 @@ from ..utils.loggable import init as loggable_init
 
 from datetime import datetime
 
+def merge_dicts(*dict_args):
+    result = {}
+    for dictionary in dict_args:
+        result.update(dictionary)
+    return result
+
 class ConfigError(Exception):
     pass
 
@@ -39,17 +45,20 @@ class DocTool(Loggable):
         self.full_scan = False
         self.full_scan_patterns = ['*.h']
         self.link_resolver = LinkResolver()
-        self.symbols_created_signal = Signal()
 
     def parse_and_format (self):
-        from .symbols import SymbolFactory
-        self.symbol_factory = SymbolFactory()
-
         self.__setup()
         self.parse_args ()
 
         self.formatter.format()
+
+        for extension in self.extensions:
+            extension.build_extra_symbols ()
+
         self.finalize()
+
+    def get_symbol (self, name):
+        return self.symbols.get (name)
 
     def __setup (self):
         if os.name == 'nt':
@@ -64,9 +73,6 @@ class DocTool(Loggable):
                 dest="c_sources", help="C source files to parse", default=[])
         self.parser.add_argument ("--clang-options", action="store", nargs="+",
                 dest="clang_options", help="Flags to pass to clang", default="")
-        self.parser.add_argument ("--dbus-sources", action="store", nargs="+",
-                dest="dbus_sources", help="DBus interface files to parse",
-                default=[])
         self.parser.add_argument ("-i", "--index", action="store",
                 dest="index", help="location of the index file")
         self.parser.add_argument ("-o", "--output", action="store", default='doc',
@@ -106,9 +112,8 @@ class DocTool(Loggable):
 
     def __setup_source_scanners(self, clang_options):
         from ..clang_interface.clangizer import ClangScanner
-        from ..dbusizer import DBusScanner
         self.c_source_scanner = ClangScanner (self, clang_options)
-        self.dbus_source_scanner = DBusScanner()
+        self.symbols = self.c_source_scanner.new_symbols
 
     def __parse_extensions (self, args):
         if args[0].extension_name:
@@ -126,7 +131,7 @@ class DocTool(Loggable):
                 self.__parse_extensions (args)
 
     def __create_symbols (self):
-        self.page_parser.create_symbols ()
+        self.page_parser.create_symbols (self)
         self.pages = self.page_parser.pages
 
     def parse_args (self):
@@ -135,7 +140,6 @@ class DocTool(Loggable):
         self.output = args[0].output
         self.output_format = args[0].output_format
         self.c_sources = args[0].c_sources
-        self.dbus_sources = args[0].dbus_sources
         self.deps_file = args[0].deps_file
         self.style = args[0].style
 
@@ -165,7 +169,6 @@ class DocTool(Loggable):
             extension.setup ()
 
         self.__create_symbols ()
-        self.symbols_created_signal()
 
     def finalize (self):
         self.dependency_tree.dump()

@@ -9,10 +9,9 @@ class TypedSymbolsList (object):
         self.symbols = []
 
 class Page:
-    def __init__(self, name, comment):
+    def __init__(self, name):
         self.symbols = []
         self.subpages = []
-        self.comment = comment
         pagename = '%s.html' % name
         self.link = Link (pagename, name, name) 
 

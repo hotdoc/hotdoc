@@ -1,6 +1,8 @@
 @require(callable, param_offset, is_pointer)
 <pre class="programlisting">
+@if callable.return_value:
 @callable.return_value
+@end
 @if is_pointer:
 (*\
 @end

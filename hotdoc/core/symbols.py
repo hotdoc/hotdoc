@@ -11,7 +11,6 @@ from .doc_tool import doc_tool
 
 class Symbol (object):
     def __init__(self, comment, name, location):
-        from hotdoc.core.doc_tool import doc_tool
         self.comment = comment
         self.name = name
         self.original_text = None
@@ -53,7 +52,6 @@ class Symbol (object):
         return tags
 
     def do_format (self):
-        from hotdoc.core.doc_tool import doc_tool
         self.tags = self.parse_tags ()
         self.skip = not doc_tool.formatter.format_symbol (self)
 
@@ -126,11 +124,11 @@ class VFunctionSymbol (FunctionSymbol):
         return '%s:::%s---vfunc' % (self.object_name, self.name)
 
 class PropertySymbol (Symbol):
-    def __init__(self, type_, object_name, comment, name):
+    def __init__(self, type_, object_name, comment, name, location=None):
         self.object_name = object_name
         self.type_ = type_
         self.flags = []
-        Symbol.__init__(self, comment, name, None)
+        Symbol.__init__(self, comment, name, location)
 
     def _make_unique_id (self):
         return '%s:::%s---property' % (self.object_name, self.name)
@@ -237,34 +235,12 @@ class AliasSymbol (Symbol):
     def get_type_name (self):
         return "Alias"
 
-def all_subclasses(cls):
-        return cls.__subclasses__() + [g for s in cls.__subclasses__()
-                                       for g in all_subclasses(s)]
-
-class SymbolFactory (object):
-    def __init__(self):
-        self.symbol_subclasses = all_subclasses (Symbol)
-        self.symbol_subclasses.append(Symbol)
-        self.new_symbol_signals = {}
-        for klass in self.symbol_subclasses:
-            self.new_symbol_signals [klass] = Signal()
-
-    def make (self, symbol, comment):
-        klass = None
-
-        if symbol.spelling in doc_tool.c_source_scanner.new_symbols:
-            sym = doc_tool.c_source_scanner.new_symbols[symbol.spelling]
-            return sym
-
-        return None
-
 
 class ClassSymbol (Symbol):
     def __init__(self, hierarchy, children, *args):
         Symbol.__init__(self, *args)
         self.hierarchy = hierarchy
         self.children = children
-        print self.hierarchy, self.children
 
     def get_type_name (self):
         return "Class"

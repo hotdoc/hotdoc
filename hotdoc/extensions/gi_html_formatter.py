@@ -1,16 +1,15 @@
 import re, os
-from hotdoc.core.doc_tool import doc_tool
 from hotdoc.formatters.html.html_formatter import HtmlFormatter
 from hotdoc.core.links import Link
 from hotdoc.core.symbols import *
 
 
 class GIHtmlFormatter(HtmlFormatter):
-    def __init__(self, gi_extension):
+    def __init__(self, gi_extension, doc_tool):
         module_path = os.path.dirname(__file__)
         searchpath = [os.path.join(module_path, "templates")]
         self.__gi_extension = gi_extension
-        HtmlFormatter.__init__(self, searchpath)
+        HtmlFormatter.__init__(self, searchpath, doc_tool)
         self.python_fundamentals = self.__create_python_fundamentals()
         self.javascript_fundamentals = self.__create_javascript_fundamentals()
 
@@ -364,17 +363,6 @@ class GIHtmlFormatter(HtmlFormatter):
                                 'constant': constant})
         return (out, False)
 
-    def _format_property_symbol(self, prop):
-        type_link = self._format_linked_symbol (prop.type_)
-        template = self.engine.get_template ('property_prototype.html')
-        prototype = template.render ({'property_name': prop.link.title,
-                                      'property_type': type_link})
-        template = self.engine.get_template ('property.html')
-        res = template.render ({'prototype': prototype,
-                               'property': prop,
-                               'extra': prop.extension_contents})
-        return (res, False)
-
     def _get_style_sheet (self):
         if self.__gi_extension.language == 'python':
             return 'redstyle.css'
@@ -390,7 +378,7 @@ class GIHtmlFormatter(HtmlFormatter):
             new_names = self.__gi_extension.gir_parser.javascript_names
 
         if new_names is not None:
-            doc_tool.page_parser.rename_headers (klass.parsed_page, new_names)
+            self.doc_tool.page_parser.rename_headers (klass.parsed_page, new_names)
         return HtmlFormatter._format_class (self, klass)
 
     def format (self):
@@ -403,17 +391,16 @@ class GIHtmlFormatter(HtmlFormatter):
                 self.fundamentals = {}
 
             for c_name, link in self.fundamentals.iteritems():
-                prev_link = doc_tool.link_resolver.get_named_link(c_name)
+                prev_link = self.doc_tool.link_resolver.get_named_link(c_name)
                 if prev_link:
                     prev_link.ref = link.ref
                     prev_link.title = link.title
                 else:
                     link.id_ = c_name
-                    doc_tool.link_resolver.add_link (link)
+                    self.doc_tool.link_resolver.add_link (link)
 
-            print "NOW DOING", l
             self.__gi_extension.setup_language (l)
-            self._output = os.path.join (doc_tool.output, l)
+            self._output = os.path.join (self.doc_tool.output, l)
             if not os.path.exists (self._output):
                 os.mkdir (self._output)
             HtmlFormatter.format (self)

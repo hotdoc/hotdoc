@@ -2,6 +2,7 @@
 <div class="refsect1">
 	<h2>Object Hierarchy</h2>
 <pre class="screen">
+@if hierarchy:
 @for i, parent in enumerate(hierarchy):
 \
 @if i != 0:
@@ -15,6 +16,7 @@
 @end
 @for j in range ((i + 1) * 4):
  \
+@end
 @end
 <span class="lineart">╰──</span>@klass.link.title
 @for child in children:

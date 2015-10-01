@@ -6,7 +6,8 @@ class BaseExtension(Loggable):
         Loggable.__init__(self)
         from ..formatters.html.html_formatter import HtmlFormatter
         from ..extensions.gtk_doc_parser import GtkDocParser
-        self._formatters = {"html": HtmlFormatter([])}
+        from hotdoc.core.doc_tool import doc_tool
+        self._formatters = {"html": HtmlFormatter([], doc_tool)}
         self._raw_parser = GtkDocRawCommentParser()
         self._doc_parser = GtkDocParser()
 
@@ -26,5 +27,5 @@ class BaseExtension(Loggable):
     def setup (self):
         pass
 
-    def get_section_type (self, symbol):
-        return (None, None)
+    def build_extra_symbols (self):
+        pass

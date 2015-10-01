@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-from .doc_tool import doc_tool
 from .sections import Page
 from ..utils.loggable import Loggable
 from ..utils.simple_signals import Signal
@@ -22,10 +21,10 @@ class PageParser(Loggable):
         self.create_object_hierarchy = False
         self.create_api_index = False
         self.symbol_added_signal = Signal()
+        self.doc_tool = None
 
     def create_page (self, page_name, filename):
-        comment = doc_tool.comments.get("SECTION:%s" % page_name.lower())
-        page = Page (page_name, comment)
+        page = Page (page_name)
         page.source_file = filename
 
         if self._current_page:
@@ -48,28 +47,21 @@ class PageParser(Loggable):
         if not self._current_page:
             return
 
-        symbol = doc_tool.c_source_scanner.symbols.get (symbol_name)
-        if symbol:
-            comment_block = doc_tool.comments.get (symbol_name)
-            if comment_block:
-                sym = doc_tool.symbol_factory.make (symbol,
-                        comment_block)
-                if sym:
-                    self._current_page.add_symbol (sym)
-                    self.__total_documented_symbols += 1
-                    new_symbols = sum(self.symbol_added_signal (sym), [])
-                    for symbol in new_symbols:
-                        self._current_page.add_symbol (symbol)
-                        self.__total_documented_symbols += 1
-            else:
-                self.warning ("No comment in sources for symbol with name %s", symbol_name)
+        sym = self.doc_tool.get_symbol (symbol_name)
+        if sym:
+            self._current_page.add_symbol (sym)
+            self.__total_documented_symbols += 1
+            new_symbols = sum(self.symbol_added_signal (sym), [])
+            for symbol in new_symbols:
+                self._current_page.add_symbol (symbol)
+                self.__total_documented_symbols += 1
         else:
             self.warning ("No symbol in sources with name %s", symbol_name)
 
     def __update_dependencies (self, pages):
         for s in pages:
             if not s.symbols:
-                doc_tool.dependency_tree.add_dependency (s.source_file,
+                self.doc_tool.dependency_tree.add_dependency (s.source_file,
                         None)
             for sym in s.symbols:
                 location = sym.get_source_location()
@@ -77,11 +69,11 @@ class PageParser(Loggable):
                     continue
 
                 filename = str (location.file)
-                doc_tool.dependency_tree.add_dependency (s.source_file,
+                self.doc_tool.dependency_tree.add_dependency (s.source_file,
                         filename)
                 if sym.comment:
                     comment_filename = sym.comment.filename
-                    doc_tool.dependency_tree.add_dependency (s.source_file, comment_filename)
+                    self.doc_tool.dependency_tree.add_dependency (s.source_file, comment_filename)
 
             self.__update_dependencies (s.subpages)
 
@@ -104,7 +96,8 @@ class PageParser(Loggable):
 
         return old_page
 
-    def create_symbols(self):
+    def create_symbols(self, doc_tool):
+        self.doc_tool = doc_tool
         self._prefix = os.path.dirname (doc_tool.index_file)
         if doc_tool.dependency_tree.initial:
             self._parse_page (doc_tool.index_file, "index")

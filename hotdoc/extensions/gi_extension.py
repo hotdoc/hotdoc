@@ -158,9 +158,9 @@ class GIRParser(object):
         self.gir_class_map = {}
 
         self.__parse_gir_file (gir_file)
-        self.__symbols_created()
+        self.__create_hierarchies()
 
-    def __symbols_created(self):
+    def __create_hierarchies(self):
         for gi_name, klass in self.gir_types.iteritems():
             hierarchy = self.__create_hierarchy (klass)
             self.gir_hierarchies[gi_name] = hierarchy
@@ -427,6 +427,7 @@ class GIExtension(BaseExtension):
         BaseExtension.__init__(self, args)
         self.gir_file = args.gir_file
         self.languages = [l.lower() for l in args.languages]
+        self.language = 'c'
         self.namespace = None
         self.major_version = args.major_version
 
@@ -452,7 +453,7 @@ class GIExtension(BaseExtension):
                 }
 
         self.__raw_comment_parser = GtkDocRawCommentParser()
-        self._formatters["html"] = GIHtmlFormatter (self)
+        self._formatters["html"] = GIHtmlFormatter (self, doc_tool)
 
     @staticmethod
     def add_arguments (parser):
@@ -464,7 +465,6 @@ class GIExtension(BaseExtension):
                 dest="major_version", default='')
 
     def __gather_gtk_doc_links (self):
-        print "Now gathering links, cool baby"
         sgml_dir = os.path.join(doc_tool.datadir, "gtk-doc", "html")
         if not os.path.exists(sgml_dir):
             self.error("no gtk doc to gather links from in %s" % sgml_dir)
@@ -477,8 +477,6 @@ class GIExtension(BaseExtension):
                     self.__parse_sgml_index(dir_)
                 except IOError:
                     pass
-
-        print "I should have True by now :", doc_tool.link_resolver.get_named_link ('TRUE')
 
     def __parse_sgml_index(self, dir_):
         symbol_map = dict({})
@@ -649,7 +647,6 @@ class GIExtension(BaseExtension):
             return
 
         if language == 'python':
-            print "TestGreeter" in self.gir_parser.python_names
             for c_name, python_name in self.gir_parser.python_names.iteritems():
                 l = doc_tool.link_resolver.get_named_link (c_name)
                 if l:
@@ -669,8 +666,6 @@ class GIExtension(BaseExtension):
         if info:
             link = doc_tool.link_resolver.get_named_link (info.parent_name)
             if link:
-                if link.title == "GstDebugMessage":
-                    print "Hello"
                 row[2] = link
             if type (info) == GIClassInfo and info.is_interface:
                 row[1] = "Interface"
@@ -981,8 +976,6 @@ class GIExtension(BaseExtension):
 
     def __adding_symbol (self, symbol):
         res = []
-
-        print type (symbol), symbol.link.title
 
         if isinstance (symbol, FunctionSymbol):
             self.__update_function (symbol)

@@ -31,8 +31,8 @@ class SymbolDescriptions (object):
         self.name = name
 
 class HtmlFormatter (Formatter):
-    def __init__(self, searchpath):
-        Formatter.__init__(self)
+    def __init__(self, searchpath, doc_tool):
+        Formatter.__init__(self, doc_tool)
 
         self._symbol_formatters = {
                 FunctionSymbol: self._format_function,
@@ -319,7 +319,7 @@ class HtmlFormatter (Formatter):
 
     def _format_page(self, page):
         if page.parsed_page and not page.symbols:
-            page.formatted_contents = doc_tool.page_parser.render_parsed_page(page.parsed_page)
+            page.formatted_contents = self.doc_tool.page_parser.render_parsed_page(page.parsed_page)
 
         toc_sections = []
         symbols_details = []
@@ -365,7 +365,6 @@ class HtmlFormatter (Formatter):
                 parameter.formatted_doc, extra=parameter.extension_contents), False)
 
     def _format_field_symbol (self, field):
-        print "formatting field symbol"
         field_id = self._format_linked_symbol (field) 
         return (self.__format_parameter_detail (field_id,
             field.formatted_doc), False)
@@ -427,10 +426,11 @@ class HtmlFormatter (Formatter):
         for c in klass.children.itervalues():
             children.append(self._format_linked_symbol (c))
 
-        template = self.engine.get_template ("hierarchy.html")
-        hierarchy = template.render ({'hierarchy': hierarchy,
-                                      'children': children,
-                                      'klass': klass})
+        if hierarchy or children:
+            template = self.engine.get_template ("hierarchy.html")
+            hierarchy = template.render ({'hierarchy': hierarchy,
+                                        'children': children,
+                                        'klass': klass})
 
         template = self.engine.get_template ('class.html')
         return (template.render ({'klass': klass,

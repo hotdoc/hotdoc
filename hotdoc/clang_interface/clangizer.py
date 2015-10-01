@@ -377,8 +377,6 @@ class ClangScanner(Loggable):
         else:
             d = t.get_declaration()
             if d.kind == clang.cindex.CursorKind.STRUCT_DECL:
-                if node.spelling == "GstDebugMessage":
-                    print "creating struct for", node.spelling
                 sym = self.__create_struct_symbol (node, comment)
             elif d.kind == clang.cindex.CursorKind.ENUM_DECL:
                 sym = self.__create_enum_symbol (node, comment)

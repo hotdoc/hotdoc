@@ -10,7 +10,7 @@ class NaiveIndexFormatter(object):
             if not page_symbols:
                 page_symbols = []
                 pages[filename] = page_symbols
-            page_symbols.append (symbol)
+            page_symbols.append (name)
 
         mddir = "tmp_markdown_files"
 
@@ -28,7 +28,7 @@ class NaiveIndexFormatter(object):
             for page, symbols in pages.iteritems():
                 base_name = os.path.basename (os.path.splitext(page)[0])
                 filename = '%s.markdown' % base_name
-                index.write ('### [%s](%s)\n' % (base_name, filename))
+                index.write ('#### [%s](%s)\n' % (base_name, filename))
                 with open (os.path.join(mddir, filename), 'a') as f:
                     for symbol in symbols:
-                        f.write('* [%s]()\n' % symbol.spelling)
+                        f.write('* [%s]()\n' % symbol)
