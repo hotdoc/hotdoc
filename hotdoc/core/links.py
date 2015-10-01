@@ -63,12 +63,11 @@ class LinkResolver(object):
         except IOError:
             return
 
-        self.__external_links = links[0]
-        self.__local_links = links[1]
+        self.__local_links = links
 
     def pickle (self, output):
         n = datetime.now()
-        pickle.dump ([self.__external_links, self.__local_links],
+        pickle.dump (self.__local_links,
                 open (os.path.join (output, "links.p"), 'wb'))
 
     def get_named_link (self, name, search_external=True):
