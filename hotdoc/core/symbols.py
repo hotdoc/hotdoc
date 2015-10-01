@@ -234,17 +234,11 @@ class AliasSymbol (Symbol):
     def get_type_name (self):
         return "Alias"
 
-def all_subclasses(cls):
-        return cls.__subclasses__() + [g for s in cls.__subclasses__()
-                                       for g in all_subclasses(s)]
 
 class SymbolFactory (object):
     def __init__(self):
         self.symbol_subclasses = all_subclasses (Symbol)
         self.symbol_subclasses.append(Symbol)
-        self.new_symbol_signals = {}
-        for klass in self.symbol_subclasses:
-            self.new_symbol_signals [klass] = Signal()
 
     def make (self, symbol, comment):
         klass = None
@@ -261,7 +255,6 @@ class ClassSymbol (Symbol):
         Symbol.__init__(self, *args)
         self.hierarchy = hierarchy
         self.children = children
-        print self.hierarchy, self.children
 
     def get_type_name (self):
         return "Class"

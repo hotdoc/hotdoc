@@ -344,7 +344,6 @@ class HtmlFormatter (Formatter):
                 parameter.formatted_doc, extra=parameter.extension_contents), False)
 
     def _format_field_symbol (self, field):
-        print "formatting field symbol"
         field_id = self._format_linked_symbol (field) 
         return (self.__format_parameter_detail (field_id,
             field.formatted_doc), False)
@@ -406,10 +405,11 @@ class HtmlFormatter (Formatter):
         for c in klass.children.itervalues():
             children.append(self._format_linked_symbol (c))
 
-        template = self.engine.get_template ("hierarchy.html")
-        hierarchy = template.render ({'hierarchy': hierarchy,
-                                      'children': children,
-                                      'klass': klass})
+        if hierarchy or children:
+            template = self.engine.get_template ("hierarchy.html")
+            hierarchy = template.render ({'hierarchy': hierarchy,
+                                        'children': children,
+                                        'klass': klass})
 
         template = self.engine.get_template ('class.html')
         return (template.render ({'klass': klass,

@@ -13,6 +13,12 @@ from ..utils.simple_signals import Signal
 from ..utils.loggable import Loggable
 from ..utils.loggable import init as loggable_init
 
+def merge_dicts(*dict_args):
+    result = {}
+    for dictionary in dict_args:
+        result.update(dictionary)
+    return result
+
 class ConfigError(Exception):
     pass
 
@@ -37,17 +43,16 @@ class DocTool(Loggable):
         self.full_scan = False
         self.full_scan_patterns = ['*.h']
         self.link_resolver = LinkResolver()
-        self.symbols_created_signal = Signal()
 
     def parse_and_format (self):
-        from .symbols import SymbolFactory
-        self.symbol_factory = SymbolFactory()
-
         self.__setup()
         self.parse_args ()
 
         self.formatter.format()
         self.finalize()
+
+    def get_symbol (self, name):
+        return self.symbols.get (name)
 
     def __setup (self):
         if os.name == 'nt':
@@ -107,6 +112,8 @@ class DocTool(Loggable):
         from ..dbusizer import DBusScanner
         self.c_source_scanner = ClangScanner (self, clang_options)
         self.dbus_source_scanner = DBusScanner()
+        self.symbols = merge_dicts (self.c_source_scanner.new_symbols,
+                self.dbus_source_scanner.symbols)
 
     def __parse_extensions (self, args):
         if args[0].extension_name:
@@ -160,7 +167,6 @@ class DocTool(Loggable):
             extension.setup ()
 
         self.__create_symbols ()
-        self.symbols_created_signal()
 
     def finalize (self):
         self.dependency_tree.dump()

@@ -14,13 +14,19 @@ from .sections import Page
 from ..utils.simple_signals import Signal
 from ..utils.loggable import progress_bar
 
+def all_subclasses(cls):
+        return cls.__subclasses__() + [g for s in cls.__subclasses__()
+                                       for g in all_subclasses(s)]
+
 class Formatter(object):
     def __init__ (self):
         # Used to warn subclasses a method isn't implemented
         self.__not_implemented_methods = {}
 
         self.formatting_symbol_signals = {}
-        for klass in doc_tool.symbol_factory.symbol_subclasses:
+        symbol_subclasses = all_subclasses (Symbol)
+        symbol_subclasses.append(Symbol)
+        for klass in symbol_subclasses:
             self.formatting_symbol_signals[klass] = Signal()
 
         self.fill_index_columns_signal = Signal()

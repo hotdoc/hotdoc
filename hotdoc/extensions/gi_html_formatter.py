@@ -351,17 +351,6 @@ class GIHtmlFormatter(HtmlFormatter):
                                 'constant': constant})
         return (out, False)
 
-    def _format_property_symbol(self, prop):
-        type_link = self._format_linked_symbol (prop.type_)
-        template = self.engine.get_template ('property_prototype.html')
-        prototype = template.render ({'property_name': prop.link.title,
-                                      'property_type': type_link})
-        template = self.engine.get_template ('property.html')
-        res = template.render ({'prototype': prototype,
-                               'property': prop,
-                               'extra': prop.extension_contents})
-        return (res, False)
-
     def _get_style_sheet (self):
         if self.__gi_extension.language == 'python':
             return 'redstyle.css'
@@ -393,7 +382,6 @@ class GIHtmlFormatter(HtmlFormatter):
                 link.id_ = c_name
                 doc_tool.link_resolver.add_external_link (link)
 
-            print "NOW DOING", l
             self.__gi_extension.setup_language (l)
             self._output = os.path.join (doc_tool.output, l)
             if not os.path.exists (self._output):

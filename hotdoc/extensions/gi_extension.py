@@ -158,9 +158,9 @@ class GIRParser(object):
         self.gir_class_map = {}
 
         self.__parse_gir_file (gir_file)
-        self.__symbols_created()
+        self.__create_hierarchies()
 
-    def __symbols_created(self):
+    def __create_hierarchies(self):
         for gi_name, klass in self.gir_types.iteritems():
             hierarchy = self.__create_hierarchy (klass)
             self.gir_hierarchies[gi_name] = hierarchy
@@ -637,7 +637,6 @@ class GIExtension(BaseExtension):
             return
 
         if language == 'python':
-            print "TestGreeter" in self.gir_parser.python_names
             for c_name, python_name in self.gir_parser.python_names.iteritems():
                 l = doc_tool.link_resolver.get_named_link (c_name)
                 if l:
@@ -823,6 +822,10 @@ class GIExtension(BaseExtension):
 
     def __update_function (self, func):
         gi_info = self.gir_parser.gir_callable_infos.get(func.link.id_)
+
+        if not gi_info:
+            return
+
         gi_params, retval = self.__create_parameters_and_retval (gi_info.node,
                 func.comment)
         for i, param in enumerate (func.parameters):
@@ -893,8 +896,6 @@ class GIExtension(BaseExtension):
 
     def __adding_symbol (self, symbol):
         res = []
-
-        print type (symbol), symbol.link.title
 
         if isinstance (symbol, FunctionSymbol):
             self.__update_function (symbol)

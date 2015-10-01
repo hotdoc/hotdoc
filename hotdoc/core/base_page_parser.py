@@ -48,21 +48,14 @@ class PageParser(Loggable):
         if not self._current_page:
             return
 
-        symbol = doc_tool.c_source_scanner.symbols.get (symbol_name)
-        if symbol:
-            comment_block = doc_tool.comments.get (symbol_name)
-            if comment_block:
-                sym = doc_tool.symbol_factory.make (symbol,
-                        comment_block)
-                if sym:
-                    self._current_page.add_symbol (sym)
-                    self.__total_documented_symbols += 1
-                    new_symbols = sum(self.symbol_added_signal (sym), [])
-                    for symbol in new_symbols:
-                        self._current_page.add_symbol (symbol)
-                        self.__total_documented_symbols += 1
-            else:
-                self.warning ("No comment in sources for symbol with name %s", symbol_name)
+        sym = doc_tool.get_symbol (symbol_name)
+        if sym:
+            self._current_page.add_symbol (sym)
+            self.__total_documented_symbols += 1
+            new_symbols = sum(self.symbol_added_signal (sym), [])
+            for symbol in new_symbols:
+                self._current_page.add_symbol (symbol)
+                self.__total_documented_symbols += 1
         else:
             self.warning ("No symbol in sources with name %s", symbol_name)
 

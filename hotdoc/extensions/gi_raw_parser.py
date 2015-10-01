@@ -135,8 +135,10 @@ class GtkDocRawCommentParser (object):
         comment = re.sub ('\n[ \t]*\*', '\n', comment)
         return comment.strip()
 
-    def parse_comment (self, comment, filename, lineno):
-        comment = self.strip_comment (comment)
+    def parse_comment (self, comment, filename, lineno, stripped=False):
+        if not stripped:
+            comment = self.strip_comment (comment)
+
         split = re.split (r'\n[\W]*\n', comment, maxsplit=1)
         block_name, parameters, annotations = self.parse_title_and_parameters (split[0])
         description = ""
