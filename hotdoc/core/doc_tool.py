@@ -13,6 +13,8 @@ from ..utils.simple_signals import Signal
 from ..utils.loggable import Loggable
 from ..utils.loggable import init as loggable_init
 
+from datetime import datetime
+
 def merge_dicts(*dict_args):
     result = {}
     for dictionary in dict_args:

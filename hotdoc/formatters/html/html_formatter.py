@@ -12,8 +12,6 @@ from wheezy.template.loader import FileLoader
 from ...core.symbols import *
 from ...core.base_formatter import Formatter
 from ...core.links import Link
-from ...core.sections import SectionSymbol
-
 
 class Callable(object):
     def __init__(self, return_value, name, parameters):
@@ -230,13 +228,21 @@ class HtmlFormatter (Formatter):
                                })
 
     def _format_class_summary (self, klass):
+        if not klass.comment:
+            return ''
+
         template = self.engine.get_template('class_summary.html')
         return template.render({'klass': klass})
 
     def _format_summary (self, summaries, summary_type):
         if not summaries:
             return None
+
         template = self.engine.get_template('summary.html')
+
+        if summary_type == 'Classes':
+            summary_type = ''
+
         return template.render({'summary_type': summary_type,
                                 'summaries': summaries
                             })
@@ -261,14 +267,18 @@ class HtmlFormatter (Formatter):
         if not toc_section_summaries:
             return (None, None)
 
+        symbol_type = symbols_list.name
+
         summary = self._format_summary (toc_section_summaries,
-                symbols_list.name)
-        toc_section = TocSection (summary, symbols_list.name)
+                symbol_type)
+        toc_section = TocSection (summary, symbol_type)
 
         symbol_descriptions = None
         if detailed_descriptions:
+            if symbol_type == 'Classes':
+                symbol_type = ''
             symbol_descriptions = SymbolDescriptions (detailed_descriptions,
-                    symbols_list.name)
+                    symbol_type)
 
         return (toc_section, symbol_descriptions)
 

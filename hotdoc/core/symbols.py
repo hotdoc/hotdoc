@@ -17,7 +17,7 @@ class Symbol (object):
         self.original_text = None
         self.detailed_description = None
         self.skip = False
-        self.link = doc_tool.link_resolver.get_named_link (self._make_unique_id())
+        self.link = doc_tool.link_resolver.get_named_link(self._make_unique_id(), search_external=False)
         if not self.link:
             self.link = LocalLink (self._make_unique_id(), "", self._make_name())
 

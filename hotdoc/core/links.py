@@ -17,6 +17,7 @@ class Link (object):
     def get_link (self):
         raise NotImplementedError
 
+
 class ExternalLink (Link):
     def __init__ (self, symbol, local_prefix, remote_prefix, filename, title):
         Link.__init__(self)
@@ -70,15 +71,16 @@ class LinkResolver(object):
         pickle.dump ([self.__external_links, self.__local_links],
                 open (os.path.join (output, "links.p"), 'wb'))
 
-    def get_named_link (self, name):
+    def get_named_link (self, name, search_external=True):
         link = None
         try:
             link = self.__local_links[name]
         except KeyError:
-            try:
-                link = self.__external_links[name]
-            except KeyError:
-                pass
+            if search_external:
+                try:
+                    link = self.__external_links[name]
+                except KeyError:
+                    pass
         return link
 
     def add_local_link (self, link):

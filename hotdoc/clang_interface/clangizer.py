@@ -38,7 +38,7 @@ class ClangScanner(Loggable):
         self.filenames = [os.path.abspath(filename) for filename in
                 config.dependency_tree.stale_sources]
 
-        args = ["-I/usr/lib/clang/3.5.0/include/", "-Wno-attributes"]
+        args = ["-isystem/usr/lib/clang/3.5.0/include/", "-Wno-attributes"]
         args.extend (options)
 
         self.symbols = {}
@@ -82,9 +82,8 @@ class ClangScanner(Loggable):
                         self.warning ("Clang issue : %s" % str (diag))
                     else:
                         self.error ("Clang issue : %s" % str (diag))
-                self.__parse_file (filename, tu)
                 for include in tu.get_includes():
-                    self.__parse_file (os.path.abspath(str(include.source)), tu)
+                    self.__parse_file (os.path.abspath(str(include.include)), tu)
             else:
                 self.__total_files_parsed += 1
                 self.__update_progress ()
@@ -328,7 +327,10 @@ class ClangScanner(Loggable):
         raw_text, public_fields = self.__parse_public_fields (decl)
         members = []
         for field in public_fields:
-            member_comment = comment.params.get (field.spelling)
+            if comment:
+                member_comment = comment.params.get (field.spelling)
+            else:
+                member_comment = None
 
             type_tokens = self.make_c_style_type_name (field.type)
             is_function_pointer = ast_node_is_function_pointer (field.type)
@@ -344,7 +346,10 @@ class ClangScanner(Loggable):
         underlying = node.underlying_typedef_type
         decl = underlying.get_declaration()
         for member in decl.get_children():
-            member_comment = comment.params.get (member.spelling)
+            if comment:
+                member_comment = comment.params.get (member.spelling)
+            else:
+                member_comment = None
             member_value = member.enum_value
             member = Symbol (member_comment, member.spelling, member.location)
             member.enum_value = member_value

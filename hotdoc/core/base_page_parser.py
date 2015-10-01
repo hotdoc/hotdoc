@@ -70,9 +70,11 @@ class PageParser(Loggable):
                     continue
 
                 filename = str (location.file)
-                doc_tool.dependency_tree.add_dependency (s.source_file, filename)
-                comment_filename = sym.comment.filename
-                doc_tool.dependency_tree.add_dependency (s.source_file, comment_filename)
+                doc_tool.dependency_tree.add_dependency (s.source_file,
+                        filename)
+                if sym.comment:
+                    comment_filename = sym.comment.filename
+                    doc_tool.dependency_tree.add_dependency (s.source_file, comment_filename)
 
             self.__update_dependencies (s.subpages)
 
