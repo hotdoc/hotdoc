@@ -250,6 +250,8 @@ class HtmlFormatter (Formatter):
         detailed_descriptions = []
         
         for element in symbols_list.symbols:
+            if element.skip:
+                continue
             summary = summary_formatter(element)
             if summary:
                 toc_section_summaries.append (summary)
@@ -272,8 +274,6 @@ class HtmlFormatter (Formatter):
 
     def _format_struct (self, struct):
         raw_code = self._format_raw_code (struct.raw_text)
-        for member in struct.members:
-            member.do_format()
         members_list = self._format_members_list (struct.members, 'Fields')
 
         template = self.engine.get_template ("struct.html")
@@ -285,7 +285,6 @@ class HtmlFormatter (Formatter):
     def _format_enum (self, enum):
         for member in enum.members:
             template = self.engine.get_template ("enum_member.html")
-            member.do_format()
             member.detailed_description = template.render ({
                                     'link': member.link,
                                     'detail': member.formatted_doc,
@@ -345,6 +344,7 @@ class HtmlFormatter (Formatter):
                 parameter.formatted_doc, extra=parameter.extension_contents), False)
 
     def _format_field_symbol (self, field):
+        print "formatting field symbol"
         field_id = self._format_linked_symbol (field) 
         return (self.__format_parameter_detail (field_id,
             field.formatted_doc), False)

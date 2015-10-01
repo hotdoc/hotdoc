@@ -3,6 +3,11 @@
 	<h4>Returns</h4>
 	@return_value.formatted_doc
 </div>
-@def extension():
+
+@if return_value.extension_contents:
+<p>
+	@for name, ex in return_value.extension_contents.iteritems():
+	@ex
+	@end
+</p>
 @end
-@extension()

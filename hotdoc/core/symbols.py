@@ -16,6 +16,7 @@ class Symbol (object):
         self.name = name
         self.original_text = None
         self.detailed_description = None
+        self.skip = False
         self.link = doc_tool.link_resolver.get_named_link (self._make_unique_id())
         if not self.link:
             self.link = LocalLink (self._make_unique_id(), "", self._make_name())
@@ -24,6 +25,17 @@ class Symbol (object):
         self.location = location
         self.extension_contents = {}
         self.extension_attributes = {}
+
+    def add_extension_attribute (self, ext_name, key, value):
+        attributes = self.extension_attributes.pop (ext_name, {})
+        attributes[key] = value
+        self.extension_attributes[ext_name] = attributes
+
+    def get_extension_attribute (self, ext_name, key):
+        attributes = self.extension_attributes.get (ext_name)
+        if not attributes:
+            return None
+        return attributes.get (key)
 
     def parse_tags(self):
         if not self.comment:
@@ -40,7 +52,7 @@ class Symbol (object):
     def do_format (self):
         from hotdoc.core.doc_tool import doc_tool
         self.tags = self.parse_tags ()
-        return doc_tool.formatter.format_symbol (self)
+        self.skip = not doc_tool.formatter.format_symbol (self)
 
     def _make_name (self):
         return self.name
@@ -131,6 +143,11 @@ class EnumSymbol (Symbol):
         Symbol.__init__(self, *args)
         self.members = members
 
+    def do_format(self):
+        for member in self.members:
+            member.do_format()
+        return Symbol.do_format (self)
+
     def get_extra_links (self):
         return [m.link for m in self.members]
 
@@ -142,6 +159,11 @@ class StructSymbol (Symbol):
         Symbol.__init__(self, *args)
         self.raw_text = raw_text
         self.members = members
+
+    def do_format(self):
+        for member in self.members:
+            member.do_format()
+        return Symbol.do_format (self)
 
     def get_type_name (self):
         return "Structure"
@@ -189,6 +211,7 @@ class ReturnValueSymbol (QualifiedSymbol):
 class ParameterSymbol (QualifiedSymbol):
     def __init__(self, argname, *args):
         self.argname = argname
+        self.array_nesting = 0
         QualifiedSymbol.__init__(self, *args)
 
 class FieldSymbol (QualifiedSymbol):

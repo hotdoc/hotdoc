@@ -70,136 +70,6 @@ class ConstructOnlyFlag (Flag):
     def __init__(self):
         Flag.__init__ (self, "Construct Only", None)
 
-class GIFlaggedSymbol(Symbol):
-    def _make_name(self):
-        return self._symbol.attrib["name"]
-
-    def __init__(self, *args):
-        self.flags = []
-        Symbol.__init__(self, *args)
-        self.ns_name = self._symbol.getparent().getparent().attrib['name']
-        self.parent_name = self._symbol.getparent().attrib['{%s}type-name' %
-                'http://www.gtk.org/introspection/glib/1.0']
-
-class GIPropertySymbol (GIFlaggedSymbol):
-    def _make_unique_id(self):
-        parent_name = self._symbol.getparent().attrib['{%s}type-name' %
-                'http://www.gtk.org/introspection/glib/1.0']
-        res = "%s:::%s---%s" % (parent_name, self._symbol.attrib["name"],
-                'property')
-        return res
-
-    def do_format (self):
-        self.flags = []
-        writable = self._symbol.attrib.get('writable')
-        construct = self._symbol.attrib.get('construct')
-        construct_only = self._symbol.attrib.get('construct-only')
-
-        self.flags.append (ReadableFlag())
-        if writable == '1':
-            self.flags.append (WritableFlag())
-        if construct_only == '1':
-            self.flags.append (ConstructOnlyFlag())
-        elif construct == '1':
-            self.flags.append (ConstructFlag())
-
-        type_ = self._symbol.find ('{http://www.gtk.org/introspection/core/1.0}type')
-        if self.extension.language == 'c' and \
-                '{http://www.gtk.org/introspection/c/1.0}type' in type_.attrib:
-            ctype_name = type_.attrib.get('{http://www.gtk.org/introspection/c/1.0}type')
-            self.type_ = self.extension.gir_parser.qualified_symbol_from_ctype (ctype_name)
-        else:
-            type_name = type_.attrib['name']
-            self.type_ = self.extension.gir_parser.qualified_symbol_from_gitype(type_name, self.extension.language)
-
-        return GIFlaggedSymbol.do_format(self)
-
-    def get_type_name (self):
-        return "Property"
-
-class GIVFunctionSymbol (GIFlaggedSymbol, FunctionSymbol):
-    def __init__(self, *args):
-        GIFlaggedSymbol.__init__(self, *args)
-        FunctionSymbol.__init__(self, *args)
-
-    def _make_unique_id(self):
-        parent_name = self._symbol.getparent().attrib['{%s}type-name' %
-                'http://www.gtk.org/introspection/glib/1.0']
-        res = "%s:::%s---%s" % (parent_name, self._symbol.attrib["name"],
-                'vfunc')
-        return res
-
-    def do_format (self):
-        self.return_value = None
-        self.parameters = []
-        ns_name =  self._symbol.getparent().getparent().attrib['name']
-        self.gi_parent_name = '%s.%s' % (ns_name, self._symbol.getparent().attrib['name'])
-        return GIFlaggedSymbol.do_format(self)
-
-    def get_type_name (self):
-        return "Virtual function"
-
-class GIClassSymbol (ClassSymbol, Loggable):
-    def __init__(self, extra_args, *args):
-        Loggable.__init__(self)
-        ClassSymbol.__init__(self, *args)
-        self.gir_class_info = extra_args['gir-class-info']
-        self.__gi_name = extra_args['gi-name']
-        self.__gi_extension = extra_args['gi-extension']
-        self._register_typed_symbol (GIPropertySymbol, "Properties")
-        self._register_typed_symbol (GISignalSymbol, "Signals")
-        self._register_typed_symbol (GIVFunctionSymbol, "Virtual Functions")
-        self.__parsed_gir_class_info = False
-
-    def parse_gir_class_info (self):
-        if self.__parsed_gir_class_info:
-            return
-
-        self.__parsed_gir_class_info = True
-
-        gir_node = self.gir_class_info.node
-
-        klass_name = gir_node.attrib.get('{%s}type-name' %
-                'http://www.gtk.org/introspection/glib/1.0')
-        class_struct_name = self.gir_class_info.class_struct_name
-
-        if klass_name:
-            for signal_name, signal_node in self.gir_class_info.signals.iteritems():
-                block_name = '%s::%s' % (klass_name, signal_node.attrib['name'])
-                comment = doc_tool.comments.get(block_name)
-                if not comment: # We do need a comment here
-                    continue
-                self.add_symbol (doc_tool.symbol_factory.make_custom (signal_node,
-                    comment, GISignalSymbol))
-            for prop_name, prop_node in self.gir_class_info.properties.iteritems():
-                block_name = '%s:%s' % (klass_name, prop_node.attrib['name'])
-                comment = doc_tool.comments.get(block_name)
-                if not comment:
-                    self.warning ("No comment found for property %s" % block_name)
-                prop = doc_tool.symbol_factory.make_custom (prop_node,
-                    comment, GIPropertySymbol)
-                prop.extension = self.__gi_extension
-                self.add_symbol (prop)
-        if class_struct_name:
-            for vfunc_name, vfunc_node in self.gir_class_info.vmethods.iteritems():
-                parent_comment = doc_tool.comments.get (class_struct_name)
-                comment = None
-                if parent_comment:
-                    comment = parent_comment.params.get (vfunc_node.attrib['name'])
-                if not comment:
-                    continue
-                block = GtkDocCommentBlock(vfunc_node.attrib['name'], '', 0,
-                        [], [], comment.description, [])
-                vfunc = doc_tool.symbol_factory.make_custom (vfunc_node,
-                        block, GIVFunctionSymbol)
-                self.add_symbol (vfunc)
-
-    def do_format (self):
-        self.parse_gir_class_info ()
-        self.children = self.__gi_extension.gir_parser.gir_children_map.get(self.__gi_name)
-        self.hierarchy = self.__gi_extension.gir_parser.gir_hierarchies.get(self.__gi_name)
-        return ClassSymbol.do_format(self)
-
 ALLOW_NONE_HELP = \
 "NULL is OK, both for passing and returning"
 
@@ -270,29 +140,6 @@ class GIClassInfo(GIInfo):
         self.properties = {}
         self.is_interface = is_interface
 
-class GICallableInfo(GIInfo):
-    def __init__(self, node, parameters, retval, throws, parent_name,
-            is_method, is_contructor):
-        GIInfo.__init__(self, node, parent_name)
-        self.parameters = parameters
-        self.retval = retval
-        self.throws = throws
-        self.is_method = is_method
-        self.is_constructor = is_contructor
-
-class GIParamInfo(object):
-    def __init__(self, param_name, type_name, out, ctype_name, array_nesting):
-        self.param_name = param_name
-        self.type_name = type_name
-        self.ctype_name = ctype_name
-        self.out = out
-        self.array_nesting = array_nesting
-
-class GIReturnValueInfo(object):
-    def __init__(self, type_name, ctype_name):
-        self.type_name = type_name
-        self.ctype_name = ctype_name
-
 class GIRParser(object):
     def __init__(self, gir_file):
         self.namespace = None
@@ -305,6 +152,8 @@ class GIRParser(object):
         self.gir_hierarchies = {}
         self.gir_types = {}
         self.all_infos = {}
+
+        self.callable_nodes = {}
 
         self.gir_class_map = {}
 
@@ -457,54 +306,6 @@ class GIRParser(object):
                 child_cname = self.__parse_gir_vmethod (nsmap, c_name, child)
                 gi_class_info.vmethods[child_cname] = child
 
-    def __unnest_type (self, parameter):
-        array_nesting = 0
-        array = parameter.find('{http://www.gtk.org/introspection/core/1.0}array')
-        while array is not None:
-            array_nesting += 1
-            parameter = array
-            array = parameter.find('{http://www.gtk.org/introspection/core/1.0}array')
-
-        return parameter, array_nesting
-
-    def __parse_parameters (self, func):
-        parameters = func.find('{http://www.gtk.org/introspection/core/1.0}parameters')
-        if parameters is None:
-            parameters = []
-        else:
-            parameters = parameters.findall('{http://www.gtk.org/introspection/core/1.0}parameter')
-
-        gir_params = []
-
-        for parameter in parameters:
-            param_name = parameter.attrib['name']
-            type_, array_nesting = self.__unnest_type (parameter)
-
-            ptype_ = type_.find('{http://www.gtk.org/introspection/core/1.0}type')
-
-            if ptype_ is None:
-                continue
-
-            ptype_name = ptype_.attrib['name']
-            out = False
-            if 'direction' in parameter.attrib:
-                out = parameter.attrib['direction'] == 'out'
-            ctype_name = type_.attrib.get('{http://www.gtk.org/introspection/c/1.0}type')
-            gir_params.append (GIParamInfo (param_name, ptype_name, out,
-                ctype_name, array_nesting))
-
-        return gir_params
-
-    def __parse_retval (self, func):
-        retval = func.find('{http://www.gtk.org/introspection/core/1.0}return-value')
-        if retval is None:
-            return None
-        ptype_ = retval.find('{http://www.gtk.org/introspection/core/1.0}type')
-        if ptype_ is not None: # FIXME
-            ctype_name = ptype_.attrib.get('{http://www.gtk.org/introspection/c/1.0}type')
-            return GIReturnValueInfo(ptype_.attrib['name'], ctype_name)
-        return None
-
     def __parse_gir_callable_common (self, callable_, c_name, python_name,
             js_name, class_name, is_method=False, is_constructor=False):
         introspectable = callable_.attrib.get('introspectable')
@@ -514,15 +315,8 @@ class GIRParser(object):
 
         self.python_names[c_name] = python_name
         self.javascript_names[c_name] = js_name
-        parameters = self.__parse_parameters (callable_)
-        retval = self.__parse_retval (callable_)
-        throws = False
 
-        if 'throws' in callable_.attrib:
-            throws = callable_.attrib['throws'] == '1'
-
-        info = GICallableInfo (callable_,
-            parameters, retval, throws, class_name, is_method, is_constructor)
+        info = GIInfo (callable_, class_name)
         self.gir_callable_infos[c_name] = info
         self.all_infos[c_name] = info
 
@@ -798,113 +592,6 @@ class GIExtension(BaseExtension):
 
         return annotations
 
-    def __update_parameters(self, callable_, gi_info):
-        if not gi_info:
-            return
-
-        retval = None
-        ret_info = gi_info.retval
-        if ret_info:
-            if self.language == 'c' and ret_info.ctype_name:
-                qs = self.gir_parser.qualified_symbol_from_ctype (ret_info.ctype_name)
-            else:
-                qs = self.gir_parser.qualified_symbol_from_gitype(ret_info.type_name)
-            if qs:
-                if callable_.return_value:
-                    comment = callable_.return_value.comment
-                else:
-                    comment = callable_.comment.tags.get('returns')
-                retval = ReturnValueSymbol (qs.type_tokens, comment)
-                callable_.return_value = retval
-
-        parameters = []
-        for parameter in gi_info.parameters:
-            if self.language == 'c' and parameter.ctype_name:
-                qs = self.gir_parser.qualified_symbol_from_ctype (parameter.ctype_name)
-            else:
-                qs = self.gir_parser.qualified_symbol_from_gitype (parameter.type_name)
-            comment = callable_.comment.params.get(parameter.param_name)
-            if qs:
-                param = ParameterSymbol (parameter.param_name, qs.type_tokens,
-                        comment)
-                param.out = parameter.out
-                param.array_nesting = parameter.array_nesting
-                parameters.append (param)
-
-        callable_.parameters = parameters
-
-    def __create_signal_parameters(self, signal, gi_info):
-        self.__update_parameters(signal, gi_info)
-
-        if self.language == 'c':
-            udata_type = self.gir_parser.qualified_symbol_from_ctype ("gpointer")
-        else:
-            udata_type = self.gir_parser.qualified_symbol_from_gitype ("gpointer")
-
-        instance_type = self.gir_parser.qualified_symbol_from_gitype(signal.parent_name,
-                self.language)
-        instance_comment = GtkDocParameter ("object", [],
-                "The object that emitted the signal")
-        instance_param = ParameterSymbol ('object', instance_type.type_tokens,
-                instance_comment)
-        signal.parameters.insert (0, instance_param)
-
-        udata_comment = GtkDocParameter ("user_data", [],
-                "user data set when the signal handler was connected.")
-
-        udata_param = ParameterSymbol ('user_data', udata_type.type_tokens,
-                udata_comment)
-        signal.parameters.append (udata_param)
-
-    def __create_vmethod_parameters(self, vmethod, gi_info):
-        self.__update_parameters(vmethod, gi_info)
-
-        instance_type = self.gir_parser.qualified_symbol_from_gitype(vmethod.parent_name,
-                self.language)
-        instance_comment = GtkDocParameter ("object", [],
-                "An instance of the class implementing the virtual method")
-        instance_param = ParameterSymbol ('object', instance_type.type_tokens,
-                instance_comment)
-        vmethod.parameters.insert (0, instance_param)
-
-    def __sort_out_parameters (self, callable_):
-        callable_.return_value.out_parameters = []
-        if callable_.parameters:
-            for param in callable_.parameters:
-                if hasattr(param, 'out') and param.out:
-                    callable_.return_value.out_parameters.append (param)
-
-    def __update_array_nesting (self, callable_):
-        if callable_.parameters:
-            for param in callable_.parameters:
-                if not hasattr(param, 'array_nesting'):
-                    param.array_nesting = 0
-
-    def __check_throws(self, callable_, gi_info):
-        if not gi_info:
-            return
-
-        if gi_info.throws:
-            callable_.throws = True
-
-    def __update_callable (self, callable_):
-        gi_info = self.gir_parser.gir_callable_infos.get(callable_.link.id_)
-        callable_.throws = False
-        if gi_info and gi_info.is_method:
-            callable_.is_method = True
-        if type(callable_) == GIVFunctionSymbol:
-            self.__create_vmethod_parameters(callable_, gi_info)
-        elif self.language in ["python", "javascript"]:
-            self.__update_parameters(callable_, gi_info)
-
-        if self.language in ["python", "javascript"] and \
-                callable_.return_value: # FIXME this could happen
-            self.__sort_out_parameters (callable_)
-
-        if self.language in ["python", "javascript"]:
-            self.__check_throws (callable_, gi_info)
-            self.__update_array_nesting (callable_)
-
     def __remove_vmethods (self, symbol):
         gir_class_info = self.gir_parser.gir_class_map.get(symbol._make_name())
         if not gir_class_info:
@@ -917,8 +604,11 @@ class GIExtension(BaseExtension):
         symbol.members = members
 
     def __add_annotations (self, symbol):
-        annotations = self.get_annotations (symbol)
-        extra_content = doc_tool.formatter._format_annotations (annotations)
+        if self.language == 'c':
+            annotations = self.get_annotations (symbol)
+            extra_content = doc_tool.formatter._format_annotations (annotations)
+        else:
+            extra_content = ''
         symbol.extension_contents['Annotations'] = extra_content
 
     def __formatting_symbol(self, symbol):
@@ -926,9 +616,6 @@ class GIExtension(BaseExtension):
             self.__add_annotations (symbol)
 
         c_name = symbol._make_name ()
-
-        if isinstance (symbol, FunctionSymbol):
-            self.__update_callable (symbol)
 
         if type (symbol) == StructSymbol:
             self.__remove_vmethods(symbol)
@@ -943,25 +630,6 @@ class GIExtension(BaseExtension):
 
         return True
 
-    def get_section_type (self, symbol):
-        if type (symbol) != clang.cindex.Cursor:
-            return (None, None)
-
-        split = symbol.spelling.split(self.gir_parser.namespace)
-        if len (split) < 2:
-            return (None, None)
-
-        gi_name = '%s.%s' % (self.gir_parser.namespace, split[1])
-        if not symbol.spelling in self.gir_parser.gir_class_infos:
-            return (None, None)
-
-        gi_class_info = self.gir_parser.gir_class_infos[symbol.spelling]
-
-        extra_args = {'gir-class-info': gi_class_info,
-                      'gi-name': gi_name,
-                      'gi-extension': self}
-        return (GIClassSymbol, extra_args)
-
     def setup_language (self, language):
         self.language = language
 
@@ -969,10 +637,12 @@ class GIExtension(BaseExtension):
             return
 
         if language == 'python':
+            print "TestGreeter" in self.gir_parser.python_names
             for c_name, python_name in self.gir_parser.python_names.iteritems():
                 l = doc_tool.link_resolver.get_named_link (c_name)
                 if l:
                     l.title = python_name
+
         elif language == 'javascript':
             for c_name, js_name in self.gir_parser.javascript_names.iteritems():
                 l = doc_tool.link_resolver.get_named_link (c_name)
@@ -988,9 +658,7 @@ class GIExtension(BaseExtension):
             link = doc_tool.link_resolver.get_named_link (info.parent_name)
             if link:
                 row[2] = link
-            if type (info) == GICallableInfo and info.is_constructor:
-                row[1] = "Constructor"
-            elif type (info) == GIClassInfo and info.is_interface:
+            if type (info) == GIClassInfo and info.is_interface:
                 row[1] = "Interface"
 
         if not symbol.comment:
@@ -1030,7 +698,7 @@ class GIExtension(BaseExtension):
 
         return tokens
 
-    def __type_tokens_from_gi_node (self, gi_node):
+    def __type_tokens_and_gi_name_from_gi_node (self, gi_node):
         type_, array_nesting = self.__unnest_type (gi_node)
         ptype_ = type_.find('{http://www.gtk.org/introspection/core/1.0}type')
 
@@ -1043,29 +711,46 @@ class GIExtension(BaseExtension):
         else:
             type_tokens = []
 
-        return type_tokens
+        namespaced = '%s.%s' % (self.gir_parser.namespace, ptype_name)
+        if namespaced in self.gir_parser.gir_types:
+            ptype_name = namespaced
+        return type_tokens, ptype_name
 
     def __create_parameter_symbol (self, gi_parameter, comment):
         param_name = gi_parameter.attrib['name']
         param_comment = comment.params.get (param_name)
-        type_tokens = self.__type_tokens_from_gi_node (gi_parameter)
+        type_tokens, gi_name = self.__type_tokens_and_gi_name_from_gi_node (gi_parameter)
 
-        return ParameterSymbol (param_name, type_tokens, param_comment)
+        res = ParameterSymbol (param_name, type_tokens, param_comment)
+        res.add_extension_attribute ('gi-extension', 'gi_name', gi_name)
+
+        return res
 
     def __create_return_value_symbol (self, gi_retval, comment):
         return_comment = comment.tags.get ('returns')
-        type_tokens = self.__type_tokens_from_gi_node (gi_retval)
+        type_tokens, gi_name = self.__type_tokens_and_gi_name_from_gi_node(gi_retval)
 
-        return ReturnValueSymbol (type_tokens, return_comment)
+        res = ReturnValueSymbol (type_tokens, return_comment)
+        res.add_extension_attribute ('gi-extension', 'gi_name', gi_name)
+
+        return res
 
     def __create_parameters_and_retval (self, node, comment):
         gi_parameters = node.find('{http://www.gtk.org/introspection/core/1.0}parameters')
+
         if gi_parameters is None:
+            instance_param = None
             gi_parameters = []
         else:
+            instance_param = \
+            gi_parameters.find('{http://www.gtk.org/introspection/core/1.0}instance-parameter')
             gi_parameters = gi_parameters.findall('{http://www.gtk.org/introspection/core/1.0}parameter')
 
         parameters = []
+
+        if instance_param is not None:
+            parameters.append (self.__create_parameter_symbol (instance_param,
+                comment))
 
         for gi_parameter in gi_parameters:
             parameters.append (self.__create_parameter_symbol (gi_parameter, comment))
@@ -1099,8 +784,9 @@ class GIExtension(BaseExtension):
         return res
 
     def __create_property_symbol (self, node, comment, object_name, name):
-        type_tokens = self.__type_tokens_from_gi_node (node)
+        type_tokens, gi_name = self.__type_tokens_and_gi_name_from_gi_node(node)
         type_ = QualifiedSymbol (type_tokens, None)
+        type_.add_extension_attribute ('gi-extension', 'gi_name', gi_name)
 
         flags = []
         writable = node.attrib.get('writable')
@@ -1135,10 +821,23 @@ class GIExtension(BaseExtension):
         class_symbol = ClassSymbol (hierarchy, children, class_comment, symbol.name, None)
         return class_symbol
 
-    def __adding_symbol (self, symbol):
-        if type (symbol) != StructSymbol:
-            return []
+    def __update_function (self, func):
+        gi_info = self.gir_parser.gir_callable_infos.get(func.link.id_)
+        gi_params, retval = self.__create_parameters_and_retval (gi_info.node,
+                func.comment)
+        for i, param in enumerate (func.parameters):
+            gi_param = gi_params[i]
+            gi_name = gi_param.get_extension_attribute ('gi-extension',
+                    'gi_name')
+            param.add_extension_attribute ('gi-extension', 'gi_name', gi_name)
 
+
+        gi_name = retval.get_extension_attribute ('gi-extension',
+                'gi_name')
+        func.return_value.add_extension_attribute ('gi-extension', 'gi_name',
+                gi_name)
+
+    def __update_struct (self, symbol):
         split = symbol.name.split(self.gir_parser.namespace)
         if len (split) < 2:
             return []
@@ -1191,6 +890,19 @@ class GIExtension(BaseExtension):
                 symbols.append (sym)
 
         return symbols
+
+    def __adding_symbol (self, symbol):
+        res = []
+
+        print type (symbol), symbol.link.title
+
+        if isinstance (symbol, FunctionSymbol):
+            self.__update_function (symbol)
+
+        elif type (symbol) == StructSymbol:
+            res = self.__update_struct (symbol)
+
+        return res
 
     def setup (self):
         doc_tool.page_parser.symbol_added_signal.connect (self.__adding_symbol)

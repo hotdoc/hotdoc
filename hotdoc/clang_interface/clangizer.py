@@ -220,18 +220,22 @@ class ClangScanner(Loggable):
         else:
             return_comment = None
 
-        type_tokens = self.make_c_style_type_name (node.result_type)
-        return_value = ReturnValueSymbol (type_tokens, return_comment)
+        return_value = None
 
-        for param in node.get_arguments():
-            if comment:
-                param_comment = comment.params.get (param.displayname)
+        for child in node.get_children():
+            if not return_value:
+                type_tokens = self.make_c_style_type_name (child.type)
+                return_value = ReturnValueSymbol(type_tokens, return_comment)
             else:
-                param_comment = None
+                if comment:
+                    param_comment = comment.params.get (child.displayname)
+                else:
+                    param_comment = None
 
-            type_tokens = self.make_c_style_type_name (param.type)
-            parameter = ParameterSymbol (param.displayname, type_tokens, param_comment)
-            parameters.append (parameter)
+                type_tokens = self.make_c_style_type_name (child.type)
+                parameter = ParameterSymbol (child.displayname, type_tokens, param_comment)
+                parameters.append (parameter)
+
         sym = CallbackSymbol (parameters, return_value, comment, node.spelling, node.location)
         return sym
 
