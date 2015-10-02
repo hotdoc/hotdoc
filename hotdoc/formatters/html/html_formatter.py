@@ -83,6 +83,10 @@ class HtmlFormatter (Formatter):
 
     def _format_link (self, link, title):
         out = ''
+        if not link:
+            print "Issue here plz check", title
+            return title
+
         template = self.engine.get_template('link.html')
         out += '%s' % template.render ({'link': link,
                                          'link_title': title})
@@ -94,8 +98,15 @@ class HtmlFormatter (Formatter):
 
         for tok in type_tokens:
             if isinstance (tok, Link):
-                out += self._format_link (tok.get_link(), tok.title)
-                link_before = True
+                ref = tok.get_link()
+                if ref:
+                    out += self._format_link (ref, tok.title)
+                    link_before = True
+                else:
+                    if link_before:
+                        out += ' '
+                    out += tok.title
+                    link_before = False
             else:
                 if link_before:
                     out += ' '

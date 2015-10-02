@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from .symbols import *
-from .links import LocalLink
+from .links import Link
 
 class TypedSymbolsList (object):
     def __init__ (self, name):
@@ -14,7 +14,7 @@ class Page:
         self.subpages = []
         self.comment = comment
         pagename = '%s.html' % name
-        self.link = LocalLink (name, pagename, name) 
+        self.link = Link (pagename, name, name) 
 
         self.formatted_contents = None
         self.formatted_doc = ''
@@ -38,9 +38,9 @@ class Page:
         self.title = ''
 
     def add_symbol (self, symbol):
-        symbol.link.pagename = self.link.pagename
+        symbol.link.ref = '%s#%s' % (self.link.ref, symbol.link.ref)
         for l in symbol.get_extra_links():
-            l.pagename = self.link.pagename
+            l.ref = '%s#%s' % (self.link.ref, l.ref)
         tsl = self.typed_symbols[type(symbol)]
         tsl.symbols.append (symbol)
         self.symbols.append (symbol)

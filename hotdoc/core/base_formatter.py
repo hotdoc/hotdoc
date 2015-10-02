@@ -162,7 +162,7 @@ class Formatter(object):
             f.write (content.encode('utf-8'))
 
     def __write_symbol (self, symbol):
-        path = os.path.join (self._output, symbol.link.pagename)
+        path = os.path.join (self._output, symbol.link.ref)
         with open (path, 'w') as f:
             out = symbol.detailed_description
             f.write (out.encode('utf-8'))

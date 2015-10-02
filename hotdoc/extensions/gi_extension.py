@@ -12,7 +12,7 @@ from ..core.base_extension import BaseExtension
 from ..utils.loggable import Loggable
 from .gi_raw_parser import GtkDocRawCommentParser
 from .gi_html_formatter import GIHtmlFormatter
-from hotdoc.core.links import Link, ExternalLink
+from hotdoc.core.links import Link
 
 
 class Annotation (object):
@@ -411,6 +411,7 @@ class GIRParser(object):
             ptype_name = c_type
 
         type_link = doc_tool.link_resolver.get_named_link (ptype_name)
+
         if type_link:
             tokens = [type_link]
             tokens += '*'
@@ -450,7 +451,6 @@ class GIExtension(BaseExtension):
                  "default": self.__make_default_annotation,
                 }
 
-        self.__gather_gtk_doc_links()
         self.__raw_comment_parser = GtkDocRawCommentParser()
         self._formatters["html"] = GIHtmlFormatter (self)
 
@@ -464,6 +464,7 @@ class GIExtension(BaseExtension):
                 dest="major_version", default='')
 
     def __gather_gtk_doc_links (self):
+        print "Now gathering links, cool baby"
         sgml_dir = os.path.join(doc_tool.datadir, "gtk-doc", "html")
         if not os.path.exists(sgml_dir):
             self.error("no gtk doc to gather links from in %s" % sgml_dir)
@@ -477,6 +478,8 @@ class GIExtension(BaseExtension):
                 except IOError:
                     pass
 
+        print "I should have True by now :", doc_tool.link_resolver.get_named_link ('TRUE')
+
     def __parse_sgml_index(self, dir_):
         symbol_map = dict({})
         remote_prefix = ""
@@ -484,16 +487,27 @@ class GIExtension(BaseExtension):
             for l in f:
                 if l.startswith("<ONLINE"):
                     remote_prefix = l.split('"')[1]
+                elif not remote_prefix:
+                    break
                 elif l.startswith("<ANCHOR"):
                     split_line = l.split('"')
                     filename = split_line[3].split('/', 1)[-1]
                     title = split_line[1].replace('-', '_')
+
                     if title.endswith (":CAPS"):
                         title = title [:-5]
-                    link = ExternalLink (split_line[1], dir_, remote_prefix,
-                            filename, title)
+                    if remote_prefix:
+                        href = '%s/%s' % (remote_prefix, filename)
+                    else:
+                        href = filename
 
-                    doc_tool.link_resolver.add_external_link (link)
+                    prev_link = doc_tool.link_resolver.get_named_link (title)
+
+                    if not prev_link:
+                        link = Link (href, title, title)
+                        doc_tool.link_resolver.add_link (link)
+                    elif not prev_link.ref:
+                        prev_link.ref = href
 
     def __make_type_annotation (self, annotation, value):
         if not value:
@@ -655,6 +669,8 @@ class GIExtension(BaseExtension):
         if info:
             link = doc_tool.link_resolver.get_named_link (info.parent_name)
             if link:
+                if link.title == "GstDebugMessage":
+                    print "Hello"
                 row[2] = link
             if type (info) == GIClassInfo and info.is_interface:
                 row[1] = "Interface"
@@ -685,7 +701,7 @@ class GIExtension(BaseExtension):
             if token in ["const", "restrict", "volatile"]:
                 tokens.append(token)
             else:
-                link = doc_tool.link_resolver.get_named_link (token) 
+                link = doc_tool.link_resolver.get_named_link (token)
                 if link:
                     tokens.append (link)
                 else:
@@ -732,7 +748,12 @@ class GIExtension(BaseExtension):
         res = ParameterSymbol (param_name, type_tokens, param_comment)
         res.add_extension_attribute ('gi-extension', 'gi_name', gi_name)
 
-        return res
+        direction = gi_parameter.attrib.get('direction')
+        if direction is None:
+            direction = 'in'
+        res.add_extension_attribute ('gi-extension', 'direction', direction)
+
+        return res, direction
 
     def __create_return_value_symbol (self, gi_retval, comment):
         if comment:
@@ -761,16 +782,47 @@ class GIExtension(BaseExtension):
         parameters = []
 
         if instance_param is not None:
-            parameters.append (self.__create_parameter_symbol (instance_param,
-                comment))
+            param, direction = self.__create_parameter_symbol (instance_param,
+                    comment)
+            parameters.append (param)
 
+        out_parameters = []
         for gi_parameter in gi_parameters:
-            parameters.append (self.__create_parameter_symbol (gi_parameter, comment))
+            param, direction = self.__create_parameter_symbol (gi_parameter,
+                    comment)
+            parameters.append (param)
+            if direction != 'in':
+                out_parameters.append (param)
 
         retval = node.find('{http://www.gtk.org/introspection/core/1.0}return-value')
         retval = self.__create_return_value_symbol (retval, comment)
+        retval.add_extension_attribute ('gi-extension', 'out_parameters',
+                out_parameters)
 
         return (parameters, retval)
+
+    def __sort_parameters (self, symbol, retval, parameters):
+        in_parameters = []
+        out_parameters = []
+
+        for i, param in enumerate (parameters):
+            if symbol.is_method and i == 0:
+                continue
+
+            direction = param.get_extension_attribute ('gi-extension', 'direction')
+
+            if direction == 'in' or direction == 'inout':
+                in_parameters.append (param)
+            if direction == 'out' or direction == 'inout':
+                out_parameters.append (param)
+
+        symbol.add_extension_attribute ('gi-extension',
+                'parameters', in_parameters)
+        symbol.add_extension_attribute ('gi-extension',
+                'out_parameters', out_parameters)
+
+        retval.add_extension_attribute('gi-extension', 'out_parameters',
+                out_parameters)
 
     def __create_signal_symbol (self, node, comment, object_name, name):
         parameters, retval = self.__create_parameters_and_retval (node, comment)
@@ -792,6 +844,8 @@ class GIExtension(BaseExtension):
 
         extra_content = doc_tool.formatter._format_flags (flags)
         res.extension_contents['Flags'] = extra_content
+
+        self.__sort_parameters (res, retval, parameters)
 
         return res
 
@@ -822,8 +876,12 @@ class GIExtension(BaseExtension):
 
     def __create_vfunc_symbol (self, node, comment, object_name, name):
         parameters, retval = self.__create_parameters_and_retval (node, comment)
-        return VFunctionSymbol (object_name, parameters, retval, comment, name,
+        symbol = VFunctionSymbol (object_name, parameters, retval, comment, name,
                 None)
+
+        self.__sort_parameters (symbol, retval, parameters)
+
+        return symbol
 
     def __create_class_symbol (self, symbol, gi_name):
         class_comment = doc_tool.comments.get ('SECTION:%s' %
@@ -835,22 +893,37 @@ class GIExtension(BaseExtension):
 
     def __update_function (self, func):
         gi_info = self.gir_parser.gir_callable_infos.get(func.link.id_)
+
+        if not gi_info:
+            return
+
+        func.is_method = gi_info.node.tag.endswith ('method')
+
         gi_params, retval = self.__create_parameters_and_retval (gi_info.node,
                 func.comment)
 
-        if 'throws' in gi_info.node.attrib:
-            func.parameters = func.parameters[:-1]
+        func_parameters = func.parameters
 
-        for i, param in enumerate (func.parameters):
+        if 'throws' in gi_info.node.attrib:
+            func_parameters = func_parameters[:-1]
+            func.throws = True
+
+        for i, param in enumerate (func_parameters):
             gi_param = gi_params[i]
             gi_name = gi_param.get_extension_attribute ('gi-extension',
                     'gi_name')
             param.add_extension_attribute ('gi-extension', 'gi_name', gi_name)
+            direction = gi_param.get_extension_attribute ('gi-extension',
+                    'direction')
+            param.add_extension_attribute('gi-extension', 'direction',
+                    direction)
 
         gi_name = retval.get_extension_attribute ('gi-extension',
                 'gi_name')
         func.return_value.add_extension_attribute ('gi-extension', 'gi_name',
                 gi_name)
+
+        self.__sort_parameters (func, func.return_value, func_parameters)
 
     def __update_struct (self, symbol):
         split = symbol.name.split(self.gir_parser.namespace)
@@ -920,6 +993,7 @@ class GIExtension(BaseExtension):
         return res
 
     def setup (self):
+        self.__gather_gtk_doc_links()
         doc_tool.page_parser.symbol_added_signal.connect (self.__adding_symbol)
         doc_tool.formatter.formatting_symbol_signals[Symbol].connect(self.__formatting_symbol)
         doc_tool.formatter.fill_index_columns_signal.connect(self.__fill_index_columns)

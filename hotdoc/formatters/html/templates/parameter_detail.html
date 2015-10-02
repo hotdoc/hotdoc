@@ -3,12 +3,14 @@
 	@if name:
 	<td class="parameter_name">
 		<p>
-		@name
+		<i>@name:</i>
 		</p>
 	</td>
 	@end
 	<td class="parameter_description"><p>@detail</p></td>
 @for name, ex in extra.iteritems():
+<td style="text-align: left;">
 @ex
+</td>
 @end
 </tr>

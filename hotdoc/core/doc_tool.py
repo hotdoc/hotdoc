@@ -157,6 +157,9 @@ class DocTool(Loggable):
             args[0].index = "tmp_markdown_files/tmp_index.markdown"
         self.index_file = args[0].index
 
+        # All symbols are now created
+        self.link_resolver.pickle (self.output)
+
         # We're done setting up, extensions can setup too
         for extension in self.extensions:
             extension.setup ()

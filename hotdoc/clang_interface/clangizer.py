@@ -10,7 +10,7 @@ from fnmatch import fnmatch
 
 from hotdoc.utils.loggable import Loggable, progress_bar
 from hotdoc.lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
-from hotdoc.core.links import LocalLink
+from hotdoc.core.links import Link
 from hotdoc.core.symbols import *
 
 def ast_node_is_function_pointer (ast_node):
@@ -82,6 +82,8 @@ class ClangScanner(Loggable):
                         self.warning ("Clang issue : %s" % str (diag))
                     else:
                         self.error ("Clang issue : %s" % str (diag))
+
+                self.__parse_file (filename, tu)
                 for include in tu.get_includes():
                     self.__parse_file (os.path.abspath(str(include.include)), tu)
             else:
@@ -196,8 +198,8 @@ class ClangScanner(Loggable):
             d = type_.get_declaration ()
             link = doc_tool.link_resolver.get_named_link (d.displayname)
             if not link:
-                link = LocalLink (d.displayname, None, d.displayname)
-                doc_tool.link_resolver.add_local_link (link)
+                link = Link (None, d.displayname, d.displayname)
+                doc_tool.link_resolver.add_link (link)
 
             tokens.append (link)
             self.__apply_qualifiers(type_, tokens)
@@ -211,6 +213,9 @@ class ClangScanner(Loggable):
         tokens.reverse()
         return tokens
 
+    def tokens_from_tokens (self, tokens):
+        toks = []
+
     def __create_callback_symbol (self, node, comment):
         parameters = []
 
@@ -223,7 +228,9 @@ class ClangScanner(Loggable):
 
         for child in node.get_children():
             if not return_value:
-                type_tokens = self.make_c_style_type_name (child.type)
+                t = node.underlying_typedef_type
+                res = t.get_pointee().get_result()
+                type_tokens = self.make_c_style_type_name (res)
                 return_value = ReturnValueSymbol(type_tokens, return_comment)
             else:
                 if comment:
@@ -353,7 +360,6 @@ class ClangScanner(Loggable):
             member_value = member.enum_value
             member = Symbol (member_comment, member.spelling, member.location)
             member.enum_value = member_value
-            doc_tool.link_resolver.add_local_link (member.link)
             members.append (member)
 
         return EnumSymbol (members, comment, node.spelling, node.location)
@@ -371,6 +377,8 @@ class ClangScanner(Loggable):
         else:
             d = t.get_declaration()
             if d.kind == clang.cindex.CursorKind.STRUCT_DECL:
+                if node.spelling == "GstDebugMessage":
+                    print "creating struct for", node.spelling
                 sym = self.__create_struct_symbol (node, comment)
             elif d.kind == clang.cindex.CursorKind.ENUM_DECL:
                 sym = self.__create_enum_symbol (node, comment)
@@ -443,7 +451,18 @@ class ClangScanner(Loggable):
         return sym
 
     def __create_exported_variable_symbol (self, node):
-        sym = ExportedVariableSymbol ("lol", self.comments.get (node.spelling),
+        l = linecache.getline (str(node.location.file), node.location.line)
+        split = l.split()
+
+        start = node.extent.start.line
+        end = node.extent.end.line + 1
+        filename = str(node.location.file)
+        original_lines = [linecache.getline(filename, i).rstrip() for i in range(start,
+            end)]
+        original_text = '\n'.join(original_lines)
+        comment = self.comments.get (node.spelling)
+
+        sym = ExportedVariableSymbol (original_text, self.comments.get (node.spelling),
                 node.spelling, node.location)
         return sym
 

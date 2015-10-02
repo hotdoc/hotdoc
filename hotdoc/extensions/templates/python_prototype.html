@@ -1,36 +1,5 @@
-@require(return_value, function_name, parameters, comment, throws, out_params, is_method)
+@require(function_name, parameters, comment, throws, is_method)
 <pre class="programlisting">
-@if parameters:
-@@accepts (\
-\
-@for i, parameter in enumerate (parameters):
-\
-@if i != 0:
-, \
-@end
-\
-@for j in range (parameter.array_nesting):
-[\
-@end
-@parameter.formatted_link\
-@for j in range (parameter.array_nesting):
-]\
-@end
-\
-@end
-)
-\
-@end
-@if return_value:
-@@returns(@return_value.formatted_link\
-@for p in out_params:
-, \
-@p.formatted_link\
-@end
-\
-)
-@end
-\
 @if throws:
 @@raises(<a href="https://developer.gnome.org/glib/stable/glib-Error-Reporting.html">GLib.GError</a>)
 @end

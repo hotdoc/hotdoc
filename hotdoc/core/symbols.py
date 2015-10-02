@@ -4,7 +4,7 @@ import re
 import linecache
 import uuid
 
-from .links import LocalLink, Link
+from .links import Link
 from ..utils.simple_signals import Signal
 from ..utils.utils import all_subclasses
 from .doc_tool import doc_tool
@@ -17,11 +17,14 @@ class Symbol (object):
         self.original_text = None
         self.detailed_description = None
         self.skip = False
-        self.link = doc_tool.link_resolver.get_named_link(self._make_unique_id(), search_external=False)
+        self.link = doc_tool.link_resolver.get_named_link(self._make_unique_id())
         if not self.link:
-            self.link = LocalLink (self._make_unique_id(), "", self._make_name())
+            self.link = Link(self._make_unique_id(), self._make_name(),
+                    self._make_unique_id())
+            doc_tool.link_resolver.add_link (self.link)
+        else:
+            self.link.ref = self._make_unique_id()
 
-        doc_tool.link_resolver.add_local_link (self.link)
         self.location = location
         self.extension_contents = {}
         self.extension_attributes = {}

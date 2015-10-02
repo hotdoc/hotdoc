@@ -1,4 +1,4 @@
-@require(return_value, function_name, parameters, comment, throws, out_params, is_method)
+@require(function_name, parameters, comment, throws, is_method)
 <pre class="programlisting">
 function @function_name\
 (\
@@ -21,15 +21,7 @@ Array(\
 \
 @end
 @end
-):\
-@if return_value:
- [@return_value.formatted_link\
-@for p in out_params:
-, \
-@p.formatted_link\
-@end
-]\
-@end
+): \
 {
     // @comment
 }</pre>

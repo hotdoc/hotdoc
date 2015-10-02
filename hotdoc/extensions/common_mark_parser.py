@@ -42,7 +42,7 @@ class CommonMarkParser (PageParser):
 
         new_section = self._parse_page (filename, section_name)
         if new_section is not None:
-            ic.destination = new_section.link.pagename
+            ic.destination = new_section.link.ref
             desc = new_section.get_short_description()
             if desc:
                 s = CommonMark.CommonMark.Block.makeBlock ("Str", "", "")

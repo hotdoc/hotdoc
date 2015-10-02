@@ -1,0 +1,34 @@
+@require(return_values)
+<div class="refsect3">
+	@if len (return_values) == 1:
+		<h4>Returns:</h4>
+	@else:
+		<h4>Returns a tuple made of</h4>
+	@end
+	<table style="width:100%; vertical-align: top;">
+		<colgroup>
+			<col class="parameters_name" style="width:20%;" />
+			<col class="parameters_description" style="width:60%;" />
+			<col class="parameters_type" style="width:20%;"/>
+		</colgroup>
+		<tbody>
+			@for value in return_values:
+			<tr>
+				<td class="parameter_name">
+					<p>
+					@if hasattr(value, "argname"):
+					<i>@value.argname:</i>
+					@end
+					</p>
+				</td>
+				<td>
+					@value.formatted_doc
+				</td>
+				<td>
+					@value.formatted_link
+				</td>
+			</tr>
+			@end
+		</tbody>
+	</table>
+</div>
