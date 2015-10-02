@@ -138,7 +138,7 @@ c_comment_scanner_module = FlexExtension(
                             'hotdoc/lexer_parsers/c_comment_scanner/scanner.h'])
 
 setup(name='hotdoc',
-      version='0.4',
+      version='0.4.1',
       description='A documentation tool based on clang',
       keywords='documentation gnome clang doxygen',
       url='https://github.com/MathieuDuponchelle/hotdoc',
@@ -169,5 +169,6 @@ setup(name='hotdoc',
       install_requires = ['wheezy.template',
                           'CommonMark',
                           'lxml',
-                          'pygraphviz'],
+                          'pygraphviz',
+                          'dbus-deviation'],
       zip_safe=False)
