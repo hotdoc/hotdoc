@@ -23,6 +23,11 @@ class GtkDocRawCommentParser (object):
                                    ''', re.VERBOSE)
 
     def parse_title (self, title):
+        # Section comments never contain annotations,
+        # We also normalize them here to not contain any spaces.
+        if "SECTION" in title:
+            return ''.join(title.split(' ')), []
+
         split = title.split (': ', 1)
         title = split[0].rstrip(':')
         annotations = []
