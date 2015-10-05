@@ -313,18 +313,19 @@ class ClangScanner(Loggable):
         return ('\n'.join(final_text), public_children)
 
     def __locate_delimiters (self, tokens, delimiters):
-        public_pattern = re.compile('\s*/\*\<\s*public\s*\>\*/.*')
-        private_pattern = re.compile('\s*/\*\<\s*private\s*\>\*/.*')
-        protected_pattern = re.compile('\s*/\*\<\s*protected\s*\>\*/.*')
+        public_pattern = "/*<public>*/"
+        private_pattern = "/*<private>*/"
+        protected_pattern = "/*<protected>*/"
         had_public = False
         for tok in tokens:
             if tok.kind == clang.cindex.TokenKind.COMMENT:
-                if public_pattern.match (tok.spelling):
+                comment = ''.join(tok.spelling.split())
+                if public_pattern == comment:
                     had_public = True
                     delimiters.append((True, tok.location.line))
-                elif private_pattern.match (tok.spelling):
+                elif private_pattern == comment:
                     delimiters.append((False, tok.location.line))
-                elif protected_pattern.match (tok.spelling):
+                elif protected_pattern == comment:
                     delimiters.append((False, tok.location.line))
         return had_public
 
