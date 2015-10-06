@@ -9,6 +9,7 @@ class ParsedPage(object):
     def __init__(self):
         self.ast = None
         self.headers = []
+        self.links = []
 
 class PageParser(Loggable):
     def __init__(self):

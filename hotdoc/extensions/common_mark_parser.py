@@ -10,7 +10,6 @@ class CommonMarkParser (PageParser):
         PageParser.__init__(self)
         self.__cmp = CommonMark.DocParser()
         self.__cmr = CommonMark.HTMLRenderer()
-        self.__labels_to_rename = {}
 
     def parse_list (self, l):
         for c in l.children:
@@ -25,6 +24,7 @@ class CommonMarkParser (PageParser):
         if not ic.destination and ic.label:
             l = ''.join ([l.c for l in ic.label])
             self.create_symbol (l)
+            ic.destination = True
 
     def parse_header(self, h, section):
         res = None
@@ -75,7 +75,20 @@ class CommonMarkParser (PageParser):
         parsed_page.headers = parsed_headers
         return parsed_page
 
+    def _update_links (self, node):
+        if node.t == 'Link':
+            link = doc_tool.link_resolver.get_named_link (node.destination)
+            if link and link.get_link() is not None:
+                l = ''.join ([l.c for l in node.label])
+                node.destination = link.get_link()
+
+        for c in node.inline_content:
+            self._update_links (c)
+        for c in node.children:
+            self._update_links (c)
+
     def render_parsed_page (self, page):
+        self._update_links (page.ast)
         return self.__cmr.render (page.ast) 
 
     def rename_headers (self, page, new_names):
