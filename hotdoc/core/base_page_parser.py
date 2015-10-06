@@ -77,13 +77,16 @@ class PageParser(Loggable):
 
             self.__update_dependencies (s.subpages)
 
-    def _parse_page (self, filename, page_name):
+    def _parse_page (self, filename):
         filename = os.path.abspath (filename)
+        page_name = os.path.splitext(os.path.basename (filename))[0]
         if not os.path.isfile (filename):
             return None
 
         if filename in self.__parsed_pages:
             return None
+
+        old_page = self._current_page
 
         self.__parsed_pages.append (filename)
         self.create_page (page_name, filename)
@@ -91,20 +94,22 @@ class PageParser(Loggable):
         with open (filename, "r") as f:
             contents = f.read()
 
-        old_page = self._current_page
-        old_page.parsed_page = self.do_parse_page (contents, self._current_page)
+        cur_page = self._current_page
+        cur_page.parsed_page = self.do_parse_page (contents, self._current_page)
 
-        return old_page
+        self._current_page = old_page
+
+        return cur_page
 
     def create_symbols(self, doc_tool):
         self.doc_tool = doc_tool
         self._prefix = os.path.dirname (doc_tool.index_file)
         if doc_tool.dependency_tree.initial:
-            self._parse_page (doc_tool.index_file, "index")
+            self._parse_page (doc_tool.index_file)
         else:
             for filename in doc_tool.dependency_tree.stale_sections:
                 page_name = os.path.splitext(os.path.basename (filename))[0]
-                self._parse_page (filename, page_name)
+                self._parse_page (filename)
         self.__update_dependencies (self.pages)
         self.info ("total documented symbols : %d" %
                 self.__total_documented_symbols)

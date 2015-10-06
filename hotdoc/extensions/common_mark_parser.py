@@ -40,7 +40,7 @@ class CommonMarkParser (PageParser):
 
         filename = os.path.join (self._prefix, ic.destination)
 
-        new_section = self._parse_page (filename, section_name)
+        new_section = self._parse_page (filename)
         if new_section is not None:
             ic.destination = new_section.link.ref
             desc = new_section.get_short_description()
