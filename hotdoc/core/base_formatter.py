@@ -174,7 +174,7 @@ class Formatter(object):
             out = symbol.detailed_description
             f.write (out.encode('utf-8'))
 
-    def __format_doc_string (self, docstring):
+    def _format_doc_string (self, docstring):
         if not docstring:
             return ""
 
@@ -188,7 +188,7 @@ class Formatter(object):
     def __format_doc (self, comment):
         out = ""
         if comment:
-            out += self.__format_doc_string (comment.description)
+            out += self._format_doc_string (comment.description)
         return out
 
     def __warn_not_implemented (self, func):

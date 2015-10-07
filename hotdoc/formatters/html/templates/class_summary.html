@@ -1,7 +1,7 @@
-@require(klass)
+@require(klass, short_description)
 <h1>@klass.link.title</h1>
 <p>
-@if klass.comment:
-@klass.comment.short_description
+@if short_description:
+@short_description
 @end
 </p>

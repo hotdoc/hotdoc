@@ -242,8 +242,10 @@ class HtmlFormatter (Formatter):
         if not klass.comment:
             return ''
 
+        short_desc = self._format_doc_string (klass.comment.short_description)
         template = self.engine.get_template('class_summary.html')
-        return template.render({'klass': klass})
+        return template.render({'klass': klass,
+                                'short_description': short_desc})
 
     def _format_summary (self, summaries, summary_type):
         if not summaries:

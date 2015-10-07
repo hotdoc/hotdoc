@@ -66,7 +66,7 @@ class CommonMarkParser (PageParser):
         for c in ast.children:
             if c.t == "List":
                 self.parse_list(c)
-            elif c.t == "ATXHeader" and len (c.inline_content) == 1:
+            elif c.t == "ATXHeader" and len (c.inline_content) >= 1:
                 parsed_header = self.parse_header (c, section)
                 if parsed_header is not None:
                     parsed_headers.append (parsed_header)

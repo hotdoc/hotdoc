@@ -16,7 +16,7 @@ class PageParser(Loggable):
         Loggable.__init__(self)
         self.pages = []
         self._current_page = None
-        self.__parsed_pages = []
+        self.__parsed_pages = {}
         self._prefix = ""
         self.__total_documented_symbols = 0
         self.create_object_hierarchy = False
@@ -85,11 +85,10 @@ class PageParser(Loggable):
             return None
 
         if filename in self.__parsed_pages:
-            return None
+            return self.__parsed_pages[filename]
 
         old_page = self._current_page
 
-        self.__parsed_pages.append (filename)
         self.create_page (page_name, filename)
 
         with open (filename, "r") as f:
@@ -100,6 +99,7 @@ class PageParser(Loggable):
 
         self._current_page = old_page
 
+        self.__parsed_pages[filename] = cur_page
         return cur_page
 
     def create_symbols(self, doc_tool):
