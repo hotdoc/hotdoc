@@ -77,6 +77,7 @@ class HtmlFormatter (Formatter):
             loader=FileLoader(searchpath, encoding='UTF-8'),
             extensions=[CoreExtension()]
         )
+        self.__stylesheets = set()
 
     def _get_extension (self):
         return "html"
@@ -342,9 +343,10 @@ class HtmlFormatter (Formatter):
 
         template = self.engine.get_template('page.html')
 
+        stylesheets = self.__get_style_sheets(page.link.ref)
         out = template.render ({'page': page,
                                 'toc_sections': toc_sections,
-                                'stylesheet': self.__stylesheet,
+                                'stylesheets': stylesheets,
                                 'symbols_details': symbols_details})
 
         return (out, True)
@@ -496,7 +498,8 @@ class HtmlFormatter (Formatter):
         return (None, False)
 
     def _format_api_index (self, columns, rows):
-        template = self.engine.get_template('API_index.html')
+        pagename = 'API_index.html'
+        template = self.engine.get_template(pagename)
         rows.sort (key=lambda row: row[0].title)
 
         formatted_rows = []
@@ -512,7 +515,7 @@ class HtmlFormatter (Formatter):
 
         out = template.render ({'columns': columns,
                                 'rows': formatted_rows,
-                                'stylesheet': self.__stylesheet})
+                                'stylesheets': self.__get_style_sheets(pagename)})
 
         return out
 
@@ -524,19 +527,36 @@ class HtmlFormatter (Formatter):
             contents = f.read()
         os.unlink(f.name)
 
-        template = self.engine.get_template('object_hierarchy.html')
-        return template.render ({'graph': contents,
-                                 'stylesheet': self.__stylesheet})
+        pagename = 'object_hierarchy.html'
+        template = self.engine.get_template(pagename)
+        return template.render({'graph': contents,
+                                'stylesheets': self.__get_style_sheets(pagename)})
+
+    def __get_style_sheets(self, page):
+        stylesheets = [self._get_style_sheet()]
+        stylesheets.extend(self._get_extra_style_sheets(page))
+
+        self.__stylesheets = self.__stylesheets.union(set(stylesheets))
+
+        return stylesheets
 
     def _get_style_sheet (self):
         return "style.css"
 
+    def _get_extra_style_sheets(self, page):
+        if page == "index.html":
+            return ["index.css"]
+        return []
+
     def _get_extra_files (self):
         dir_ = os.path.dirname(__file__)
-        return [os.path.join (dir_, self.__stylesheet),
-                os.path.join (dir_, "API_index.js"),
-                os.path.join (dir_, "home.png"),]
+        res = []
+        for stylesheet in self.__stylesheets:
+            res.append(os.path.join(dir_, stylesheet))
+        res.extend([os.path.join (dir_, "API_index.js"),
+                os.path.join (dir_, "home.png"),])
+
+        return res
 
     def format (self):
-        self.__stylesheet = self._get_style_sheet()
         Formatter.format(self)

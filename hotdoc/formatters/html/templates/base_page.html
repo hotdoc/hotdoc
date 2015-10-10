@@ -1,11 +1,13 @@
-@require(stylesheet)
+@require(stylesheets)
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<meta content='text/html; charset=UTF-8' />
+	@for stylesheet in stylesheets:
 	<link rel="stylesheet" href=@stylesheet type="text/css" />
+	@end
 </head>
 
 <table class="navigation" id="top" summary="Navigation header" width="100%" cellpadding="2" cellspacing="5">
