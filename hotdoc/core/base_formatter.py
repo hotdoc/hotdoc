@@ -8,6 +8,7 @@ import pygraphviz as pg
 from xml.sax.saxutils import unescape
 
 from .doc_tool import ConfigError
+from .doc_tool import doc_tool as dt
 from .symbols import (Symbol, ReturnValueSymbol, ParameterSymbol, FieldSymbol,
         ClassSymbol)
 from .sections import Page
@@ -180,7 +181,7 @@ class Formatter(object):
 
         out = ""
         docstring = unescape (docstring)
-        docstring = self.doc_tool.doc_parser.translate (docstring)
+        docstring = dt.doc_parser.translate (docstring)
         ast = self.__cmp.parse (docstring.encode('utf-8'))
         rendered_text = self.__cmr.render(ast)
         return rendered_text
