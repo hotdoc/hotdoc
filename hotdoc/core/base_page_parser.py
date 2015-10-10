@@ -103,6 +103,9 @@ class PageParser(Loggable):
         return cur_page
 
     def create_symbols(self, doc_tool):
+        if not os.path.isfile (doc_tool.index_file):
+            raise IOError ('Index file %s not found' % doc_tool.index_file)
+
         self.doc_tool = doc_tool
         self._prefix = os.path.dirname (doc_tool.index_file)
         if doc_tool.dependency_tree.initial:

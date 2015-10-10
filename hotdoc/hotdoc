@@ -18,9 +18,9 @@
 # 02110-1301, USA.
 #
 
-import os
+import os, traceback
 
-from hotdoc.core.doc_tool import doc_tool, ConfigError
+from hotdoc.core.doc_tool import doc_tool
 from hotdoc.extensions import *
 
 if __name__=="__main__":
@@ -33,5 +33,8 @@ if __name__=="__main__":
 
     try:
         doc_tool.parse_and_format()
-    except ConfigError as e:
-        print e
+    except Exception as e:
+        if os.environ.get ("DOC_DEBUG"):
+            traceback.print_exc (e)
+        else:
+            print '\033[91m' + e.message + '\033[0m'
