@@ -370,7 +370,7 @@ class GIHtmlFormatter(HtmlFormatter):
             return 'greenstyle.css'
         return 'style.css'
 
-    def _format_class (self, klass):
+    def _format_page (self, page):
         new_names = None
         if self.__gi_extension.language == 'python':
             new_names = self.__gi_extension.gir_parser.python_names
@@ -378,8 +378,9 @@ class GIHtmlFormatter(HtmlFormatter):
             new_names = self.__gi_extension.gir_parser.javascript_names
 
         if new_names is not None:
-            self.doc_tool.page_parser.rename_headers (klass.parsed_page, new_names)
-        return HtmlFormatter._format_class (self, klass)
+            self.doc_tool.page_parser.rename_headers (page.parsed_page,
+                    new_names)
+        return HtmlFormatter._format_page (self, page)
 
     def format (self):
         for l in self.__gi_extension.languages:
