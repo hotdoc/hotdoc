@@ -18,7 +18,7 @@
 # 02110-1301, USA.
 #
 
-import os, traceback
+import sys, os, traceback
 
 from hotdoc.core.doc_tool import doc_tool
 from hotdoc.extensions import *
@@ -38,3 +38,5 @@ if __name__=="__main__":
             traceback.print_exc (e)
         else:
             print '\033[91m' + e.message + '\033[0m'
+        sys.exit (1)
+    sys.exit(0)
