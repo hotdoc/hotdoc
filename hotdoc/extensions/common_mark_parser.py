@@ -25,7 +25,7 @@ class CommonMarkParser (PageParser):
         if not ic.destination and ic.label:
             l = ''.join ([l.c for l in ic.label])
             self.create_symbol (l)
-            ic.destination = True
+            ic.destination = "not_an_actual_link_sorry"
 
     def parse_header(self, h, section):
         res = None
