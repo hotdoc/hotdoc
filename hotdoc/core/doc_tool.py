@@ -115,6 +115,9 @@ class DocTool(Loggable):
         self.c_source_scanner = ClangScanner (self, clang_options)
         self.symbols = self.c_source_scanner.new_symbols
 
+        if self.c_sources and not self.symbols:
+            raise ConfigError ("No symbols found in c sources")
+
     def __parse_extensions (self, args):
         if args[0].extension_name:
             ext = self.__extension_dict[args[0].extension_name](args[0])
