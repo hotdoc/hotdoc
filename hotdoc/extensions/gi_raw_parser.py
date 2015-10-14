@@ -119,10 +119,12 @@ class GtkDocRawCommentParser (object):
             return self.parse_since_tag (name, desc)
         elif name.lower() == "returns":
             return self.parse_returns_tag (name, desc)
+        elif name.lower() == "return value":
+            return self.parse_returns_tag ("returns", desc)
         print ("What the hell dude")
 
     def parse_description_and_tags (self, dt):
-        dts = re.split (r'((?:^|\n)[ \t]*(returns|Returns|since|Since):)', dt)
+        dts = re.split (r'((?:^|\n)[ \t]*(returns|Returns|since|Since|Return value):)', dt)
         tags = []
 
         desc = dts[0]
