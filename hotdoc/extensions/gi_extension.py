@@ -823,6 +823,9 @@ class GIExtension(BaseExtension):
         parameters, retval = self.__create_parameters_and_retval (node, comment)
         res = SignalSymbol (object_name, parameters, retval, comment, name, None)
 
+        if comment:
+            comment.tags.pop ('returns', None)
+
         flags = []
 
         when = node.attrib.get('when')
