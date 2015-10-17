@@ -59,25 +59,6 @@ class PageParser(Loggable):
         else:
             self.warning ("No symbol in sources with name %s", symbol_name)
 
-    def __update_dependencies (self, pages):
-        for s in pages:
-            if not s.symbols:
-                self.doc_tool.dependency_tree.add_dependency (s.source_file,
-                        None)
-            for sym in s.symbols:
-                location = sym.get_source_location()
-                if location is None:
-                    continue
-
-                filename = str (location.file)
-                self.doc_tool.dependency_tree.add_dependency (s.source_file,
-                        filename)
-                if sym.comment:
-                    comment_filename = sym.comment.filename
-                    self.doc_tool.dependency_tree.add_dependency (s.source_file, comment_filename)
-
-            self.__update_dependencies (s.subpages)
-
     def _parse_page (self, filename):
         filename = os.path.abspath (filename)
         page_name = os.path.splitext(os.path.basename (filename))[0]
@@ -108,12 +89,6 @@ class PageParser(Loggable):
 
         self.doc_tool = doc_tool
         self._prefix = os.path.dirname (doc_tool.index_file)
-        if doc_tool.dependency_tree.initial:
-            self._parse_page (doc_tool.index_file)
-        else:
-            for filename in doc_tool.dependency_tree.stale_sections:
-                page_name = os.path.splitext(os.path.basename (filename))[0]
-                self._parse_page (filename)
-        self.__update_dependencies (self.pages)
+        self._parse_page (doc_tool.index_file)
         self.info ("total documented symbols : %d" %
                 self.__total_documented_symbols)

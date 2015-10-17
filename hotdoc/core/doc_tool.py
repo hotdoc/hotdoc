@@ -3,7 +3,6 @@ import os, sys, argparse
 reload(sys)  
 sys.setdefaultencoding('utf8')
 
-from .dependencies import DependencyTree
 from .naive_index import NaiveIndexFormatter
 from .links import LinkResolver
 from .base_extension import BaseExtension
@@ -30,11 +29,9 @@ class DocTool(Loggable):
 
         self.formatter = None
         self.output = None
-        self.deps_file = None
         self.c_sources = None
         self.style = None
         self.index_file = None
-        self.dependency_tree = None
         self.raw_comment_parser = None
         self.doc_parser = None
         self.symbol_factory = None
@@ -77,8 +74,6 @@ class DocTool(Loggable):
                 dest="index", help="location of the index file")
         self.parser.add_argument ("-o", "--output", action="store", default='doc',
                 dest="output", help="where to output the rendered documentation")
-        self.parser.add_argument ("-d", "--dependency-file", action="store",
-                default="doc_dependencies.p", dest="deps_file")
         self.parser.add_argument ("--output-format", action="store",
                 default="html", dest="output_format")
 
@@ -105,10 +100,6 @@ class DocTool(Loggable):
                 raise ConfigError ()
         else:
             os.mkdir (self.output)
-
-    def __setup_dependency_tree(self):
-        self.dependency_tree = DependencyTree (os.path.join(self.output, self.deps_file),
-                [os.path.abspath (f) for f in self.c_sources])
 
     def __setup_source_scanners(self, clang_options):
         from ..clang_interface.clangizer import ClangScanner
@@ -143,17 +134,13 @@ class DocTool(Loggable):
         self.output = args[0].output
         self.output_format = args[0].output_format
         self.c_sources = args[0].c_sources
-        self.deps_file = args[0].deps_file
         self.style = args[0].style
 
         if self.output_format not in ["html"]:
             raise ConfigError ("Unsupported output format : %s" %
                     self.output_format)
 
-        self.link_resolver.unpickle (self.output)
-
         self.__setup_output ()
-        self.__setup_dependency_tree ()
         self.__parse_extensions (args)
         self.__setup_source_scanners (args[0].clang_options)
 
@@ -164,9 +151,6 @@ class DocTool(Loggable):
             args[0].index = "tmp_markdown_files/tmp_index.markdown"
         self.index_file = args[0].index
 
-        # All symbols are now created
-        self.link_resolver.pickle (self.output)
-
         # We're done setting up, extensions can setup too
         for extension in self.extensions:
             extension.setup ()
@@ -174,7 +158,6 @@ class DocTool(Loggable):
         self.__create_symbols ()
 
     def finalize (self):
-        self.dependency_tree.dump()
         self.link_resolver.pickle (self.output)
         self.c_source_scanner.finalize()
 

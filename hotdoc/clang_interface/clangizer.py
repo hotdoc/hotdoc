@@ -36,7 +36,7 @@ class ClangScanner(Loggable):
                 clang.cindex.TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
 
         self.filenames = [os.path.abspath(filename) for filename in
-                config.dependency_tree.stale_sources]
+                config.c_sources]
 
         args = ["-isystem/usr/lib/clang/3.5.0/include/", "-Wno-attributes"]
         args.extend (options)

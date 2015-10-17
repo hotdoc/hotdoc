@@ -1,7 +1,6 @@
 import os
 
 from ..core.base_extension import BaseExtension
-from ..core.dependencies import DependencyTree
 from hotdoc.utils.loggable import Loggable, progress_bar
 from hotdoc.extensions.common_mark_parser import CommonMarkParser
 from dbusapi.interfaceparser import InterfaceParser
@@ -123,12 +122,9 @@ class DBusExtension(BaseExtension):
         self.page_parser = CommonMarkParser ()
 
     def setup (self):
-        deps_file = 'dbus_dependencies.p'
         self.output = os.path.join(doc_tool.output, 'dbus')
         if not os.path.exists (self.output):
             os.mkdir (self.output)
-        self.dependency_tree = DependencyTree (os.path.join(doc_tool.output, deps_file),
-                [os.path.abspath (f) for f in self.sources])
         self.page_parser.create_symbols(self)
         self.pages = self.page_parser.pages
         self.formatter = HtmlFormatter([], self)
