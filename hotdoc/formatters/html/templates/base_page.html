@@ -1,4 +1,5 @@
 @require(stylesheets)
+@require(scripts)
 
 <!DOCTYPE html>
 <html lang="en">
@@ -7,6 +8,10 @@
 	<meta content='text/html; charset=UTF-8' />
 	@for stylesheet in stylesheets:
 	<link rel="stylesheet" href=@stylesheet type="text/css" />
+	@end
+
+	@for script in scripts:
+    <script src=@script></script>
 	@end
 </head>
 

@@ -78,6 +78,7 @@ class HtmlFormatter (Formatter):
             extensions=[CoreExtension()]
         )
         self.__stylesheets = set()
+        self.__scripts = set()
 
     def _get_extension (self):
         return "html"
@@ -344,9 +345,11 @@ class HtmlFormatter (Formatter):
         template = self.engine.get_template('page.html')
 
         stylesheets = self.__get_style_sheets(page.link.ref)
+        scripts = self.__get_scripts(page.link.ref)
         out = template.render ({'page': page,
                                 'toc_sections': toc_sections,
                                 'stylesheets': stylesheets,
+                                'scripts': scripts,
                                 'symbols_details': symbols_details})
 
         return (out, True)
@@ -515,6 +518,7 @@ class HtmlFormatter (Formatter):
 
         out = template.render ({'columns': columns,
                                 'rows': formatted_rows,
+                                'scripts': self.__get_scripts(pagename),
                                 'stylesheets': self.__get_style_sheets(pagename)})
 
         return out
@@ -530,31 +534,47 @@ class HtmlFormatter (Formatter):
         pagename = 'object_hierarchy.html'
         template = self.engine.get_template(pagename)
         return template.render({'graph': contents,
-                                'stylesheets': self.__get_style_sheets(pagename)})
+                                'scripts': self.__get_scripts(pagename),
+                                'stylesheets': self.__get_style_sheets(pagename),
+                                })
 
     def __get_style_sheets(self, page):
         stylesheets = [self._get_style_sheet()]
         stylesheets.extend(self._get_extra_style_sheets(page))
-
         self.__stylesheets = self.__stylesheets.union(set(stylesheets))
 
         return stylesheets
+
+    def __get_scripts(self, page):
+        scripts = self._do_get_scripts(page)
+
+        self.__scripts = self.__scripts.union(set(scripts))
+
+        return scripts
+
+    def _do_get_scripts(self, page):
+        return ["prism.js", "prism-bash.js"]
 
     def _get_style_sheet (self):
         return "style.css"
 
     def _get_extra_style_sheets(self, page):
+        extra_style_sheets = ["prism.css"]
         if page == "index.html":
-            return ["index.css"]
-        return []
+            extra_style_sheets.append("index.css")
+        return extra_style_sheets
 
     def _get_extra_files (self):
         dir_ = os.path.dirname(__file__)
         res = []
         for stylesheet in self.__stylesheets:
             res.append(os.path.join(dir_, stylesheet))
+
+        for script in self.__scripts:
+            res.append(os.path.join(dir_, script))
+
         res.extend([os.path.join (dir_, "API_index.js"),
-                os.path.join (dir_, "home.png"),])
+                os.path.join (dir_, "home.png")])
 
         return res
 

@@ -42,3 +42,6 @@
     background: #e2ffe2;
   }
 }
+
+.language-js {display: inherit}
+.language-javascript {display: inherit}

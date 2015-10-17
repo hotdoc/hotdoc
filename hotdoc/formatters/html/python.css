@@ -39,3 +39,6 @@
     background: #ffe2e2;
   }
 }
+
+.language-py {display: inherit}
+.language-python {display: inherit}
