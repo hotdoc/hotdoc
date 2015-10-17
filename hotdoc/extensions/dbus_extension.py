@@ -117,20 +117,10 @@ class DBusExtension(BaseExtension):
 
     def __init__(self, args):
         self.sources = args.dbus_sources
-        self.index_file = args.dbus_index
         self.scanner = DBusScanner (self.sources)
-        self.page_parser = CommonMarkParser ()
 
-    def setup (self):
-        self.output = os.path.join(doc_tool.output, 'dbus')
-        if not os.path.exists (self.output):
-            os.mkdir (self.output)
-        self.page_parser.create_symbols(self)
-        self.pages = self.page_parser.pages
-        self.formatter = HtmlFormatter([], self)
-
-    def build_extra_symbols (self):
-        self.formatter.format()
+    def get_extra_symbols (self):
+        return self.scanner.symbols
 
     def get_symbol (self, symbol_name):
         return self.scanner.symbols.get (symbol_name)
@@ -140,6 +130,3 @@ class DBusExtension(BaseExtension):
         parser.add_argument ("--dbus-sources", action="store", nargs="+",
                 dest="dbus_sources", help="DBus interface files to parse",
                 default=[], required = True)
-        parser.add_argument ("--dbus-index", action="store",
-                dest="dbus_index", help="location of the dbus index file",
-                required = True)

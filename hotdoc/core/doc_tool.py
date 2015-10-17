@@ -49,9 +49,6 @@ class DocTool(Loggable):
 
         self.formatter.format()
 
-        for extension in self.extensions:
-            extension.build_extra_symbols ()
-
         self.finalize()
 
     def get_symbol (self, name):
@@ -125,6 +122,9 @@ class DocTool(Loggable):
                 self.__parse_extensions (args)
 
     def __create_symbols (self):
+        for extension in self.extensions:
+            self.symbols.update (extension.get_extra_symbols())
+
         self.page_parser.create_symbols (self)
         self.pages = self.page_parser.pages
 

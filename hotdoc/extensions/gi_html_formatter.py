@@ -5,11 +5,11 @@ from hotdoc.core.symbols import *
 
 
 class GIHtmlFormatter(HtmlFormatter):
-    def __init__(self, gi_extension, doc_tool):
+    def __init__(self, gi_extension):
         module_path = os.path.dirname(__file__)
         searchpath = [os.path.join(module_path, "templates")]
         self.__gi_extension = gi_extension
-        HtmlFormatter.__init__(self, searchpath, doc_tool)
+        HtmlFormatter.__init__(self, searchpath)
         self.python_fundamentals = self.__create_python_fundamentals()
         self.javascript_fundamentals = self.__create_javascript_fundamentals()
 
@@ -378,7 +378,7 @@ class GIHtmlFormatter(HtmlFormatter):
             new_names = self.__gi_extension.gir_parser.javascript_names
 
         if new_names is not None:
-            self.doc_tool.page_parser.rename_headers (page.parsed_page,
+            doc_tool.page_parser.rename_headers (page.parsed_page,
                     new_names)
         return HtmlFormatter._format_page (self, page)
 
@@ -392,16 +392,16 @@ class GIHtmlFormatter(HtmlFormatter):
                 self.fundamentals = {}
 
             for c_name, link in self.fundamentals.iteritems():
-                prev_link = self.doc_tool.link_resolver.get_named_link(c_name)
+                prev_link = doc_tool.link_resolver.get_named_link(c_name)
                 if prev_link:
                     prev_link.ref = link.ref
                     prev_link.title = link.title
                 else:
                     link.id_ = c_name
-                    self.doc_tool.link_resolver.add_link (link)
+                    doc_tool.link_resolver.add_link (link)
 
             self.__gi_extension.setup_language (l)
-            self._output = os.path.join (self.doc_tool.output, l)
+            self._output = os.path.join (doc_tool.output, l)
             if not os.path.exists (self._output):
                 os.mkdir (self._output)
             HtmlFormatter.format (self)

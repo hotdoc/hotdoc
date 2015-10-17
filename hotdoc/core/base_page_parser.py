@@ -4,6 +4,7 @@ import os
 from .sections import Page
 from ..utils.loggable import Loggable
 from ..utils.simple_signals import Signal
+from hotdoc.core.doc_tool import doc_tool
 
 class ParsedPage(object):
     def __init__(self):
@@ -22,7 +23,6 @@ class PageParser(Loggable):
         self.create_object_hierarchy = False
         self.create_api_index = False
         self.symbol_added_signal = Signal()
-        self.doc_tool = None
 
     def create_page (self, page_name, filename):
         page = Page (page_name)
@@ -48,7 +48,7 @@ class PageParser(Loggable):
         if not self._current_page:
             return
 
-        sym = self.doc_tool.get_symbol (symbol_name)
+        sym = doc_tool.get_symbol (symbol_name)
         if sym:
             self._current_page.add_symbol (sym)
             self.__total_documented_symbols += 1
@@ -87,7 +87,6 @@ class PageParser(Loggable):
         if not os.path.isfile (doc_tool.index_file):
             raise IOError ('Index file %s not found' % doc_tool.index_file)
 
-        self.doc_tool = doc_tool
         self._prefix = os.path.dirname (doc_tool.index_file)
         self._parse_page (doc_tool.index_file)
         self.info ("total documented symbols : %d" %

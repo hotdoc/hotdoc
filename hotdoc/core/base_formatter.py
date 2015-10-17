@@ -8,7 +8,7 @@ import pygraphviz as pg
 from xml.sax.saxutils import unescape
 
 from .doc_tool import ConfigError
-from .doc_tool import doc_tool as dt
+from .doc_tool import doc_tool
 from .symbols import (Symbol, ReturnValueSymbol, ParameterSymbol, FieldSymbol,
         ClassSymbol)
 from .sections import Page
@@ -20,7 +20,7 @@ def all_subclasses(cls):
                                        for g in all_subclasses(s)]
 
 class Formatter(object):
-    def __init__ (self, doc_tool):
+    def __init__ (self):
         # Used to warn subclasses a method isn't implemented
         self.__not_implemented_methods = {}
 
@@ -32,8 +32,7 @@ class Formatter(object):
 
         self.fill_index_columns_signal = Signal()
         self.fill_index_row_signal = Signal()
-        self.doc_tool = doc_tool
-        self._output = self.doc_tool.output
+        self._output = doc_tool.output
 
         # Hardcoded for now
         self.__cmp = CommonMark.DocParser()
@@ -51,7 +50,7 @@ class Formatter(object):
     def format (self):
         self.__total_pages = 0
         self.__total_rendered_pages = 0
-        for page in self.doc_tool.pages:
+        for page in doc_tool.pages:
             self.__total_pages += self.__get_subpages_count (page)
 
         self.__progress_bar = progress_bar.get_progress_bar ()
@@ -64,16 +63,16 @@ class Formatter(object):
         self.__index_rows = []
         self.fill_index_columns_signal (index_columns)
 
-        for page in self.doc_tool.pages:
+        for page in doc_tool.pages:
             self.__format_page (page)
 
-        if self.doc_tool.page_parser.create_object_hierarchy:
+        if doc_tool.page_parser.create_object_hierarchy:
             graph = self.__create_hierarchy_graph ()
             hierarchy = self._format_class_hierarchy (graph)
             if hierarchy:
                 self.__write_hierarchy (hierarchy)
 
-        if self.doc_tool.page_parser.create_api_index:
+        if doc_tool.page_parser.create_api_index:
             api_index = self._format_api_index (index_columns, self.__index_rows)
             if api_index:
                 self.__write_API_index (api_index)
@@ -181,7 +180,7 @@ class Formatter(object):
 
         out = ""
         docstring = unescape (docstring)
-        docstring = dt.doc_parser.translate (docstring)
+        docstring = doc_tool.doc_parser.translate (docstring)
         ast = self.__cmp.parse (docstring.encode('utf-8'))
         rendered_text = self.__cmr.render(ast)
         return rendered_text

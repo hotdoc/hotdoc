@@ -7,7 +7,7 @@ class BaseExtension(Loggable):
         from ..formatters.html.html_formatter import HtmlFormatter
         from ..extensions.gtk_doc_parser import GtkDocParser
         from hotdoc.core.doc_tool import doc_tool
-        self._formatters = {"html": HtmlFormatter([], doc_tool)}
+        self._formatters = {"html": HtmlFormatter([])}
         self._raw_parser = GtkDocRawCommentParser()
         self._doc_parser = GtkDocParser()
 
@@ -27,5 +27,5 @@ class BaseExtension(Loggable):
     def setup (self):
         pass
 
-    def build_extra_symbols (self):
-        pass
+    def get_extra_symbols (self):
+        return {}

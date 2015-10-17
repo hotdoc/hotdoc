@@ -31,8 +31,8 @@ class SymbolDescriptions (object):
         self.name = name
 
 class HtmlFormatter (Formatter):
-    def __init__(self, searchpath, doc_tool):
-        Formatter.__init__(self, doc_tool)
+    def __init__(self, searchpath):
+        Formatter.__init__(self)
 
         self._symbol_formatters = {
                 FunctionSymbol: self._format_function,
@@ -321,7 +321,7 @@ class HtmlFormatter (Formatter):
 
     def _format_page(self, page):
         if page.parsed_page and not page.symbols:
-            page.formatted_contents = self.doc_tool.page_parser.render_parsed_page(page.parsed_page)
+            page.formatted_contents = doc_tool.page_parser.render_parsed_page(page.parsed_page)
 
         toc_sections = []
         symbols_details = []

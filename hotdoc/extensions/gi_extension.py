@@ -453,7 +453,7 @@ class GIExtension(BaseExtension):
                 }
 
         self.__raw_comment_parser = GtkDocRawCommentParser()
-        self._formatters["html"] = GIHtmlFormatter (self, doc_tool)
+        self._formatters["html"] = GIHtmlFormatter (self)
 
     @staticmethod
     def add_arguments (parser):
