@@ -73,6 +73,8 @@ class DocTool(Loggable):
                 dest="output", help="where to output the rendered documentation")
         self.parser.add_argument ("--output-format", action="store",
                 default="html", dest="output_format")
+        self.parser.add_argument ("-I", "--include-path", action="append",
+                default=[], dest="include_paths")
 
         # Hardcoded for now
         from ..extensions.common_mark_parser import CommonMarkParser
@@ -135,6 +137,7 @@ class DocTool(Loggable):
         self.output_format = args[0].output_format
         self.c_sources = args[0].c_sources
         self.style = args[0].style
+        self.include_paths = args[0].include_paths
 
         if self.output_format not in ["html"]:
             raise ConfigError ("Unsupported output format : %s" %

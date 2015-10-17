@@ -77,6 +77,8 @@ class HtmlFormatter (Formatter):
             loader=FileLoader(searchpath, encoding='UTF-8'),
             extensions=[CoreExtension()]
         )
+        self.__stylesheets = set()
+        self.__scripts = set()
 
     def _get_extension (self):
         return "html"
@@ -342,9 +344,12 @@ class HtmlFormatter (Formatter):
 
         template = self.engine.get_template('page.html')
 
+        stylesheets = self.__get_style_sheets(page.link.ref)
+        scripts = self.__get_scripts(page.link.ref)
         out = template.render ({'page': page,
                                 'toc_sections': toc_sections,
-                                'stylesheet': self.__stylesheet,
+                                'stylesheets': stylesheets,
+                                'scripts': scripts,
                                 'symbols_details': symbols_details})
 
         return (out, True)
@@ -496,7 +501,8 @@ class HtmlFormatter (Formatter):
         return (None, False)
 
     def _format_api_index (self, columns, rows):
-        template = self.engine.get_template('API_index.html')
+        pagename = 'API_index.html'
+        template = self.engine.get_template(pagename)
         rows.sort (key=lambda row: row[0].title)
 
         formatted_rows = []
@@ -512,7 +518,8 @@ class HtmlFormatter (Formatter):
 
         out = template.render ({'columns': columns,
                                 'rows': formatted_rows,
-                                'stylesheet': self.__stylesheet})
+                                'scripts': self.__get_scripts(pagename),
+                                'stylesheets': self.__get_style_sheets(pagename)})
 
         return out
 
@@ -524,19 +531,52 @@ class HtmlFormatter (Formatter):
             contents = f.read()
         os.unlink(f.name)
 
-        template = self.engine.get_template('object_hierarchy.html')
-        return template.render ({'graph': contents,
-                                 'stylesheet': self.__stylesheet})
+        pagename = 'object_hierarchy.html'
+        template = self.engine.get_template(pagename)
+        return template.render({'graph': contents,
+                                'scripts': self.__get_scripts(pagename),
+                                'stylesheets': self.__get_style_sheets(pagename),
+                                })
+
+    def __get_style_sheets(self, page):
+        stylesheets = [self._get_style_sheet()]
+        stylesheets.extend(self._get_extra_style_sheets(page))
+        self.__stylesheets = self.__stylesheets.union(set(stylesheets))
+
+        return stylesheets
+
+    def __get_scripts(self, page):
+        scripts = self._do_get_scripts(page)
+
+        self.__scripts = self.__scripts.union(set(scripts))
+
+        return scripts
+
+    def _do_get_scripts(self, page):
+        return ["prism.js", "prism-bash.js"]
 
     def _get_style_sheet (self):
         return "style.css"
 
+    def _get_extra_style_sheets(self, page):
+        extra_style_sheets = ["prism.css"]
+        if page == "index.html":
+            extra_style_sheets.append("index.css")
+        return extra_style_sheets
+
     def _get_extra_files (self):
         dir_ = os.path.dirname(__file__)
-        return [os.path.join (dir_, self.__stylesheet),
-                os.path.join (dir_, "API_index.js"),
-                os.path.join (dir_, "home.png"),]
+        res = []
+        for stylesheet in self.__stylesheets:
+            res.append(os.path.join(dir_, stylesheet))
+
+        for script in self.__scripts:
+            res.append(os.path.join(dir_, script))
+
+        res.extend([os.path.join (dir_, "API_index.js"),
+                os.path.join (dir_, "home.png")])
+
+        return res
 
     def format (self):
-        self.__stylesheet = self._get_style_sheet()
         Formatter.format(self)

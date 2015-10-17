@@ -363,12 +363,29 @@ class GIHtmlFormatter(HtmlFormatter):
                                 'constant': constant})
         return (out, False)
 
-    def _get_style_sheet (self):
+    def _get_extra_style_sheets(self, page):
+        res = []
         if self.__gi_extension.language == 'python':
-            return 'redstyle.css'
+            res.append('python.css')
         elif self.__gi_extension.language == 'javascript':
-            return 'greenstyle.css'
-        return 'style.css'
+            res.append('js.css')
+        elif self.__gi_extension.language == 'c':
+            res.append('c.css')
+        res.extend(super(GIHtmlFormatter, self)._get_extra_style_sheets(page))
+        return res
+
+    def _do_get_scripts(self, page):
+        res = super(GIHtmlFormatter, self)._do_get_scripts(page)
+
+        if self.__gi_extension.language == 'python':
+            res.append('prism-python.js')
+        elif self.__gi_extension.language == 'javascript':
+            res.append('prism-javascript.js')
+        elif self.__gi_extension.language == 'c':
+            res.append('prism-c.js')
+            res.append('prism-cpp.js')
+
+        return res
 
     def _format_page (self, page):
         new_names = None

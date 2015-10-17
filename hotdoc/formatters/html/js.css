@@ -1,0 +1,47 @@
+.programlisting
+{
+  border: solid 1px #fce94f;
+  background: rgba(226, 255, 226, 0.5);
+  border: solid 1px rgba(226, 255, 226, 0.4);
+  padding: 0.5em;
+}
+
+.note
+{
+  background: rgba(252, 233, 79, 0.1);
+  border-color: rgba(226, 255, 226, 0.4);
+}
+
+.listing_frame {
+  /* tango:scarlet red 1 */
+  border: solid 1px #fce94f;
+  border: solid 1px rgba(226, 255, 226, 0.4);
+}
+
+.listing_lines {
+  /* tango:scarlet red 1 */
+  background: #fce94f;
+  background: rgba(226, 255, 226, 0.4);
+}
+
+.listing_code {
+  /* tango:scarlet red 1 */
+  background: #fce94f;
+  background: rgba(226, 255, 226, 0.5);
+}
+
+@media screen {
+  table.navigation#top
+  {
+    background: #e2ffe2;
+  }
+}
+
+@media screen and (max-width: 60em) {
+  div.titlepage table.navigation {
+    background: #e2ffe2;
+  }
+}
+
+.language-js {display: inherit}
+.language-javascript {display: inherit}

@@ -10,6 +10,11 @@ body
   border: solid 1px rgb(238, 238, 236);
   padding: 0.5em;
 }
+
+[class*='language-'] {
+    display: none;
+}
+
 .programlisting
 {
   /* tango:sky blue 0/1 */
