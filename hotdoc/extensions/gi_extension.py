@@ -153,6 +153,8 @@ class GIRParser(object):
         self.gir_types = {}
         self.all_infos = {}
 
+        self.parsed_files = []
+
         self.callable_nodes = {}
 
         self.gir_class_map = {}
@@ -224,8 +226,18 @@ class GIRParser(object):
         return hierarchy
 
     def __parse_gir_file (self, gir_file):
+        if gir_file in self.parsed_files:
+            return
+
+        self.parsed_files.append (gir_file)
+
         tree = etree.parse (gir_file)
         root = tree.getroot()
+
+        if self.namespace is None:
+            ns = root.find("{http://www.gtk.org/introspection/core/1.0}namespace")
+            self.namespace = ns.attrib['name']
+
         nsmap = {k:v for k,v in root.nsmap.iteritems() if k}
         self.nsmap = nsmap
         for child in root:
@@ -240,7 +252,7 @@ class GIRParser(object):
 
     def __parse_namespace (self, nsmap, ns):
         ns_name = ns.attrib["name"]
-        self.namespace = ns_name
+
         for child in ns:
             if child.tag == "{http://www.gtk.org/introspection/core/1.0}class":
                 self.__parse_gir_record(nsmap, ns_name, child)
@@ -248,8 +260,6 @@ class GIRParser(object):
                 self.__parse_gir_record(nsmap, ns_name, child, is_interface=True)
             elif child.tag == "{http://www.gtk.org/introspection/core/1.0}record":
                 self.__parse_gir_record(nsmap, ns_name, child)
-            elif child.tag == "{http://www.gtk.org/introspection/core/1.0}function":
-                self.__parse_gir_function (nsmap, ns_name, child)
             elif child.tag == "{http://www.gtk.org/introspection/core/1.0}callback":
                 self.__parse_gir_callback (nsmap, ns_name, child)
             elif child.tag == "{http://www.gtk.org/introspection/core/1.0}enumeration":
@@ -258,6 +268,8 @@ class GIRParser(object):
                 self.__parse_gir_enum (nsmap, ns_name, child)
             elif child.tag == "{http://www.gtk.org/introspection/core/1.0}constant":
                 self.__parse_gir_constant (nsmap, ns_name, child)
+            elif child.tag == "{http://www.gtk.org/introspection/core/1.0}function":
+                self.__parse_gir_function (nsmap, ns_name, child)
 
     def __parse_gir_record (self, nsmap, ns_name, klass, is_interface=False):
         name = '%s.%s' % (ns_name, klass.attrib["name"])
