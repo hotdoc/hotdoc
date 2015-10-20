@@ -1,8 +1,13 @@
 class CommentBlock(object):
     def __init__ (self):
         self.params = {}
-        self.description = None
+        self.description = ''
+        self.annotations = {}
+        self.short_description = None
         self.tags = {}
+        self.name = None
+        self.title = None
+        self.filename = None
 
     def add_param_block (self, param_name, block):
         self.params[param_name] = block
@@ -30,7 +35,6 @@ class GtkDocCommentBlock(CommentBlock):
                 self.params[param.name] = param
         self.name = name
         self.description = description
-        self.annotations = {}
         for annotation in annotations:
             self.annotations[annotation.name] = annotation
         for tag in tags:
