@@ -17,15 +17,17 @@ class CommonMarkParser (PageParser):
         for c in l.children:
             for c2 in c.children:
                 if c2.t == "Paragraph" and len (c2.inline_content) == 1:
-                    self.parse_para (c2.inline_content[0])
+                    self.parse_para (c2)
 
-    def parse_para(self, ic):
+    def parse_para(self, paragraph):
+        ic = paragraph.inline_content[0]
+
         if ic.t != "Link":
             return
 
         if not ic.destination and ic.label:
-            l = ''.join ([l.c for l in ic.label])
-            self.create_symbol (l)
+            name = paragraph.strings[0].strip('[]() ')
+            self.create_symbol (name)
             ic.destination = "not_an_actual_link_sorry"
 
     def parse_header(self, h, section):

@@ -2,10 +2,8 @@ import os
 
 from ..core.base_extension import BaseExtension
 from hotdoc.utils.loggable import Loggable, progress_bar
-from hotdoc.extensions.common_mark_parser import CommonMarkParser
 from dbusapi.interfaceparser import InterfaceParser
 from hotdoc.core.doc_tool import doc_tool
-from hotdoc.formatters.html.html_formatter import HtmlFormatter
 from hotdoc.core.symbols import *
 from hotdoc.core.naive_index import NaiveIndexFormatter
 
@@ -122,11 +120,9 @@ class DBusExtension(BaseExtension):
     def get_extra_symbols (self):
         return self.scanner.symbols
 
-    def get_symbol (self, symbol_name):
-        return self.scanner.symbols.get (symbol_name)
-
     @staticmethod
     def add_arguments (parser):
         parser.add_argument ("--dbus-sources", action="store", nargs="+",
                 dest="dbus_sources", help="DBus interface files to parse",
                 default=[], required = True)
+        parser.add_argument ("--end-dbus-sources", action="store_true")
