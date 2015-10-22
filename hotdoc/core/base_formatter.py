@@ -37,21 +37,11 @@ class Formatter(object):
         # Hardcoded for now
         self.__cmp = CommonMark.DocParser()
         self.__cmr = CommonMark.HTMLRenderer()
-        self.__global_hierarchy = []
 
-    def set_global_hierarchy (self, hierarchy):
-        """
-        A bit ugly for now, will be changed when C++ support is
-        implemented.
-        For now the extension provides a list of 2-tuple (parent->child)
-        """
-        self.__global_hierarchy = hierarchy
-
-    def format (self):
+    def format (self, page):
         self.__total_pages = 0
         self.__total_rendered_pages = 0
-        for page in doc_tool.pages:
-            self.__total_pages += self.__get_subpages_count (page)
+        self.__total_pages = self.__get_subpages_count (page)
 
         self.__progress_bar = progress_bar.get_progress_bar ()
         if self.__progress_bar is not None:
@@ -63,26 +53,19 @@ class Formatter(object):
         self.__index_rows = []
         self.fill_index_columns_signal (index_columns)
 
-        for page in doc_tool.pages:
-            self.__format_page (page)
+        self.__format_page (page)
 
-        if doc_tool.page_parser.create_object_hierarchy:
-            graph = self.__create_hierarchy_graph ()
-            hierarchy = self._format_class_hierarchy (graph)
-            if hierarchy:
-                self.__write_hierarchy (hierarchy)
-
-        if doc_tool.page_parser.create_api_index:
-            api_index = self._format_api_index (index_columns, self.__index_rows)
-            if api_index:
-                self.__write_API_index (api_index)
+        #api_index = self._format_api_index (index_columns, self.__index_rows)
+        #print api_index
+        #if api_index:
+        #    self.__write_API_index (api_index)
 
         self.__copy_extra_files ()
 
-    def __create_hierarchy_graph (self):
+    def _create_hierarchy_graph (self, hierarchy):
         graph = pg.AGraph(directed=True, strict=True)
 
-        for pair in self.__global_hierarchy:
+        for pair in hierarchy:
             parent_link = pair[0].get_type_link()
             child_link = pair[1].get_type_link()
 
@@ -122,7 +105,7 @@ class Formatter(object):
         out, standalone = self._format_symbol (symbol)
         symbol.detailed_description = out
         if standalone:
-            self.__write_symbol (symbol)
+            self._write_page (symbol)
 
         if out and type(symbol) not in [ReturnValueSymbol,
                 ParameterSymbol, FieldSymbol]:
@@ -146,7 +129,7 @@ class Formatter(object):
         out = ""
         page.format_symbols ()
         page.detailed_description = self._format_page (page)[0]
-        self.__write_symbol (page)
+        self._write_page (page)
         self.__total_rendered_pages += 1
         self.__update_progress()
 
@@ -154,9 +137,14 @@ class Formatter(object):
             self.__format_page (page)
 
     def __copy_extra_files (self):
+        asset_path = os.path.join (doc_tool.output, 'assets')
+        if not os.path.exists (asset_path):
+            os.mkdir (asset_path)
+
         for f in self._get_extra_files():
             basename = os.path.basename (f)
-            shutil.copy (f, os.path.join (self._output, basename))
+            path = os.path.join (asset_path, basename)
+            shutil.copy (f, path)
 
     def __write_API_index (self, content):
         path = os.path.join (self._output, 'api_index.html')
@@ -168,10 +156,10 @@ class Formatter(object):
         with open (path, 'w') as f:
             f.write (content.encode('utf-8'))
 
-    def __write_symbol (self, symbol):
-        path = os.path.join (self._output, symbol.link.ref)
+    def _write_page (self, page):
+        path = os.path.join (self._output, page.link.ref)
         with open (path, 'w') as f:
-            out = symbol.detailed_description
+            out = page.detailed_description
             f.write (out.encode('utf-8'))
 
     def _format_doc_string (self, docstring):

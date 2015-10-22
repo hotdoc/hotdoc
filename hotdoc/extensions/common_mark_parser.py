@@ -122,10 +122,17 @@ class CommonMarkParser (PageParser):
 
     def _update_links (self, node):
         if node.t == 'Link':
-            link = doc_tool.link_resolver.get_named_link (node.destination)
-            node.label[-1].c += ' '
-            if link and link.get_link() is not None:
-                node.destination = link.get_link()
+            handling_extension = doc_tool.get_well_known_name_handler(node.destination)
+            if handling_extension:
+                res = handling_extension.insert_well_known_name (node.destination)
+                if not res:
+                    doc_tool.queue_well_known_name(node.destination)
+                    node.destination += '.html'
+            else:
+                link = doc_tool.link_resolver.get_named_link (node.destination)
+                node.label[-1].c += ' '
+                if link and link.get_link() is not None:
+                    node.destination = link.get_link()
 
         for c in node.inline_content:
             self._update_links (c)
@@ -150,6 +157,9 @@ class CommonMarkParser (PageParser):
         return self.__cmr.render (page.ast) 
 
     def rename_headers (self, page, new_names):
+        if not page:
+            return
+
         for h in page.headers:
             if h[0].original_name:
                 new_name = new_names.get(h[0].original_name)

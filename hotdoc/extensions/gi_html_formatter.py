@@ -2,6 +2,7 @@ import re, os
 from hotdoc.formatters.html.html_formatter import HtmlFormatter
 from hotdoc.core.links import Link
 from hotdoc.core.symbols import *
+from hotdoc.core.sections import Page
 
 
 class GIHtmlFormatter(HtmlFormatter):
@@ -363,6 +364,9 @@ class GIHtmlFormatter(HtmlFormatter):
                                 'constant': constant})
         return (out, False)
 
+    def _get_assets_path(self):
+        return os.path.join('..', 'assets')
+
     def _get_extra_style_sheets(self, page):
         res = []
         if self.__gi_extension.language == 'python':
@@ -371,12 +375,12 @@ class GIHtmlFormatter(HtmlFormatter):
             res.append('js.css')
         elif self.__gi_extension.language == 'c':
             res.append('c.css')
+        res = [os.path.join('assets', s) for s in res]
         res.extend(super(GIHtmlFormatter, self)._get_extra_style_sheets(page))
         return res
 
     def _do_get_scripts(self, page):
-        res = super(GIHtmlFormatter, self)._do_get_scripts(page)
-
+        res = []
         if self.__gi_extension.language == 'python':
             res.append('prism-python.js')
         elif self.__gi_extension.language == 'javascript':
@@ -384,8 +388,18 @@ class GIHtmlFormatter(HtmlFormatter):
         elif self.__gi_extension.language == 'c':
             res.append('prism-c.js')
             res.append('prism-cpp.js')
+        res = [os.path.join('assets', s) for s in res]
 
+        res.extend(super(GIHtmlFormatter, self)._do_get_scripts(page))
         return res
+
+    def _get_style_sheets(self, page):
+        stylesheets = HtmlFormatter._get_style_sheets (self, page)
+        return [os.path.join('..', s) for s in stylesheets]
+
+    def _get_scripts(self, page):
+        scripts = HtmlFormatter._get_scripts (self, page)
+        return [os.path.join('..', s) for s in scripts]
 
     def _format_page (self, page):
         new_names = None
@@ -399,7 +413,7 @@ class GIHtmlFormatter(HtmlFormatter):
                     new_names)
         return HtmlFormatter._format_page (self, page)
 
-    def format (self):
+    def format (self, page):
         for l in self.__gi_extension.languages:
             if l == 'python':
                 self.fundamentals = self.python_fundamentals
@@ -421,4 +435,4 @@ class GIHtmlFormatter(HtmlFormatter):
             self._output = os.path.join (doc_tool.output, l)
             if not os.path.exists (self._output):
                 os.mkdir (self._output)
-            HtmlFormatter.format (self)
+            HtmlFormatter.format (self, page)

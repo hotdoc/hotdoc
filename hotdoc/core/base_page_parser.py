@@ -15,7 +15,7 @@ class ParsedPage(object):
 class PageParser(Loggable):
     def __init__(self):
         Loggable.__init__(self)
-        self.pages = []
+        self.base_page = None
         self._current_page = None
         self.__parsed_pages = {}
         self._prefix = ""
@@ -31,7 +31,7 @@ class PageParser(Loggable):
         if self._current_page:
             self._current_page.subpages.append (page)
         else:
-            self.pages.append (page)
+            self.base_page = page
 
         self._current_page = page
 
@@ -68,12 +68,15 @@ class PageParser(Loggable):
         if filename in self.__parsed_pages:
             return self.__parsed_pages[filename]
 
+        with open (filename, "r") as f:
+            contents = f.read()
+
+        return self.parse_contents (contents, page_name, filename)
+
+    def parse_contents (self, contents, page_name, filename):
         old_page = self._current_page
 
         self.create_page (page_name, filename)
-
-        with open (filename, "r") as f:
-            contents = f.read()
 
         cur_page = self._current_page
         cur_page.parsed_page = self.do_parse_page (contents, self._current_page)
@@ -83,11 +86,13 @@ class PageParser(Loggable):
         self.__parsed_pages[filename] = cur_page
         return cur_page
 
-    def create_symbols(self, doc_tool):
-        if not os.path.isfile (doc_tool.index_file):
-            raise IOError ('Index file %s not found' % doc_tool.index_file)
+    def parse(self, index_file):
+        if not os.path.isfile (index_file):
+            raise IOError ('Index file %s not found' % index_file)
 
-        self._prefix = os.path.dirname (doc_tool.index_file)
-        self._parse_page (doc_tool.index_file)
+        self._prefix = os.path.dirname (index_file)
+        self._parse_page (index_file)
         self.info ("total documented symbols : %d" %
                 self.__total_documented_symbols)
+
+        return self.base_page

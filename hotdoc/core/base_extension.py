@@ -27,5 +27,17 @@ class BaseExtension(Loggable):
     def setup (self):
         pass
 
+    def insert_well_known_name (self, name):
+        return None
+
+    def create_page_from_well_known_name(self, wkn):
+        return None
+
+    def get_index(self):
+        return None
+
     def get_extra_symbols (self):
+        return {}
+
+    def get_comments(self):
         return {}

@@ -27,7 +27,6 @@ class DocTool(Loggable):
     def __init__(self):
         Loggable.__init__(self)
 
-        self.formatter = None
         self.output = None
         self.c_sources = None
         self.style = None
@@ -39,17 +38,50 @@ class DocTool(Loggable):
         self.extensions = []
         self.pages = []
         self.comments = {}
+        self.symbols = {}
         self.full_scan = False
         self.full_scan_patterns = ['*.h']
         self.link_resolver = LinkResolver()
+        self.well_known_names = {}
+        self.queued_well_known_names = []
 
     def parse_and_format (self):
         self.__setup()
         self.parse_args ()
 
-        self.formatter.format()
+        # We're done setting up, extensions can setup too
+        for extension in self.extensions:
+            extension.setup ()
+            self.symbols.update (extension.get_extra_symbols())
+            self.comments.update (extension.get_comments())
+
+        page = self.page_parser.parse (self.index_file)
+
+        from ..formatters.html.html_formatter import HtmlFormatter
+        self.formatter = HtmlFormatter([])
+        self.base_formatter = self.formatter
+
+        self.formatter.format(page)
+
+        while self.queued_well_known_names:
+            wkn = self.queued_well_known_names.pop()
+            extension = self.well_known_names[wkn]
+            formatter = extension.get_formatter(self.output_format)
+            if formatter:
+                self.formatter = formatter
+            page = extension.create_page_from_well_known_name (wkn)
+            self.formatter.format (page)
 
         self.finalize()
+
+    def register_well_known_name (self, name, extension):
+        self.well_known_names[name] = extension
+
+    def get_well_known_name_handler (self, name):
+        return self.well_known_names.get(name)
+
+    def queue_well_known_name (self, name):
+        self.queued_well_known_names.insert (0, name)
 
     def get_symbol (self, name):
         return self.symbols.get (name)
@@ -63,10 +95,6 @@ class DocTool(Loggable):
         self.parser = argparse.ArgumentParser()
         self.parser.add_argument("-s", "--style", action="store", default="gnome",
                 dest="style")
-        self.parser.add_argument ("--c-sources", action="store", nargs="+",
-                dest="c_sources", help="C source files to parse", default=[])
-        self.parser.add_argument ("--clang-options", action="store", nargs="+",
-                dest="clang_options", help="Flags to pass to clang", default="")
         self.parser.add_argument ("-i", "--index", action="store",
                 dest="index", help="location of the index file")
         self.parser.add_argument ("-o", "--output", action="store", default='doc',
@@ -115,27 +143,17 @@ class DocTool(Loggable):
 
             if self.raw_comment_parser is None:
                 self.raw_comment_parser = ext.get_raw_comment_parser()
-            if self.formatter is None:
-                self.formatter = ext.get_formatter(self.output_format)
             if self.doc_parser is None:
                 self.doc_parser = ext.get_doc_parser()
             if args[1]:
                 args = self.parser.parse_known_args (args[1])
                 self.__parse_extensions (args)
 
-    def __create_symbols (self):
-        for extension in self.extensions:
-            self.symbols.update (extension.get_extra_symbols())
-
-        self.page_parser.create_symbols (self)
-        self.pages = self.page_parser.pages
-
     def parse_args (self):
         args = self.parser.parse_known_args()
 
         self.output = args[0].output
         self.output_format = args[0].output_format
-        self.c_sources = args[0].c_sources
         self.style = args[0].style
         self.include_paths = args[0].include_paths
 
@@ -145,23 +163,14 @@ class DocTool(Loggable):
 
         self.__setup_output ()
         self.__parse_extensions (args)
-        self.__setup_source_scanners (args[0].clang_options)
-
-        self.comments = self.c_source_scanner.comments
 
         if not args[0].index:
             nif = NaiveIndexFormatter (self.c_source_scanner.symbols)
             args[0].index = "tmp_markdown_files/tmp_index.markdown"
         self.index_file = args[0].index
 
-        # We're done setting up, extensions can setup too
-        for extension in self.extensions:
-            extension.setup ()
-
-        self.__create_symbols ()
-
     def finalize (self):
         self.link_resolver.pickle (self.output)
-        self.c_source_scanner.finalize()
+
 
 doc_tool = DocTool()

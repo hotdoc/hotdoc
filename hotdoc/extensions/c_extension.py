@@ -1,17 +1,16 @@
-#!/usr/bin/env python
+import os, ast, linecache
 
-import os
-import sys
-import linecache
-from datetime import datetime, timedelta
 import clang.cindex
 from ctypes import *
 from fnmatch import fnmatch
 
+from hotdoc.core.base_extension import BaseExtension
 from hotdoc.utils.loggable import Loggable, progress_bar
+from hotdoc.core.doc_tool import doc_tool
+from hotdoc.core.symbols import *
+from hotdoc.core.comment_block import CommentBlock
 from hotdoc.lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
 from hotdoc.core.links import Link
-from hotdoc.core.symbols import *
 
 def ast_node_is_function_pointer (ast_node):
     if ast_node.kind == clang.cindex.TypeKind.POINTER and \
@@ -22,10 +21,8 @@ def ast_node_is_function_pointer (ast_node):
 
 
 class ClangScanner(Loggable):
-    def __init__(self, config, options):
+    def __init__(self, filenames, options, full_scan, full_scan_patterns):
         Loggable.__init__(self)
-
-        self.__config = config
 
         if options:
             options = options[0].split(' ')
@@ -36,7 +33,9 @@ class ClangScanner(Loggable):
                 clang.cindex.TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
 
         self.filenames = [os.path.abspath(filename) for filename in
-                config.c_sources]
+                filenames]
+        self.full_scan = full_scan
+        self.full_scan_patterns = full_scan_patterns
 
         args = ["-isystem/usr/lib/clang/3.5.0/include/", "-Wno-attributes"]
         args.extend (options)
@@ -59,21 +58,19 @@ class ClangScanner(Loggable):
 
         self.parsed = set({})
 
-        n = datetime.now()
-
-        if not self.__config.full_scan:
+        if not full_scan:
             for filename in self.filenames:
                 with open (filename, 'r') as f:
                     cs = get_comments (filename)
                     for c in cs:
-                        block = self.__config.raw_comment_parser.parse_comment(c[0], c[1], c[2])
+                        block = doc_tool.raw_comment_parser.parse_comment(c[0], c[1], c[2])
                         self.comments[block.name] = block
 
         for filename in self.filenames:
             if os.path.abspath(filename) in self.parsed:
                 continue
 
-            do_full_scan = any(fnmatch(filename, p) for p in self.__config.full_scan_patterns)
+            do_full_scan = any(fnmatch(filename, p) for p in full_scan_patterns)
             if do_full_scan:
                 tu = index.parse(filename, args=args, options=flags)
                 self.tus.append (tu)
@@ -90,7 +87,6 @@ class ClangScanner(Loggable):
                 self.__total_files_parsed += 1
                 self.__update_progress ()
 
-        self.info ("Source parsing done %s" % str(datetime.now() - n))
         self.info ("%d internal symbols found" % len (self.symbols))
         self.info ("%d external symbols found" % len (self.external_symbols))
         self.info ("%d comments found" % len (self.comments))
@@ -149,14 +145,14 @@ class ClangScanner(Loggable):
                             clang.cindex.CursorKind.TYPEDEF_DECL,
                             clang.cindex.CursorKind.MACRO_DEFINITION,
                             clang.cindex.CursorKind.VAR_DECL]:
-                if self.__config.full_scan:
+                if self.full_scan:
                     if not node.raw_comment:
                         self.debug ("Discarding symbol %s at location %s as it has no doc" %
                                 (node.spelling, str(node.location)))
                         continue
 
                     self.comments[node.spelling] = \
-                        self.__config.raw_comment_parser.parse_comment \
+                        doc_tool.raw_comment_parser.parse_comment \
                                 (node.raw_comment, str(node.location.file), 0)
 
                 self.symbols[node.spelling] = node
@@ -472,6 +468,11 @@ class ClangScanner(Loggable):
                 self.external_symbols[node.spelling] = node
                 self.debug ("Found external symbol %s" % node.spelling)
 
+                sym = self.__create_typedef_symbol (node)
+
+                if sym is not None:
+                    self.new_symbols[node.spelling] = sym
+
     def lookup_ast_node (self, name):
         return self.symbols.get(name) or self.external_symbols.get(name)
 
@@ -497,6 +498,29 @@ class ClangScanner(Loggable):
         del self.external_symbols
         del self.tus
 
-if __name__=="__main__": 
-    css = ClangScanner ([sys.argv[1]], '')
-    print css.comments
+class CExtension(BaseExtension):
+    EXTENSION_NAME = 'c-extension'
+
+    def __init__(self, args):
+        BaseExtension.__init__(self, args)
+        self.sources = args.c_sources
+        self.clang_options = args.clang_options
+
+    def setup(self):
+        self.scanner = ClangScanner(self.sources, self.clang_options, False,
+                ['*.h'])
+
+    def get_extra_symbols(self):
+        return self.scanner.new_symbols
+
+    def get_comments(self):
+        return self.scanner.comments
+
+    @staticmethod
+    def add_arguments (parser):
+        parser.add_argument ("--c-sources", action="store", nargs="+",
+                dest="c_sources", help="C source files to parse",
+                default=[], required = True)
+        parser.add_argument ("--clang-options", action="store", nargs="+",
+                dest="clang_options", help="Flags to pass to clang", default="")
+        parser.add_argument ("--end-c-sources", action="store_true")

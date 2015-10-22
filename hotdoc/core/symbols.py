@@ -99,6 +99,11 @@ class FunctionSymbol (Symbol):
             return 'Method'
         return 'Function'
 
+class ObjectHierarchySymbol (Symbol):
+    def __init__(self, hierarchy, *args):
+        Symbol.__init__(self, *args)
+        self.hierarchy = hierarchy
+
 class SignalSymbol (FunctionSymbol):
     def __init__(self, object_name, *args):
         self.object_name = object_name

@@ -13,6 +13,7 @@ from ..utils.loggable import Loggable
 from .gi_raw_parser import GtkDocRawCommentParser
 from .gi_html_formatter import GIHtmlFormatter
 from hotdoc.core.links import Link
+from hotdoc.core.sections import Page
 
 
 class Annotation (object):
@@ -152,6 +153,7 @@ class GIRParser(object):
         self.gir_hierarchies = {}
         self.gir_types = {}
         self.all_infos = {}
+        self.global_hierarchy = None
 
         self.parsed_files = []
 
@@ -176,17 +178,15 @@ class GIRParser(object):
 
             gi_name = '%s.%s' % (klass.parent_name, klass.node.attrib['name'])
             klass_name = klass.node.attrib['{%s}type-name' % self.nsmap['glib']]
-            cursor = \
-                    doc_tool.c_source_scanner.lookup_ast_node(klass_name)
-            if cursor:
-                type_tokens = doc_tool.c_source_scanner.make_c_style_type_name (cursor.type)
-                symbol = QualifiedSymbol(type_tokens, None)
+            link = doc_tool.link_resolver.get_named_link (klass_name)
+            if link:
+                symbol = QualifiedSymbol([link], None)
                 parents = reversed(self.gir_hierarchies[gi_name])
                 for parent in parents:
                     hierarchy.append ((parent, symbol))
                     symbol = parent
 
-        doc_tool.formatter.set_global_hierarchy (hierarchy)
+        self.global_hierarchy = hierarchy
 
     def __create_hierarchy (self, klass):
         klaass = klass
@@ -204,22 +204,18 @@ class GIRParser(object):
             klass_name = klass.attrib['{%s}type-name' % self.nsmap['glib']]
 
             if not klass_name in children:
-                cursor = \
-                        doc_tool.c_source_scanner.lookup_ast_node(klass_name)
-                if cursor:
-                    type_tokens = doc_tool.c_source_scanner.make_c_style_type_name (cursor.type)
-                    symbol = QualifiedSymbol (type_tokens, None)
-                    children[klass_name] = symbol
+                link = doc_tool.link_resolver.get_named_link(klass_name)
+                if link:
+                    sym = QualifiedSymbol([link], None)
+                    children[klass_name] = sym
 
             c_name = parent_class.attrib['{%s}type-name' % self.nsmap['glib']]
-            cursor = \
-                    doc_tool.c_source_scanner.lookup_ast_node(c_name)
-            if not cursor:
+            link = doc_tool.link_resolver.get_named_link(c_name)
+            if not link:
                 break
 
-            type_tokens = doc_tool.c_source_scanner.make_c_style_type_name (cursor.type)
-            parent_symbol = QualifiedSymbol (type_tokens, None)
-            hierarchy.append (parent_symbol)
+            sym = QualifiedSymbol([link], None)
+            hierarchy.append (sym)
             klass = parent_class
 
         hierarchy.reverse()
@@ -438,10 +434,15 @@ class GIExtension(BaseExtension):
     def __init__(self, args):
         BaseExtension.__init__(self, args)
         self.gir_file = args.gir_file
+        self.gi_index = args.gi_index
         self.languages = [l.lower() for l in args.languages]
         self.language = 'c'
         self.namespace = None
         self.major_version = args.major_version
+        self.gir_parser = None
+
+        doc_tool.register_well_known_name ('gobject-api', self)
+        doc_tool.register_well_known_name ('gobject-hierarchy', self)
 
         # Make sure C always gets formatted first
         if 'c' in self.languages:
@@ -465,7 +466,7 @@ class GIExtension(BaseExtension):
                 }
 
         self.__raw_comment_parser = GtkDocRawCommentParser()
-        self._formatters["html"] = GIHtmlFormatter (self)
+        self._formatters["html"] = GIHtmlFormatter(self)
 
     @staticmethod
     def add_arguments (parser):
@@ -475,6 +476,8 @@ class GIExtension(BaseExtension):
                 nargs='*', default=['c'])
         parser.add_argument ("--major-version", action="store",
                 dest="major_version", default='')
+        parser.add_argument ("--gi-index", action="store",
+                dest="gi_index", required=True)
 
     def __gather_gtk_doc_links (self):
         sgml_dir = os.path.join(doc_tool.datadir, "gtk-doc", "html")
@@ -656,7 +659,10 @@ class GIExtension(BaseExtension):
         self.language = language
 
         if language == 'c':
-            return
+            for c_name, python_name in self.gir_parser.python_names.iteritems():
+                l = doc_tool.link_resolver.get_named_link (c_name)
+                if l:
+                    l.title = c_name
 
         if language == 'python':
             for c_name, python_name in self.gir_parser.python_names.iteritems():
@@ -898,7 +904,8 @@ class GIExtension(BaseExtension):
                 symbol.name.lower())
         hierarchy = self.gir_parser.gir_hierarchies.get (gi_name)
         children = self.gir_parser.gir_children_map.get (gi_name)
-        class_symbol = ClassSymbol (hierarchy, children, class_comment, symbol.name, None)
+        class_symbol = ClassSymbol (hierarchy, children, class_comment,
+                symbol.name, None)
         return class_symbol
 
     def __update_function (self, func):
@@ -1000,11 +1007,36 @@ class GIExtension(BaseExtension):
 
         return res
 
+    def create_page_from_well_known_name (self, wkn):
+        if self.gir_file and not self.gir_parser:
+            self.gir_parser = GIRParser (self.gir_file)
+
+        if wkn == 'gobject-api':
+            contents = ''
+            for language in self.languages:
+                contents += '### [%s API](%s/gobject-api.html)\n' % \
+                        (language.capitalize (), language)
+            doc_tool.page_parser.__init__()
+            index_page = doc_tool.page_parser.parse_contents (contents, 'gobject-api', None)
+            doc_tool.base_formatter.format(index_page)
+
+            doc_tool.page_parser.__init__()
+            doc_tool.page_parser.symbol_added_signal.connect (self.__adding_symbol)
+
+            doc_tool.formatter.formatting_symbol_signals[Symbol].connect(self.__formatting_symbol)
+            doc_tool.formatter.fill_index_columns_signal.connect(self.__fill_index_columns)
+            doc_tool.formatter.fill_index_row_signal.connect(self.__fill_index_row)
+
+            page = doc_tool.page_parser.parse (self.gi_index)
+            return page
+
+        elif wkn == 'gobject-hierarchy':
+            page = Page(wkn)
+            graph = doc_tool.formatter._create_hierarchy_graph(self.gir_parser.global_hierarchy)
+            symbol = ObjectHierarchySymbol (self.gir_parser.global_hierarchy,
+                    None, 'GObject-hierarchy', None)
+            page.add_symbol (symbol)
+            return page
+
     def setup (self):
         self.__gather_gtk_doc_links()
-        doc_tool.page_parser.symbol_added_signal.connect (self.__adding_symbol)
-        doc_tool.formatter.formatting_symbol_signals[Symbol].connect(self.__formatting_symbol)
-        doc_tool.formatter.fill_index_columns_signal.connect(self.__fill_index_columns)
-        doc_tool.formatter.fill_index_row_signal.connect(self.__fill_index_row)
-        if self.gir_file:
-            self.gir_parser = GIRParser (self.gir_file)

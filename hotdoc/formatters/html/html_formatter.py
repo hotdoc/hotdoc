@@ -50,6 +50,7 @@ class HtmlFormatter (Formatter):
                 VFunctionSymbol: self._format_vfunction_symbol,
                 PropertySymbol: self._format_property_symbol,
                 ClassSymbol: self._format_class_symbol,
+                ObjectHierarchySymbol: self._format_object_hierarchy_symbol,
                 }
 
         self._summary_formatters = {
@@ -69,7 +70,8 @@ class HtmlFormatter (Formatter):
 
         self._ordering = [ClassSymbol, FunctionSymbol, FunctionMacroSymbol, SignalSymbol,
                 PropertySymbol, StructSymbol, VFunctionSymbol, EnumSymbol, ConstantSymbol,
-                ExportedVariableSymbol, AliasSymbol, CallbackSymbol]
+                ExportedVariableSymbol, AliasSymbol, CallbackSymbol,
+                ObjectHierarchySymbol]
 
         module_path = os.path.dirname(__file__)
         searchpath.append (os.path.join(module_path, "templates"))
@@ -264,8 +266,6 @@ class HtmlFormatter (Formatter):
 
     def _format_symbols_toc_section (self, symbols_type, symbols_list):
         summary_formatter = self._summary_formatters.get(symbols_type)
-        if not summary_formatter:
-            return (None, None)
 
         toc_section_summaries = []
         detailed_descriptions = []
@@ -273,20 +273,20 @@ class HtmlFormatter (Formatter):
         for element in symbols_list.symbols:
             if element.skip:
                 continue
-            summary = summary_formatter(element)
-            if summary:
-                toc_section_summaries.append (summary)
+            if summary_formatter:
+                summary = summary_formatter(element)
+                if summary:
+                    toc_section_summaries.append (summary)
             if element.detailed_description:
                 detailed_descriptions.append (element.detailed_description)
 
-        if not toc_section_summaries:
-            return (None, None)
-
         symbol_type = symbols_list.name
 
-        summary = self._format_summary (toc_section_summaries,
-                symbol_type)
-        toc_section = TocSection (summary, symbol_type)
+        toc_section = None
+        if toc_section_summaries:
+            summary = self._format_summary (toc_section_summaries,
+                    symbol_type)
+            toc_section = TocSection (summary, symbol_type)
 
         symbol_descriptions = None
         if detailed_descriptions:
@@ -344,12 +344,13 @@ class HtmlFormatter (Formatter):
 
         template = self.engine.get_template('page.html')
 
-        stylesheets = self.__get_style_sheets(page.link.ref)
-        scripts = self.__get_scripts(page.link.ref)
+        stylesheets = self._get_style_sheets(page.link.ref)
+        scripts = self._get_scripts(page.link.ref)
         out = template.render ({'page': page,
                                 'toc_sections': toc_sections,
                                 'stylesheets': stylesheets,
                                 'scripts': scripts,
+                                'assets_path': self._get_assets_path(),
                                 'symbols_details': symbols_details})
 
         return (out, True)
@@ -518,12 +519,14 @@ class HtmlFormatter (Formatter):
 
         out = template.render ({'columns': columns,
                                 'rows': formatted_rows,
-                                'scripts': self.__get_scripts(pagename),
-                                'stylesheets': self.__get_style_sheets(pagename)})
+                                'assets_path': self._get_assets_path(),
+                                'scripts': self._get_scripts(pagename),
+                                'stylesheets': self._get_style_sheets(pagename)})
 
         return out
 
-    def _format_class_hierarchy (self, dot_graph):
+    def _format_object_hierarchy_symbol (self, symbol):
+        dot_graph = self._create_hierarchy_graph (symbol.hierarchy)
         f = tempfile.NamedTemporaryFile(suffix='.svg', delete=False)
         dot_graph.draw(f, prog='dot', format='svg', args="-Grankdir=LR")
         f.close()
@@ -533,19 +536,24 @@ class HtmlFormatter (Formatter):
 
         pagename = 'object_hierarchy.html'
         template = self.engine.get_template(pagename)
-        return template.render({'graph': contents,
-                                'scripts': self.__get_scripts(pagename),
-                                'stylesheets': self.__get_style_sheets(pagename),
+        res = template.render({'graph': contents,
+                                'scripts': self._get_scripts(pagename),
+                                'assets_path': self._get_assets_path(),
+                                'stylesheets': self._get_style_sheets(pagename),
                                 })
+        return (res, False)
 
-    def __get_style_sheets(self, page):
+    def _get_assets_path(self):
+        return 'assets'
+
+    def _get_style_sheets(self, page):
         stylesheets = [self._get_style_sheet()]
         stylesheets.extend(self._get_extra_style_sheets(page))
         self.__stylesheets = self.__stylesheets.union(set(stylesheets))
 
         return stylesheets
 
-    def __get_scripts(self, page):
+    def _get_scripts(self, page):
         scripts = self._do_get_scripts(page)
 
         self.__scripts = self.__scripts.union(set(scripts))
@@ -553,15 +561,18 @@ class HtmlFormatter (Formatter):
         return scripts
 
     def _do_get_scripts(self, page):
-        return ["prism.js", "prism-bash.js"]
+        scripts = ["prism.js", "prism-bash.js"]
+        return [os.path.join ('assets', s) for s in scripts]
 
     def _get_style_sheet (self):
-        return "style.css"
+        return os.path.join("assets", "style.css")
 
     def _get_extra_style_sheets(self, page):
         extra_style_sheets = ["prism.css"]
         if page == "index.html":
             extra_style_sheets.append("index.css")
+        extra_style_sheets = [os.path.join ('assets', s) for s in
+                extra_style_sheets]
         return extra_style_sheets
 
     def _get_extra_files (self):
@@ -573,10 +584,7 @@ class HtmlFormatter (Formatter):
         for script in self.__scripts:
             res.append(os.path.join(dir_, script))
 
-        res.extend([os.path.join (dir_, "API_index.js"),
-                os.path.join (dir_, "home.png")])
+        res.extend([os.path.join (dir_, 'assets', "API_index.js"),
+                os.path.join (dir_, 'assets', "home.png")])
 
         return res
-
-    def format (self):
-        Formatter.format(self)
