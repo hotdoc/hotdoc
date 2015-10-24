@@ -3,6 +3,8 @@ import os, sys, argparse
 reload(sys)  
 sys.setdefaultencoding('utf8')
 
+from hotdoc.core.alchemy_integration import session
+
 from .naive_index import NaiveIndexFormatter
 from .links import LinkResolver
 from .base_extension import BaseExtension
@@ -37,7 +39,6 @@ class DocTool(Loggable):
         self.page_parser = None
         self.extensions = []
         self.pages = []
-        self.comments = {}
         self.symbols = {}
         self.full_scan = False
         self.full_scan_patterns = ['*.h']
@@ -53,7 +54,6 @@ class DocTool(Loggable):
         for extension in self.extensions:
             extension.setup ()
             self.symbols.update (extension.get_extra_symbols())
-            self.comments.update (extension.get_comments())
 
         page = self.page_parser.parse (self.index_file)
 
@@ -171,6 +171,8 @@ class DocTool(Loggable):
 
     def finalize (self):
         self.link_resolver.pickle (self.output)
+        session.commit()
+        session.close()
 
 
 doc_tool = DocTool()

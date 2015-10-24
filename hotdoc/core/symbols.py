@@ -9,6 +9,10 @@ from ..utils.simple_signals import Signal
 from ..utils.utils import all_subclasses
 from .doc_tool import doc_tool
 
+import sqlalchemy
+from sqlalchemy import create_engine, Column, String, Boolean
+from hotdoc.core.alchemy_integration import Base, engine
+
 class Symbol (object):
     def __init__(self, comment, name, location):
         self.comment = comment
@@ -249,3 +253,5 @@ class ClassSymbol (Symbol):
 
     def get_type_name (self):
         return "Class"
+
+Base.metadata.create_all(engine)

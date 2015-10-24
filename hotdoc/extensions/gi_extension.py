@@ -6,7 +6,7 @@ import clang.cindex
 import pygraphviz as pg
 
 from ..core.symbols import *
-from ..core.comment_block import GtkDocParameter, GtkDocCommentBlock
+from ..core.comment_block import GtkDocParameter, CommentBlock
 from ..core.doc_tool import doc_tool
 from ..core.base_extension import BaseExtension
 from ..utils.loggable import Loggable
@@ -14,6 +14,7 @@ from .gi_raw_parser import GtkDocRawCommentParser
 from .gi_html_formatter import GIHtmlFormatter
 from hotdoc.core.links import Link
 from hotdoc.core.sections import Page
+from hotdoc.core.alchemy_integration import session
 
 
 class Annotation (object):
@@ -900,8 +901,8 @@ class GIExtension(BaseExtension):
         return symbol
 
     def __create_class_symbol (self, symbol, gi_name):
-        class_comment = doc_tool.comments.get ('SECTION:%s' %
-                symbol.name.lower())
+        comment_name = 'SECTION:%s' % symbol.name.lower()
+        class_comment = session.query(CommentBlock).filter_by(name=comment_name).first()
         hierarchy = self.gir_parser.gir_hierarchies.get (gi_name)
         children = self.gir_parser.gir_children_map.get (gi_name)
         class_symbol = ClassSymbol (hierarchy, children, class_comment,
@@ -966,14 +967,14 @@ class GIExtension(BaseExtension):
         if klass_name:
             for signal_name, signal_node in gi_class_info.signals.iteritems():
                 block_name = '%s::%s' % (klass_name, signal_name)
-                comment = doc_tool.comments.get(block_name)
+                comment = session.query(CommentBlock).filter_by(name=block_name).first()
                 sym = self.__create_signal_symbol (signal_node, comment,
                         klass_name, signal_name)
                 symbols.append (sym)
 
             for prop_name, prop_node in gi_class_info.properties.iteritems():
                 block_name = '%s:%s' % (klass_name, prop_name)
-                comment = doc_tool.comments.get(block_name)
+                comment = session.query(CommentBlock).filter_by(name=block_name).first()
                 sym = self.__create_property_symbol (prop_node, comment,
                         klass_name, prop_name)
                 symbols.append (sym)
@@ -981,15 +982,15 @@ class GIExtension(BaseExtension):
         class_struct_name = gi_class_info.class_struct_name
         if class_struct_name:
             for vfunc_name, vfunc_node in gi_class_info.vmethods.iteritems():
-                parent_comment = doc_tool.comments.get (class_struct_name)
+                parent_comment = session.query(CommentBlock).filter_by(name=class_struct_name).first()
                 comment = None
                 if parent_comment:
                     comment = parent_comment.params.get (vfunc_node.attrib['name'])
                 if not comment:
                     continue
 
-                block = GtkDocCommentBlock(vfunc_node.attrib['name'], '', 0,
-                        [], [], comment.description, [])
+                block = CommentBlock (name=vfunc_node.attrib['name'],
+                        description=comment.description)
                 sym = self.__create_vfunc_symbol (vfunc_node, block,
                         klass_name, vfunc_name)
                 symbols.append (sym)

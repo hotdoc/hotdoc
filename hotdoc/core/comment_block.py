@@ -1,13 +1,21 @@
-class CommentBlock(object):
-    def __init__ (self):
-        self.params = {}
-        self.description = ''
-        self.annotations = {}
-        self.short_description = None
-        self.tags = {}
-        self.name = None
-        self.title = None
-        self.filename = None
+import sqlalchemy
+from sqlalchemy import create_engine, Column, Integer, String, PickleType
+from hotdoc.core.alchemy_integration import Base, engine
+
+class CommentBlock(Base):
+    __tablename__ = 'comments'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    title = Column(String)
+    params = Column(PickleType)
+    filename = Column(String, default='')
+    lineno = Column(Integer)
+    annotations = Column(PickleType, default={})
+    params = Column(PickleType, default={})
+    description = Column(String)
+    short_description = Column(String)
+    tags = Column(PickleType, default={})
 
     def add_param_block (self, param_name, block):
         self.params[param_name] = block
@@ -18,46 +26,23 @@ class CommentBlock(object):
     def set_description (self, description):
         self.description = description.strip();
 
-class GtkDocCommentBlock(CommentBlock):
-    def __init__(self, name, filename, lineno, annotations, params, description, tags):
-        CommentBlock.__init__(self)
-        self.short_description = None
-        self.title = None
-        self.filename = filename
-        self.lineno = lineno
+class GtkDocAnnotation(Base):
+    __tablename__ = 'annotations'
 
-        for param in params:
-            if param.name.lower() == 'short_description':
-                self.short_description = param.description
-            elif param.name.lower() == 'title':
-                self.title = param.description
-            else:
-                self.params[param.name] = param
-        self.name = name
-        self.description = description
-        for annotation in annotations:
-            self.annotations[annotation.name] = annotation
-        for tag in tags:
-            self.tags[tag.name.lower()] = tag
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    argument = Column(PickleType)
 
-class GtkDocAnnotation(object):
-    def __init__ (self, name, argument):
-        self.name = name
-        self.argument = argument
+class GtkDocTag(Base):
+    __tablename__ = 'tags'
 
-class GtkDocTag(object):
-    def __init__(self, name, value, annotations, description):
-        self.name = name
-        self.value = value
-        self.annotations = {}
-        for annotation in annotations:
-            self.annotations[annotation.name] = annotation
-        self.description = description
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    value = Column(String)
+    annotations = Column(PickleType, default={})
+    description = Column(String)
 
-class GtkDocParameter(object):
-    def __init__(self, name, annotations, description):
-        self.name = name
-        self.annotations = {}
-        for annotation in annotations:
-            self.annotations[annotation.name] = annotation
-        self.description = description
+class GtkDocParameter(CommentBlock):
+    pass
+
+Base.metadata.create_all(engine)
