@@ -50,7 +50,7 @@ class HtmlFormatter (Formatter):
                 VFunctionSymbol: self._format_vfunction_symbol,
                 PropertySymbol: self._format_property_symbol,
                 ClassSymbol: self._format_class_symbol,
-                ObjectHierarchySymbol: self._format_object_hierarchy_symbol,
+                #ObjectHierarchySymbol: self._format_object_hierarchy_symbol,
                 }
 
         self._summary_formatters = {
@@ -70,8 +70,7 @@ class HtmlFormatter (Formatter):
 
         self._ordering = [ClassSymbol, FunctionSymbol, FunctionMacroSymbol, SignalSymbol,
                 PropertySymbol, StructSymbol, VFunctionSymbol, EnumSymbol, ConstantSymbol,
-                ExportedVariableSymbol, AliasSymbol, CallbackSymbol,
-                ObjectHierarchySymbol]
+                ExportedVariableSymbol, AliasSymbol, CallbackSymbol]
 
         module_path = os.path.dirname(__file__)
         searchpath.append (os.path.join(module_path, "templates"))
@@ -233,7 +232,7 @@ class HtmlFormatter (Formatter):
 
     def _format_property_summary (self, prop):
         template = self.engine.get_template('property_summary.html')
-        property_type = self._format_linked_symbol (prop.type_)
+        property_type = self._format_linked_symbol (prop.prop_type)
 
         prop_link = self._format_linked_symbol (prop)
 
@@ -299,6 +298,7 @@ class HtmlFormatter (Formatter):
 
     def _format_struct (self, struct):
         raw_code = self._format_raw_code (struct.raw_text)
+
         members_list = self._format_members_list (struct.members, 'Fields')
 
         template = self.engine.get_template ("struct.html")
@@ -416,7 +416,7 @@ class HtmlFormatter (Formatter):
         return self._format_callable (vmethod, "virtual method", vmethod.link.title)
 
     def _format_property_symbol (self, prop):
-        type_link = self._format_linked_symbol (prop.type_)
+        type_link = self._format_linked_symbol (prop.prop_type)
         template = self.engine.get_template ('property_prototype.html')
         prototype = template.render ({'property_name': prop.link.title,
                                       'property_type': type_link})

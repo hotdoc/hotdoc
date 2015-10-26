@@ -111,7 +111,7 @@ class GtkDocRawCommentParser (object):
         return title, parameters, annotations
 
     def parse_since_tag (self, name, desc):
-        return GtkDocTag (name=name, value=desc)
+        return GtkDocTag (name=name, description=desc)
 
     def parse_returns_tag (self, name, desc):
         desc, annotations = self.extract_annotations (desc)
@@ -126,7 +126,6 @@ class GtkDocRawCommentParser (object):
             return self.parse_returns_tag (name, desc)
         elif name.lower() == "return value":
             return self.parse_returns_tag ("returns", desc)
-        print ("What the hell dude")
 
     def parse_description_and_tags (self, dt):
         dts = re.split (r'((?:^|\n)[ \t]*(returns|Returns|since|Since|Return value):)', dt)
@@ -148,6 +147,7 @@ class GtkDocRawCommentParser (object):
         return comment.strip()
 
     def parse_comment (self, comment, filename, lineno, stripped=False):
+        comment = unicode(comment.encode('utf8'))
         if not stripped:
             comment = self.strip_comment (comment)
 

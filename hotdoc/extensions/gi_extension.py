@@ -6,7 +6,7 @@ import clang.cindex
 import pygraphviz as pg
 
 from ..core.symbols import *
-from ..core.comment_block import GtkDocParameter, CommentBlock
+from ..core.comment_block import GtkDocParameter, CommentBlock, comment_from_tag
 from ..core.doc_tool import doc_tool
 from ..core.base_extension import BaseExtension
 from ..utils.loggable import Loggable
@@ -148,6 +148,7 @@ class GIRParser(object):
         self.gir_class_infos = {}
         self.gir_callable_infos = {}
         self.python_names = {}
+        self.c_names = {}
         self.javascript_names = {}
         self.unintrospectable_symbols = {}
         self.gir_children_map = {}
@@ -181,7 +182,7 @@ class GIRParser(object):
             klass_name = klass.node.attrib['{%s}type-name' % self.nsmap['glib']]
             link = doc_tool.link_resolver.get_named_link (klass_name)
             if link:
-                symbol = QualifiedSymbol([link], None)
+                symbol = QualifiedSymbol(type_tokens=[link])
                 parents = reversed(self.gir_hierarchies[gi_name])
                 for parent in parents:
                     hierarchy.append ((parent, symbol))
@@ -207,7 +208,7 @@ class GIRParser(object):
             if not klass_name in children:
                 link = doc_tool.link_resolver.get_named_link(klass_name)
                 if link:
-                    sym = QualifiedSymbol([link], None)
+                    sym = QualifiedSymbol(type_tokens=[link])
                     children[klass_name] = sym
 
             c_name = parent_class.attrib['{%s}type-name' % self.nsmap['glib']]
@@ -215,7 +216,7 @@ class GIRParser(object):
             if not link:
                 break
 
-            sym = QualifiedSymbol([link], None)
+            sym = QualifiedSymbol(type_tokens=[link])
             hierarchy.append (sym)
             klass = parent_class
 
@@ -286,10 +287,12 @@ class GIRParser(object):
 
         self.gir_class_infos[c_name] = gi_class_info
         self.all_infos[c_name] = gi_class_info
+        self.c_names[c_name] = c_name
         self.python_names[c_name] = name
         self.javascript_names[c_name] = name
 
         struct_name = c_name + '-struct'
+        self.c_names[struct_name] = c_name
         self.python_names[struct_name] = name
         self.javascript_names[struct_name] = name
 
@@ -319,6 +322,7 @@ class GIRParser(object):
         if introspectable == '0':
             self.unintrospectable_symbols[c_name] = True
 
+        self.c_names[c_name] = c_name
         self.python_names[c_name] = python_name
         self.javascript_names[c_name] = js_name
 
@@ -365,6 +369,7 @@ class GIRParser(object):
     def __parse_gir_constant (self, nsmap, class_name, constant):
         name = '%s.%s' % (class_name, constant.attrib['name'])
         c_name = constant.attrib['{%s}type' % nsmap['c']]
+        self.c_names[c_name] = c_name
         self.python_names[c_name] = name
         self.javascript_names[c_name] = name
 
@@ -372,12 +377,14 @@ class GIRParser(object):
         name = '%s.%s' % (class_name, enum.attrib['name'])
         self.gir_types[name] = enum
         c_name = enum.attrib['{%s}type' % nsmap['c']]
+        self.c_names[c_name] = c_name
         self.python_names[c_name] = name
         self.javascript_names[c_name] = name
         for c in enum:
             if c.tag == "{http://www.gtk.org/introspection/core/1.0}member":
                 m_name = '%s.%s' % (name, c.attrib["name"].upper())
                 c_name = c.attrib['{%s}identifier' % nsmap['c']]
+                self.c_names[c_name] = c_name
                 self.python_names[c_name] = m_name
                 self.javascript_names[c_name] = m_name
 
@@ -405,7 +412,7 @@ class GIRParser(object):
         for i in range(indirection):
             tokens.append ('*')
 
-        qs = QualifiedSymbol (tokens, None)
+        qs = QualifiedSymbol (type_tokens=tokens)
         return qs
 
     def type_tokens_from_gitype (self, ptype_name):
@@ -660,22 +667,17 @@ class GIExtension(BaseExtension):
         self.language = language
 
         if language == 'c':
-            for c_name, python_name in self.gir_parser.python_names.iteritems():
-                l = doc_tool.link_resolver.get_named_link (c_name)
-                if l:
-                    l.title = c_name
-
-        if language == 'python':
-            for c_name, python_name in self.gir_parser.python_names.iteritems():
-                l = doc_tool.link_resolver.get_named_link (c_name)
-                if l:
-                    l.title = python_name
-
+            names = self.gir_parser.c_names
+        elif language == 'python':
+            names = self.gir_parser.python_names
         elif language == 'javascript':
-            for c_name, js_name in self.gir_parser.javascript_names.iteritems():
-                l = doc_tool.link_resolver.get_named_link (c_name)
-                if l:
-                    l.title = js_name
+            names = self.gir_parser.javascript_names
+        else:
+            return
+        for c_id, name in names.iteritems():
+            l = doc_tool.link_resolver.get_named_link (c_id)
+            if l:
+                l.title = name
 
     def __fill_index_columns(self, columns):
         columns.append ('Since')
@@ -695,7 +697,7 @@ class GIExtension(BaseExtension):
         if not 'since' in symbol.comment.tags:
             row.append (self.major_version)
             return
-        row.append (symbol.comment.tags.get ('since').value)
+        row.append (symbol.comment.tags.get ('since').description)
 
     def __unnest_type (self, parameter):
         array_nesting = 0
@@ -759,7 +761,8 @@ class GIExtension(BaseExtension):
 
         type_tokens, gi_name = self.__type_tokens_and_gi_name_from_gi_node (gi_parameter)
 
-        res = ParameterSymbol (param_name, type_tokens, param_comment)
+        res = ParameterSymbol (argname=param_name, type_tokens=type_tokens,
+                comment=param_comment)
         res.add_extension_attribute ('gi-extension', 'gi_name', gi_name)
 
         direction = gi_parameter.attrib.get('direction')
@@ -771,13 +774,14 @@ class GIExtension(BaseExtension):
 
     def __create_return_value_symbol (self, gi_retval, comment):
         if comment:
-            return_comment = comment.tags.get ('returns')
+            return_tag = comment.tags.get ('returns')
+            return_comment = comment_from_tag (return_tag)
         else:
             return_comment = None
 
         type_tokens, gi_name = self.__type_tokens_and_gi_name_from_gi_node(gi_retval)
 
-        res = ReturnValueSymbol (type_tokens, return_comment)
+        res = ReturnValueSymbol (type_tokens=type_tokens, comment=return_comment)
         res.add_extension_attribute ('gi-extension', 'gi_name', gi_name)
 
         return res
@@ -840,7 +844,9 @@ class GIExtension(BaseExtension):
 
     def __create_signal_symbol (self, node, comment, object_name, name):
         parameters, retval = self.__create_parameters_and_retval (node, comment)
-        res = SignalSymbol (object_name, parameters, retval, comment, name, None)
+        res = get_or_create_symbol(SignalSymbol, object_name=object_name,
+                parameters=parameters, return_value=retval,
+                comment=comment, name=name)
 
         if comment:
             comment.tags.pop ('returns', None)
@@ -868,7 +874,7 @@ class GIExtension(BaseExtension):
 
     def __create_property_symbol (self, node, comment, object_name, name):
         type_tokens, gi_name = self.__type_tokens_and_gi_name_from_gi_node(node)
-        type_ = QualifiedSymbol (type_tokens, None)
+        type_ = QualifiedSymbol (type_tokens=type_tokens)
         type_.add_extension_attribute ('gi-extension', 'gi_name', gi_name)
 
         flags = []
@@ -884,7 +890,8 @@ class GIExtension(BaseExtension):
         elif construct == '1':
             flags.append (ConstructFlag())
 
-        res = PropertySymbol (type_, object_name, comment, name)
+        res = get_or_create_symbol(PropertySymbol, prop_type=type_, object_name=object_name,
+                comment=comment, name=name)
 
         extra_content = doc_tool.formatter._format_flags (flags)
         res.extension_contents['Flags'] = extra_content
@@ -893,8 +900,8 @@ class GIExtension(BaseExtension):
 
     def __create_vfunc_symbol (self, node, comment, object_name, name):
         parameters, retval = self.__create_parameters_and_retval (node, comment)
-        symbol = VFunctionSymbol (object_name, parameters, retval, comment, name,
-                None)
+        symbol = get_or_create_symbol(VFunctionSymbol, object_name=object_name, parameters=parameters, 
+                return_value=retval, comment=comment, name=name)
 
         self.__sort_parameters (symbol, retval, parameters)
 
@@ -902,11 +909,11 @@ class GIExtension(BaseExtension):
 
     def __create_class_symbol (self, symbol, gi_name):
         comment_name = 'SECTION:%s' % symbol.name.lower()
-        class_comment = session.query(CommentBlock).filter_by(name=comment_name).first()
+        class_comment = doc_tool.comments.get(comment_name)
         hierarchy = self.gir_parser.gir_hierarchies.get (gi_name)
         children = self.gir_parser.gir_children_map.get (gi_name)
-        class_symbol = ClassSymbol (hierarchy, children, class_comment,
-                symbol.name, None)
+        class_symbol = get_or_create_symbol(ClassSymbol, hierarchy=hierarchy, children=children,
+                comment=class_comment, name=symbol.name)
         return class_symbol
 
     def __update_function (self, func):
@@ -967,14 +974,14 @@ class GIExtension(BaseExtension):
         if klass_name:
             for signal_name, signal_node in gi_class_info.signals.iteritems():
                 block_name = '%s::%s' % (klass_name, signal_name)
-                comment = session.query(CommentBlock).filter_by(name=block_name).first()
+                comment = doc_tool.comments.get(block_name)
                 sym = self.__create_signal_symbol (signal_node, comment,
                         klass_name, signal_name)
                 symbols.append (sym)
 
             for prop_name, prop_node in gi_class_info.properties.iteritems():
                 block_name = '%s:%s' % (klass_name, prop_name)
-                comment = session.query(CommentBlock).filter_by(name=block_name).first()
+                comment = doc_tool.comments.get(block_name)
                 sym = self.__create_property_symbol (prop_node, comment,
                         klass_name, prop_name)
                 symbols.append (sym)
@@ -982,7 +989,7 @@ class GIExtension(BaseExtension):
         class_struct_name = gi_class_info.class_struct_name
         if class_struct_name:
             for vfunc_name, vfunc_node in gi_class_info.vmethods.iteritems():
-                parent_comment = session.query(CommentBlock).filter_by(name=class_struct_name).first()
+                parent_comment =doc_tool.comments.get(class_struct_name)
                 comment = None
                 if parent_comment:
                     comment = parent_comment.params.get (vfunc_node.attrib['name'])
@@ -1034,9 +1041,9 @@ class GIExtension(BaseExtension):
         elif wkn == 'gobject-hierarchy':
             page = Page(wkn)
             graph = doc_tool.formatter._create_hierarchy_graph(self.gir_parser.global_hierarchy)
-            symbol = ObjectHierarchySymbol (self.gir_parser.global_hierarchy,
-                    None, 'GObject-hierarchy', None)
-            page.add_symbol (symbol)
+            #symbol = ObjectHierarchySymbol (self.gir_parser.global_hierarchy,
+            #        None, 'GObject-hierarchy', None)
+            #page.add_symbol (symbol)
             return page
 
     def setup (self):

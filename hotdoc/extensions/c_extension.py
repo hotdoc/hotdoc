@@ -4,11 +4,13 @@ import clang.cindex
 from ctypes import *
 from fnmatch import fnmatch
 
+from datetime import datetime
+
 from hotdoc.core.base_extension import BaseExtension
 from hotdoc.utils.loggable import Loggable, progress_bar
 from hotdoc.core.doc_tool import doc_tool
 from hotdoc.core.symbols import *
-from hotdoc.core.comment_block import CommentBlock
+from hotdoc.core.comment_block import CommentBlock, comment_from_tag
 from hotdoc.lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
 from hotdoc.core.links import Link
 
@@ -58,6 +60,7 @@ class ClangScanner(Loggable):
 
         self.parsed = set({})
 
+        n = datetime.now()
         if not full_scan:
             for filename in self.filenames:
                 with open (filename, 'r') as f:
@@ -65,6 +68,8 @@ class ClangScanner(Loggable):
                     for c in cs:
                         block = doc_tool.raw_comment_parser.parse_comment(c[0], c[1], c[2])
                         self.comments[block.name] = block
+
+        print "Parsing comments takes", datetime.now() - n
 
         for filename in self.filenames:
             if os.path.abspath(filename) in self.parsed:
@@ -115,8 +120,8 @@ class ClangScanner(Loggable):
             self.__total_files_parsed += 1
             self.__update_progress ()
             self.find_internal_symbols (cursors, tu)
-        else:
-            self.find_external_symbols (cursors, tu)
+        #else:
+        #    self.find_external_symbols (cursors, tu)
 
     # That's the fastest way of obtaining our ast nodes for a given filename
     def __get_cursors (self, tu, extent):
@@ -216,7 +221,8 @@ class ClangScanner(Loggable):
         parameters = []
 
         if comment:
-            return_comment = comment.tags.pop('returns', None) 
+            return_tag = comment.tags.pop('returns', None) 
+            return_comment = comment_from_tag(return_tag)
         else:
             return_comment = None
 
@@ -227,7 +233,8 @@ class ClangScanner(Loggable):
                 t = node.underlying_typedef_type
                 res = t.get_pointee().get_result()
                 type_tokens = self.make_c_style_type_name (res)
-                return_value = ReturnValueSymbol(type_tokens, return_comment)
+                return_value = ReturnValueSymbol(type_tokens=type_tokens,
+                        comment=return_comment)
             else:
                 if comment:
                     param_comment = comment.params.get (child.displayname)
@@ -235,10 +242,13 @@ class ClangScanner(Loggable):
                     param_comment = None
 
                 type_tokens = self.make_c_style_type_name (child.type)
-                parameter = ParameterSymbol (child.displayname, type_tokens, param_comment)
+                parameter = ParameterSymbol (argname=child.displayname,
+                        type_tokens=type_tokens, comment=param_comment)
                 parameters.append (parameter)
 
-        sym = CallbackSymbol (parameters, return_value, comment, node.spelling, node.location)
+        sym = get_or_create_symbol(CallbackSymbol, parameters=parameters,
+                return_value=return_value, comment=comment, name=node.spelling,
+                filename=str(node.location.file), lineno=node.location.line)
         return sym
 
     def __parse_public_fields (self, decl):
@@ -338,12 +348,14 @@ class ClangScanner(Loggable):
 
             type_tokens = self.make_c_style_type_name (field.type)
             is_function_pointer = ast_node_is_function_pointer (field.type)
-            member = FieldSymbol (is_function_pointer, field.spelling,
-                    type_tokens, member_comment)
+            member = FieldSymbol (is_function_pointer=is_function_pointer,
+                    member_name=field.spelling, type_tokens=type_tokens,
+                    comment=member_comment)
             members.append (member)
 
-        return StructSymbol (raw_text, members, comment, node.spelling,
-                node.location)
+        return get_or_create_symbol(StructSymbol, raw_text=raw_text, members=members,
+                comment=comment, name=node.spelling,
+                filename=str(node.location.file), lineno=node.location.line)
 
     def __create_enum_symbol (self, node, comment):
         members = []
@@ -355,16 +367,21 @@ class ClangScanner(Loggable):
             else:
                 member_comment = None
             member_value = member.enum_value
-            member = Symbol (member_comment, member.spelling, member.location)
+            member = get_or_create_symbol(Symbol, comment=member_comment, name=member.spelling,
+                    filename=str(member.location.file),
+                    lineno=member.location.line)
             member.enum_value = member_value
             members.append (member)
 
-        return EnumSymbol (members, comment, node.spelling, node.location)
+        return get_or_create_symbol(EnumSymbol, members=members, comment=comment, name=node.spelling,
+                filename=str(node.location.file), lineno=node.location.line)
 
     def __create_alias_symbol (self, node, comment):
         type_tokens = self.make_c_style_type_name(node.underlying_typedef_type)
-        aliased_type = QualifiedSymbol (type_tokens, None)
-        return AliasSymbol (aliased_type, comment, node.spelling, node.location)
+        aliased_type = QualifiedSymbol (type_tokens=type_tokens)
+        return get_or_create_symbol(AliasSymbol, aliased_type=aliased_type, comment=comment,
+                name=node.spelling, filename=str(node.location.file),
+                lineno=node.location.line)
 
     def __create_typedef_symbol (self, node): 
         t = node.underlying_typedef_type
@@ -384,24 +401,27 @@ class ClangScanner(Loggable):
     def __create_function_macro_symbol (self, node, comment, original_text): 
         return_value = None
         if comment:
-            return_comment = comment.tags.get ('returns')
-            if return_comment:
-                comment.tags.pop ('returns')
-                return_value = ReturnValueSymbol ([], return_comment)
+            return_tag = comment.tags.pop ('returns', None)
+            if return_tag:
+                return_comment = comment_from_tag (return_tag)
+                return_value = ReturnValueSymbol (comment=return_comment)
 
         parameters = []
         if comment:
             for param_name, param_comment in comment.params.iteritems():
-                parameter = ParameterSymbol (param_name, [], param_comment)
+                parameter = ParameterSymbol (argname=param_name, comment = param_comment)
                 parameters.append (parameter)
 
-        sym = FunctionMacroSymbol (return_value, parameters, original_text,
-                comment, node.spelling, node.location)
+        sym = get_or_create_symbol(FunctionMacroSymbol, return_value=return_value,
+                parameters=parameters, original_text=original_text,
+                comment=comment, name=node.spelling,
+                filename=str(node.location.file), lineno=node.location.line)
         return sym
 
     def __create_constant_symbol (self, node, comment, original_text):
-        return ConstantSymbol (original_text, comment, node.spelling,
-                node.location)
+        return get_or_create_symbol(ConstantSymbol, original_text=original_text, comment=comment,
+                name=node.spelling, filename=str(node.location.file),
+                lineno=node.location.line)
 
     def __create_macro_symbol (self, node):
         l = linecache.getline (str(node.location.file), node.location.line)
@@ -426,12 +446,14 @@ class ClangScanner(Loggable):
         parameters = []
 
         if comment:
-            return_comment = comment.tags.pop('returns', None) 
+            return_tag = comment.tags.pop('returns', None) 
+            return_comment = comment_from_tag(return_tag)
         else:
             return_comment = None
 
         type_tokens = self.make_c_style_type_name (node.result_type)
-        return_value = ReturnValueSymbol (type_tokens, return_comment)
+        return_value = ReturnValueSymbol (type_tokens=type_tokens,
+                comment=return_comment)
 
         for param in node.get_arguments():
             if comment:
@@ -440,9 +462,12 @@ class ClangScanner(Loggable):
                 param_comment = None
 
             type_tokens = self.make_c_style_type_name (param.type)
-            parameter = ParameterSymbol (param.displayname, type_tokens, param_comment)
+            parameter = ParameterSymbol (argname=param.displayname,
+                    type_tokens=type_tokens, comment=param_comment)
             parameters.append (parameter)
-        sym = FunctionSymbol (parameters, return_value, comment, node.spelling, node.location)
+        sym = get_or_create_symbol(FunctionSymbol, parameters=parameters,
+                return_value=return_value, comment=comment, name=node.spelling,
+                filename=str(node.location.file), lineno=node.location.line)
         return sym
 
     def __create_exported_variable_symbol (self, node):
@@ -457,8 +482,10 @@ class ClangScanner(Loggable):
         original_text = '\n'.join(original_lines)
         comment = self.comments.get (node.spelling)
 
-        sym = ExportedVariableSymbol (original_text, self.comments.get (node.spelling),
-                node.spelling, node.location)
+        sym = get_or_create_symbol(ExportedVariableSymbol, original_text=original_text,
+                comment=self.comments.get (node.spelling),
+                name=node.spelling, filename=str(node.location.file),
+                lineno=node.location.line)
         return sym
 
     def find_external_symbols(self, nodes, tu):

@@ -31,7 +31,6 @@ class Page:
         self.typed_symbols[PropertySymbol] = TypedSymbolsList ("Properties")
         self.typed_symbols[VFunctionSymbol] = TypedSymbolsList ("Virtual Methods")
         self.typed_symbols[ClassSymbol] = TypedSymbolsList ("Classes")
-        self.typed_symbols[ObjectHierarchySymbol] = TypedSymbolsList ("Class hierarchy")
 
         self.ast = None
         self.short_description = ''

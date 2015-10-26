@@ -10,25 +10,286 @@ from ..utils.utils import all_subclasses
 from .doc_tool import doc_tool
 
 import sqlalchemy
-from sqlalchemy import create_engine, Column, String, Boolean
-from hotdoc.core.alchemy_integration import Base, engine
+from sqlalchemy import (create_engine, Column, String, Integer, Boolean,
+        ForeignKey, PickleType)
+from sqlalchemy.orm import relationship
+from hotdoc.core.alchemy_integration import *
 
-class Symbol (object):
-    def __init__(self, comment, name, location):
-        self.comment = comment
-        self.name = name
-        self.original_text = None
-        self.detailed_description = None
+def get_or_create_symbol(type_, **kwargs):
+    name = kwargs.pop('name')
+    symbol = session.query(type_).filter(type_.name == name).first()
+    if not symbol:
+        symbol = type_(name=name)
+    else:
+        print "This symbol already exists, duh"
+
+    for key, value in kwargs.items():
+        setattr(symbol, key, value)
+
+    return symbol
+
+class Symbol (Base):
+    __tablename__ = 'symbols'
+
+    id = Column(Integer, primary_key=True)
+    comment = Column(PickleType)
+    name = Column(String)
+    link = Column(Link.as_mutable(PickleType))
+    filename = Column(String)
+    lineno = Column(Integer)
+    location = Column(PickleType)
+    _type_ = Column(String)
+    extension_contents = Column(MutableDict.as_mutable(PickleType))
+    extension_attributes = Column(MutableDict.as_mutable(PickleType))
+    skip = Column(Boolean)
+
+    __mapper_args__ = {
+            'polymorphic_identity': 'symbol',
+            'polymorphic_on': _type_,
+    }
+
+    def __init__(self, **kwargs):
+        self.extension_contents = {}
+        self.extension_attributes = {}
+        self.name = kwargs.get('name')
         self.skip = False
-        self.link = doc_tool.link_resolver.get_named_link(self._make_unique_id())
-        if not self.link:
-            self.link = Link(self._make_unique_id(), self._make_name(),
+        link = doc_tool.link_resolver.get_named_link(self._make_unique_id())
+        if not link:
+            link = Link(self._make_unique_id(), self._make_name(),
                     self._make_unique_id())
-            doc_tool.link_resolver.add_link (self.link)
+            doc_tool.link_resolver.add_link (link)
         else:
-            self.link.ref = self._make_unique_id()
+            link.ref = self._make_unique_id()
 
-        self.location = location
+        kwargs['link'] = link
+
+        Base.__init__(self, **kwargs)
+
+    def add_extension_attribute (self, ext_name, key, value):
+        attributes = self.extension_attributes.pop (ext_name, {})
+        attributes[key] = value
+        self.extension_attributes[ext_name] = attributes
+
+    def get_extension_attribute (self, ext_name, key):
+        attributes = self.extension_attributes.get (ext_name)
+        if not attributes:
+            return None
+        return attributes.get (key)
+
+    def parse_tags(self):
+        if not self.comment:
+            return []
+
+        if not hasattr (self.comment, "tags"):
+            return []
+
+        tags = []
+        for tag, value in self.comment.tags.iteritems():
+            tags.append (Tag (tag, value.description))
+        return tags
+
+    def do_format (self):
+        self.tags = self.parse_tags ()
+        self.skip = not doc_tool.formatter.format_symbol (self)
+
+    def _make_name (self):
+        return self.name
+
+    def _make_unique_id (self):
+        return self.name
+
+    def get_extra_links (self):
+        return []
+
+    def get_type_name (self):
+        return ''
+
+    def get_source_location (self):
+        return self.location
+
+class Tag:
+    def __init__(self, name, value):
+        self.name = name
+        self.description = value
+
+class FunctionSymbol (Symbol):
+    __tablename__ = 'functions'
+    id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
+    parameters = Column(PickleType)
+    return_value = Column(PickleType)
+    is_method = Column(Boolean)
+    throws = Column(Boolean)
+    __mapper_args__ = {
+            'polymorphic_identity': 'functions',
+    }
+
+    def __init__(self, **kwargs):
+        self.parameters = {}
+        self.throws = False
+        self.is_method = False
+        Symbol.__init__(self, **kwargs)
+
+    def get_type_name (self):
+        if self.is_method:
+            return 'Method'
+        return 'Function'
+
+class SignalSymbol (FunctionSymbol):
+    __tablename__ = 'signals'
+    id = Column(Integer, ForeignKey('functions.id'), primary_key=True)
+    __mapper_args__ = {
+            'polymorphic_identity': 'signals',
+    }
+    object_name = Column(String)
+    flags = Column(PickleType)
+
+    def __init__(self, **kwargs):
+        self.flags = []
+        FunctionSymbol.__init__(self, **kwargs)
+
+    def get_type_name (self):
+        return "Signal"
+
+    def _make_unique_id (self):
+        return '%s:::%s---signal' % (self.object_name, self.name)
+
+class VFunctionSymbol (FunctionSymbol):
+    __tablename__ = 'vfunctions'
+    id = Column(Integer, ForeignKey('functions.id'), primary_key=True)
+    __mapper_args__ = {
+            'polymorphic_identity': 'vfunctions',
+    }
+    object_name = Column(String)
+    flags = Column(PickleType)
+
+    def __init__(self, **kwargs):
+        self.flags = []
+        FunctionSymbol.__init__(self, **kwargs)
+
+    def get_type_name (self):
+        return "Virtual Method"
+
+    def _make_unique_id (self):
+        return '%s:::%s---vfunc' % (self.object_name, self.name)
+
+class PropertySymbol (Symbol):
+    __tablename__ = 'properties'
+    id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
+    __mapper_args__ = {
+            'polymorphic_identity': 'properties',
+    }
+    object_name = Column(String)
+    prop_type = Column(PickleType)
+
+    def _make_unique_id (self):
+        return '%s:::%s---property' % (self.object_name, self.name)
+
+class CallbackSymbol (FunctionSymbol):
+    __tablename__ = 'callbacks'
+    id = Column(Integer, ForeignKey('functions.id'), primary_key=True)
+    __mapper_args__ = {
+            'polymorphic_identity': 'callbacks',
+    }
+
+    def get_type_name (self):
+        return "Callback"
+
+class EnumSymbol (Symbol):
+    __tablename__ = 'enums'
+    id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
+    __mapper_args__ = {
+            'polymorphic_identity': 'enums',
+    }
+    members = Column(PickleType)
+
+    def __init__(self, **kwargs):
+        self.members = {}
+        Symbol.__init__(self, **kwargs)
+
+    def do_format(self):
+        for member in self.members:
+            member.do_format()
+        return Symbol.do_format (self)
+
+    def get_extra_links (self):
+        return [m.link for m in self.members]
+
+    def get_type_name (self):
+        return "Enumeration"
+
+class StructSymbol (Symbol):
+    __tablename__ = 'structs'
+    id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
+    __mapper_args__ = {
+            'polymorphic_identity': 'structs',
+    }
+    members = Column(PickleType)
+    raw_text = Column(String)
+
+    def __init__(self, **kwargs):
+        self.members = {}
+        Symbol.__init__(self, **kwargs)
+
+    def do_format(self):
+        for member in self.members:
+            member.do_format()
+        return Symbol.do_format (self)
+
+    def get_type_name (self):
+        return "Structure"
+
+    def _make_unique_id (self):
+        return self.name + "-struct"
+
+class MacroSymbol (Symbol):
+    __tablename__ = 'macros'
+    id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
+    __mapper_args__ = {
+            'polymorphic_identity': 'macros',
+    }
+    original_text = Column(String)
+
+class FunctionMacroSymbol (MacroSymbol):
+    __tablename__ = 'function_macros'
+    id = Column(Integer, ForeignKey('macros.id'), primary_key=True)
+    __mapper_args__ = {
+            'polymorphic_identity': 'function_macros',
+    }
+
+    parameters = Column(PickleType)
+    return_value = Column(PickleType)
+
+    def __init__(self, **kwargs):
+        self.parameters = {}
+        MacroSymbol.__init__(self, **kwargs)
+
+    def get_type_name (self):
+        return "Function macro"
+
+class ConstantSymbol (MacroSymbol):
+    __tablename__ = 'constants'
+    id = Column(Integer, ForeignKey('macros.id'), primary_key=True)
+    __mapper_args__ = {
+            'polymorphic_identity': 'constants',
+    }
+
+    def get_type_name (self):
+        return "Constant"
+
+
+class ExportedVariableSymbol (MacroSymbol):
+    __tablename__ = 'exported_variables'
+    id = Column(Integer, ForeignKey('macros.id'), primary_key=True)
+    __mapper_args__ = {
+            'polymorphic_identity': 'exported_variables',
+    }
+
+    def get_type_name (self):
+        return "Exported variable"
+
+class QualifiedSymbol (object):
+    def __init__(self, type_tokens=[]):
+        self.type_tokens = type_tokens
         self.extension_contents = {}
         self.extension_attributes = {}
 
@@ -52,162 +313,12 @@ class Symbol (object):
 
         tags = []
         for tag, value in self.comment.tags.iteritems():
-            tags.append (Tag (tag, value.value))
+            tags.append (Tag (tag, value.description))
         return tags
 
     def do_format (self):
         self.tags = self.parse_tags ()
         self.skip = not doc_tool.formatter.format_symbol (self)
-
-    def _make_name (self):
-        return self.name
-
-    def _make_unique_id (self):
-        return self.name
-
-    def get_extra_links (self):
-        return []
-
-    def add_annotation (self, annotation):
-        self.annotations.append (annotation)
-
-    def get_type_name (self):
-        return ''
-
-    def __apply_qualifiers (self, type_, tokens):
-        if type_.is_const_qualified():
-            tokens.append ('const ')
-        if type_.is_restrict_qualified():
-            tokens.append ('restrict ')
-        if type_.is_volatile_qualified():
-            tokens.append ('volatile ')
-
-    def get_source_location (self):
-        return self.location
-
-class Tag:
-    def __init__(self, name, value):
-        self.name = name
-        self.description = value
-
-class FunctionSymbol (Symbol):
-    def __init__(self, parameters, return_value, *args):
-        Symbol.__init__(self, *args)
-        self.parameters = parameters
-        self.return_value = return_value
-        self.throws = False
-        self.is_method = False
-
-    def get_type_name (self):
-        if self.is_method:
-            return 'Method'
-        return 'Function'
-
-class ObjectHierarchySymbol (Symbol):
-    def __init__(self, hierarchy, *args):
-        Symbol.__init__(self, *args)
-        self.hierarchy = hierarchy
-
-class SignalSymbol (FunctionSymbol):
-    def __init__(self, object_name, *args):
-        self.object_name = object_name
-        FunctionSymbol.__init__(self, *args)
-        self.flags = []
-
-    def get_type_name (self):
-        return "Signal"
-
-    def _make_unique_id (self):
-        return '%s:::%s---signal' % (self.object_name, self.name)
-
-class VFunctionSymbol (FunctionSymbol):
-    def __init__(self, object_name, *args):
-        self.object_name = object_name
-        FunctionSymbol.__init__(self, *args)
-        self.flags = []
-
-    def get_type_name (self):
-        return "Virtual Method"
-
-    def _make_unique_id (self):
-        return '%s:::%s---vfunc' % (self.object_name, self.name)
-
-class PropertySymbol (Symbol):
-    def __init__(self, type_, object_name, comment, name, location=None):
-        self.object_name = object_name
-        self.type_ = type_
-        self.flags = []
-        Symbol.__init__(self, comment, name, location)
-
-    def _make_unique_id (self):
-        return '%s:::%s---property' % (self.object_name, self.name)
-
-class CallbackSymbol (FunctionSymbol):
-    pass
-
-    def get_type_name (self):
-        return "Callback"
-
-class EnumSymbol (Symbol):
-    def __init__(self, members, *args):
-        Symbol.__init__(self, *args)
-        self.members = members
-
-    def do_format(self):
-        for member in self.members:
-            member.do_format()
-        return Symbol.do_format (self)
-
-    def get_extra_links (self):
-        return [m.link for m in self.members]
-
-    def get_type_name (self):
-        return "Enumeration"
-
-class StructSymbol (Symbol):
-    def __init__(self, raw_text, members, *args):
-        Symbol.__init__(self, *args)
-        self.raw_text = raw_text
-        self.members = members
-
-    def do_format(self):
-        for member in self.members:
-            member.do_format()
-        return Symbol.do_format (self)
-
-    def get_type_name (self):
-        return "Structure"
-
-    def _make_unique_id (self):
-        return self.name + "-struct"
-
-class MacroSymbol (Symbol):
-    def __init__(self, original_text, *args):
-        Symbol.__init__(self, *args)
-        self.original_text = original_text
-
-class FunctionMacroSymbol (MacroSymbol):
-    def __init__(self, return_value, parameters, *args):
-        MacroSymbol.__init__(self, *args)
-        self.return_value = return_value
-        self.parameters = parameters
-
-    def get_type_name (self):
-        return "Function macro"
-
-class ConstantSymbol (MacroSymbol):
-    def get_type_name (self):
-        return "Constant"
-
-
-class ExportedVariableSymbol (MacroSymbol):
-    def get_type_name (self):
-        return "Exported variable"
-
-class QualifiedSymbol (Symbol):
-    def __init__(self, type_tokens, comment):
-        Symbol.__init__(self, comment, None, None)
-        self.type_tokens = type_tokens
 
     def get_type_link (self):
         for tok in self.type_tokens:
@@ -216,19 +327,33 @@ class QualifiedSymbol (Symbol):
         return None
 
 class ReturnValueSymbol (QualifiedSymbol):
-    pass
+    def __init__(self, comment=None, **kwargs):
+        self.comment = comment
+        QualifiedSymbol.__init__(self, **kwargs)
 
 class ParameterSymbol (QualifiedSymbol):
-    def __init__(self, argname, *args):
-        self.argname = argname
+    def __init__(self, argname='', comment=None, **kwargs):
+        QualifiedSymbol.__init__(self, **kwargs)
         self.array_nesting = 0
-        QualifiedSymbol.__init__(self, *args)
+        self.argname = argname
+        self.comment = comment
 
 class FieldSymbol (QualifiedSymbol):
-    def __init__(self, is_function_pointer, member_name, *args):
+    def __init__(self, member_name='', is_function_pointer=False,
+            comment=None, **kwargs):
+        QualifiedSymbol.__init__(self, **kwargs)
         self.member_name = member_name
         self.is_function_pointer = is_function_pointer
-        QualifiedSymbol.__init__(self, *args)
+        self.comment = comment
+        link = doc_tool.link_resolver.get_named_link(self.member_name)
+        if not link:
+            link = Link(self.member_name, self.member_name,
+                    self.member_name)
+            doc_tool.link_resolver.add_link (link)
+        else:
+            link.ref = self.member_name
+
+        self.link = link
 
     def _make_name (self):
         return self.member_name
@@ -237,19 +362,25 @@ class FieldSymbol (QualifiedSymbol):
         return "Attribute"
 
 class AliasSymbol (Symbol):
-    def __init__(self, aliased_type, *args):
-        Symbol.__init__(self, *args)
-        self.aliased_type = aliased_type
+    __tablename__ = 'aliases'
+    id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
+    __mapper_args__ = {
+            'polymorphic_identity': 'aliases',
+    }
+    aliased_type = Column(PickleType)
 
     def get_type_name (self):
         return "Alias"
 
 
 class ClassSymbol (Symbol):
-    def __init__(self, hierarchy, children, *args):
-        Symbol.__init__(self, *args)
-        self.hierarchy = hierarchy
-        self.children = children
+    __tablename__ = 'classes'
+    id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
+    __mapper_args__ = {
+            'polymorphic_identity': 'classes',
+    }
+    hierarchy = Column(PickleType)
+    children = Column(PickleType)
 
     def get_type_name (self):
         return "Class"

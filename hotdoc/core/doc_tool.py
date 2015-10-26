@@ -3,7 +3,7 @@ import os, sys, argparse
 reload(sys)  
 sys.setdefaultencoding('utf8')
 
-from hotdoc.core.alchemy_integration import session
+from hotdoc.core.alchemy_integration import session, finalize_db, purge_db
 
 from .naive_index import NaiveIndexFormatter
 from .links import LinkResolver
@@ -40,6 +40,7 @@ class DocTool(Loggable):
         self.extensions = []
         self.pages = []
         self.symbols = {}
+        self.comments = {}
         self.full_scan = False
         self.full_scan_patterns = ['*.h']
         self.link_resolver = LinkResolver()
@@ -51,9 +52,13 @@ class DocTool(Loggable):
         self.parse_args ()
 
         # We're done setting up, extensions can setup too
+        n = datetime.now()
         for extension in self.extensions:
+            n = datetime.now()
             extension.setup ()
+            purge_db()
             self.symbols.update (extension.get_extra_symbols())
+            self.comments.update (extension.get_comments())
 
         page = self.page_parser.parse (self.index_file)
 
@@ -84,7 +89,9 @@ class DocTool(Loggable):
         self.queued_well_known_names.insert (0, name)
 
     def get_symbol (self, name):
-        return self.symbols.get (name)
+        from hotdoc.core.symbols import Symbol
+        sym = session.query(Symbol).filter_by(name=name).first()
+        return sym
 
     def __setup (self):
         if os.name == 'nt':
@@ -170,9 +177,9 @@ class DocTool(Loggable):
         self.index_file = args[0].index
 
     def finalize (self):
-        self.link_resolver.pickle (self.output)
+        n = datetime.now()
         session.commit()
+        print "commiting took me", datetime.now() - n
         session.close()
-
 
 doc_tool = DocTool()

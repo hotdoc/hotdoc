@@ -1,14 +1,16 @@
 import os
 import cPickle as pickle
 from datetime import datetime
+from hotdoc.core.alchemy_integration import MutableObject
 
 import traceback
 
-class Link (object):
+class Link (MutableObject):
     def __init__(self, ref, title, id_):
         self.title = title
         self.ref = ref
         self.id_ = id_
+        MutableObject.__init__(self)
 
     def get_link (self):
         return self.ref
@@ -17,20 +19,6 @@ class Link (object):
 class LinkResolver(object):
     def __init__(self):
         self.__links = {}
-
-    def unpickle (self, output):
-        n = datetime.now()
-        try:
-            links = pickle.load (open (os.path.join (output, "links.p"), 'rb'))
-        except IOError:
-            return
-
-        self.__links = links
-
-    def pickle (self, output):
-        n = datetime.now()
-        pickle.dump (self.__links,
-                open (os.path.join (output, "links.p"), 'wb'))
 
     def get_named_link (self, name):
         return self.__links.get (name)
