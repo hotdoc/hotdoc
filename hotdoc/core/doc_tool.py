@@ -3,6 +3,8 @@ import os, sys, argparse
 reload(sys)  
 sys.setdefaultencoding('utf8')
 
+import pygraphviz as pg
+
 from hotdoc.core.alchemy_integration import session, finalize_db, purge_db
 
 from .naive_index import NaiveIndexFormatter
@@ -47,9 +49,26 @@ class DocTool(Loggable):
         self.well_known_names = {}
         self.queued_well_known_names = []
 
+    def dump_dependencies (self, page, graph):
+        graph.add_node (page.source_file, style="rounded", shape="box")
+        for symbol in page.symbols:
+            if symbol.filename:
+                graph.add_node (symbol.filename, shape="box")
+                graph.add_edge (page.source_file, symbol.filename)
+            if symbol.comment and symbol.comment.filename:
+                graph.add_node (symbol.comment.filename, shape="box")
+                graph.add_edge(page.source_file, symbol.comment.filename)
+
+        for cpage in page.subpages:
+            graph.add_node (cpage.source_file, shape="box", style="rounded")
+            graph.add_edge (page.source_file, cpage.source_file)
+            self.dump_dependencies (cpage, graph)
+
     def parse_and_format (self):
         self.__setup()
         self.parse_args ()
+
+        graph = pg.AGraph(directed=True, strict=True)
 
         # We're done setting up, extensions can setup too
         n = datetime.now()
@@ -61,6 +80,7 @@ class DocTool(Loggable):
             self.comments.update (extension.get_comments())
 
         page = self.page_parser.parse (self.index_file)
+        self.dump_dependencies (page, graph)
 
         from ..formatters.html.html_formatter import HtmlFormatter
         self.formatter = HtmlFormatter([])
@@ -75,8 +95,11 @@ class DocTool(Loggable):
             if formatter:
                 self.formatter = formatter
             page = extension.create_page_from_well_known_name (wkn)
+            self.dump_dependencies(page, graph)
             self.formatter.format (page)
 
+        with open ('dependency.svg', 'w') as f:
+            graph.draw(f, prog='dot', format='svg', args="-Grankdir=LR")
         self.finalize()
 
     def register_well_known_name (self, name, extension):

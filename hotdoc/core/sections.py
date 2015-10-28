@@ -9,11 +9,12 @@ class TypedSymbolsList (object):
         self.symbols = []
 
 class Page:
-    def __init__(self, name):
+    def __init__(self, name, source_file):
         self.symbols = []
         self.subpages = []
         pagename = '%s.html' % name
         self.link = Link (pagename, name, name) 
+        self.source_file = source_file
 
         self.formatted_contents = None
         self.formatted_doc = ''

@@ -25,8 +25,7 @@ class PageParser(Loggable):
         self.symbol_added_signal = Signal()
 
     def create_page (self, page_name, filename):
-        page = Page (page_name)
-        page.source_file = filename
+        page = Page (page_name, filename)
 
         if self._current_page:
             self._current_page.subpages.append (page)

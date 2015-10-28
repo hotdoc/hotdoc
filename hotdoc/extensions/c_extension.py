@@ -355,7 +355,7 @@ class ClangScanner(Loggable):
 
         return get_or_create_symbol(StructSymbol, raw_text=raw_text, members=members,
                 comment=comment, name=node.spelling,
-                filename=str(node.location.file), lineno=node.location.line)
+                filename=str(decl.location.file), lineno=decl.location.line)
 
     def __create_enum_symbol (self, node, comment):
         members = []
@@ -374,7 +374,7 @@ class ClangScanner(Loggable):
             members.append (member)
 
         return get_or_create_symbol(EnumSymbol, members=members, comment=comment, name=node.spelling,
-                filename=str(node.location.file), lineno=node.location.line)
+                filename=str(decl.location.file), lineno=decl.location.line)
 
     def __create_alias_symbol (self, node, comment):
         type_tokens = self.make_c_style_type_name(node.underlying_typedef_type)

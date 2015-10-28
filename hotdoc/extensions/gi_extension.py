@@ -997,7 +997,8 @@ class GIExtension(BaseExtension):
                     continue
 
                 block = CommentBlock (name=vfunc_node.attrib['name'],
-                        description=comment.description)
+                        description=comment.description,
+                        filename=parent_comment.filename)
                 sym = self.__create_vfunc_symbol (vfunc_node, block,
                         klass_name, vfunc_name)
                 symbols.append (sym)
@@ -1039,7 +1040,7 @@ class GIExtension(BaseExtension):
             return page
 
         elif wkn == 'gobject-hierarchy':
-            page = Page(wkn)
+            page = Page(wkn, None)
             graph = doc_tool.formatter._create_hierarchy_graph(self.gir_parser.global_hierarchy)
             #symbol = ObjectHierarchySymbol (self.gir_parser.global_hierarchy,
             #        None, 'GObject-hierarchy', None)
