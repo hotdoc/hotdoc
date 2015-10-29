@@ -88,6 +88,7 @@ class DocTool(Loggable):
 
         self.formatter.format(page)
 
+        '''
         while self.queued_well_known_names:
             wkn = self.queued_well_known_names.pop()
             extension = self.well_known_names[wkn]
@@ -97,6 +98,7 @@ class DocTool(Loggable):
             page = extension.create_page_from_well_known_name (wkn)
             self.dump_dependencies(page, graph)
             self.formatter.format (page)
+        '''
 
         with open ('dependency.svg', 'w') as f:
             graph.draw(f, prog='dot', format='svg', args="-Grankdir=LR")

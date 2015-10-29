@@ -9,7 +9,7 @@ class TypedSymbolsList (object):
         self.symbols = []
 
 class Page:
-    def __init__(self, name, source_file):
+    def __init__(self, name, source_file, formatter=None):
         self.symbols = []
         self.subpages = []
         pagename = '%s.html' % name
@@ -18,6 +18,8 @@ class Page:
 
         self.formatted_contents = None
         self.formatted_doc = ''
+
+        self.formatter = formatter
 
         self.typed_symbols = {}
         self.typed_symbols[FunctionSymbol] = TypedSymbolsList ("Functions")

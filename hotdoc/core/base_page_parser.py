@@ -89,9 +89,21 @@ class PageParser(Loggable):
         if not os.path.isfile (index_file):
             raise IOError ('Index file %s not found' % index_file)
 
+        # Save status for reentrancy
+        old_base_page = self.base_page
+        old_current_page = self._current_page
+        self.base_page = None
+        self._current_page = None
+
         self._prefix = os.path.dirname (index_file)
         self._parse_page (index_file)
         self.info ("total documented symbols : %d" %
                 self.__total_documented_symbols)
 
-        return self.base_page
+        res = self.base_page
+
+        # And restore
+        self.base_page = old_base_page
+        self._current_page = old_current_page
+
+        return res

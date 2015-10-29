@@ -865,7 +865,7 @@ class GIExtension(BaseExtension):
         if no_hooks == '1':
             flags.append (NoHooksFlag())
 
-        extra_content = doc_tool.formatter._format_flags (flags)
+        extra_content = self.get_formatter(doc_tool.output_format)._format_flags (flags)
         res.extension_contents['Flags'] = extra_content
 
         self.__sort_parameters (res, retval, parameters)
@@ -893,7 +893,7 @@ class GIExtension(BaseExtension):
         res = get_or_create_symbol(PropertySymbol, prop_type=type_, object_name=object_name,
                 comment=comment, name=name)
 
-        extra_content = doc_tool.formatter._format_flags (flags)
+        extra_content = self.get_formatter(doc_tool.output_format)._format_flags (flags)
         res.extension_contents['Flags'] = extra_content
 
         return res
@@ -1016,36 +1016,39 @@ class GIExtension(BaseExtension):
 
         return res
 
-    def create_page_from_well_known_name (self, wkn):
+    def handle_well_known_name (self, wkn):
         if self.gir_file and not self.gir_parser:
             self.gir_parser = GIRParser (self.gir_file)
+
+        formatter = self.get_formatter(doc_tool.output_format)
 
         if wkn == 'gobject-api':
             contents = ''
             for language in self.languages:
                 contents += '### [%s API](%s/gobject-api.html)\n' % \
                         (language.capitalize (), language)
-            doc_tool.page_parser.__init__()
-            index_page = doc_tool.page_parser.parse_contents (contents, 'gobject-api', None)
-            doc_tool.base_formatter.format(index_page)
+            index_page = doc_tool.page_parser.parse_contents (contents,
+                    'gobject-api', 'generated-gobject-index')
 
-            doc_tool.page_parser.__init__()
             doc_tool.page_parser.symbol_added_signal.connect (self.__adding_symbol)
 
-            doc_tool.formatter.formatting_symbol_signals[Symbol].connect(self.__formatting_symbol)
-            doc_tool.formatter.fill_index_columns_signal.connect(self.__fill_index_columns)
-            doc_tool.formatter.fill_index_row_signal.connect(self.__fill_index_row)
+            formatter.formatting_symbol_signals[Symbol].connect(self.__formatting_symbol)
+            formatter.fill_index_columns_signal.connect(self.__fill_index_columns)
+            formatter.fill_index_row_signal.connect(self.__fill_index_row)
 
+            doc_tool.page_parser._current_page = index_page
             page = doc_tool.page_parser.parse (self.gi_index)
-            return page
+            doc_tool.page_parser.symbol_added_signal.disconnect (self.__adding_symbol)
+            page.formatter = self.get_formatter(doc_tool.output_format)
+            return None, page
 
         elif wkn == 'gobject-hierarchy':
-            page = Page(wkn, None)
-            graph = doc_tool.formatter._create_hierarchy_graph(self.gir_parser.global_hierarchy)
+            page = Page(wkn, 'generated-gobject-hierarchy')
+            graph = formatter._create_hierarchy_graph(self.gir_parser.global_hierarchy)
             #symbol = ObjectHierarchySymbol (self.gir_parser.global_hierarchy,
             #        None, 'GObject-hierarchy', None)
             #page.add_symbol (symbol)
-            return page
+            return None, page
 
     def setup (self):
         self.__gather_gtk_doc_links()

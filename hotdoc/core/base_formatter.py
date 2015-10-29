@@ -38,30 +38,6 @@ class Formatter(object):
         self.__cmp = CommonMark.DocParser()
         self.__cmr = CommonMark.HTMLRenderer()
 
-    def format (self, page):
-        self.__total_pages = 0
-        self.__total_rendered_pages = 0
-        self.__total_pages = self.__get_subpages_count (page)
-
-        self.__progress_bar = progress_bar.get_progress_bar ()
-        if self.__progress_bar is not None:
-            self.__progress_bar.set_header("Rendering Sections (2 / 2)")
-            self.__progress_bar.clear()
-            self.__update_progress ()
-        
-        index_columns = ['Name', 'Type', 'In']
-        self.__index_rows = []
-        self.fill_index_columns_signal (index_columns)
-
-        self.__format_page (page)
-
-        #api_index = self._format_api_index (index_columns, self.__index_rows)
-        #print api_index
-        #if api_index:
-        #    self.__write_API_index (api_index)
-
-        self.__copy_extra_files ()
-
     def _create_hierarchy_graph (self, hierarchy):
         graph = pg.AGraph(directed=True, strict=True)
 
@@ -108,7 +84,7 @@ class Formatter(object):
             self._write_page (symbol)
 
         if out and type(symbol) not in [ReturnValueSymbol,
-                ParameterSymbol, FieldSymbol]:
+                ParameterSymbol, FieldSymbol] and False:
             row = [symbol.link, symbol.get_type_name()]
             if symbol.comment:
                 row.append (os.path.basename(symbol.comment.filename))
@@ -125,16 +101,21 @@ class Formatter(object):
             count += self.__get_subpages_count (subpage)
         return count
 
+    def format (self, page):
+        self.__format_page (page)
+        self.__copy_extra_files ()
+
     def __format_page (self, page):
         out = ""
-        page.format_symbols ()
-        page.detailed_description = self._format_page (page)[0]
-        self._write_page (page)
-        self.__total_rendered_pages += 1
-        self.__update_progress()
-
-        for page in page.subpages:
-            self.__format_page (page)
+        page.detailed_description = doc_tool.formatter._format_page (page)[0]
+        doc_tool.formatter._write_page (page)
+        for cpage in page.subpages:
+            if cpage.formatter:
+                doc_tool.formatter = cpage.formatter
+                doc_tool.formatter.format(cpage)
+            else:
+                self.__format_page (cpage)
+            doc_tool.formatter = self
 
     def __copy_extra_files (self):
         asset_path = os.path.join (doc_tool.output, 'assets')
@@ -158,6 +139,7 @@ class Formatter(object):
 
     def _write_page (self, page):
         path = os.path.join (self._output, page.link.ref)
+        #print "Writing", path
         with open (path, 'w') as f:
             out = page.detailed_description
             f.write (out.encode('utf-8'))

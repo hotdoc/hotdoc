@@ -7,7 +7,7 @@ import traceback
 
 class Link (MutableObject):
     def __init__(self, ref, title, id_):
-        self.title = title
+        self._title = title
         self.ref = ref
         self.id_ = id_
         MutableObject.__init__(self)
@@ -15,6 +15,13 @@ class Link (MutableObject):
     def get_link (self):
         return self.ref
 
+    @property
+    def title(self):
+        return self._title
+
+    @title.setter
+    def title(self, title):
+        self._title = title
 
 class LinkResolver(object):
     def __init__(self):

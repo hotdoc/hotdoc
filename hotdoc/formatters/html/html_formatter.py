@@ -325,6 +325,7 @@ class HtmlFormatter (Formatter):
         if page.parsed_page and not page.symbols:
             page.formatted_contents = doc_tool.page_parser.render_parsed_page(page.parsed_page)
 
+        page.format_symbols ()
         toc_sections = []
         symbols_details = []
 

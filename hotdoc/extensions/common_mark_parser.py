@@ -97,6 +97,22 @@ class CommonMarkParser (PageParser):
 
         return None
 
+    def check_well_known_names(self, node):
+        if node.t == 'Link':
+            handling_extension = doc_tool.get_well_known_name_handler(node.destination)
+            if handling_extension:
+                new_contents, new_page = handling_extension.handle_well_known_name(node.destination)
+                #res = handling_extension.insert_well_known_name (node.destination)
+                if new_page:
+                    self._current_page.subpages.append (new_page)
+                    node.destination += '.html'
+
+        for c in node.inline_content:
+            self.check_well_known_names (c)
+        for c in node.children:
+            self.check_well_known_names (c)
+
+
     def do_parse_page(self, contents, section):
         parsed_page = ParsedPage()
         parsed_headers = []
@@ -116,23 +132,19 @@ class CommonMarkParser (PageParser):
                 if parsed_header is not None:
                     parsed_headers.append (parsed_header)
 
+        self.check_well_known_names (ast)
+
         parsed_page.ast = ast
         parsed_page.headers = parsed_headers
+
         return parsed_page
 
     def _update_links (self, node):
         if node.t == 'Link':
-            handling_extension = doc_tool.get_well_known_name_handler(node.destination)
-            if handling_extension:
-                res = handling_extension.insert_well_known_name (node.destination)
-                if not res:
-                    doc_tool.queue_well_known_name(node.destination)
-                    node.destination += '.html'
-            else:
-                link = doc_tool.link_resolver.get_named_link (node.destination)
-                node.label[-1].c += ' '
-                if link and link.get_link() is not None:
-                    node.destination = link.get_link()
+            link = doc_tool.link_resolver.get_named_link (node.destination)
+            node.label[-1].c += ' '
+            if link and link.get_link() is not None:
+                node.destination = link.get_link()
 
         for c in node.inline_content:
             self._update_links (c)
