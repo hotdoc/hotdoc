@@ -1,7 +1,9 @@
-import sys, re
+import sys, re, os
 from itertools import izip_longest
 from datetime import datetime
 from hotdoc.core.comment_block import *
+
+from ..utils.utils import markdown_include_content
 
 #http://stackoverflow.com/questions/434287/what-is-the-most-pythonic-way-to-iterate-over-a-list-in-chunks
 def grouper(iterable, n, fillvalue=None):
@@ -143,9 +145,11 @@ class GtkDocRawCommentParser (object):
         return comment.strip()
 
     def parse_comment (self, comment, filename, lineno, stripped=False):
+        from ..core.doc_tool import doc_tool
         if not stripped:
             comment = self.strip_comment (comment)
 
+        comment = markdown_include_content(comment, filename, doc_tool.include_paths, lineno)
         split = re.split (r'\n[\W]*\n', comment, maxsplit=1)
         block_name, parameters, annotations = self.parse_title_and_parameters (split[0])
         description = ""

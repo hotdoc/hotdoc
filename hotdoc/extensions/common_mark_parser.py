@@ -5,6 +5,7 @@ import re
 import CommonMark
 from xml.sax.saxutils import unescape
 from ..core.doc_tool import doc_tool
+from ..utils.utils import markdown_include_content
 from ..core.base_page_parser import PageParser, ParsedPage
 
 class CommonMarkParser (PageParser):
@@ -67,47 +68,16 @@ class CommonMarkParser (PageParser):
 
         return res
 
-    def __find_included_file(self, filename):
-        if os.path.isabs(filename):
-            return filename
-
-        for include_path in doc_tool.include_paths:
-            fpath = os.path.join(include_path, filename)
-            if os.path.exists(fpath):
-                return fpath
-
-        return filename
-
-    def __include_content(self, contents, node, section):
-        included_content = ''
-        for string in node.strings:
-            if re.findall("^{{.*}}$", string):
-                include_path = self.__find_included_file(re.sub("{{|}}| ", "", string))
-                try:
-                    included_content += open(include_path, 'r').read()
-                except Exception as e:
-                    raise type(e)("Could not include %s in %s - include line: '%s'"
-                                  " (%s)" % (include_path, section.source_file,
-                                             string, e.message))
-
-                contents = contents.replace(string, included_content)
-
-        if included_content:
-            return contents
-
-        return None
-
     def do_parse_page(self, contents, section):
         parsed_page = ParsedPage()
         parsed_headers = []
 
+        contents = markdown_include_content(contents, section.source_file,
+                                   doc_tool.include_paths)
         ast = self.__cmp.parse (contents)
         for c in ast.children:
             # FIXME modify the AST in place (currently changing
             # the node strings in place won't work)
-            ncontent = self.__include_content(contents, c, section)
-            if ncontent:
-                return self.do_parse_page(ncontent, section)
 
             if c.t == "List":
                 self.parse_list(c)
