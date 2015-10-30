@@ -4,6 +4,7 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 import pygraphviz as pg
+import cPickle as pickle
 
 from hotdoc.core.alchemy_integration import session, finalize_db, purge_db
 
@@ -27,81 +28,138 @@ def merge_dicts(*dict_args):
 class ConfigError(Exception):
     pass
 
+class DependencyEdge(object):
+    def __init__(self, parent, child):
+        self.parent = parent
+        self.child = child
+
+    def __eq__(self, other):
+        return (self.parent == other.parent and
+                self.child == other.child)
+
+    def __hash__(self):
+        return hash((self.parent, self.child))
+
+    def __repr__(self):
+        return '%s -> %s' % (self.parent, self.child)
+
+class DependencyNode (object):
+    def __init__(self, filename):
+        self.filename = filename
+        self.unstale()
+
+    def __repr__(self):
+        return '%s last modified at %s' % (self.filename, str(self.mtime))
+
+    def unstale(self):
+        try:
+            self.mtime = os.path.getmtime(self.filename)
+        except OSError:
+            self.mtime = -1
+
+class DependencyGraph(object):
+    def __init__(self):
+        self.nodes = {}
+        self.edges = set({})
+
+    def add_node (self, filename):
+        node = DependencyNode(filename)
+        self.nodes[filename] = node
+
+    def add_edge (self, parent, child):
+        edge = DependencyEdge(parent, child)
+        self.edges.add (edge)
+
+    def dump(self):
+        graph = pg.AGraph(directed=True, strict=True)
+
+        for node in self.nodes.values():
+            graph.add_node (node.filename, style='rounded', shape='box')
+            node.unstale()
+        for edge in self.edges:
+            graph.add_edge (edge.parent, edge.child)
+ 
+        with open ('dependency.svg', 'w') as f:
+            graph.draw(f, prog='dot', format='svg', args="-Grankdir=LR")
+
+
 class DocTool(Loggable):
     def __init__(self):
         Loggable.__init__(self)
 
         self.output = None
-        self.c_sources = None
         self.style = None
         self.index_file = None
         self.raw_comment_parser = None
         self.doc_parser = None
-        self.symbol_factory = None
         self.page_parser = None
         self.extensions = []
-        self.pages = []
-        self.symbols = {}
         self.comments = {}
         self.full_scan = False
         self.full_scan_patterns = ['*.h']
         self.link_resolver = LinkResolver()
         self.well_known_names = {}
-        self.queued_well_known_names = []
+        self.rebuilding = False
 
-    def dump_dependencies (self, page, graph):
-        graph.add_node (page.source_file, style="rounded", shape="box")
+    def get_stale_files (self, filenames):
+        stale = []
+        for filename in filenames:
+            abspath = os.path.abspath (filename)
+            node = self.graph.nodes.get(abspath)
+            if not node:
+                stale.append (abspath)
+                continue
+            mtime = os.path.getmtime (abspath)
+            if mtime > node.mtime:
+                stale.append (abspath)
+
+        return stale
+
+    def dump_dependencies (self, page):
+        self.graph.add_node (page.source_file)
         for symbol in page.symbols:
             if symbol.filename:
-                graph.add_node (symbol.filename, shape="box")
-                graph.add_edge (page.source_file, symbol.filename)
+                self.graph.add_node (symbol.filename)
+                self.graph.add_edge (page.source_file, symbol.filename)
             if symbol.comment and symbol.comment.filename:
-                graph.add_node (symbol.comment.filename, shape="box")
-                graph.add_edge(page.source_file, symbol.comment.filename)
+                self.graph.add_node (symbol.comment.filename)
+                self.graph.add_edge(page.source_file, symbol.comment.filename)
 
         for cpage in page.subpages:
-            graph.add_node (cpage.source_file, shape="box", style="rounded")
-            graph.add_edge (page.source_file, cpage.source_file)
-            self.dump_dependencies (cpage, graph)
+            self.graph.add_node (cpage.source_file)
+            self.graph.add_edge (page.source_file, cpage.source_file)
+            self.dump_dependencies (cpage)
 
     def parse_and_format (self):
         self.__setup()
         self.parse_args ()
 
-        graph = pg.AGraph(directed=True, strict=True)
+        try:
+            self.graph = pickle.load(open(os.path.join(self.output,
+                'dep_graph.p'), 'rb'))
+            self.rebuilding = True
+        except IOError:
+            self.graph = DependencyGraph()
 
         # We're done setting up, extensions can setup too
-        n = datetime.now()
         for extension in self.extensions:
             n = datetime.now()
             extension.setup ()
             purge_db()
-            self.symbols.update (extension.get_extra_symbols())
             self.comments.update (extension.get_comments())
+            print "Extension done", datetime.now() - n, extension.EXTENSION_NAME
 
+        n = datetime.now()
         page = self.page_parser.parse (self.index_file)
-        self.dump_dependencies (page, graph)
-
+        print "Page parsing done", datetime.now() - n
+        self.dump_dependencies (page)
         from ..formatters.html.html_formatter import HtmlFormatter
         self.formatter = HtmlFormatter([])
-        self.base_formatter = self.formatter
 
         self.formatter.format(page)
 
-        '''
-        while self.queued_well_known_names:
-            wkn = self.queued_well_known_names.pop()
-            extension = self.well_known_names[wkn]
-            formatter = extension.get_formatter(self.output_format)
-            if formatter:
-                self.formatter = formatter
-            page = extension.create_page_from_well_known_name (wkn)
-            self.dump_dependencies(page, graph)
-            self.formatter.format (page)
-        '''
-
-        with open ('dependency.svg', 'w') as f:
-            graph.draw(f, prog='dot', format='svg', args="-Grankdir=LR")
+        self.graph.dump()
+        pickle.dump(self.graph, open(os.path.join(self.output, 'dep_graph.p'), 'wb'))
         self.finalize()
 
     def register_well_known_name (self, name, extension):
@@ -109,9 +167,6 @@ class DocTool(Loggable):
 
     def get_well_known_name_handler (self, name):
         return self.well_known_names.get(name)
-
-    def queue_well_known_name (self, name):
-        self.queued_well_known_names.insert (0, name)
 
     def get_symbol (self, name):
         from hotdoc.core.symbols import Symbol
@@ -160,14 +215,6 @@ class DocTool(Loggable):
         else:
             os.mkdir (self.output)
 
-    def __setup_source_scanners(self, clang_options):
-        from ..clang_interface.clangizer import ClangScanner
-        self.c_source_scanner = ClangScanner (self, clang_options)
-        self.symbols = self.c_source_scanner.new_symbols
-
-        if self.c_sources and not self.symbols:
-            raise ConfigError ("No symbols found in c sources")
-
     def __parse_extensions (self, args):
         if args[0].extension_name:
             ext = self.__extension_dict[args[0].extension_name](args[0])
@@ -204,7 +251,6 @@ class DocTool(Loggable):
     def finalize (self):
         n = datetime.now()
         session.commit()
-        print "commiting took me", datetime.now() - n
         session.close()
 
 doc_tool = DocTool()

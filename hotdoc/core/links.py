@@ -33,3 +33,9 @@ class LinkResolver(object):
     def add_link (self, link):
         if not link.id_ in self.__links:
             self.__links[link.id_] = link
+
+    def dump(self):
+        pickle.dump(self.__links, open('hd_links.p', 'wb'))
+
+    def load(self):
+        self.__links = pickle.load(open('hd_links.p', 'rb'))

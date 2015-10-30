@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 import re
 import linecache
 import uuid
@@ -17,11 +18,13 @@ from hotdoc.core.alchemy_integration import *
 
 def get_or_create_symbol(type_, **kwargs):
     name = kwargs.pop('name')
+    filename = kwargs.get('filename')
+    if filename:
+        kwargs['filename'] = os.path.abspath(filename)
+
     symbol = session.query(type_).filter(type_.name == name).first()
     if not symbol:
         symbol = type_(name=name)
-    else:
-        print "This symbol already exists, duh"
 
     for key, value in kwargs.items():
         setattr(symbol, key, value)

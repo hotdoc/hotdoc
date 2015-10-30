@@ -36,6 +36,7 @@ class ClangScanner(Loggable):
 
         self.filenames = [os.path.abspath(filename) for filename in
                 filenames]
+        self.filenames = doc_tool.get_stale_files(self.filenames)
         self.full_scan = full_scan
         self.full_scan_patterns = full_scan_patterns
 
