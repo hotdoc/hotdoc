@@ -58,8 +58,3 @@ class Page:
 
     def get_title (self):
         return self.title
-
-    def format_symbols (self):
-        for type_, tsl in self.typed_symbols.iteritems():
-            for symbol in tsl.symbols:
-                symbol.do_format ()

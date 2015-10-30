@@ -325,7 +325,6 @@ class HtmlFormatter (Formatter):
         if page.parsed_page and not page.symbols:
             page.formatted_contents = doc_tool.page_parser.render_parsed_page(page.parsed_page)
 
-        page.format_symbols ()
         toc_sections = []
         symbols_details = []
 
@@ -388,9 +387,6 @@ class HtmlFormatter (Formatter):
             is_pointer=False):
         template = self.engine.get_template('callable.html')
 
-        for p in callable_.parameters:
-            p.do_format()
-
         parameters = [p.detailed_description for p in callable_.parameters if
                 p.detailed_description is not None]
 
@@ -398,13 +394,18 @@ class HtmlFormatter (Formatter):
 
         return_value_detail = None
         if callable_.return_value:
-            callable_.return_value.do_format()
             return_value_detail = callable_.return_value.detailed_description
+
+        tags = {}
+        if callable_.comment:
+            tags = callable_.comment.tags
+
         out = template.render ({'prototype': prototype,
                                 'callable': callable_,
                                 'return_value': return_value_detail,
                                 'parameters': parameters,
                                 'callable_type': callable_type,
+                                'tags': tags,
                                 'extra': callable_.extension_contents})
 
         return (out, False)
@@ -462,15 +463,11 @@ class HtmlFormatter (Formatter):
         template = self.engine.get_template('callable.html')
         prototype = self._format_raw_code (function_macro.original_text)
 
-        for p in function_macro.parameters:
-            p.do_format()
-
         parameters = [p.detailed_description for p in function_macro.parameters
                 if p.detailed_description is not None]
 
         return_value_detail = None
         if function_macro.return_value:
-            function_macro.return_value.do_format()
             return_value_detail = function_macro.return_value.detailed_description
 
         out = template.render ({'prototype': prototype,
@@ -479,6 +476,7 @@ class HtmlFormatter (Formatter):
                                 'parameters': parameters,
                                 'callable_type': "function macro",
                                 'flags': None,
+                                'tags': {},
                                 'extra': function_macro.extension_contents})
 
         return (out, False)

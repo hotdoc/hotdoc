@@ -105,8 +105,16 @@ class Formatter(object):
         self.__format_page (page)
         self.__copy_extra_files ()
 
+    def __format_symbols(self, symbols):
+        for symbol in symbols:
+            if symbol is None:
+                continue
+            self.__format_symbols (symbol.get_children_symbols())
+            symbol.skip = not self.format_symbol(symbol)
+
     def __format_page (self, page):
         out = ""
+        self.__format_symbols(page.symbols)
         page.detailed_description = doc_tool.formatter._format_page (page)[0]
         doc_tool.formatter._write_page (page)
         for cpage in page.subpages:

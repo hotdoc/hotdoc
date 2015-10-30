@@ -1,4 +1,4 @@
-@require(prototype, callable, return_value, parameters, callable_type, extra)
+@require(prototype, callable, return_value, parameters, callable_type, tags, extra)
 <div class="refsect2">
 	<a name=@callable.link.id_></a>
 	<h3 class="method">
@@ -38,7 +38,7 @@
 	@end
 	@end
 
-	@for tag in callable.tags:
+	@for tag in tags.values():
 		<p>
 		@tag.name\
 		@if tag.description:

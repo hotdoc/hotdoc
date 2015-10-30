@@ -79,21 +79,8 @@ class Symbol (Base):
             return None
         return attributes.get (key)
 
-    def parse_tags(self):
-        if not self.comment:
-            return []
-
-        if not hasattr (self.comment, "tags"):
-            return []
-
-        tags = []
-        for tag, value in self.comment.tags.iteritems():
-            tags.append (Tag (tag, value.description))
-        return tags
-
-    def do_format (self):
-        self.tags = self.parse_tags ()
-        self.skip = not doc_tool.formatter.format_symbol (self)
+    def get_children_symbols (self):
+        return []
 
     def _make_name (self):
         return self.name
@@ -131,6 +118,9 @@ class FunctionSymbol (Symbol):
         self.throws = False
         self.is_method = False
         Symbol.__init__(self, **kwargs)
+
+    def get_children_symbols(self):
+        return self.parameters + [self.return_value]
 
     def get_type_name (self):
         if self.is_method:
@@ -209,10 +199,8 @@ class EnumSymbol (Symbol):
         self.members = {}
         Symbol.__init__(self, **kwargs)
 
-    def do_format(self):
-        for member in self.members:
-            member.do_format()
-        return Symbol.do_format (self)
+    def get_children_symbols(self):
+        return self.members
 
     def get_extra_links (self):
         return [m.link for m in self.members]
@@ -233,10 +221,8 @@ class StructSymbol (Symbol):
         self.members = {}
         Symbol.__init__(self, **kwargs)
 
-    def do_format(self):
-        for member in self.members:
-            member.do_format()
-        return Symbol.do_format (self)
+    def get_children_symbols(self):
+        return self.members
 
     def get_type_name (self):
         return "Structure"
@@ -265,6 +251,9 @@ class FunctionMacroSymbol (MacroSymbol):
     def __init__(self, **kwargs):
         self.parameters = {}
         MacroSymbol.__init__(self, **kwargs)
+
+    def get_children_symbols(self):
+        return self.parameters + [self.return_value]
 
     def get_type_name (self):
         return "Function macro"
@@ -307,21 +296,8 @@ class QualifiedSymbol (object):
             return None
         return attributes.get (key)
 
-    def parse_tags(self):
-        if not self.comment:
-            return []
-
-        if not hasattr (self.comment, "tags"):
-            return []
-
-        tags = []
-        for tag, value in self.comment.tags.iteritems():
-            tags.append (Tag (tag, value.description))
-        return tags
-
-    def do_format (self):
-        self.tags = self.parse_tags ()
-        self.skip = not doc_tool.formatter.format_symbol (self)
+    def get_children_symbols(self):
+        return []
 
     def get_type_link (self):
         for tok in self.type_tokens:
