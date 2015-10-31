@@ -12,6 +12,7 @@ class CommonMarkParser (PageParser):
         PageParser.__init__(self)
         self.__cmp = CommonMark.DocParser()
         self.__cmr = CommonMark.HTMLRenderer()
+        self.final_destinations = {}
 
     def parse_list (self, l):
         for c in l.children:
@@ -40,10 +41,6 @@ class CommonMarkParser (PageParser):
         link = ic[0]
         section_name = ''.join ([l.c for l in link.label])
 
-        if not link.destination:
-            link.destination = self.create_page_from_well_known_name(section_name)
-            return None
-
         filename = os.path.join (self._prefix, link.destination)
 
         new_section = self._parse_page (filename)
@@ -51,6 +48,7 @@ class CommonMarkParser (PageParser):
             res = ic
 
             link.destination = new_section.link.ref
+            self.final_destinations[link.destination] = True
             desc = new_section.get_short_description()
             if desc:
                 link.desc = desc
@@ -105,7 +103,8 @@ class CommonMarkParser (PageParser):
                 #res = handling_extension.insert_well_known_name (node.destination)
                 if new_page:
                     self._current_page.subpages.append (new_page)
-                    node.destination += '.html'
+                    node.destination += '.%s' % doc_tool.output_format
+                    self.final_destinations[node.destination] = True
 
         for c in node.inline_content:
             self.check_well_known_names (c)
@@ -141,10 +140,12 @@ class CommonMarkParser (PageParser):
 
     def _update_links (self, node):
         if node.t == 'Link':
-            link = doc_tool.link_resolver.get_named_link (node.destination)
-            node.label[-1].c += ' '
-            if link and link.get_link() is not None:
-                node.destination = link.get_link()
+            if node.destination not in self.final_destinations:
+                link = doc_tool.link_resolver.get_named_link (node.destination)
+                node.label[-1].c += ' '
+                if link and link.get_link() is not None:
+                    node.destination = link.get_link()
+                    self.final_destinations[node.destination] = True
 
         for c in node.inline_content:
             self._update_links (c)

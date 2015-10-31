@@ -179,16 +179,22 @@ class GIRParser(object):
                 continue
 
             gi_name = '%s.%s' % (klass.parent_name, klass.node.attrib['name'])
-            klass_name = klass.node.attrib['{%s}type-name' % self.nsmap['glib']]
-            link = doc_tool.link_resolver.get_named_link (klass_name)
-            if link:
-                symbol = QualifiedSymbol(type_tokens=[link])
-                parents = reversed(self.gir_hierarchies[gi_name])
-                for parent in parents:
-                    hierarchy.append ((parent, symbol))
-                    symbol = parent
+            klass_name = self.__get_klass_name (klass.node)
+            link = Link(None, klass_name, klass_name)
+            link = doc_tool.link_resolver.upsert_link(link)
+            symbol = QualifiedSymbol(type_tokens=[link])
+            parents = reversed(self.gir_hierarchies[gi_name])
+            for parent in parents:
+                hierarchy.append ((parent, symbol))
+                symbol = parent
 
         self.global_hierarchy = hierarchy
+
+    def __get_klass_name(self, klass):
+        klass_name = klass.attrib.get('{%s}type' % self.nsmap['c'])
+        if not klass_name:
+            klass_name = klass.attrib.get('{%s}type-name' % self.nsmap['glib'])
+        return klass_name
 
     def __create_hierarchy (self, klass):
         klaass = klass
@@ -203,21 +209,20 @@ class GIRParser(object):
                 parent_name = '%s.%s' % (namespace, parent_name)
             parent_class = self.gir_types[parent_name]
             children = self.gir_children_map.get(parent_name)
-            klass_name = klass.attrib['{%s}type-name' % self.nsmap['glib']]
+            klass_name = self.__get_klass_name (klass)
 
             if not klass_name in children:
-                link = doc_tool.link_resolver.get_named_link(klass_name)
-                if link:
-                    sym = QualifiedSymbol(type_tokens=[link])
-                    children[klass_name] = sym
+                link = Link(None, klass_name, klass_name)
+                link = doc_tool.link_resolver.upsert_link(link)
+                sym = QualifiedSymbol(type_tokens=[link])
+                children[klass_name] = sym
 
-            c_name = parent_class.attrib['{%s}type-name' % self.nsmap['glib']]
-            link = doc_tool.link_resolver.get_named_link(c_name)
-            if not link:
-                break
-
+            klass_name = self.__get_klass_name(parent_class)
+            link = Link(None, klass_name, klass_name)
+            link = doc_tool.link_resolver.upsert_link(link)
             sym = QualifiedSymbol(type_tokens=[link])
             hierarchy.append (sym)
+
             klass = parent_class
 
         hierarchy.reverse()
@@ -395,26 +400,6 @@ class GIRParser(object):
             return klass
         return self.gir_types.get (name)
 
-    def qualified_symbol_from_ctype (self, ctype):
-        indirection = ctype.count ('*')
-        qualified_type = ctype.strip ('*')
-        tokens = []
-        for token in qualified_type.split ():
-            if token in ["const", "restrict", "volatile"]:
-                tokens.append(token)
-            else:
-                link = doc_tool.link_resolver.get_named_link (token) 
-                if link:
-                    tokens.append (link)
-                else:
-                    tokens.append (token)
-
-        for i in range(indirection):
-            tokens.append ('*')
-
-        qs = QualifiedSymbol (type_tokens=tokens)
-        return qs
-
     def type_tokens_from_gitype (self, ptype_name):
         qs = None
 
@@ -426,13 +411,11 @@ class GIRParser(object):
             c_type = gitype.attrib['{http://www.gtk.org/introspection/c/1.0}type']
             ptype_name = c_type
 
-        type_link = doc_tool.link_resolver.get_named_link (ptype_name)
+        type_link = Link (None, ptype_name, ptype_name)
+        type_link = doc_tool.link_resolver.upsert_link(type_link)
 
-        if type_link:
-            tokens = [type_link]
-            tokens += '*'
-        else:
-            tokens = [ptype_name]
+        tokens = [type_link]
+        tokens += '*'
 
         return tokens
 
@@ -475,6 +458,8 @@ class GIExtension(BaseExtension):
 
         self.__raw_comment_parser = GtkDocRawCommentParser()
         self._formatters["html"] = GIHtmlFormatter(self)
+
+        self.__translated_names = {}
 
     @staticmethod
     def add_arguments (parser):
@@ -522,13 +507,8 @@ class GIExtension(BaseExtension):
                     else:
                         href = filename
 
-                    prev_link = doc_tool.link_resolver.get_named_link (title)
-
-                    if not prev_link:
-                        link = Link (href, title, title)
-                        doc_tool.link_resolver.add_link (link)
-                    elif not prev_link.ref:
-                        prev_link.ref = href
+                    link = Link (href, title, title)
+                    doc_tool.link_resolver.upsert_link (link)
 
     def __make_type_annotation (self, annotation, value):
         if not value:
@@ -663,21 +643,33 @@ class GIExtension(BaseExtension):
 
         return True
 
+    def update_links(self, symbol):
+        if not symbol:
+            return
+
+        if isinstance(symbol, QualifiedSymbol):
+            link = symbol.type_link
+        else:
+            link = symbol.link
+
+        if link:
+            translated_name = self.__translated_names.get(link.id_)
+            if translated_name is not None:
+                link.title = translated_name
+
     def setup_language (self, language):
         self.language = language
 
         if language == 'c':
-            names = self.gir_parser.c_names
+            self.__translated_names = self.gir_parser.c_names
         elif language == 'python':
-            names = self.gir_parser.python_names
+            self.__translated_names = self.gir_parser.python_names
         elif language == 'javascript':
-            names = self.gir_parser.javascript_names
+            self.__translated_names = self.gir_parser.javascript_names
         else:
-            return
-        for c_id, name in names.iteritems():
-            l = doc_tool.link_resolver.get_named_link (c_id)
-            if l:
-                l.title = name
+            self.__translated_names = {}
+
+        doc_tool.doc_parser.set_translated_names(self.__translated_names)
 
     def __fill_index_columns(self, columns):
         columns.append ('Since')
@@ -685,9 +677,9 @@ class GIExtension(BaseExtension):
     def __fill_index_row (self, symbol, row):
         info = self.gir_parser.all_infos.get (symbol.link.id_)
         if info:
-            link = doc_tool.link_resolver.get_named_link (info.parent_name)
-            if link:
-                row[2] = link
+            link = Link(None, info.parent_name, info.parent_name)
+            link = doc_tool.link_resolver.upsert_link(link)
+            row[2] = link
             if type (info) == GIClassInfo and info.is_interface:
                 row[1] = "Interface"
 
@@ -717,11 +709,9 @@ class GIExtension(BaseExtension):
             if token in ["const", "restrict", "volatile"]:
                 tokens.append(token)
             else:
-                link = doc_tool.link_resolver.get_named_link (token)
-                if link:
-                    tokens.append (link)
-                else:
-                    tokens.append (token)
+                link = Link(None, token, token)
+                link = doc_tool.link_resolver.upsert_link(link)
+                tokens.append (link)
 
         for i in range(indirection):
             tokens.append ('*')
@@ -1025,8 +1015,11 @@ class GIExtension(BaseExtension):
         if wkn == 'gobject-api':
             contents = ''
             for language in self.languages:
-                contents += '### [%s API](%s/gobject-api.html)\n' % \
-                        (language.capitalize (), language)
+                dest = '%s/gobject-api.html' % language
+                contents += '### [%s API](%s)\n' % \
+                        (language.capitalize (), dest)
+                doc_tool.page_parser.final_destinations[dest] = True
+
             index_page = doc_tool.page_parser.parse_contents (contents,
                     'gobject-api', 'generated-gobject-index')
 

@@ -413,6 +413,10 @@ class GIHtmlFormatter(HtmlFormatter):
                     new_names)
         return HtmlFormatter._format_page (self, page)
 
+    def _format_symbol(self, symbol):
+        self.__gi_extension.update_links(symbol)
+        return HtmlFormatter._format_symbol(self, symbol)
+
     def format (self, page):
         for l in self.__gi_extension.languages:
             if l == 'python':
@@ -423,13 +427,8 @@ class GIHtmlFormatter(HtmlFormatter):
                 self.fundamentals = {}
 
             for c_name, link in self.fundamentals.iteritems():
-                prev_link = doc_tool.link_resolver.get_named_link(c_name)
-                if prev_link:
-                    prev_link.ref = link.ref
-                    prev_link.title = link.title
-                else:
-                    link.id_ = c_name
-                    doc_tool.link_resolver.add_link (link)
+                link.id_ = c_name
+                doc_tool.link_resolver.upsert_link(link)
 
             self.__gi_extension.setup_language (l)
             self._output = os.path.join (doc_tool.output, l)

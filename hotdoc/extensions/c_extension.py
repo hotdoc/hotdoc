@@ -198,19 +198,13 @@ class ClangScanner(Loggable):
 
         if type_.kind == clang.cindex.TypeKind.TYPEDEF:
             d = type_.get_declaration ()
-            link = doc_tool.link_resolver.get_named_link (d.displayname)
-            if not link:
-                link = Link (None, d.displayname, d.displayname)
-                doc_tool.link_resolver.add_link (link)
+            link = Link (None, d.displayname, d.displayname)
+            link = doc_tool.link_resolver.upsert_link(link)
 
             tokens.append (link)
             self.__apply_qualifiers(type_, tokens)
         else:
-            link = doc_tool.link_resolver.get_named_link (type_.spelling)
-            if link:
-                tokens.append (link)
-            else:
-                tokens.append (type_.spelling + ' ')
+            tokens.append (type_.spelling + ' ')
 
         tokens.reverse()
         return tokens

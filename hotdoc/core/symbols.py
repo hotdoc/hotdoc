@@ -16,6 +16,9 @@ from sqlalchemy import (create_engine, Column, String, Integer, Boolean,
 from sqlalchemy.orm import relationship
 from hotdoc.core.alchemy_integration import *
 
+def get_symbol(name):
+    return session.query(Symbol).filter(Symbol.name == name).first()
+
 def get_or_create_symbol(type_, **kwargs):
     name = kwargs.pop('name')
     filename = kwargs.get('filename')
@@ -56,13 +59,9 @@ class Symbol (Base):
         self.extension_attributes = {}
         self.name = kwargs.get('name')
         self.skip = False
-        link = doc_tool.link_resolver.get_named_link(self._make_unique_id())
-        if not link:
-            link = Link(self._make_unique_id(), self._make_name(),
+        link = Link(self._make_unique_id(), self._make_name(),
                     self._make_unique_id())
-            doc_tool.link_resolver.add_link (link)
-        else:
-            link.ref = self._make_unique_id()
+        link = doc_tool.link_resolver.upsert_link(link)
 
         kwargs['link'] = link
 
@@ -282,6 +281,13 @@ class ExportedVariableSymbol (MacroSymbol):
 class QualifiedSymbol (object):
     def __init__(self, type_tokens=[]):
         self.type_tokens = type_tokens
+        self.type_link = None
+
+        for tok in self.type_tokens:
+            if isinstance(tok, Link):
+                self.type_link = tok
+                break
+
         self.extension_contents = {}
         self.extension_attributes = {}
 
@@ -300,10 +306,7 @@ class QualifiedSymbol (object):
         return []
 
     def get_type_link (self):
-        for tok in self.type_tokens:
-            if isinstance(tok, Link):
-                return tok
-        return None
+        return self.type_link
 
 class ReturnValueSymbol (QualifiedSymbol):
     def __init__(self, comment=None, **kwargs):
@@ -324,13 +327,9 @@ class FieldSymbol (QualifiedSymbol):
         self.member_name = member_name
         self.is_function_pointer = is_function_pointer
         self.comment = comment
-        link = doc_tool.link_resolver.get_named_link(self.member_name)
-        if not link:
-            link = Link(self.member_name, self.member_name,
+        link = Link(self.member_name, self.member_name,
                     self.member_name)
-            doc_tool.link_resolver.add_link (link)
-        else:
-            link.ref = self.member_name
+        link = doc_tool.link_resolver.upsert_link(link)
 
         self.link = link
 

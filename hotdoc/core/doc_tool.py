@@ -143,6 +143,7 @@ class DocTool(Loggable):
 
         # We're done setting up, extensions can setup too
         for extension in self.extensions:
+            print "Doing extension", extension.EXTENSION_NAME
             n = datetime.now()
             extension.setup ()
             purge_db()

@@ -28,11 +28,33 @@ class LinkResolver(object):
         self.__links = {}
 
     def get_named_link (self, name):
-        return self.__links.get (name)
+        from hotdoc.core.symbols import get_symbol
+
+        if name in self.__links:
+            return self.__links[name]
+
+        sym = get_symbol(name)
+        if sym:
+            self.__links[name] = sym.link
+            return sym.link
+
+        self.__links[name] = None
+        return None
 
     def add_link (self, link):
         if not link.id_ in self.__links:
             self.__links[link.id_] = link
+
+    def upsert_link (self, link):
+        elink = self.__links.get (link.id_)
+        if elink:
+            if link.ref is not None:
+                elink.ref = link.ref
+            if link.title is not None:
+                elink.title = link.title
+            return elink
+        self.add_link (link)
+        return link
 
     def dump(self):
         pickle.dump(self.__links, open('hd_links.p', 'wb'))

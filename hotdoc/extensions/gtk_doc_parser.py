@@ -90,85 +90,110 @@ class DocScanner(object):
         if pos < len(text):
             yield ('other', text[pos:], None)
 
-def format_other(match, props):
-    return match
-
-def format_property (match, props):
-    type_name = props['type_name']
-    property_name = props['property_name']
-    linkname = "%s:::%s---property" % (type_name, property_name)
-    link = doc_tool.link_resolver.get_named_link (linkname)
-    if link:
-        return u"[“%s”](%s)" % (link.title, link.get_link())
-    else:
-        return u"the %s's “%s” property" % (type_name, property_name)
-
-def format_signal (match, props):
-    type_name = props['type_name']
-    signal_name = props['signal_name']
-    linkname = "%s:::%s---signal" % (type_name, signal_name)
-    link = doc_tool.link_resolver.get_named_link (linkname)
-    if link:
-        return u"[“%s”](%s)" % (link.title, link.get_link())
-    else:
-        return u"the %s's “%s” signal" % (type_name, signal_name)
-
-def format_type_name (match, props):
-    type_name = props['type_name']
-    link = doc_tool.link_resolver.get_named_link (type_name)
-    if link:
-        return "[%s](%s)" % (link.title, link.get_link())
-    else:
-        return match
-
-def format_enum_value (match, props):
-    member_name = props['member_name']
-    link = doc_tool.link_resolver.get_named_link (member_name)
-    if link:
-        return "[%s](%s)" % (link.title, link.get_link ())
-    else:
-        return match
-
-def format_parameter (match, props):
-    param_name = props['param_name']
-    return '_%s_' % param_name
-
-def format_function_call (match, props):
-    func_name = props['symbol_name']
-    link = doc_tool.link_resolver.get_named_link (func_name)
-    if link:
-        return "[%s()](%s)" % (link.title, link.get_link ())
-    else:
-        return match
-
-def format_code_start (match, props):
-    return "\n```\n"
-
-def format_code_start_with_language (match, props):
-    return "\n```%s\n" % props["language_name"] 
-
-def format_code_end (match, props):
-    return "\n```\n"
 
 class GtkDocParser (object):
     def __init__(self):
         self.funcs = {
-            'other': format_other,
-            'new_line': format_other,
-            'new_paragraph': format_other,
-            'note': format_other,
-            'include': format_other,
-            'property': format_property,
-            'signal': format_signal,
-            'type_name': format_type_name,
-            'enum_value': format_enum_value,
-            'parameter': format_parameter,
-            'function_call': format_function_call,
-            'code_start': format_code_start,
-            'code_start_with_language': format_code_start_with_language,
-            'code_end': format_code_end,
+            'other': self.format_other,
+            'new_line': self.format_other,
+            'new_paragraph': self.format_other,
+            'note': self.format_other,
+            'include': self.format_other,
+            'property': self.format_property,
+            'signal': self.format_signal,
+            'type_name': self.format_type_name,
+            'enum_value': self.format_enum_value,
+            'parameter': self.format_parameter,
+            'function_call': self.format_function_call,
+            'code_start': self.format_code_start,
+            'code_start_with_language': self.format_code_start_with_language,
+            'code_end': self.format_code_end,
         }
 
+        self.__translated_names = {}
+
+    def format_other(self, match, props):
+        return match
+
+    def format_property (self, match, props):
+        type_name = props['type_name']
+        property_name = props['property_name']
+        linkname = "%s:::%s---property" % (type_name, property_name)
+        link = doc_tool.link_resolver.get_named_link (linkname)
+
+        if link and link.id_ in self.__translated_names:
+            link.title = self.__translated_names[link.id_]
+
+        if link:
+            return u"[“%s”](%s)" % (link.title, link.get_link())
+        else:
+            return u"the %s's “%s” property" % (type_name, property_name)
+
+    def format_signal (self, match, props):
+        type_name = props['type_name']
+        signal_name = props['signal_name']
+        linkname = "%s:::%s---signal" % (type_name, signal_name)
+        link = doc_tool.link_resolver.get_named_link (linkname)
+
+        if link and link.id_ in self.__translated_names:
+            link.title = self.__translated_names[link.id_]
+
+        if link:
+            return u"[“%s”](%s)" % (link.title, link.get_link())
+        else:
+            return u"the %s's “%s” signal" % (type_name, signal_name)
+
+    def format_type_name (self, match, props):
+        type_name = props['type_name']
+        link = doc_tool.link_resolver.get_named_link (type_name)
+
+        if link and link.id_ in self.__translated_names:
+            link.title = self.__translated_names[link.id_]
+
+        if link:
+            return "[%s](%s)" % (link.title, link.get_link())
+        else:
+            return match
+
+    def format_enum_value (self, match, props):
+        member_name = props['member_name']
+        link = doc_tool.link_resolver.get_named_link (member_name)
+
+        if link and link.id_ in self.__translated_names:
+            link.title = self.__translated_names[link.id_]
+
+        if link:
+            return "[%s](%s)" % (link.title, link.get_link ())
+        else:
+            return match
+
+    def format_parameter (self, match, props):
+        param_name = props['param_name']
+        return '_%s_' % param_name
+
+    def format_function_call (self, match, props):
+        func_name = props['symbol_name']
+        link = doc_tool.link_resolver.get_named_link (func_name)
+
+        if link and link.id_ in self.__translated_names:
+            link.title = self.__translated_names[link.id_]
+
+        if link:
+            return "[%s()](%s)" % (link.title, link.get_link ())
+        else:
+            return match
+
+    def format_code_start (self, match, props):
+        return "\n```\n"
+
+    def format_code_start_with_language (self, match, props):
+        return "\n```%s\n" % props["language_name"] 
+
+    def format_code_end (self, match, props):
+        return "\n```\n"
+
+    def set_translated_names(self, translated_names):
+        self.__translated_names = translated_names
 
     def translate (self, text):
         if not text:
