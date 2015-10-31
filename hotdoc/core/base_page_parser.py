@@ -44,6 +44,7 @@ class PageParser(Loggable):
         return ''
 
     def create_symbol (self, symbol_name):
+        from hotdoc.core.symbols import StructSymbol, ClassSymbol
         if not self._current_page:
             return
 

@@ -107,6 +107,7 @@ class DocTool(Loggable):
             abspath = os.path.abspath (filename)
             node = self.graph.nodes.get(abspath)
             if not node:
+                self.graph.add_node (abspath)
                 stale.append (abspath)
                 continue
             mtime = os.path.getmtime (abspath)
@@ -160,6 +161,8 @@ class DocTool(Loggable):
         self.formatter = HtmlFormatter([])
 
         self.formatter.format(page)
+
+        print "currently optimizable:", datetime.now() - n
 
         self.graph.dump()
         pickle.dump(self.graph, open(os.path.join(self.output, 'dep_graph.p'), 'wb'))

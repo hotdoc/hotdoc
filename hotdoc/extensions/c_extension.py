@@ -70,8 +70,7 @@ class ClangScanner(Loggable):
                         block = doc_tool.raw_comment_parser.parse_comment(c[0], c[1], c[2])
                         self.comments[block.name] = block
 
-        print "Parsing comments takes", datetime.now() - n
-
+        n = datetime.now()
         for filename in self.filenames:
             if os.path.abspath(filename) in self.parsed:
                 continue

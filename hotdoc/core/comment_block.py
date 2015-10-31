@@ -1,4 +1,5 @@
 import sqlalchemy
+import os
 from sqlalchemy import create_engine, Column, Integer, String, PickleType
 from sqlalchemy.sql import exists
 from hotdoc.core.alchemy_integration import Base, engine, session
@@ -11,7 +12,7 @@ class CommentBlock(object):
         self.name = name
         self.title = title
         self.params = params
-        self.filename = filename
+        self.filename = os.path.abspath(filename)
         self.lineno = lineno
         self.annotations = annotations
         self.description = description

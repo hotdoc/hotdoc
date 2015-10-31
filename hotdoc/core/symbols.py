@@ -24,6 +24,7 @@ def get_symbol(name):
 
 def get_or_create_symbol(type_, **kwargs):
     name = kwargs.pop('name')
+
     filename = kwargs.get('filename')
     if filename:
         kwargs['filename'] = os.path.abspath(filename)
