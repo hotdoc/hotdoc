@@ -152,7 +152,9 @@ class DocTool(Loggable):
 
         n = datetime.now()
         page = self.page_parser.parse (self.index_file)
-        print "Page parsing done", datetime.now() - n
+
+        purge_db()
+
         self.dump_dependencies (page)
         from ..formatters.html.html_formatter import HtmlFormatter
         self.formatter = HtmlFormatter([])
@@ -161,6 +163,7 @@ class DocTool(Loggable):
 
         self.graph.dump()
         pickle.dump(self.graph, open(os.path.join(self.output, 'dep_graph.p'), 'wb'))
+        session.commit()
         self.finalize()
 
     def register_well_known_name (self, name, extension):
@@ -170,9 +173,8 @@ class DocTool(Loggable):
         return self.well_known_names.get(name)
 
     def get_symbol (self, name):
-        from hotdoc.core.symbols import Symbol
-        sym = session.query(Symbol).filter_by(name=name).first()
-        return sym
+        from hotdoc.core.symbols import get_symbol
+        return get_symbol(name)
 
     def __setup (self):
         if os.name == 'nt':
@@ -250,8 +252,6 @@ class DocTool(Loggable):
         self.index_file = args[0].index
 
     def finalize (self):
-        purge_db()
-        session.commit()
         session.close()
 
 doc_tool = DocTool()

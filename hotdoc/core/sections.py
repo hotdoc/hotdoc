@@ -41,9 +41,11 @@ class Page:
         self.parsed_page = None
 
     def add_symbol (self, symbol):
-        symbol.link.ref = '%s#%s' % (self.link.ref, symbol.link.ref)
+        if not '#' in symbol.link.ref:
+            symbol.link.ref = '%s#%s' % (self.link.ref, symbol.link.ref)
         for l in symbol.get_extra_links():
-            l.ref = '%s#%s' % (self.link.ref, l.ref)
+            if not '#' in l.ref:
+                l.ref = '%s#%s' % (self.link.ref, l.ref)
         tsl = self.typed_symbols[type(symbol)]
         tsl.symbols.append (symbol)
         self.symbols.append (symbol)

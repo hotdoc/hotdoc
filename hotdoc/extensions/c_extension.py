@@ -63,7 +63,7 @@ class ClangScanner(Loggable):
 
         n = datetime.now()
         if not full_scan:
-            for filename in self.filenames:
+            for filename in filenames:
                 with open (filename, 'r') as f:
                     cs = get_comments (filename)
                     for c in cs:

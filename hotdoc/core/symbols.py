@@ -17,7 +17,10 @@ from sqlalchemy.orm import relationship
 from hotdoc.core.alchemy_integration import *
 
 def get_symbol(name):
-    return session.query(Symbol).filter(Symbol.name == name).first()
+    sym = session.query(Symbol).filter(Symbol.name == name).first()
+    if sym:
+        sym.constructed()
+    return sym
 
 def get_or_create_symbol(type_, **kwargs):
     name = kwargs.pop('name')
@@ -26,12 +29,14 @@ def get_or_create_symbol(type_, **kwargs):
         kwargs['filename'] = os.path.abspath(filename)
 
     symbol = session.query(type_).filter(type_.name == name).first()
+
     if not symbol:
         symbol = type_(name=name)
 
     for key, value in kwargs.items():
         setattr(symbol, key, value)
 
+    symbol.constructed()
     return symbol
 
 class Symbol (Base):
@@ -40,7 +45,6 @@ class Symbol (Base):
     id = Column(Integer, primary_key=True)
     comment = Column(PickleType)
     name = Column(String)
-    link = Column(Link.as_mutable(PickleType))
     filename = Column(String)
     lineno = Column(Integer)
     location = Column(PickleType)
@@ -59,13 +63,13 @@ class Symbol (Base):
         self.extension_attributes = {}
         self.name = kwargs.get('name')
         self.skip = False
-        link = Link(self._make_unique_id(), self._make_name(),
-                    self._make_unique_id())
-        link = doc_tool.link_resolver.upsert_link(link)
-
-        kwargs['link'] = link
 
         Base.__init__(self, **kwargs)
+
+    def constructed (self):
+        link = Link(self._make_unique_id(), self._make_name(),
+                    self._make_unique_id())
+        self.link = doc_tool.link_resolver.upsert_link(link)
 
     def add_extension_attribute (self, ext_name, key, value):
         attributes = self.extension_attributes.pop (ext_name, {})
@@ -278,18 +282,20 @@ class ExportedVariableSymbol (MacroSymbol):
     def get_type_name (self):
         return "Exported variable"
 
+class TypeSymbol(object):
+    def __init__(self, tokens):
+        self.tokens = tokens
+        self._constructed()
+
+    def __setstate__(self):
+        object.__setstate__(self, state)
+        self._constructed()
+
+
 class QualifiedSymbol (MutableObject):
     def __init__(self, type_tokens=[]):
-        self.type_tokens = type_tokens
-        self.type_link = None
-
-        for tok in self.type_tokens:
-            if isinstance(tok, Link):
-                self.type_link = tok
-                break
-
-        self.extension_contents = {}
-        self.extension_attributes = {}
+        self.input_tokens = type_tokens
+        self.constructed()
         MutableObject.__init__(self)
 
     def add_extension_attribute (self, ext_name, key, value):
@@ -309,6 +315,23 @@ class QualifiedSymbol (MutableObject):
     def get_type_link (self):
         return self.type_link
 
+    def constructed(self):
+        self.extension_contents = {}
+        self.extension_attributes = {}
+        self.type_link = None
+
+        self.type_tokens = []
+        for tok in self.input_tokens:
+            if isinstance(tok, Link):
+                self.type_link = doc_tool.link_resolver.upsert_link(tok)
+                self.type_tokens.append (self.type_link)
+            else:
+                self.type_tokens.append (tok)
+
+    def __setstate__(self, state):
+        MutableObject.__setstate__(self, state)
+        self.constructed()
+
 class ReturnValueSymbol (QualifiedSymbol):
     def __init__(self, comment=None, **kwargs):
         self.comment = comment
@@ -316,10 +339,10 @@ class ReturnValueSymbol (QualifiedSymbol):
 
 class ParameterSymbol (QualifiedSymbol):
     def __init__(self, argname='', comment=None, **kwargs):
-        QualifiedSymbol.__init__(self, **kwargs)
         self.array_nesting = 0
         self.argname = argname
         self.comment = comment
+        QualifiedSymbol.__init__(self, **kwargs)
 
 class FieldSymbol (QualifiedSymbol):
     def __init__(self, member_name='', is_function_pointer=False,

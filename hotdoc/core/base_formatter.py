@@ -10,7 +10,7 @@ from xml.sax.saxutils import unescape
 from .doc_tool import ConfigError
 from .doc_tool import doc_tool
 from .symbols import (Symbol, ReturnValueSymbol, ParameterSymbol, FieldSymbol,
-        ClassSymbol)
+        ClassSymbol, QualifiedSymbol, CallbackSymbol)
 from .sections import Page
 from ..utils.simple_signals import Signal
 from ..utils.loggable import progress_bar

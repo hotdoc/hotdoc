@@ -320,32 +320,32 @@ class GIRParser(object):
                 child_cname = self.__parse_gir_vmethod (nsmap, c_name, child)
                 gi_class_info.vmethods[child_cname] = child
 
-    def __parse_gir_callable_common (self, callable_, c_name, python_name,
+    def __parse_gir_callable_common (self, callable_, c_id, c_name, python_name,
             js_name, class_name, is_method=False, is_constructor=False):
         introspectable = callable_.attrib.get('introspectable')
 
         if introspectable == '0':
-            self.unintrospectable_symbols[c_name] = True
+            self.unintrospectable_symbols[c_id] = True
 
-        self.c_names[c_name] = c_name
-        self.python_names[c_name] = python_name
-        self.javascript_names[c_name] = js_name
+        self.c_names[c_id] = c_name
+        self.python_names[c_id] = python_name
+        self.javascript_names[c_id] = js_name
 
         info = GIInfo (callable_, class_name)
-        self.gir_callable_infos[c_name] = info
-        self.all_infos[c_name] = info
+        self.gir_callable_infos[c_id] = info
+        self.all_infos[c_id] = info
 
     def __parse_gir_vmethod (self, nsmap, class_name, vmethod):
         name = vmethod.attrib['name']
-        c_name = "%s:::%s---%s" % (class_name, name, 'vfunc')
-        self.__parse_gir_callable_common (vmethod, c_name, name, name,
+        c_id = "%s:::%s---%s" % (class_name, name, 'vfunc')
+        self.__parse_gir_callable_common (vmethod, c_id, name, name, name,
                 class_name)
         return name
 
     def __parse_gir_signal (self, nsmap, class_name, signal):
         name = signal.attrib["name"]
-        c_name = "%s:::%s---%s" % (class_name, name, 'signal')
-        self.__parse_gir_callable_common (signal, c_name, name, name, class_name)
+        c_id = "%s:::%s---%s" % (class_name, name, 'signal')
+        self.__parse_gir_callable_common (signal, c_id, name, name, name, class_name)
         return name
 
     def __parse_gir_property (self, nsmap, class_name, prop):
@@ -358,7 +358,7 @@ class GIRParser(object):
         python_name = '%s.%s' % (class_name, function.attrib['name'])
         js_name = '%s.prototype.%s' % (class_name, function.attrib['name'])
         c_name = function.attrib['{%s}identifier' % nsmap['c']]
-        self.__parse_gir_callable_common (function, c_name, python_name,
+        self.__parse_gir_callable_common (function, c_name, c_name, python_name,
                 js_name, class_name, is_method=is_method,
                 is_constructor=is_constructor)
         return c_name
@@ -367,7 +367,7 @@ class GIRParser(object):
         name = '%s.%s' % (class_name, function.attrib['name'])
         c_name = function.attrib['{%s}type' % nsmap['c']]
         self.gir_types[name] = function
-        self.__parse_gir_callable_common (function, c_name, name, name,
+        self.__parse_gir_callable_common (function, c_name, c_name, name, name,
                 class_name)
         return c_name
 

@@ -14,6 +14,13 @@ class Link (MutableObject):
         MutableObject.__init__(self)
 
     def get_link (self):
+        from hotdoc.core.symbols import get_symbol
+        if not self.ref:
+            #print "I don't have a ref that's sad", self._title, self.id_, self
+            sym = get_symbol(self._title)
+            if sym and sym.link:
+                self.ref = sym.link.ref
+
         return self.ref
 
     @property
@@ -46,10 +53,10 @@ class LinkResolver(object):
         if not link.id_ in self.__links:
             self.__links[link.id_] = link
 
-    def upsert_link (self, link):
+    def upsert_link (self, link, overwrite_ref=False):
         elink = self.__links.get (link.id_)
         if elink:
-            if link.ref is not None:
+            if elink.ref is None or overwrite_ref and link.ref:
                 elink.ref = link.ref
             if link.title is not None:
                 elink.title = link.title

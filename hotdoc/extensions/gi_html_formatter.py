@@ -419,7 +419,15 @@ class GIHtmlFormatter(HtmlFormatter):
         return HtmlFormatter._format_symbol(self, symbol)
 
     def format (self, page):
+        c_fundamentals = {}
+        for c_name, link in self.python_fundamentals.iteritems():
+            link.id_ = c_name
+            elink = doc_tool.link_resolver.get_named_link(link.id_)
+            if elink:
+                c_fundamentals[c_name] = Link(elink.ref, elink.title, None)
+
         for l in self.__gi_extension.languages:
+            print "doing language", l
             if l == 'python':
                 self.fundamentals = self.python_fundamentals
             elif l == 'javascript':
@@ -429,10 +437,14 @@ class GIHtmlFormatter(HtmlFormatter):
 
             for c_name, link in self.fundamentals.iteritems():
                 link.id_ = c_name
-                doc_tool.link_resolver.upsert_link(link)
+                doc_tool.link_resolver.upsert_link(link, overwrite_ref=True)
 
             self.__gi_extension.setup_language (l)
             self._output = os.path.join (doc_tool.output, l)
             if not os.path.exists (self._output):
                 os.mkdir (self._output)
             HtmlFormatter.format (self, page)
+
+        for c_name, link in c_fundamentals.iteritems():
+            link.id_ = c_name
+            doc_tool.link_resolver.upsert_link(link, overwrite_ref=True)
