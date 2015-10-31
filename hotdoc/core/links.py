@@ -5,6 +5,7 @@ from hotdoc.core.alchemy_integration import MutableObject
 
 import traceback
 
+
 class Link (MutableObject):
     def __init__(self, ref, title, id_):
         self._title = title

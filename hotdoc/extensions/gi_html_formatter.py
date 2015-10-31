@@ -207,6 +207,7 @@ class GIHtmlFormatter(HtmlFormatter):
             return_values.append (retval)
 
         for param in out_parameters:
+            self.format_symbol (param)
             param.formatted_link = self._format_linked_symbol(param)
             return_values.append (param)
 

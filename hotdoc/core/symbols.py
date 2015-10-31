@@ -104,7 +104,7 @@ class Tag:
 class FunctionSymbol (Symbol):
     __tablename__ = 'functions'
     id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
-    parameters = Column(PickleType)
+    parameters = Column(MutableList.as_mutable(PickleType))
     return_value = Column(PickleType)
     is_method = Column(Boolean)
     throws = Column(Boolean)
@@ -113,7 +113,7 @@ class FunctionSymbol (Symbol):
     }
 
     def __init__(self, **kwargs):
-        self.parameters = {}
+        self.parameters = []
         self.throws = False
         self.is_method = False
         Symbol.__init__(self, **kwargs)
@@ -244,11 +244,11 @@ class FunctionMacroSymbol (MacroSymbol):
             'polymorphic_identity': 'function_macros',
     }
 
-    parameters = Column(PickleType)
+    parameters = Column(MutableList.as_mutable(PickleType))
     return_value = Column(PickleType)
 
     def __init__(self, **kwargs):
-        self.parameters = {}
+        self.parameters = []
         MacroSymbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
@@ -278,7 +278,7 @@ class ExportedVariableSymbol (MacroSymbol):
     def get_type_name (self):
         return "Exported variable"
 
-class QualifiedSymbol (object):
+class QualifiedSymbol (MutableObject):
     def __init__(self, type_tokens=[]):
         self.type_tokens = type_tokens
         self.type_link = None
@@ -290,6 +290,7 @@ class QualifiedSymbol (object):
 
         self.extension_contents = {}
         self.extension_attributes = {}
+        MutableObject.__init__(self)
 
     def add_extension_attribute (self, ext_name, key, value):
         attributes = self.extension_attributes.pop (ext_name, {})

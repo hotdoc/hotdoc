@@ -250,7 +250,7 @@ class DocTool(Loggable):
         self.index_file = args[0].index
 
     def finalize (self):
-        n = datetime.now()
+        purge_db()
         session.commit()
         session.close()
 
