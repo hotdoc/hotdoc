@@ -52,7 +52,7 @@ class PageParser(Loggable):
         if sym:
             self._current_page.add_symbol (sym)
             self.__total_documented_symbols += 1
-            new_symbols = sum(self.symbol_added_signal (sym), [])
+            new_symbols = sum(self.symbol_added_signal (self._current_page, sym), [])
             for symbol in new_symbols:
                 self._current_page.add_symbol (symbol)
                 self.__total_documented_symbols += 1

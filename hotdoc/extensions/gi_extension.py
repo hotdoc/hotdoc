@@ -995,7 +995,7 @@ class GIExtension(BaseExtension):
 
         return symbols
 
-    def __adding_symbol (self, symbol):
+    def __adding_symbol (self, page, symbol):
         res = []
 
         if isinstance (symbol, FunctionSymbol):
