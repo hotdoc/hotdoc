@@ -23,6 +23,7 @@ class PageParser(Loggable):
         self.create_object_hierarchy = False
         self.create_api_index = False
         self.symbol_added_signal = Signal()
+        self.adding_symbol_signal = Signal()
 
     def create_page (self, page_name, filename):
         page = Page (page_name, filename)
@@ -43,10 +44,11 @@ class PageParser(Loggable):
             return 'api_index.html'
         return ''
 
-    def create_symbol (self, symbol_name):
-        from hotdoc.core.symbols import StructSymbol, ClassSymbol
+    def add_symbol (self, symbol_name):
         if not self._current_page:
             return
+
+        self.adding_symbol_signal(self._current_page, symbol_name)
 
         sym = doc_tool.get_symbol (symbol_name)
         if sym:
