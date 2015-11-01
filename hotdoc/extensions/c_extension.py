@@ -34,9 +34,7 @@ class ClangScanner(Loggable):
                 clang.cindex.TranslationUnit.PARSE_INCOMPLETE |\
                 clang.cindex.TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
 
-        self.filenames = [os.path.abspath(filename) for filename in
-                filenames]
-        self.filenames = doc_tool.get_stale_files(self.filenames)
+        self.filenames = filenames
         self.full_scan = full_scan
         self.full_scan_patterns = full_scan_patterns
 
@@ -524,12 +522,16 @@ class CExtension(BaseExtension):
 
     def __init__(self, args):
         BaseExtension.__init__(self, args)
-        self.sources = args.c_sources
+        self.sources = [os.path.abspath(filename) for filename in
+                args.c_sources]
         self.clang_options = args.clang_options
 
     def setup(self):
         self.scanner = ClangScanner(self.sources, self.clang_options, False,
                 ['*.h'])
+
+    def get_source_files(self):
+        return self.sources
 
     def get_extra_symbols(self):
         return self.scanner.new_symbols

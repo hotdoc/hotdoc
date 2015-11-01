@@ -28,60 +28,40 @@ def merge_dicts(*dict_args):
 class ConfigError(Exception):
     pass
 
-class DependencyEdge(object):
-    def __init__(self, parent, child):
-        self.parent = parent
-        self.child = child
 
-    def __eq__(self, other):
-        return (self.parent == other.parent and
-                self.child == other.child)
-
-    def __hash__(self):
-        return hash((self.parent, self.child))
-
-    def __repr__(self):
-        return '%s -> %s' % (self.parent, self.child)
-
-class DependencyNode (object):
-    def __init__(self, filename):
-        self.filename = filename
-        self.unstale()
-
-    def __repr__(self):
-        return '%s last modified at %s' % (self.filename, str(self.mtime))
-
-    def unstale(self):
-        try:
-            self.mtime = os.path.getmtime(self.filename)
-        except OSError:
-            self.mtime = -1
-
-class DependencyGraph(object):
+class ChangeTracker(object):
     def __init__(self):
-        self.nodes = {}
-        self.edges = set({})
+        self.markdown_mtimes = {}
+        self.exts_mtimes = {}
 
-    def add_node (self, filename):
-        node = DependencyNode(filename)
-        self.nodes[filename] = node
+    def update_extension_sources_mtimes(self, extension):
+        ext_mtimes = {}
+        source_files = extension.get_source_files()
+        for source_file in source_files:
+            mtime = os.path.getmtime(source_file)
+            ext_mtimes[source_file] = mtime
 
-    def add_edge (self, parent, child):
-        edge = DependencyEdge(parent, child)
-        self.edges.add (edge)
+        self.exts_mtimes[extension.EXTENSION_NAME] = ext_mtimes
 
-    def dump(self):
-        graph = pg.AGraph(directed=True, strict=True)
+    def mark_extension_stale_sources (self, extension):
+        stale = []
+        source_files = extension.get_source_files()
 
-        for node in self.nodes.values():
-            graph.add_node (node.filename, style='rounded', shape='box')
-            node.unstale()
-        for edge in self.edges:
-            graph.add_edge (edge.parent, edge.child)
- 
-        with open ('dependency.svg', 'w') as f:
-            graph.draw(f, prog='dot', format='svg', args="-Grankdir=LR")
+        if extension.EXTENSION_NAME in self.exts_mtimes:
+            prev_mtimes = self.exts_mtimes[extension.EXTENSION_NAME]
+        else:
+            prev_mtimes = {}
 
+        for source_file in source_files:
+            if not source_file in prev_mtimes:
+                stale.append(source_file)
+            else:
+                prev_mtime = prev_mtimes.get(source_file)
+                mtime = os.path.getmtime(source_file)
+                if prev_mtime != mtime:
+                    stale.append(source_file)
+
+        extension.set_stale_source_files(stale)
 
 class SymbolsTable(object):
     def __init__(self):
@@ -127,17 +107,27 @@ class DocTool(Loggable):
 
         self.symbols_table.listen(self.page_parser)
 
+    def __create_change_tracker(self):
+        try:
+            self.change_tracker = pickle.load(open(os.path.join(self.output,
+                'change_tracker.p'), 'rb'))
+        except IOError:
+            self.change_tracker = ChangeTracker()
+
     def parse_and_format (self):
         self.__setup()
         self.parse_args ()
 
         self.__create_symbols_table()
+        self.__create_change_tracker()
 
         # We're done setting up, extensions can setup too
         for extension in self.extensions:
             print "Doing extension", extension.EXTENSION_NAME
             n = datetime.now()
+            self.change_tracker.mark_extension_stale_sources(extension)
             extension.setup ()
+            self.change_tracker.update_extension_sources_mtimes(extension)
             purge_db()
             self.comments.update (extension.get_comments())
             print "Extension done", datetime.now() - n, extension.EXTENSION_NAME
@@ -156,6 +146,8 @@ class DocTool(Loggable):
 
         pickle.dump(self.symbols_table, open(os.path.join(self.output,
             'symbols_table.p'), 'wb'))
+        pickle.dump(self.change_tracker, open(os.path.join(self.output,
+            'change_tracker.p'), 'wb'))
         session.commit()
         self.finalize()
 

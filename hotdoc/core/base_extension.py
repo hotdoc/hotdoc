@@ -10,6 +10,7 @@ class BaseExtension(Loggable):
         self._formatters = {"html": HtmlFormatter([])}
         self._raw_parser = GtkDocRawCommentParser()
         self._doc_parser = GtkDocParser()
+        self.stale_source_files = []
 
     @staticmethod
     def add_arguments (parser):
@@ -41,3 +42,9 @@ class BaseExtension(Loggable):
 
     def get_comments(self):
         return {}
+
+    def get_source_files(self):
+        return []
+
+    def set_stale_source_files(self, stale):
+        self.stale_source_files = stale
