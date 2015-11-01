@@ -22,6 +22,12 @@ def get_symbol(name):
         sym.constructed()
     return sym
 
+def get_typed_symbols(type_):
+    syms = session.query(type_).all()
+    for sym in syms:
+        sym.constructed()
+    return syms
+
 def get_or_create_symbol(type_, **kwargs):
     name = kwargs.pop('name')
 
