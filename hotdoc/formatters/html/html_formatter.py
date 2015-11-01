@@ -400,6 +400,8 @@ class HtmlFormatter (Formatter):
         if callable_.comment:
             tags = callable_.comment.tags
 
+        tags.pop('returns', None)
+
         out = template.render ({'prototype': prototype,
                                 'callable': callable_,
                                 'return_value': return_value_detail,

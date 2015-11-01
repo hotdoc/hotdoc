@@ -764,7 +764,7 @@ class GIExtension(BaseExtension):
 
     def __create_return_value_symbol (self, gi_retval, comment):
         if comment:
-            return_tag = comment.tags.get ('returns')
+            return_tag = comment.tags.get ('returns', None)
             return_comment = comment_from_tag (return_tag)
         else:
             return_comment = None
@@ -838,9 +838,6 @@ class GIExtension(BaseExtension):
                 parameters=parameters, return_value=retval,
                 comment=comment, name=name)
 
-        if comment:
-            comment.tags.pop ('returns', None)
-
         flags = []
 
         when = node.attrib.get('when')
@@ -899,11 +896,17 @@ class GIExtension(BaseExtension):
 
     def __create_class_symbol (self, symbol, gi_name):
         comment_name = 'SECTION:%s' % symbol.name.lower()
-        class_comment = doc_tool.comments.get(comment_name)
+        class_comment = doc_tool.get_comment(comment_name)
         hierarchy = self.gir_parser.gir_hierarchies.get (gi_name)
         children = self.gir_parser.gir_children_map.get (gi_name)
-        class_symbol = get_or_create_symbol(ClassSymbol, hierarchy=hierarchy, children=children,
-                comment=class_comment, name=symbol.name)
+
+        if class_comment:
+            class_symbol = get_or_create_symbol(ClassSymbol, hierarchy=hierarchy, children=children,
+                    comment=class_comment, name=symbol.name)
+        else:
+            class_symbol = get_or_create_symbol(ClassSymbol, hierarchy=hierarchy, children=children,
+                    name=symbol.name)
+
         return class_symbol
 
     def __update_function (self, func):
@@ -940,6 +943,14 @@ class GIExtension(BaseExtension):
 
         self.__sort_parameters (func, func.return_value, func_parameters)
 
+    def __get_comment (self, symbol_name, comment_name):
+        comment = doc_tool.get_comment(comment_name)
+        if not comment:
+            esym = get_symbol(symbol_name)
+            if esym:
+                comment = esym.comment
+        return comment
+
     def __update_struct (self, symbol):
         split = symbol.name.split(self.gir_parser.namespace)
         if len (split) < 2:
@@ -964,14 +975,14 @@ class GIExtension(BaseExtension):
         if klass_name:
             for signal_name, signal_node in gi_class_info.signals.iteritems():
                 block_name = '%s::%s' % (klass_name, signal_name)
-                comment = doc_tool.comments.get(block_name)
+                comment = self.__get_comment(signal_name, block_name)
                 sym = self.__create_signal_symbol (signal_node, comment,
                         klass_name, signal_name)
                 symbols.append (sym)
 
             for prop_name, prop_node in gi_class_info.properties.iteritems():
                 block_name = '%s:%s' % (klass_name, prop_name)
-                comment = doc_tool.comments.get(block_name)
+                comment = self.__get_comment(prop_name, block_name)
                 sym = self.__create_property_symbol (prop_node, comment,
                         klass_name, prop_name)
                 symbols.append (sym)
@@ -979,7 +990,8 @@ class GIExtension(BaseExtension):
         class_struct_name = gi_class_info.class_struct_name
         if class_struct_name:
             for vfunc_name, vfunc_node in gi_class_info.vmethods.iteritems():
-                parent_comment =doc_tool.comments.get(class_struct_name)
+                parent_comment = self.__get_comment(class_struct_name,
+                        class_struct_name)
                 comment = None
                 if parent_comment:
                     comment = parent_comment.params.get (vfunc_node.attrib['name'])

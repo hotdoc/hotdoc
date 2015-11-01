@@ -91,7 +91,7 @@ class DocTool(Loggable):
         self.doc_parser = None
         self.page_parser = None
         self.extensions = []
-        self.comments = {}
+        self.__comments = {}
         self.full_scan = False
         self.full_scan_patterns = ['*.h']
         self.link_resolver = LinkResolver()
@@ -129,7 +129,7 @@ class DocTool(Loggable):
             extension.setup ()
             self.change_tracker.update_extension_sources_mtimes(extension)
             purge_db()
-            self.comments.update (extension.get_comments())
+            self.__comments.update (extension.get_comments())
             print "Extension done", datetime.now() - n, extension.EXTENSION_NAME
 
         n = datetime.now()
@@ -160,6 +160,9 @@ class DocTool(Loggable):
     def get_symbol (self, name):
         from hotdoc.core.symbols import get_symbol
         return get_symbol(name)
+
+    def get_comment (self, name):
+        return self.__comments.get(name)
 
     def __setup (self):
         if os.name == 'nt':

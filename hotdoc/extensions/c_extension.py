@@ -23,7 +23,8 @@ def ast_node_is_function_pointer (ast_node):
 
 
 class ClangScanner(Loggable):
-    def __init__(self, filenames, options, full_scan, full_scan_patterns):
+    def __init__(self, filenames, options, full_scan, full_scan_patterns,
+            incremental):
         Loggable.__init__(self)
 
         if options:
@@ -67,6 +68,8 @@ class ClangScanner(Loggable):
                     for c in cs:
                         block = doc_tool.raw_comment_parser.parse_comment(c[0], c[1], c[2])
                         self.comments[block.name] = block
+                        if incremental:
+                            self.__update_symbol_comment(block)
 
         n = datetime.now()
         for filename in self.filenames:
@@ -208,6 +211,19 @@ class ClangScanner(Loggable):
 
     def tokens_from_tokens (self, tokens):
         toks = []
+
+    def __update_symbol_comment(self, comment):
+        esym = get_symbol (comment.name)
+        if esym:
+            esym.comment = comment
+
+    def __get_comment (self, comment_name):
+        comment = self.comments.get(comment_name)
+        if not comment:
+            esym = get_symbol(comment_name)
+            if esym:
+                comment = esym.comment
+        return comment
 
     def __create_callback_symbol (self, node, comment):
         parameters = []
@@ -377,7 +393,7 @@ class ClangScanner(Loggable):
 
     def __create_typedef_symbol (self, node): 
         t = node.underlying_typedef_type
-        comment = self.comments.get (node.spelling)
+        comment = self.__get_comment (node.spelling)
         if ast_node_is_function_pointer (t):
             sym = self.__create_callback_symbol (node, comment)
         else:
@@ -425,7 +441,7 @@ class ClangScanner(Loggable):
         original_lines = [linecache.getline(filename, i).rstrip() for i in range(start,
             end)]
         original_text = '\n'.join(original_lines)
-        comment = self.comments.get (node.spelling)
+        comment = self.__get_comment (node.spelling)
         if '(' in split[1]:
             sym = self.__create_function_macro_symbol (node, comment, original_text)
         else:
@@ -434,7 +450,7 @@ class ClangScanner(Loggable):
         return sym
 
     def __create_function_symbol (self, node):
-        comment = self.comments.get (node.spelling)
+        comment = self.__get_comment (node.spelling)
         parameters = []
 
         if comment:
@@ -472,10 +488,10 @@ class ClangScanner(Loggable):
         original_lines = [linecache.getline(filename, i).rstrip() for i in range(start,
             end)]
         original_text = '\n'.join(original_lines)
-        comment = self.comments.get (node.spelling)
+        comment = self.__get_comment (node.spelling)
 
         sym = get_or_create_symbol(ExportedVariableSymbol, original_text=original_text,
-                comment=self.comments.get (node.spelling),
+                comment=self.__get_comment (node.spelling),
                 name=node.spelling, filename=str(node.location.file),
                 lineno=node.location.line)
         return sym
@@ -527,8 +543,9 @@ class CExtension(BaseExtension):
         self.clang_options = args.clang_options
 
     def setup(self):
-        self.scanner = ClangScanner(self.sources, self.clang_options, False,
-                ['*.h'])
+        incremental = (self.stale_source_files != self.sources)
+        self.scanner = ClangScanner(self.stale_source_files, self.clang_options, False,
+                ['*.h'], incremental)
 
     def get_source_files(self):
         return self.sources
