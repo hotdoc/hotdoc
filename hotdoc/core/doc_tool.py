@@ -83,6 +83,23 @@ class DependencyGraph(object):
             graph.draw(f, prog='dot', format='svg', args="-Grankdir=LR")
 
 
+class SymbolsTable(object):
+    def __init__(self):
+        self.symbols_map = {}
+        self.pages_symbols = {}
+
+    def listen(self, page_parser):
+        page_parser.adding_symbol_signal.connect(self.__adding_symbol_cb)
+
+    def __adding_symbol_cb (self, page, symbol_name):
+        symbol_map = self.symbols_map.pop(symbol_name, {})
+        symbol_map[page.source_file] = True
+        self.symbols_map[symbol_name] = symbol_map
+
+        page_symbols = self.pages_symbols.pop(page.source_file, [])
+        page_symbols.append(symbol_name)
+        self.pages_symbols[page.source_file] = page_symbols
+
 class DocTool(Loggable):
     def __init__(self):
         Loggable.__init__(self)
@@ -101,46 +118,20 @@ class DocTool(Loggable):
         self.well_known_names = {}
         self.rebuilding = False
 
-    def get_stale_files (self, filenames):
-        stale = []
-        for filename in filenames:
-            abspath = os.path.abspath (filename)
-            node = self.graph.nodes.get(abspath)
-            if not node:
-                self.graph.add_node (abspath)
-                stale.append (abspath)
-                continue
-            mtime = os.path.getmtime (abspath)
-            if mtime > node.mtime:
-                stale.append (abspath)
+    def __create_symbols_table(self):
+        try:
+            self.symbols_table = pickle.load(open(os.path.join(self.output,
+                'symbols_table.p'), 'rb'))
+        except IOError:
+            self.symbols_table = SymbolsTable()
 
-        return stale
-
-    def dump_dependencies (self, page):
-        self.graph.add_node (page.source_file)
-        for symbol in page.symbols:
-            if symbol.filename:
-                self.graph.add_node (symbol.filename)
-                self.graph.add_edge (page.source_file, symbol.filename)
-            if symbol.comment and symbol.comment.filename:
-                self.graph.add_node (symbol.comment.filename)
-                self.graph.add_edge(page.source_file, symbol.comment.filename)
-
-        for cpage in page.subpages:
-            self.graph.add_node (cpage.source_file)
-            self.graph.add_edge (page.source_file, cpage.source_file)
-            self.dump_dependencies (cpage)
+        self.symbols_table.listen(self.page_parser)
 
     def parse_and_format (self):
         self.__setup()
         self.parse_args ()
 
-        try:
-            self.graph = pickle.load(open(os.path.join(self.output,
-                'dep_graph.p'), 'rb'))
-            self.rebuilding = True
-        except IOError:
-            self.graph = DependencyGraph()
+        self.__create_symbols_table()
 
         # We're done setting up, extensions can setup too
         for extension in self.extensions:
@@ -156,7 +147,6 @@ class DocTool(Loggable):
 
         purge_db()
 
-        self.dump_dependencies (page)
         from ..formatters.html.html_formatter import HtmlFormatter
         self.formatter = HtmlFormatter([])
 
@@ -164,8 +154,8 @@ class DocTool(Loggable):
 
         print "currently optimizable:", datetime.now() - n
 
-        self.graph.dump()
-        pickle.dump(self.graph, open(os.path.join(self.output, 'dep_graph.p'), 'wb'))
+        pickle.dump(self.symbols_table, open(os.path.join(self.output,
+            'symbols_table.p'), 'wb'))
         session.commit()
         self.finalize()
 
