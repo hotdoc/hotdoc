@@ -8,7 +8,6 @@ from datetime import datetime
 
 from hotdoc.core.base_extension import BaseExtension
 from hotdoc.utils.loggable import Loggable, progress_bar
-from hotdoc.core.doc_tool import doc_tool
 from hotdoc.core.symbols import *
 from hotdoc.core.comment_block import CommentBlock, comment_from_tag
 from hotdoc.lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
@@ -23,10 +22,11 @@ def ast_node_is_function_pointer (ast_node):
 
 
 class ClangScanner(Loggable):
-    def __init__(self, filenames, options, full_scan, full_scan_patterns,
+    def __init__(self, doc_tool, filenames, options, full_scan, full_scan_patterns,
             incremental):
         Loggable.__init__(self)
 
+        self.doc_tool = doc_tool
         if options:
             options = options[0].split(' ')
 
@@ -66,7 +66,7 @@ class ClangScanner(Loggable):
                 with open (filename, 'r') as f:
                     cs = get_comments (filename)
                     for c in cs:
-                        block = doc_tool.raw_comment_parser.parse_comment(c[0], c[1], c[2])
+                        block = self.doc_tool.raw_comment_parser.parse_comment(c[0], c[1], c[2])
                         self.comments[block.name] = block
                         if incremental:
                             self.__update_symbol_comment(block)
@@ -158,7 +158,7 @@ class ClangScanner(Loggable):
                         continue
 
                     self.comments[node.spelling] = \
-                        doc_tool.raw_comment_parser.parse_comment \
+                        self.doc_tool.raw_comment_parser.parse_comment \
                                 (node.raw_comment, str(node.location.file), 0)
 
                 self.symbols[node.spelling] = node
@@ -199,7 +199,7 @@ class ClangScanner(Loggable):
         if type_.kind == clang.cindex.TypeKind.TYPEDEF:
             d = type_.get_declaration ()
             link = Link (None, d.displayname, d.displayname)
-            link = doc_tool.link_resolver.upsert_link(link)
+            link = self.doc_tool.link_resolver.upsert_link(link)
 
             tokens.append (link)
             self.__apply_qualifiers(type_, tokens)
@@ -536,15 +536,15 @@ class ClangScanner(Loggable):
 class CExtension(BaseExtension):
     EXTENSION_NAME = 'c-extension'
 
-    def __init__(self, args):
-        BaseExtension.__init__(self, args)
+    def __init__(self, doc_tool, args):
+        BaseExtension.__init__(self, doc_tool, args)
         self.sources = [os.path.abspath(filename) for filename in
                 args.c_sources]
         self.clang_options = args.clang_options
 
     def setup(self):
         incremental = (self.stale_source_files != self.sources)
-        self.scanner = ClangScanner(self.stale_source_files, self.clang_options, False,
+        self.scanner = ClangScanner(self.doc_tool, self.stale_source_files, self.clang_options, False,
                 ['*.h'], incremental)
 
     def get_source_files(self):

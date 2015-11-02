@@ -174,7 +174,7 @@ class DocTool(Loggable):
         purge_db()
 
         from ..formatters.html.html_formatter import HtmlFormatter
-        self.formatter = HtmlFormatter([])
+        self.formatter = HtmlFormatter(self, [])
 
         self.formatter.format(page)
 
@@ -243,7 +243,7 @@ class DocTool(Loggable):
 
     def __parse_extensions (self, args):
         if args[0].extension_name:
-            ext = self.__extension_dict[args[0].extension_name](args[0])
+            ext = self.__extension_dict[args[0].extension_name](self, args[0])
             self.extensions.append (ext)
 
             if self.raw_comment_parser is None:

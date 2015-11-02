@@ -6,11 +6,11 @@ from hotdoc.core.sections import Page
 
 
 class GIHtmlFormatter(HtmlFormatter):
-    def __init__(self, gi_extension):
+    def __init__(self, doc_tool, gi_extension):
         module_path = os.path.dirname(__file__)
         searchpath = [os.path.join(module_path, "templates")]
         self.__gi_extension = gi_extension
-        HtmlFormatter.__init__(self, searchpath)
+        HtmlFormatter.__init__(self, doc_tool, searchpath)
         self.python_fundamentals = self.__create_python_fundamentals()
         self.javascript_fundamentals = self.__create_javascript_fundamentals()
 
@@ -410,7 +410,7 @@ class GIHtmlFormatter(HtmlFormatter):
             new_names = self.__gi_extension.gir_parser.javascript_names
 
         if new_names is not None:
-            doc_tool.page_parser.rename_headers (page.parsed_page,
+            self.doc_tool.page_parser.rename_headers (page.parsed_page,
                     new_names)
         return HtmlFormatter._format_page (self, page)
 
@@ -422,7 +422,7 @@ class GIHtmlFormatter(HtmlFormatter):
         c_fundamentals = {}
         for c_name, link in self.python_fundamentals.iteritems():
             link.id_ = c_name
-            elink = doc_tool.link_resolver.get_named_link(link.id_)
+            elink = self.doc_tool.link_resolver.get_named_link(link.id_)
             if elink:
                 c_fundamentals[c_name] = Link(elink.ref, elink.title, None)
 
@@ -437,14 +437,14 @@ class GIHtmlFormatter(HtmlFormatter):
 
             for c_name, link in self.fundamentals.iteritems():
                 link.id_ = c_name
-                doc_tool.link_resolver.upsert_link(link, overwrite_ref=True)
+                self.doc_tool.link_resolver.upsert_link(link, overwrite_ref=True)
 
             self.__gi_extension.setup_language (l)
-            self._output = os.path.join (doc_tool.output, l)
+            self._output = os.path.join (self.doc_tool.output, l)
             if not os.path.exists (self._output):
                 os.mkdir (self._output)
             HtmlFormatter.format (self, page)
 
         for c_name, link in c_fundamentals.iteritems():
             link.id_ = c_name
-            doc_tool.link_resolver.upsert_link(link, overwrite_ref=True)
+            self.doc_tool.link_resolver.upsert_link(link, overwrite_ref=True)

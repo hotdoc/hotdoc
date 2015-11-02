@@ -2,12 +2,12 @@ from ..extensions.gi_raw_parser import GtkDocRawCommentParser
 from ..utils.loggable import Loggable
 
 class BaseExtension(Loggable):
-    def __init__(self, args):
+    def __init__(self, doc_tool, args):
         Loggable.__init__(self)
         from ..formatters.html.html_formatter import HtmlFormatter
         from ..extensions.gtk_doc_parser import GtkDocParser
-        from hotdoc.core.doc_tool import doc_tool
-        self._formatters = {"html": HtmlFormatter([])}
+        self.doc_tool = doc_tool
+        self._formatters = {"html": HtmlFormatter(doc_tool, [])}
         self._raw_parser = GtkDocRawCommentParser()
         self._doc_parser = GtkDocParser()
         self.stale_source_files = []

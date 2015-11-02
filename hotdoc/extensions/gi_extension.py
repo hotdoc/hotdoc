@@ -7,7 +7,6 @@ import pygraphviz as pg
 
 from ..core.symbols import *
 from ..core.comment_block import GtkDocParameter, CommentBlock, comment_from_tag
-from ..core.doc_tool import doc_tool
 from ..core.base_extension import BaseExtension
 from ..utils.loggable import Loggable
 from .gi_raw_parser import GtkDocRawCommentParser
@@ -142,7 +141,7 @@ class GIClassInfo(GIInfo):
         self.is_interface = is_interface
 
 class GIRParser(object):
-    def __init__(self, gir_file):
+    def __init__(self, doc_tool, gir_file):
         self.namespace = None
         self.gir_class_infos = {}
         self.gir_callable_infos = {}
@@ -155,6 +154,7 @@ class GIRParser(object):
         self.gir_types = {}
         self.all_infos = {}
         self.global_hierarchy = None
+        self.doc_tool = doc_tool
 
         self.parsed_files = []
 
@@ -180,7 +180,7 @@ class GIRParser(object):
             gi_name = '%s.%s' % (klass.parent_name, klass.node.attrib['name'])
             klass_name = self.__get_klass_name (klass.node)
             link = Link(None, klass_name, klass_name)
-            link = doc_tool.link_resolver.upsert_link(link)
+            link = self.doc_tool.link_resolver.upsert_link(link)
             symbol = QualifiedSymbol(type_tokens=[link])
             parents = reversed(self.gir_hierarchies[gi_name])
             for parent in parents:
@@ -212,13 +212,13 @@ class GIRParser(object):
 
             if not klass_name in children:
                 link = Link(None, klass_name, klass_name)
-                link = doc_tool.link_resolver.upsert_link(link)
+                link = self.doc_tool.link_resolver.upsert_link(link)
                 sym = QualifiedSymbol(type_tokens=[link])
                 children[klass_name] = sym
 
             klass_name = self.__get_klass_name(parent_class)
             link = Link(None, klass_name, klass_name)
-            link = doc_tool.link_resolver.upsert_link(link)
+            link = self.doc_tool.link_resolver.upsert_link(link)
             sym = QualifiedSymbol(type_tokens=[link])
             hierarchy.append (sym)
 
@@ -248,7 +248,7 @@ class GIRParser(object):
             elif child.tag == "{http://www.gtk.org/introspection/core/1.0}include":
                 inc_name = child.attrib["name"]
                 inc_version = child.attrib["version"]
-                gir_file = os.path.join (doc_tool.datadir, 'gir-1.0', '%s-%s.gir' % (inc_name,
+                gir_file = os.path.join (self.doc_tool.datadir, 'gir-1.0', '%s-%s.gir' % (inc_name,
                     inc_version))
                 self.__parse_gir_file (gir_file)
 
@@ -411,7 +411,7 @@ class GIRParser(object):
             ptype_name = c_type
 
         type_link = Link (None, ptype_name, ptype_name)
-        type_link = doc_tool.link_resolver.upsert_link(type_link)
+        type_link = self.doc_tool.link_resolver.upsert_link(type_link)
 
         tokens = [type_link]
         tokens += '*'
@@ -421,8 +421,8 @@ class GIRParser(object):
 class GIExtension(BaseExtension):
     EXTENSION_NAME = "gi-extension"
 
-    def __init__(self, args):
-        BaseExtension.__init__(self, args)
+    def __init__(self, doc_tool, args):
+        BaseExtension.__init__(self, doc_tool, args)
         self.gir_file = args.gir_file
         self.gi_index = args.gi_index
         self.languages = [l.lower() for l in args.languages]
@@ -456,7 +456,7 @@ class GIExtension(BaseExtension):
                 }
 
         self.__raw_comment_parser = GtkDocRawCommentParser()
-        self._formatters["html"] = GIHtmlFormatter(self)
+        self._formatters["html"] = GIHtmlFormatter(self.doc_tool, self)
 
         self.__translated_names = {}
 
@@ -472,7 +472,7 @@ class GIExtension(BaseExtension):
                 dest="gi_index", required=True)
 
     def __gather_gtk_doc_links (self):
-        sgml_dir = os.path.join(doc_tool.datadir, "gtk-doc", "html")
+        sgml_dir = os.path.join(self.doc_tool.datadir, "gtk-doc", "html")
         if not os.path.exists(sgml_dir):
             self.error("no gtk doc to gather links from in %s" % sgml_dir)
             return
@@ -507,7 +507,7 @@ class GIExtension(BaseExtension):
                         href = filename
 
                     link = Link (href, title, title)
-                    doc_tool.link_resolver.upsert_link (link)
+                    self.doc_tool.link_resolver.upsert_link (link)
 
     def __make_type_annotation (self, annotation, value):
         if not value:
@@ -618,7 +618,7 @@ class GIExtension(BaseExtension):
     def __add_annotations (self, symbol):
         if self.language == 'c':
             annotations = self.get_annotations (symbol)
-            extra_content = doc_tool.formatter._format_annotations (annotations)
+            extra_content = self.doc_tool.formatter._format_annotations (annotations)
         else:
             extra_content = ''
         symbol.extension_contents['Annotations'] = extra_content
@@ -668,27 +668,7 @@ class GIExtension(BaseExtension):
         else:
             self.__translated_names = {}
 
-        doc_tool.doc_parser.set_translated_names(self.__translated_names)
-
-    def __fill_index_columns(self, columns):
-        columns.append ('Since')
-
-    def __fill_index_row (self, symbol, row):
-        info = self.gir_parser.all_infos.get (symbol.link.id_)
-        if info:
-            link = Link(None, info.parent_name, info.parent_name)
-            link = doc_tool.link_resolver.upsert_link(link)
-            row[2] = link
-            if type (info) == GIClassInfo and info.is_interface:
-                row[1] = "Interface"
-
-        if not symbol.comment:
-            row.append (self.major_version)
-            return
-        if not 'since' in symbol.comment.tags:
-            row.append (self.major_version)
-            return
-        row.append (symbol.comment.tags.get ('since').description)
+        self.doc_tool.doc_parser.set_translated_names(self.__translated_names)
 
     def __unnest_type (self, parameter):
         array_nesting = 0
@@ -709,7 +689,7 @@ class GIExtension(BaseExtension):
                 tokens.append(token)
             else:
                 link = Link(None, token, token)
-                link = doc_tool.link_resolver.upsert_link(link)
+                link = self.doc_tool.link_resolver.upsert_link(link)
                 tokens.append (link)
 
         for i in range(indirection):
@@ -851,7 +831,7 @@ class GIExtension(BaseExtension):
         if no_hooks == '1':
             flags.append (NoHooksFlag())
 
-        extra_content = self.get_formatter(doc_tool.output_format)._format_flags (flags)
+        extra_content = self.get_formatter(self.doc_tool.output_format)._format_flags (flags)
         res.extension_contents['Flags'] = extra_content
 
         self.__sort_parameters (res, retval, parameters)
@@ -879,7 +859,7 @@ class GIExtension(BaseExtension):
         res = get_or_create_symbol(PropertySymbol, prop_type=type_, object_name=object_name,
                 comment=comment, name=name)
 
-        extra_content = self.get_formatter(doc_tool.output_format)._format_flags (flags)
+        extra_content = self.get_formatter(self.doc_tool.output_format)._format_flags (flags)
         res.extension_contents['Flags'] = extra_content
 
         return res
@@ -895,7 +875,7 @@ class GIExtension(BaseExtension):
 
     def __create_class_symbol (self, symbol, gi_name):
         comment_name = 'SECTION:%s' % symbol.name.lower()
-        class_comment = doc_tool.get_comment(comment_name)
+        class_comment = self.doc_tool.get_comment(comment_name)
         hierarchy = self.gir_parser.gir_hierarchies.get (gi_name)
         children = self.gir_parser.gir_children_map.get (gi_name)
 
@@ -943,7 +923,7 @@ class GIExtension(BaseExtension):
         self.__sort_parameters (func, func.return_value, func_parameters)
 
     def __get_comment (self, symbol_name, comment_name):
-        comment = doc_tool.get_comment(comment_name)
+        comment = self.doc_tool.get_comment(comment_name)
         if not comment:
             esym = get_symbol(symbol_name)
             if esym:
@@ -1019,9 +999,9 @@ class GIExtension(BaseExtension):
 
     def handle_well_known_name (self, wkn):
         if self.gir_file and not self.gir_parser:
-            self.gir_parser = GIRParser (self.gir_file)
+            self.gir_parser = GIRParser (self.doc_tool, self.gir_file)
 
-        formatter = self.get_formatter(doc_tool.output_format)
+        formatter = self.get_formatter(self.doc_tool.output_format)
 
         if wkn == 'gobject-api':
             contents = ''
@@ -1029,21 +1009,19 @@ class GIExtension(BaseExtension):
                 dest = '%s/gobject-api.html' % language
                 contents += '### [%s API](%s)\n' % \
                         (language.capitalize (), dest)
-                doc_tool.page_parser.final_destinations[dest] = True
+                self.doc_tool.page_parser.final_destinations[dest] = True
 
-            index_page = doc_tool.page_parser.parse_contents (contents,
+            index_page = self.doc_tool.page_parser.parse_contents (contents,
                     'gobject-api', 'generated-gobject-index')
 
-            doc_tool.page_parser.symbol_added_signal.connect (self.__adding_symbol)
+            self.doc_tool.page_parser.symbol_added_signal.connect (self.__adding_symbol)
 
             formatter.formatting_symbol_signals[Symbol].connect(self.__formatting_symbol)
-            formatter.fill_index_columns_signal.connect(self.__fill_index_columns)
-            formatter.fill_index_row_signal.connect(self.__fill_index_row)
 
-            doc_tool.page_parser._current_page = index_page
-            page = doc_tool.page_parser.parse (self.gi_index)
-            doc_tool.page_parser.symbol_added_signal.disconnect (self.__adding_symbol)
-            page.formatter = self.get_formatter(doc_tool.output_format)
+            self.doc_tool.page_parser._current_page = index_page
+            page = self.doc_tool.page_parser.parse (self.gi_index)
+            self.doc_tool.page_parser.symbol_added_signal.disconnect (self.__adding_symbol)
+            page.formatter = self.get_formatter(self.doc_tool.output_format)
             return None, page
 
         elif wkn == 'gobject-hierarchy':

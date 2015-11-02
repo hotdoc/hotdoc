@@ -7,8 +7,6 @@ import pygraphviz as pg
 
 from xml.sax.saxutils import unescape
 
-from .doc_tool import ConfigError
-from .doc_tool import doc_tool
 from .symbols import (Symbol, ReturnValueSymbol, ParameterSymbol, FieldSymbol,
         ClassSymbol, QualifiedSymbol, CallbackSymbol)
 from .sections import Page
@@ -20,7 +18,10 @@ def all_subclasses(cls):
                                        for g in all_subclasses(s)]
 
 class Formatter(object):
-    def __init__ (self):
+    def __init__ (self, doc_tool):
+        self.doc_tool = doc_tool
+        self._output = doc_tool.output
+
         # Used to warn subclasses a method isn't implemented
         self.__not_implemented_methods = {}
 
@@ -32,7 +33,6 @@ class Formatter(object):
 
         self.fill_index_columns_signal = Signal()
         self.fill_index_row_signal = Signal()
-        self._output = doc_tool.output
 
         # Hardcoded for now
         self.__cmp = CommonMark.DocParser()
@@ -115,18 +115,18 @@ class Formatter(object):
     def __format_page (self, page):
         out = ""
         self.__format_symbols(page.symbols)
-        page.detailed_description = doc_tool.formatter._format_page (page)[0]
-        doc_tool.formatter._write_page (page)
+        page.detailed_description = self.doc_tool.formatter._format_page (page)[0]
+        self.doc_tool.formatter._write_page (page)
         for cpage in page.subpages:
             if cpage.formatter:
-                doc_tool.formatter = cpage.formatter
-                doc_tool.formatter.format(cpage)
+                self.doc_tool.formatter = cpage.formatter
+                self.doc_tool.formatter.format(cpage)
             else:
                 self.__format_page (cpage)
-            doc_tool.formatter = self
+            self.doc_tool.formatter = self
 
     def __copy_extra_files (self):
-        asset_path = os.path.join (doc_tool.output, 'assets')
+        asset_path = os.path.join (self.doc_tool.output, 'assets')
         if not os.path.exists (asset_path):
             os.mkdir (asset_path)
 
@@ -158,7 +158,7 @@ class Formatter(object):
 
         out = ""
         docstring = unescape (docstring)
-        docstring = doc_tool.doc_parser.translate (docstring)
+        docstring = self.doc_tool.doc_parser.translate (docstring)
         ast = self.__cmp.parse (docstring.encode('utf-8'))
         rendered_text = self.__cmr.render(ast)
         return rendered_text
