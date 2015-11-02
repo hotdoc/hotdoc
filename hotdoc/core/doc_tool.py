@@ -31,7 +31,7 @@ class ConfigError(Exception):
 
 class ChangeTracker(object):
     def __init__(self):
-        self.markdown_mtimes = {}
+        self.pages_mtimes = {}
         self.exts_mtimes = {}
 
     def update_extension_sources_mtimes(self, extension):
@@ -62,6 +62,36 @@ class ChangeTracker(object):
                     stale.append(source_file)
 
         extension.set_stale_source_files(stale)
+
+    def __update_page_mtime(self, page):
+        try:
+            self.pages_mtimes[page.source_file] = os.path.getmtime(page.source_file)
+        except OSError:  # Generated pages
+            pass
+
+        for cpage in page.subpages:
+            self.__update_page_mtime (cpage)
+
+    def update_pages_mtimes(self, page):
+        self.__update_page_mtime (page)
+
+        # Check removed markdown files
+        for source_file in self.pages_mtimes:
+            if not os.path.exists (source_file):
+                self.pages_mtimes.pop(source_file)
+
+    def get_stale_pages(self):
+        stale = []
+
+        for source_file, prev_mtime in self.pages_mtimes.items():
+            try:
+                mtime = os.path.getmtime(source_file)
+            except OSError:  # Page might have been deleted
+                continue
+            if mtime != prev_mtime:
+                stale.append(source_file)
+
+        return stale
 
 class SymbolsTable(object):
     def __init__(self):
@@ -96,7 +126,7 @@ class DocTool(Loggable):
         self.full_scan_patterns = ['*.h']
         self.link_resolver = LinkResolver()
         self.well_known_names = {}
-        self.rebuilding = False
+        self.incremental = False
 
     def __create_symbols_table(self):
         try:
@@ -111,6 +141,7 @@ class DocTool(Loggable):
         try:
             self.change_tracker = pickle.load(open(os.path.join(self.output,
                 'change_tracker.p'), 'rb'))
+            self.incremental = True
         except IOError:
             self.change_tracker = ChangeTracker()
 
@@ -133,7 +164,12 @@ class DocTool(Loggable):
             print "Extension done", datetime.now() - n, extension.EXTENSION_NAME
 
         n = datetime.now()
+
+        if self.incremental:
+            stale_pages = self.change_tracker.get_stale_pages()
+
         page = self.page_parser.parse (self.index_file)
+        self.change_tracker.update_pages_mtimes(page)
 
         purge_db()
 
