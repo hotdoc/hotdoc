@@ -4,12 +4,11 @@ import os
 import re
 import CommonMark
 from xml.sax.saxutils import unescape
-from ..core.doc_tool import doc_tool
 from ..core.base_page_parser import PageParser, ParsedPage
 
 class CommonMarkParser (PageParser):
-    def __init__(self):
-        PageParser.__init__(self)
+    def __init__(self, doc_tool):
+        PageParser.__init__(self, doc_tool)
         self.__cmp = CommonMark.DocParser()
         self.__cmr = CommonMark.HTMLRenderer()
         self.final_destinations = {}
@@ -69,7 +68,7 @@ class CommonMarkParser (PageParser):
         if os.path.isabs(filename):
             return filename
 
-        for include_path in doc_tool.include_paths:
+        for include_path in self.doc_tool.include_paths:
             fpath = os.path.join(include_path, filename)
             if os.path.exists(fpath):
                 return fpath
@@ -97,13 +96,13 @@ class CommonMarkParser (PageParser):
 
     def check_well_known_names(self, node):
         if node.t == 'Link':
-            handling_extension = doc_tool.get_well_known_name_handler(node.destination)
+            handling_extension = self.doc_tool.get_well_known_name_handler(node.destination)
             if handling_extension:
                 new_contents, new_page = handling_extension.handle_well_known_name(node.destination)
                 #res = handling_extension.insert_well_known_name (node.destination)
                 if new_page:
                     self._current_page.subpages.append (new_page)
-                    node.destination += '.%s' % doc_tool.output_format
+                    node.destination += '.%s' % self.doc_tool.output_format
                     self.final_destinations[node.destination] = True
 
         for c in node.inline_content:
@@ -141,7 +140,7 @@ class CommonMarkParser (PageParser):
     def _update_links (self, node):
         if node.t == 'Link':
             if node.destination not in self.final_destinations:
-                link = doc_tool.link_resolver.get_named_link (node.destination)
+                link = self.doc_tool.link_resolver.get_named_link (node.destination)
                 node.label[-1].c += ' '
                 if link and link.get_link() is not None:
                     node.destination = link.get_link()
@@ -156,7 +155,7 @@ class CommonMarkParser (PageParser):
         for h in page.headers:
             if h[0].desc:
                 del h[1:]
-                desc = doc_tool.doc_parser.translate (h[0].desc)
+                desc = self.doc_tool.doc_parser.translate (h[0].desc)
                 docstring = unescape (desc)
                 desc = u' — %s' % desc.encode ('utf-8')
                 sub_ast = self.__cmp.parse (desc)

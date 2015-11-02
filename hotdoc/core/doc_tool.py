@@ -218,9 +218,8 @@ class DocTool(Loggable):
         self.parser.add_argument ("-I", "--include-path", action="append",
                 default=[], dest="include_paths")
 
-        # Hardcoded for now
         from ..extensions.common_mark_parser import CommonMarkParser
-        self.page_parser = CommonMarkParser ()
+        self.page_parser = CommonMarkParser (self)
 
         extension_subclasses = all_subclasses (BaseExtension)
         subparsers = self.parser.add_subparsers (title="extensions",

@@ -4,7 +4,6 @@ import os
 from .sections import Page
 from ..utils.loggable import Loggable
 from ..utils.simple_signals import Signal
-from hotdoc.core.doc_tool import doc_tool
 
 class ParsedPage(object):
     def __init__(self):
@@ -13,8 +12,10 @@ class ParsedPage(object):
         self.links = []
 
 class PageParser(Loggable):
-    def __init__(self):
+    def __init__(self, doc_tool):
         Loggable.__init__(self)
+
+        self.doc_tool = doc_tool
         self.base_page = None
         self._current_page = None
         self.__parsed_pages = {}
@@ -50,7 +51,7 @@ class PageParser(Loggable):
 
         self.adding_symbol_signal(self._current_page, symbol_name)
 
-        sym = doc_tool.get_symbol (symbol_name)
+        sym = self.doc_tool.get_symbol (symbol_name)
         if sym:
             self._current_page.add_symbol (sym)
             self.__total_documented_symbols += 1
