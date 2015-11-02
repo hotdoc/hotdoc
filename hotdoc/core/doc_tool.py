@@ -6,7 +6,7 @@ sys.setdefaultencoding('utf8')
 import pygraphviz as pg
 import cPickle as pickle
 
-from hotdoc.core.alchemy_integration import session, finalize_db, purge_db
+from hotdoc.core.alchemy_integration import session, purge_db
 
 from .naive_index import NaiveIndexFormatter
 from .links import LinkResolver

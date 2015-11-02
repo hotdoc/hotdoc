@@ -10,10 +10,8 @@ from ..utils.simple_signals import Signal
 from ..utils.utils import all_subclasses
 from .doc_tool import doc_tool
 
-import sqlalchemy
-from sqlalchemy import (create_engine, Column, String, Integer, Boolean,
+from sqlalchemy import (Column, String, Integer, Boolean,
         ForeignKey, PickleType)
-from sqlalchemy.orm import relationship
 from hotdoc.core.alchemy_integration import *
 
 def get_symbol(name):

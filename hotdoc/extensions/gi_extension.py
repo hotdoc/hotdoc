@@ -14,7 +14,6 @@ from .gi_raw_parser import GtkDocRawCommentParser
 from .gi_html_formatter import GIHtmlFormatter
 from hotdoc.core.links import Link
 from hotdoc.core.sections import Page
-from hotdoc.core.alchemy_integration import session
 
 
 class Annotation (object):

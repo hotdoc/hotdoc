@@ -121,6 +121,3 @@ def auto_add (target, args, kwargs):
 
 def purge_db():
     session.flush()
-
-def finalize_db ():
-    pass

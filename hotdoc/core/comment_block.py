@@ -1,9 +1,4 @@
-import sqlalchemy
 import os
-from sqlalchemy import create_engine, Column, Integer, String, PickleType
-from sqlalchemy.sql import exists
-from hotdoc.core.alchemy_integration import Base, engine, session
-
 
 class CommentBlock(object):
     def __init__(self, name='', title='', params={}, filename='',
@@ -49,5 +44,3 @@ def comment_from_tag(tag):
             description=tag.description,
             annotations=tag.annotations)
     return comment
-
-Base.metadata.create_all(engine)
