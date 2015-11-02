@@ -1,18 +1,9 @@
-import sqlalchemy
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker, mapper
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.mutable import Mutable
 
 Base = declarative_base()
 
-engine = create_engine('sqlite:///hotdoc.db')
-Session = sessionmaker(bind=engine)
-session = Session()
-session.autoflush = False
-
 class MutableDict(Mutable, dict):
-
     @classmethod
     def coerce(cls, key, value):
         if not isinstance(value, MutableDict):
@@ -114,10 +105,3 @@ class MutableObject(Mutable, object):
     def __setattr__(self, name, value):
         object.__setattr__(self, name, value)
         self.changed()
-
-@event.listens_for(mapper, 'init')
-def auto_add (target, args, kwargs):
-    session.add (target)
-
-def purge_db():
-    session.flush()

@@ -6,11 +6,14 @@ sys.setdefaultencoding('utf8')
 import pygraphviz as pg
 import cPickle as pickle
 
-from hotdoc.core.alchemy_integration import session, purge_db
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import sessionmaker, mapper
 
 from .naive_index import NaiveIndexFormatter
 from .links import LinkResolver
+from .symbols import Symbol
 from .base_extension import BaseExtension
+from .alchemy_integration import Base
 
 from ..utils.utils import all_subclasses
 from ..utils.simple_signals import Signal
@@ -124,9 +127,44 @@ class DocTool(Loggable):
         self.__comments = {}
         self.full_scan = False
         self.full_scan_patterns = ['*.h']
-        self.link_resolver = LinkResolver()
+        self.link_resolver = LinkResolver(self)
         self.well_known_names = {}
         self.incremental = False
+
+    def get_symbol(self, name):
+        sym = self.session.query(Symbol).filter(Symbol.name == name).first()
+        if sym:
+            sym.constructed()
+        return sym
+
+    def get_or_create_symbol(self, type_, **kwargs):
+        name = kwargs.pop('name')
+
+        filename = kwargs.get('filename')
+        if filename:
+            kwargs['filename'] = os.path.abspath(filename)
+
+        symbol = self.session.query(type_).filter(type_.name == name).first()
+
+        if not symbol:
+            symbol = type_(name=name)
+
+        for key, value in kwargs.items():
+            setattr(symbol, key, value)
+
+        symbol.constructed()
+        return symbol
+
+    def __setup_database(self):
+        self.engine = create_engine('sqlite:///hotdoc.db')
+        Session = sessionmaker(bind=self.engine)
+        self.session = Session()
+        self.session.autoflush = False
+        Base.metadata.create_all(self.engine)
+        event.listen(mapper, 'init', self.__auto_add)
+
+    def __auto_add (self, target, args, kwargs):
+        self.session.add (target)
 
     def __create_symbols_table(self):
         try:
@@ -159,7 +197,7 @@ class DocTool(Loggable):
             self.change_tracker.mark_extension_stale_sources(extension)
             extension.setup ()
             self.change_tracker.update_extension_sources_mtimes(extension)
-            purge_db()
+            self.session.flush()
             self.__comments.update (extension.get_comments())
             print "Extension done", datetime.now() - n, extension.EXTENSION_NAME
 
@@ -171,7 +209,7 @@ class DocTool(Loggable):
         page = self.page_parser.parse (self.index_file)
         self.change_tracker.update_pages_mtimes(page)
 
-        purge_db()
+        self.session.flush()
 
         from ..formatters.html.html_formatter import HtmlFormatter
         self.formatter = HtmlFormatter(self, [])
@@ -184,7 +222,7 @@ class DocTool(Loggable):
             'symbols_table.p'), 'wb'))
         pickle.dump(self.change_tracker, open(os.path.join(self.output,
             'change_tracker.p'), 'wb'))
-        session.commit()
+        self.session.commit()
         self.finalize()
 
     def register_well_known_name (self, name, extension):
@@ -192,10 +230,6 @@ class DocTool(Loggable):
 
     def get_well_known_name_handler (self, name):
         return self.well_known_names.get(name)
-
-    def get_symbol (self, name):
-        from hotdoc.core.symbols import get_symbol
-        return get_symbol(name)
 
     def get_comment (self, name):
         return self.__comments.get(name)
@@ -232,6 +266,8 @@ class DocTool(Loggable):
             self.__extension_dict[subclass.EXTENSION_NAME] = subclass
 
         loggable_init("DOC_DEBUG")
+
+        self.__setup_database()
 
     def __setup_output(self):
         if os.path.exists (self.output):
@@ -275,6 +311,6 @@ class DocTool(Loggable):
         self.index_file = args[0].index
 
     def finalize (self):
-        session.close()
+        self.session.close()
 
 doc_tool = DocTool()

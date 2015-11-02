@@ -14,13 +14,6 @@ class Link (MutableObject):
         MutableObject.__init__(self)
 
     def get_link (self):
-        from hotdoc.core.symbols import get_symbol
-        if not self.ref:
-            #print "I don't have a ref that's sad", self._title, self.id_, self
-            sym = get_symbol(self._title)
-            if sym and sym.link:
-                self.ref = sym.link.ref
-
         return self.ref
 
     @property
@@ -32,16 +25,15 @@ class Link (MutableObject):
         self._title = title
 
 class LinkResolver(object):
-    def __init__(self):
+    def __init__(self, doc_tool):
         self.__links = {}
+        self.doc_tool = doc_tool
 
     def get_named_link (self, name):
-        from hotdoc.core.symbols import get_symbol
-
         if name in self.__links:
             return self.__links[name]
 
-        sym = get_symbol(name)
+        sym = self.doc_tool.get_symbol(name)
         if sym:
             self.__links[name] = sym.link
             return sym.link

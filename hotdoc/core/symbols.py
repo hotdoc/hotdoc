@@ -8,41 +8,11 @@ import uuid
 from .links import Link
 from ..utils.simple_signals import Signal
 from ..utils.utils import all_subclasses
-from .doc_tool import doc_tool
 
 from sqlalchemy import (Column, String, Integer, Boolean,
         ForeignKey, PickleType)
 from hotdoc.core.alchemy_integration import *
 
-def get_symbol(name):
-    sym = session.query(Symbol).filter(Symbol.name == name).first()
-    if sym:
-        sym.constructed()
-    return sym
-
-def get_typed_symbols(type_):
-    syms = session.query(type_).all()
-    for sym in syms:
-        sym.constructed()
-    return syms
-
-def get_or_create_symbol(type_, **kwargs):
-    name = kwargs.pop('name')
-
-    filename = kwargs.get('filename')
-    if filename:
-        kwargs['filename'] = os.path.abspath(filename)
-
-    symbol = session.query(type_).filter(type_.name == name).first()
-
-    if not symbol:
-        symbol = type_(name=name)
-
-    for key, value in kwargs.items():
-        setattr(symbol, key, value)
-
-    symbol.constructed()
-    return symbol
 
 class Symbol (Base):
     __tablename__ = 'symbols'
@@ -72,6 +42,7 @@ class Symbol (Base):
         Base.__init__(self, **kwargs)
 
     def constructed (self):
+        from hotdoc.core.doc_tool import doc_tool
         link = Link(self._make_unique_id(), self._make_name(),
                     self._make_unique_id())
         self.link = doc_tool.link_resolver.upsert_link(link)
@@ -321,6 +292,7 @@ class QualifiedSymbol (MutableObject):
         return self.type_link
 
     def constructed(self):
+        from hotdoc.core.doc_tool import doc_tool
         self.extension_contents = {}
         self.extension_attributes = {}
         self.type_link = None
@@ -353,6 +325,7 @@ class FieldSymbol (QualifiedSymbol):
     def __init__(self, member_name='', is_function_pointer=False,
             comment=None, **kwargs):
         QualifiedSymbol.__init__(self, **kwargs)
+        from hotdoc.core.doc_tool import doc_tool
         self.member_name = member_name
         self.is_function_pointer = is_function_pointer
         self.comment = comment
@@ -391,5 +364,3 @@ class ClassSymbol (Symbol):
 
     def get_type_name (self):
         return "Class"
-
-Base.metadata.create_all(engine)

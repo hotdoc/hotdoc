@@ -213,14 +213,14 @@ class ClangScanner(Loggable):
         toks = []
 
     def __update_symbol_comment(self, comment):
-        esym = get_symbol (comment.name)
+        esym = self.doc_tool.get_symbol (comment.name)
         if esym:
             esym.comment = comment
 
     def __get_comment (self, comment_name):
         comment = self.comments.get(comment_name)
         if not comment:
-            esym = get_symbol(comment_name)
+            esym = self.doc_tool.get_symbol(comment_name)
             if esym:
                 comment = esym.comment
         return comment
@@ -254,7 +254,7 @@ class ClangScanner(Loggable):
                         type_tokens=type_tokens, comment=param_comment)
                 parameters.append (parameter)
 
-        sym = get_or_create_symbol(CallbackSymbol, parameters=parameters,
+        sym = self.doc_tool.get_or_create_symbol(CallbackSymbol, parameters=parameters,
                 return_value=return_value, comment=comment, name=node.spelling,
                 filename=str(node.location.file), lineno=node.location.line)
         return sym
@@ -361,7 +361,7 @@ class ClangScanner(Loggable):
                     comment=member_comment)
             members.append (member)
 
-        return get_or_create_symbol(StructSymbol, raw_text=raw_text, members=members,
+        return self.doc_tool.get_or_create_symbol(StructSymbol, raw_text=raw_text, members=members,
                 comment=comment, name=node.spelling,
                 filename=str(decl.location.file), lineno=decl.location.line)
 
@@ -375,19 +375,19 @@ class ClangScanner(Loggable):
             else:
                 member_comment = None
             member_value = member.enum_value
-            member = get_or_create_symbol(Symbol, comment=member_comment, name=member.spelling,
+            member = self.doc_tool.get_or_create_symbol(Symbol, comment=member_comment, name=member.spelling,
                     filename=str(member.location.file),
                     lineno=member.location.line)
             member.enum_value = member_value
             members.append (member)
 
-        return get_or_create_symbol(EnumSymbol, members=members, comment=comment, name=node.spelling,
+        return self.doc_tool.get_or_create_symbol(EnumSymbol, members=members, comment=comment, name=node.spelling,
                 filename=str(decl.location.file), lineno=decl.location.line)
 
     def __create_alias_symbol (self, node, comment):
         type_tokens = self.make_c_style_type_name(node.underlying_typedef_type)
         aliased_type = QualifiedSymbol (type_tokens=type_tokens)
-        return get_or_create_symbol(AliasSymbol, aliased_type=aliased_type, comment=comment,
+        return self.doc_tool.get_or_create_symbol(AliasSymbol, aliased_type=aliased_type, comment=comment,
                 name=node.spelling, filename=str(node.location.file),
                 lineno=node.location.line)
 
@@ -420,14 +420,14 @@ class ClangScanner(Loggable):
                 parameter = ParameterSymbol (argname=param_name, comment = param_comment)
                 parameters.append (parameter)
 
-        sym = get_or_create_symbol(FunctionMacroSymbol, return_value=return_value,
+        sym = self.doc_tool.get_or_create_symbol(FunctionMacroSymbol, return_value=return_value,
                 parameters=parameters, original_text=original_text,
                 comment=comment, name=node.spelling,
                 filename=str(node.location.file), lineno=node.location.line)
         return sym
 
     def __create_constant_symbol (self, node, comment, original_text):
-        return get_or_create_symbol(ConstantSymbol, original_text=original_text, comment=comment,
+        return self.doc_tool.get_or_create_symbol(ConstantSymbol, original_text=original_text, comment=comment,
                 name=node.spelling, filename=str(node.location.file),
                 lineno=node.location.line)
 
@@ -473,7 +473,7 @@ class ClangScanner(Loggable):
             parameter = ParameterSymbol (argname=param.displayname,
                     type_tokens=type_tokens, comment=param_comment)
             parameters.append (parameter)
-        sym = get_or_create_symbol(FunctionSymbol, parameters=parameters,
+        sym = self.doc_tool.get_or_create_symbol(FunctionSymbol, parameters=parameters,
                 return_value=return_value, comment=comment, name=node.spelling,
                 filename=str(node.location.file), lineno=node.location.line)
         return sym
@@ -490,7 +490,7 @@ class ClangScanner(Loggable):
         original_text = '\n'.join(original_lines)
         comment = self.__get_comment (node.spelling)
 
-        sym = get_or_create_symbol(ExportedVariableSymbol, original_text=original_text,
+        sym = self.doc_tool.get_or_create_symbol(ExportedVariableSymbol, original_text=original_text,
                 comment=self.__get_comment (node.spelling),
                 name=node.spelling, filename=str(node.location.file),
                 lineno=node.location.line)

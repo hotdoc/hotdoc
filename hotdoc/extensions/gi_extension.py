@@ -813,7 +813,7 @@ class GIExtension(BaseExtension):
 
     def __create_signal_symbol (self, node, comment, object_name, name):
         parameters, retval = self.__create_parameters_and_retval (node, comment)
-        res = get_or_create_symbol(SignalSymbol, object_name=object_name,
+        res = self.doc_tool.get_or_create_symbol(SignalSymbol, object_name=object_name,
                 parameters=parameters, return_value=retval,
                 comment=comment, name=name)
 
@@ -856,7 +856,7 @@ class GIExtension(BaseExtension):
         elif construct == '1':
             flags.append (ConstructFlag())
 
-        res = get_or_create_symbol(PropertySymbol, prop_type=type_, object_name=object_name,
+        res = self.doc_tool.get_or_create_symbol(PropertySymbol, prop_type=type_, object_name=object_name,
                 comment=comment, name=name)
 
         extra_content = self.get_formatter(self.doc_tool.output_format)._format_flags (flags)
@@ -866,7 +866,7 @@ class GIExtension(BaseExtension):
 
     def __create_vfunc_symbol (self, node, comment, object_name, name):
         parameters, retval = self.__create_parameters_and_retval (node, comment)
-        symbol = get_or_create_symbol(VFunctionSymbol, object_name=object_name, parameters=parameters, 
+        symbol = self.doc_tool.get_or_create_symbol(VFunctionSymbol, object_name=object_name, parameters=parameters, 
                 return_value=retval, comment=comment, name=name)
 
         self.__sort_parameters (symbol, retval, parameters)
@@ -880,10 +880,10 @@ class GIExtension(BaseExtension):
         children = self.gir_parser.gir_children_map.get (gi_name)
 
         if class_comment:
-            class_symbol = get_or_create_symbol(ClassSymbol, hierarchy=hierarchy, children=children,
+            class_symbol = self.doc_tool.get_or_create_symbol(ClassSymbol, hierarchy=hierarchy, children=children,
                     comment=class_comment, name=symbol.name)
         else:
-            class_symbol = get_or_create_symbol(ClassSymbol, hierarchy=hierarchy, children=children,
+            class_symbol = self.doc_tool.get_or_create_symbol(ClassSymbol, hierarchy=hierarchy, children=children,
                     name=symbol.name)
 
         return class_symbol
@@ -925,7 +925,7 @@ class GIExtension(BaseExtension):
     def __get_comment (self, symbol_name, comment_name):
         comment = self.doc_tool.get_comment(comment_name)
         if not comment:
-            esym = get_symbol(symbol_name)
+            esym = self.doc_tool.get_symbol(symbol_name)
             if esym:
                 comment = esym.comment
         return comment
