@@ -25,9 +25,10 @@ class PageParser(Loggable):
         self.create_api_index = False
         self.symbol_added_signal = Signal()
         self.adding_symbol_signal = Signal()
+        self.extension_name = None
 
     def create_page (self, page_name, filename):
-        page = Page (page_name, filename)
+        page = Page (page_name, filename, self.extension_name)
 
         if self._current_page:
             self._current_page.subpages.append (page)
@@ -89,16 +90,18 @@ class PageParser(Loggable):
         self.__parsed_pages[filename] = cur_page
         return cur_page
 
-    def parse(self, index_file):
+    def parse(self, index_file, extension_name=None):
         if not os.path.isfile (index_file):
             raise IOError ('Index file %s not found' % index_file)
 
         # Save status for reentrancy
         old_base_page = self.base_page
         old_current_page = self._current_page
+        old_extension_name = self.extension_name
         self.base_page = None
         self._current_page = None
 
+        self.extension_name = extension_name
         self._prefix = os.path.dirname (index_file)
         self._parse_page (index_file)
         self.info ("total documented symbols : %d" %
@@ -107,6 +110,7 @@ class PageParser(Loggable):
         res = self.base_page
 
         # And restore
+        self.extension_name = old_extension_name
         self.base_page = old_base_page
         self._current_page = old_current_page
 

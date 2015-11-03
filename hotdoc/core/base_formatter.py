@@ -111,7 +111,8 @@ class Formatter(object):
         page.detailed_description = self.doc_tool.formatter._format_page (page)[0]
         self.doc_tool.formatter._write_page (page)
         for cpage in page.subpages:
-            if cpage.formatter:
+            formatter = self.doc_tool.get_formatter(cpage.extension_name)
+            if formatter and formatter != self.doc_tool.formatter:
                 self.doc_tool.formatter = cpage.formatter
                 self.doc_tool.formatter.format(cpage)
             else:

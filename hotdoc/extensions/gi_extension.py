@@ -1014,7 +1014,8 @@ class GIExtension(BaseExtension):
             formatter.formatting_symbol_signals[Symbol].connect(self.__formatting_symbol)
 
             self.doc_tool.page_parser._current_page = index_page
-            page = self.doc_tool.page_parser.parse (self.gi_index)
+            page = self.doc_tool.page_parser.parse (self.gi_index,
+                    self.EXTENSION_NAME)
             self.doc_tool.page_parser.symbol_added_signal.disconnect (self.__adding_symbol)
             page.formatter = self.get_formatter(self.doc_tool.output_format)
             return None, page
