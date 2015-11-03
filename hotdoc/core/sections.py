@@ -8,19 +8,29 @@ class TypedSymbolsList (object):
         self.name = name
         self.symbols = []
 
-class Page:
+class Page(object):
     def __init__(self, name, source_file, extension_name):
         self.symbols = []
+        self.symbol_names = []
         self.subpages = []
         pagename = '%s.html' % name
         self.link = Link (pagename, name, name) 
         self.source_file = source_file
-
-        self.formatted_contents = None
-        self.formatted_doc = ''
-
         self.extension_name = extension_name
 
+        self.parsed_page = None
+
+    def __getstate__(self):
+        return {'symbol_names': self.symbol_names,
+                'subpages': self.subpages,
+                'link': self.link,
+                'source_file': self.source_file,
+                'extension_name': self.extension_name}
+
+    def add_symbol (self, symbol_name):
+        self.symbol_names.append (symbol_name)
+
+    def resolve_symbols (self, doc_tool):
         self.typed_symbols = {}
         self.typed_symbols[FunctionSymbol] = TypedSymbolsList ("Functions")
         self.typed_symbols[CallbackSymbol] = TypedSymbolsList ("Callback Functions")
@@ -35,12 +45,21 @@ class Page:
         self.typed_symbols[VFunctionSymbol] = TypedSymbolsList ("Virtual Methods")
         self.typed_symbols[ClassSymbol] = TypedSymbolsList ("Classes")
 
-        self.ast = None
         self.short_description = ''
         self.title = ''
-        self.parsed_page = None
+        self.formatted_contents = None
+        self.formatted_doc = ''
 
-    def add_symbol (self, symbol):
+        for sym_name in self.symbol_names:
+            sym = doc_tool.get_symbol(sym_name)
+            if sym:
+                self.resolve_symbol (sym)
+
+            new_symbols = sum(doc_tool.page_parser.symbol_added_signal(self, sym), [])
+            for symbol in new_symbols:
+                self.resolve_symbol (symbol)
+
+    def resolve_symbol (self, symbol):
         if not '#' in symbol.link.ref:
             symbol.link.ref = '%s#%s' % (self.link.ref, symbol.link.ref)
         for l in symbol.get_extra_links():

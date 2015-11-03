@@ -106,10 +106,12 @@ class Formatter(object):
             symbol.skip = not self.format_symbol(symbol)
 
     def __format_page (self, page):
-        out = ""
-        self.__format_symbols(page.symbols)
-        page.detailed_description = self.doc_tool.formatter._format_page (page)[0]
-        self.doc_tool.formatter._write_page (page)
+        if self.doc_tool.page_is_stale(page):
+            print "Actually rendering", page.source_file
+            self.__format_symbols(page.symbols)
+            page.detailed_description = self.doc_tool.formatter._format_page (page)[0]
+            self.doc_tool.formatter._write_page (page)
+
         for cpage in page.subpages:
             formatter = self.doc_tool.get_formatter(cpage.extension_name)
             if formatter and formatter != self.doc_tool.formatter:
@@ -118,6 +120,7 @@ class Formatter(object):
             else:
                 self.__format_page (cpage)
             self.doc_tool.formatter = self
+
 
     def __copy_extra_files (self):
         asset_path = os.path.join (self.doc_tool.output, 'assets')
@@ -141,7 +144,6 @@ class Formatter(object):
 
     def _write_page (self, page):
         path = os.path.join (self._output, page.link.ref)
-        #print "Writing", path
         with open (path, 'w') as f:
             out = page.detailed_description
             f.write (out.encode('utf-8'))

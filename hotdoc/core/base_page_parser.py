@@ -51,17 +51,7 @@ class PageParser(Loggable):
             return
 
         self.adding_symbol_signal(self._current_page, symbol_name)
-
-        sym = self.doc_tool.get_symbol (symbol_name)
-        if sym:
-            self._current_page.add_symbol (sym)
-            self.__total_documented_symbols += 1
-            new_symbols = sum(self.symbol_added_signal (self._current_page, sym), [])
-            for symbol in new_symbols:
-                self._current_page.add_symbol (symbol)
-                self.__total_documented_symbols += 1
-        else:
-            self.warning ("No symbol in sources with name %s", symbol_name)
+        self._current_page.add_symbol(symbol_name)
 
     def _parse_page (self, filename):
         filename = os.path.abspath (filename)
@@ -75,7 +65,8 @@ class PageParser(Loggable):
         with open (filename, "r") as f:
             contents = f.read()
 
-        return self.parse_contents (contents, page_name, filename)
+        res = self.parse_contents (contents, page_name, filename)
+        return res
 
     def parse_contents (self, contents, page_name, filename):
         old_page = self._current_page

@@ -35,7 +35,7 @@ class CommonMarkParser (PageParser):
         ic = h.inline_content
 
         if ic[0].t != "Link":
-            return None
+            return None, None
 
         link = ic[0]
         section_name = ''.join ([l.c for l in link.label])
@@ -48,21 +48,10 @@ class CommonMarkParser (PageParser):
 
             link.destination = new_section.link.ref
             self.final_destinations[link.destination] = True
-            desc = new_section.get_short_description()
-            if desc:
-                link.desc = desc
-            else:
-                link.desc = None
 
-            title = new_section.get_title()
+            link.original_name = link.label[0].c
 
-            if title:
-                link.label[0].c = title
-                link.original_name = None
-            else:
-                link.original_name = link.label[0].c
-
-        return res
+        return res, new_section
 
     def __find_included_file(self, filename):
         if os.path.isabs(filename):
@@ -126,9 +115,9 @@ class CommonMarkParser (PageParser):
             if c.t == "List":
                 self.parse_list(c)
             elif c.t == "ATXHeader" and len (c.inline_content) >= 1:
-                parsed_header = self.parse_header (c, section)
+                parsed_header, new_section = self.parse_header (c, section)
                 if parsed_header is not None:
-                    parsed_headers.append (parsed_header)
+                    parsed_headers.append((parsed_header, new_section))
 
         self.check_well_known_names (ast)
 
@@ -152,10 +141,11 @@ class CommonMarkParser (PageParser):
             self._update_links (c)
 
     def _update_short_descriptions (self, page):
-        for h in page.headers:
-            if h[0].desc:
+        for h, new_section in page.headers:
+            desc = new_section.get_short_description()
+            if desc:
                 del h[1:]
-                desc = self.doc_tool.doc_parser.translate (h[0].desc)
+                desc = self.doc_tool.doc_parser.translate (desc)
                 docstring = unescape (desc)
                 desc = u' — %s' % desc.encode ('utf-8')
                 sub_ast = self.__cmp.parse (desc)
@@ -172,8 +162,11 @@ class CommonMarkParser (PageParser):
         if not page:
             return
 
-        for h in page.headers:
-            if h[0].original_name:
+        for h, new_section in page.headers:
+            title = new_section.get_title()
+            if title:
+                h[0].label[0].c = title
+            else:
                 new_name = new_names.get(h[0].original_name)
                 if new_name:
                     h[0].label[0].c = new_name

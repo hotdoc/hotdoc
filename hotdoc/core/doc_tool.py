@@ -27,16 +27,9 @@ from datetime import datetime
 class ConfigError(Exception):
     pass
 
-class PageSummary(object):
-    def __init__(self, page):
-        self.short_description = page.get_short_description()
-        self.title = page.get_title()
-        self.extension_name = page.extension_name
-        self.mtime = os.path.getmtime(page.source_file)
-
 class ChangeTracker(object):
     def __init__(self):
-        self.pages = {}
+        self.pages_mtimes = {}
         self.exts_mtimes = {}
 
     def update_extension_sources_mtimes(self, extension):
@@ -70,7 +63,7 @@ class ChangeTracker(object):
 
     def __update_page_mtime(self, page):
         try:
-            self.pages[page.source_file] = PageSummary(page)
+            self.pages_mtimes[page.source_file] = os.path.getmtime(page.source_file)
         except OSError:  # Generated pages
             pass
 
@@ -81,20 +74,20 @@ class ChangeTracker(object):
         self.__update_page_mtime (page)
 
         # Check removed markdown files
-        for source_file in self.pages:
+        for source_file in self.pages_mtimes:
             if not os.path.exists (source_file):
-                self.pages.pop(source_file)
+                self.pages_mtimes.pop(source_file)
 
     def get_stale_pages(self):
-        stale = {}
+        stale = set({})
 
-        for source_file, page_summary in self.pages.items():
+        for source_file, prev_mtime in self.pages_mtimes.items():
             try:
                 mtime = os.path.getmtime(source_file)
             except OSError:  # Page might have been deleted
                 continue
-            if mtime != page_summary.mtime:
-                stale[source_file] = page_summary
+            if mtime != prev_mtime:
+                stale.add(source_file)
 
         return stale
 
@@ -131,7 +124,8 @@ class DocTool(Loggable):
         self.full_scan_patterns = ['*.h']
         self.link_resolver = LinkResolver(self)
         self.well_known_names = {}
-        self.stale_pages = {}
+        self.stale_pages = set({})
+        self.final_stale_pages = None
         self.incremental = False
 
     def get_symbol(self, name):
@@ -144,7 +138,7 @@ class DocTool(Loggable):
         containing_pages = self.symbols_table.symbols_map.get(symbol_name)
         if containing_pages is not None:
             for page in containing_pages:
-                self.stale_pages[page] = self.change_tracker.pages[page]
+                self.stale_pages.add(page)
 
     def get_or_create_symbol(self, type_, **kwargs):
         name = kwargs.pop('name')
@@ -202,6 +196,20 @@ class DocTool(Loggable):
                 return ext.get_formatter(self.output_format)
         return None
 
+    def __resolve_page_symbols(self, page):
+        page.resolve_symbols(self)
+        for cpage in page.subpages:
+            self.__resolve_page_symbols(cpage)
+
+    def page_is_stale(self, page):
+        if self.final_stale_pages is None:
+            return True
+
+        if page.source_file in self.final_stale_pages:
+            return True
+
+        return False
+
     def parse_and_format (self):
         self.__setup()
         self.parse_args ()
@@ -220,26 +228,29 @@ class DocTool(Loggable):
             self.__comments.update (extension.get_comments())
             print "Extension done", datetime.now() - n, extension.EXTENSION_NAME
 
-        n = datetime.now()
 
         if self.incremental:
             for comment in self.__comments.values():
                 self.mark_stale_pages(comment.name)
 
-            stale_pages = self.change_tracker.get_stale_pages()
-            self.stale_pages.update(stale_pages)
-            print "our stale pages are", self.stale_pages
+            self.final_stale_pages = self.stale_pages | self.change_tracker.get_stale_pages()
 
+        n = datetime.now()
         page = self.page_parser.parse (self.index_file)
+        print "parsing pages took", datetime.now() - n
+        n = datetime.now()
+        self.__resolve_page_symbols(page)
+        print "resolving symbols took", datetime.now() - n
+        n = datetime.now()
         self.change_tracker.update_pages_mtimes(page)
-        print "page parsing takes", datetime.now() - n
 
         self.session.flush()
 
+        print "flushing session took", datetime.now() - n
+        n = datetime.now()
+
         self.formatter = HtmlFormatter(self, [])
-
         self.formatter.format(page)
-
         print "currently optimizable:", datetime.now() - n
 
         pickle.dump(self.symbols_table, open(os.path.join(self.output,

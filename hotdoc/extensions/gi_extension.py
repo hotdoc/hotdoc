@@ -993,9 +993,6 @@ class GIExtension(BaseExtension):
         return res
 
     def handle_well_known_name (self, wkn):
-        if self.gir_file and not self.gir_parser:
-            self.gir_parser = GIRParser (self.doc_tool, self.gir_file)
-
         formatter = self.get_formatter(self.doc_tool.output_format)
 
         if wkn == 'gobject-api':
@@ -1016,7 +1013,6 @@ class GIExtension(BaseExtension):
             self.doc_tool.page_parser._current_page = index_page
             page = self.doc_tool.page_parser.parse (self.gi_index,
                     self.EXTENSION_NAME)
-            self.doc_tool.page_parser.symbol_added_signal.disconnect (self.__adding_symbol)
             page.formatter = self.get_formatter(self.doc_tool.output_format)
             return None, page
 
@@ -1030,3 +1026,4 @@ class GIExtension(BaseExtension):
 
     def setup (self):
         self.__gather_gtk_doc_links()
+        self.gir_parser = GIRParser (self.doc_tool, self.gir_file)
