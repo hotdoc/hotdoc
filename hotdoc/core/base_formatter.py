@@ -7,8 +7,7 @@ import pygraphviz as pg
 
 from xml.sax.saxutils import unescape
 
-from .symbols import (Symbol, ReturnValueSymbol, ParameterSymbol, FieldSymbol,
-        ClassSymbol, QualifiedSymbol, CallbackSymbol)
+from .symbols import *
 from .sections import Page
 from ..utils.simple_signals import Signal
 from ..utils.loggable import progress_bar
@@ -66,6 +65,9 @@ class Formatter(object):
                 (self.__total_rendered_pages, self.__total_pages))
 
     def format_symbol (self, symbol):
+        if isinstance (symbol, QualifiedSymbol):
+            symbol.resolve_links(self.doc_tool.link_resolver)
+
         if type (symbol) in self.formatting_symbol_signals:
             res = self.formatting_symbol_signals[type(symbol)](symbol)
 
@@ -80,18 +82,9 @@ class Formatter(object):
         symbol.formatted_doc = self.__format_doc (symbol.comment)
         out, standalone = self._format_symbol (symbol)
         symbol.detailed_description = out
+
         if standalone:
             self._write_page (symbol)
-
-        if out and type(symbol) not in [ReturnValueSymbol,
-                ParameterSymbol, FieldSymbol] and False:
-            row = [symbol.link, symbol.get_type_name()]
-            if symbol.comment:
-                row.append (os.path.basename(symbol.comment.filename))
-            else:
-                row.append ('')
-            self.fill_index_row_signal (symbol, row)
-            self.__index_rows.append (row)
 
         return True
 

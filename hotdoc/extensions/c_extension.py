@@ -199,7 +199,6 @@ class ClangScanner(Loggable):
         if type_.kind == clang.cindex.TypeKind.TYPEDEF:
             d = type_.get_declaration ()
             link = Link (None, d.displayname, d.displayname)
-            link = self.doc_tool.link_resolver.upsert_link(link)
 
             tokens.append (link)
             self.__apply_qualifiers(type_, tokens)

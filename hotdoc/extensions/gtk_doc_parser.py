@@ -6,7 +6,6 @@ import sys
 import re
 
 from datetime import datetime
-from hotdoc.core.doc_tool import doc_tool
 
 class DocScanner(object):
     def __init__(self):
@@ -92,7 +91,7 @@ class DocScanner(object):
 
 
 class GtkDocParser (object):
-    def __init__(self):
+    def __init__(self, doc_tool):
         self.funcs = {
             'other': self.format_other,
             'new_line': self.format_other,
@@ -110,6 +109,7 @@ class GtkDocParser (object):
             'code_end': self.format_code_end,
         }
 
+        self.doc_tool = doc_tool
         self.__translated_names = {}
 
     def format_other(self, match, props):
@@ -119,7 +119,7 @@ class GtkDocParser (object):
         type_name = props['type_name']
         property_name = props['property_name']
         linkname = "%s:::%s---property" % (type_name, property_name)
-        link = doc_tool.link_resolver.get_named_link (linkname)
+        link = self.doc_tool.link_resolver.get_named_link (linkname)
 
         if link and link.id_ in self.__translated_names:
             link.title = self.__translated_names[link.id_]
@@ -133,7 +133,7 @@ class GtkDocParser (object):
         type_name = props['type_name']
         signal_name = props['signal_name']
         linkname = "%s:::%s---signal" % (type_name, signal_name)
-        link = doc_tool.link_resolver.get_named_link (linkname)
+        link = self.doc_tool.link_resolver.get_named_link (linkname)
 
         if link and link.id_ in self.__translated_names:
             link.title = self.__translated_names[link.id_]
@@ -145,7 +145,7 @@ class GtkDocParser (object):
 
     def format_type_name (self, match, props):
         type_name = props['type_name']
-        link = doc_tool.link_resolver.get_named_link (type_name)
+        link = self.doc_tool.link_resolver.get_named_link (type_name)
 
         if link and link.id_ in self.__translated_names:
             link.title = self.__translated_names[link.id_]
@@ -157,7 +157,7 @@ class GtkDocParser (object):
 
     def format_enum_value (self, match, props):
         member_name = props['member_name']
-        link = doc_tool.link_resolver.get_named_link (member_name)
+        link = self.doc_tool.link_resolver.get_named_link (member_name)
 
         if link and link.id_ in self.__translated_names:
             link.title = self.__translated_names[link.id_]
@@ -173,7 +173,7 @@ class GtkDocParser (object):
 
     def format_function_call (self, match, props):
         func_name = props['symbol_name']
-        link = doc_tool.link_resolver.get_named_link (func_name)
+        link = self.doc_tool.link_resolver.get_named_link (func_name)
 
         if link and link.id_ in self.__translated_names:
             link.title = self.__translated_names[link.id_]

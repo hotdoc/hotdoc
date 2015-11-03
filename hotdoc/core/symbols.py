@@ -41,12 +41,6 @@ class Symbol (Base):
 
         Base.__init__(self, **kwargs)
 
-    def constructed (self):
-        from hotdoc.core.doc_tool import doc_tool
-        link = Link(self._make_unique_id(), self._make_name(),
-                    self._make_unique_id())
-        self.link = doc_tool.link_resolver.upsert_link(link)
-
     def add_extension_attribute (self, ext_name, key, value):
         attributes = self.extension_attributes.pop (ext_name, {})
         attributes[key] = value
@@ -75,6 +69,11 @@ class Symbol (Base):
 
     def get_source_location (self):
         return self.location
+
+    def resolve_links(self, link_resolver):
+        link = Link(self._make_unique_id(), self._make_name(),
+                    self._make_unique_id())
+        self.link = link_resolver.upsert_link(link)
 
 class Tag:
     def __init__(self, name, value):
@@ -155,6 +154,9 @@ class PropertySymbol (Symbol):
 
     def _make_unique_id (self):
         return '%s:::%s---property' % (self.object_name, self.name)
+
+    def get_children_symbols(self):
+        return [self.prop_type]
 
 class CallbackSymbol (FunctionSymbol):
     __tablename__ = 'callbacks'
@@ -271,6 +273,7 @@ class TypeSymbol(object):
 class QualifiedSymbol (MutableObject):
     def __init__(self, type_tokens=[]):
         self.input_tokens = type_tokens
+        self.comment = None
         self.constructed()
         MutableObject.__init__(self)
 
@@ -291,19 +294,20 @@ class QualifiedSymbol (MutableObject):
     def get_type_link (self):
         return self.type_link
 
-    def constructed(self):
-        from hotdoc.core.doc_tool import doc_tool
-        self.extension_contents = {}
-        self.extension_attributes = {}
+    def resolve_links(self, link_resolver):
         self.type_link = None
-
         self.type_tokens = []
+
         for tok in self.input_tokens:
             if isinstance(tok, Link):
-                self.type_link = doc_tool.link_resolver.upsert_link(tok)
+                self.type_link = link_resolver.upsert_link(tok)
                 self.type_tokens.append (self.type_link)
             else:
                 self.type_tokens.append (tok)
+
+    def constructed(self):
+        self.extension_contents = {}
+        self.extension_attributes = {}
 
     def __setstate__(self, state):
         MutableObject.__setstate__(self, state)
@@ -311,29 +315,23 @@ class QualifiedSymbol (MutableObject):
 
 class ReturnValueSymbol (QualifiedSymbol):
     def __init__(self, comment=None, **kwargs):
-        self.comment = comment
         QualifiedSymbol.__init__(self, **kwargs)
+        self.comment = comment
 
 class ParameterSymbol (QualifiedSymbol):
     def __init__(self, argname='', comment=None, **kwargs):
+        QualifiedSymbol.__init__(self, **kwargs)
         self.array_nesting = 0
         self.argname = argname
         self.comment = comment
-        QualifiedSymbol.__init__(self, **kwargs)
 
 class FieldSymbol (QualifiedSymbol):
     def __init__(self, member_name='', is_function_pointer=False,
             comment=None, **kwargs):
         QualifiedSymbol.__init__(self, **kwargs)
-        from hotdoc.core.doc_tool import doc_tool
         self.member_name = member_name
         self.is_function_pointer = is_function_pointer
         self.comment = comment
-        link = Link(self.member_name, self.member_name,
-                    self.member_name)
-        link = doc_tool.link_resolver.upsert_link(link)
-
-        self.link = link
 
     def _make_name (self):
         return self.member_name
@@ -352,6 +350,8 @@ class AliasSymbol (Symbol):
     def get_type_name (self):
         return "Alias"
 
+    def get_children_symbols(self):
+        return [self.aliased_type]
 
 class ClassSymbol (Symbol):
     __tablename__ = 'classes'
@@ -364,3 +364,6 @@ class ClassSymbol (Symbol):
 
     def get_type_name (self):
         return "Class"
+
+    def get_children_symbols(self):
+        return self.hierarchy + list(self.children.values())

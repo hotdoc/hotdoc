@@ -19,6 +19,8 @@ from ..utils.utils import all_subclasses
 from ..utils.simple_signals import Signal
 from ..utils.loggable import Loggable
 from ..utils.loggable import init as loggable_init
+from ..formatters.html.html_formatter import HtmlFormatter
+from ..extensions.common_mark_parser import CommonMarkParser
 
 from datetime import datetime
 
@@ -134,7 +136,7 @@ class DocTool(Loggable):
     def get_symbol(self, name):
         sym = self.session.query(Symbol).filter(Symbol.name == name).first()
         if sym:
-            sym.constructed()
+            sym.resolve_links(self.link_resolver)
         return sym
 
     def get_or_create_symbol(self, type_, **kwargs):
@@ -152,7 +154,7 @@ class DocTool(Loggable):
         for key, value in kwargs.items():
             setattr(symbol, key, value)
 
-        symbol.constructed()
+        symbol.resolve_links(self.link_resolver)
         return symbol
 
     def __setup_database(self):
@@ -211,7 +213,6 @@ class DocTool(Loggable):
 
         self.session.flush()
 
-        from ..formatters.html.html_formatter import HtmlFormatter
         self.formatter = HtmlFormatter(self, [])
 
         self.formatter.format(page)
@@ -252,7 +253,6 @@ class DocTool(Loggable):
         self.parser.add_argument ("-I", "--include-path", action="append",
                 default=[], dest="include_paths")
 
-        from ..extensions.common_mark_parser import CommonMarkParser
         self.page_parser = CommonMarkParser (self)
 
         extension_subclasses = all_subclasses (BaseExtension)

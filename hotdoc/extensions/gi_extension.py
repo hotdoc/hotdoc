@@ -180,7 +180,6 @@ class GIRParser(object):
             gi_name = '%s.%s' % (klass.parent_name, klass.node.attrib['name'])
             klass_name = self.__get_klass_name (klass.node)
             link = Link(None, klass_name, klass_name)
-            link = self.doc_tool.link_resolver.upsert_link(link)
             symbol = QualifiedSymbol(type_tokens=[link])
             parents = reversed(self.gir_hierarchies[gi_name])
             for parent in parents:
@@ -212,13 +211,11 @@ class GIRParser(object):
 
             if not klass_name in children:
                 link = Link(None, klass_name, klass_name)
-                link = self.doc_tool.link_resolver.upsert_link(link)
                 sym = QualifiedSymbol(type_tokens=[link])
                 children[klass_name] = sym
 
             klass_name = self.__get_klass_name(parent_class)
             link = Link(None, klass_name, klass_name)
-            link = self.doc_tool.link_resolver.upsert_link(link)
             sym = QualifiedSymbol(type_tokens=[link])
             hierarchy.append (sym)
 
@@ -411,7 +408,6 @@ class GIRParser(object):
             ptype_name = c_type
 
         type_link = Link (None, ptype_name, ptype_name)
-        type_link = self.doc_tool.link_resolver.upsert_link(type_link)
 
         tokens = [type_link]
         tokens += '*'
@@ -689,7 +685,6 @@ class GIExtension(BaseExtension):
                 tokens.append(token)
             else:
                 link = Link(None, token, token)
-                link = self.doc_tool.link_resolver.upsert_link(link)
                 tokens.append (link)
 
         for i in range(indirection):
