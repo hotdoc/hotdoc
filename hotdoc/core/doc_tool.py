@@ -24,15 +24,8 @@ from ..extensions.common_mark_parser import CommonMarkParser
 
 from datetime import datetime
 
-def merge_dicts(*dict_args):
-    result = {}
-    for dictionary in dict_args:
-        result.update(dictionary)
-    return result
-
 class ConfigError(Exception):
     pass
-
 
 class ChangeTracker(object):
     def __init__(self):
@@ -86,7 +79,7 @@ class ChangeTracker(object):
                 self.pages_mtimes.pop(source_file)
 
     def get_stale_pages(self):
-        stale = []
+        stale = set({})
 
         for source_file, prev_mtime in self.pages_mtimes.items():
             try:
@@ -94,7 +87,7 @@ class ChangeTracker(object):
             except OSError:  # Page might have been deleted
                 continue
             if mtime != prev_mtime:
-                stale.append(source_file)
+                stale.add(source_file)
 
         return stale
 
@@ -131,6 +124,7 @@ class DocTool(Loggable):
         self.full_scan_patterns = ['*.h']
         self.link_resolver = LinkResolver(self)
         self.well_known_names = {}
+        self.stale_pages = set({})
         self.incremental = False
 
     def get_symbol(self, name):
@@ -138,6 +132,12 @@ class DocTool(Loggable):
         if sym:
             sym.resolve_links(self.link_resolver)
         return sym
+
+    def mark_stale_pages(self, symbol_name):
+        containing_pages = self.symbols_table.symbols_map.get(symbol_name)
+        if containing_pages is not None:
+            for page in containing_pages:
+                self.stale_pages.add(page)
 
     def get_or_create_symbol(self, type_, **kwargs):
         name = kwargs.pop('name')
@@ -155,6 +155,10 @@ class DocTool(Loggable):
             setattr(symbol, key, value)
 
         symbol.resolve_links(self.link_resolver)
+
+        if self.incremental:
+            self.mark_stale_pages(symbol.name)
+
         return symbol
 
     def __setup_database(self):
@@ -206,6 +210,9 @@ class DocTool(Loggable):
         n = datetime.now()
 
         if self.incremental:
+            for comment in self.__comments.values():
+                self.mark_stale_pages(comment.name)
+
             stale_pages = self.change_tracker.get_stale_pages()
 
         page = self.page_parser.parse (self.index_file)
