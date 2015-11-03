@@ -20,7 +20,7 @@
 
 import sys, os, traceback
 
-from hotdoc.core.doc_tool import doc_tool
+from hotdoc.core.doc_tool import DocTool
 from hotdoc.extensions import *
 
 if __name__=="__main__":
@@ -30,6 +30,8 @@ if __name__=="__main__":
             for f in os.listdir (dir_):
                 if f.endswith (".py"):
                     __import__ ("%s.%s" % (dir_, f[:-3]))
+
+    doc_tool = DocTool()
 
     try:
         doc_tool.parse_and_format()

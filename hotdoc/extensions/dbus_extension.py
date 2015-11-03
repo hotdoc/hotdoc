@@ -3,7 +3,6 @@ import os
 from ..core.base_extension import BaseExtension
 from hotdoc.utils.loggable import Loggable, progress_bar
 from dbusapi.interfaceparser import InterfaceParser
-from hotdoc.core.doc_tool import doc_tool
 from hotdoc.core.symbols import *
 from hotdoc.core.naive_index import NaiveIndexFormatter
 

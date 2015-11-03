@@ -312,5 +312,3 @@ class DocTool(Loggable):
 
     def finalize (self):
         self.session.close()
-
-doc_tool = DocTool()
