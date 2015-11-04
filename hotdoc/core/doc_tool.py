@@ -127,6 +127,7 @@ class DocTool(Loggable):
         self.stale_pages = set({})
         self.final_stale_pages = None
         self.incremental = False
+        self.symbols_maps = {}
 
     def get_symbol(self, name):
         sym = self.session.query(Symbol).filter(Symbol.name == name).first()
@@ -135,9 +136,12 @@ class DocTool(Loggable):
         return sym
 
     def mark_stale_pages(self, symbol_name):
-        containing_pages = self.symbols_table.symbols_map.get(symbol_name)
+        containing_pages = self.symbols_maps.get(symbol_name)
         if containing_pages is not None:
-            for page in containing_pages:
+            for source_file, page in containing_pages.items():
+                if not page.is_stale:
+                    page.is_stale = True
+                    self.doc_tree.page_parser.reparse(page)
                 self.stale_pages.add(page)
 
     def get_or_create_symbol(self, type_, **kwargs):
@@ -186,7 +190,6 @@ class DocTool(Loggable):
         try:
             self.change_tracker = pickle.load(open(os.path.join(self.output,
                 'change_tracker.p'), 'rb'))
-            self.incremental = True
         except IOError:
             self.change_tracker = ChangeTracker()
 
@@ -222,17 +225,22 @@ class DocTool(Loggable):
         for cpage in page.subpages:
             self.__display_page_tree(cpage, level + 1)
 
+    def __fill_symbols_map(self):
+        for page in self.doc_tree.pages.values():
+            for name in page.symbol_names:
+                symbol_map = self.symbols_maps.pop(name, {})
+                symbol_map[page.source_file] = page
+                self.symbols_maps[name] = symbol_map
+
     def parse_and_format (self):
         self.__setup()
         self.parse_args ()
 
         self.root = self.doc_tree.build_tree(self.index_file)
-        pickle.dump(self.pages, open('pages.p', 'wb'))
+        self.__fill_symbols_map()
 
         #self.__create_symbols_table()
         self.__create_change_tracker()
-
-        print self.index_file
 
 
         # We're done setting up, extensions can setup too
@@ -248,15 +256,27 @@ class DocTool(Loggable):
 
         self.session.flush()
 
+        if self.incremental:
+            for comment in self.__comments.values():
+                self.mark_stale_pages(comment.name)
+            self.final_stale_pages = set({})
+            for page in self.doc_tree.pages.values():
+                if page.is_stale:
+                    self.final_stale_pages.add (page.source_file)
+            self.final_stale_pages |= self.stale_pages
+
+        print "ze stale pages are", self.final_stale_pages
+
         self.formatter = HtmlFormatter(self, [])
-        self.__resolve_page_symbols(self.root)
         self.formatter.format(self.root)
+
         print "currently optimizable:", datetime.now() - n
 
         #pickle.dump(self.symbols_table, open(os.path.join(self.output,
         #    'symbols_table.p'), 'wb'))
         pickle.dump(self.change_tracker, open(os.path.join(self.output,
             'change_tracker.p'), 'wb'))
+        pickle.dump(self.pages, open('pages.p', 'wb'))
         #pickle.dump(page, open(os.path.join(self.output, 'index.p'), 'wb'))
         self.session.commit()
         self.finalize()
@@ -344,6 +364,7 @@ class DocTool(Loggable):
 
         try:
             self.pages = pickle.load(open('pages.p', 'rb'))
+            self.incremental = True
         except:
             self.pages = {}
 

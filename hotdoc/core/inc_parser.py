@@ -17,21 +17,23 @@ class ParsedPage(object):
 
 class Page(object):
     def __init__(self, source_file):
-        self.source_file = source_file
-        self.subpages = []
-        self.symbols = []
-        self.symbol_names = []
         name = os.path.splitext(os.path.basename(source_file))[0]
         pagename = '%s.html' % name
+
+        self.symbol_names = []
+        self.subpages = []
         self.link = Link (pagename, name, name) 
-        self.extension_name = None
-        self.parsed_page = None
-        self.short_description = ''
         self.title = ''
+        self.short_description = ''
+        self.source_file = source_file
+        self.extension_name = None
         try:
             self.mtime = os.path.getmtime(source_file)
         except OSError:
             self.mtime = -1
+
+        self.parsed_page = None
+        self.is_stale = True
 
     def __getstate__(self):
         return {'symbol_names': self.symbol_names,
@@ -41,9 +43,13 @@ class Page(object):
                 'short_description': self.short_description,
                 'source_file': self.source_file,
                 'extension_name': self.extension_name,
+                'parsed_page': None,
+                'is_stale': self.is_stale,
                 'mtime': self.mtime}
 
     def resolve_symbols (self, doc_tool):
+        self.symbols = []
+
         self.typed_symbols = {}
         self.typed_symbols[FunctionSymbol] = TypedSymbolsList ("Functions")
         self.typed_symbols[CallbackSymbol] = TypedSymbolsList ("Callback Functions")
@@ -109,7 +115,7 @@ class PageParser(object):
                 subpage = handler(self.doc_tree)
                 page.subpages.append (subpage)
                 node.destination = '%s.html' % subpage
-            elif parent_node and parent_node.t == 'ATXHeader' and \
+            elif parent_node and parent_node.t == 'ATXHeader' and node.destination and \
                     os.path.exists(os.path.join(self.prefix, node.destination)):
                 page.subpages.append (os.path.join(self.prefix,
                     node.destination))
@@ -160,6 +166,17 @@ class PageParser(object):
 
         return page
 
+    def reparse(self, page):
+        with open(page.source_file, 'r') as f:
+            contents = f.read()
+
+        ast = self.__cmp.parse(contents)
+        parsed_page = ParsedPage()
+        parsed_page.ast = ast
+        page.parsed_page = parsed_page
+
+        self.check_links(page, ast)
+
     def parse_contents(self, contents):
         ast = self.__cmp.parse(contents)
         parsed_page = ParsedPage()
@@ -206,6 +223,7 @@ class DocTree(object):
                 mtime = os.path.getmtime(source_file)
                 if mtime == epage.mtime:
                     page = epage
+                    page.is_stale = False
             except OSError:
                 page = epage
 

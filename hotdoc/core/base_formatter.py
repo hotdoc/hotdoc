@@ -107,6 +107,7 @@ class Formatter(object):
 
     def __format_page (self, page):
         if self.doc_tool.page_is_stale(page):
+            page.resolve_symbols(self.doc_tool)
             self.__format_symbols(page.symbols)
             page.detailed_description = self.doc_tool.formatter._format_page (page)[0]
             self.doc_tool.formatter._write_page (page)
