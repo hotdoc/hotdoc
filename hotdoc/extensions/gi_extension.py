@@ -993,8 +993,6 @@ class GIExtension(BaseExtension):
         return res
 
     def handle_well_known_name (self, wkn):
-        formatter = self.get_formatter(self.doc_tool.output_format)
-
         if wkn == 'gobject-api':
             contents = ''
             for language in self.languages:
@@ -1006,24 +1004,14 @@ class GIExtension(BaseExtension):
             index_page = self.doc_tool.page_parser.parse_contents (contents,
                     'gobject-api', 'generated-gobject-index')
 
-            self.doc_tool.page_parser.symbol_added_signal.connect (self.__adding_symbol)
-
-            formatter.formatting_symbol_signals[Symbol].connect(self.__formatting_symbol)
-
             self.doc_tool.page_parser._current_page = index_page
             page = self.doc_tool.page_parser.parse (self.gi_index,
                     self.EXTENSION_NAME)
-            page.formatter = self.get_formatter(self.doc_tool.output_format)
-            return None, page
-
-        elif wkn == 'gobject-hierarchy':
-            page = Page(wkn, 'generated-gobject-hierarchy')
-            graph = formatter._create_hierarchy_graph(self.gir_parser.global_hierarchy)
-            #symbol = ObjectHierarchySymbol (self.gir_parser.global_hierarchy,
-            #        None, 'GObject-hierarchy', None)
-            #page.add_symbol (symbol)
             return None, page
 
     def setup (self):
         self.__gather_gtk_doc_links()
         self.gir_parser = GIRParser (self.doc_tool, self.gir_file)
+        formatter = self.get_formatter(self.doc_tool.output_format)
+        self.doc_tool.page_parser.symbol_added_signal.connect (self.__adding_symbol)
+        formatter.formatting_symbol_signals[Symbol].connect(self.__formatting_symbol)

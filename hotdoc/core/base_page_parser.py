@@ -18,7 +18,7 @@ class PageParser(Loggable):
         self.doc_tool = doc_tool
         self.base_page = None
         self._current_page = None
-        self.__parsed_pages = {}
+        self.parsed_pages = {}
         self._prefix = ""
         self.__total_documented_symbols = 0
         self.create_object_hierarchy = False
@@ -26,6 +26,7 @@ class PageParser(Loggable):
         self.symbol_added_signal = Signal()
         self.adding_symbol_signal = Signal()
         self.extension_name = None
+        self.incremental = False
 
     def create_page (self, page_name, filename):
         page = Page (page_name, filename, self.extension_name)
@@ -59,8 +60,8 @@ class PageParser(Loggable):
         if not os.path.isfile (filename):
             return None
 
-        if filename in self.__parsed_pages:
-            return self.__parsed_pages[filename]
+        if filename in self.parsed_pages:
+            return self.parsed_pages[filename]
 
         with open (filename, "r") as f:
             contents = f.read()
@@ -71,15 +72,28 @@ class PageParser(Loggable):
     def parse_contents (self, contents, page_name, filename):
         old_page = self._current_page
 
-        self.create_page (page_name, filename)
+        if not self.incremental:
+            self.create_page (page_name, filename)
 
         cur_page = self._current_page
         cur_page.parsed_page = self.do_parse_page (contents, self._current_page)
 
         self._current_page = old_page
 
-        self.__parsed_pages[filename] = cur_page
+        self.parsed_pages[filename] = cur_page
         return cur_page
+
+    def reparse(self, page):
+        self.incremental = True
+
+        if self.doc_tool.page_is_stale(page):
+            print "reparsing", page.source_file
+            self._current_page = page
+            self._parse_page(page.source_file)
+            print "ze subpages are", page.subpages
+        else:
+            for cpage in page.subpages:
+                self.reparse (cpage)
 
     def parse(self, index_file, extension_name=None):
         if not os.path.isfile (index_file):

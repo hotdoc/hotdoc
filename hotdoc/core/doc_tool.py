@@ -210,6 +210,17 @@ class DocTool(Loggable):
 
         return False
 
+    def __get_parsed_pages(self, page, all_pages):
+        if not self.page_is_stale (page):
+            all_pages[page.source_file] = page
+        for cpage in page.subpages:
+            self.__get_parsed_pages(cpage, all_pages)
+
+    def __display_page_tree(self, page, level=0):
+        print '  ' * level, page.source_file
+        for cpage in page.subpages:
+            self.__display_page_tree(cpage, level + 1)
+
     def parse_and_format (self):
         self.__setup()
         self.parse_args ()
@@ -235,6 +246,20 @@ class DocTool(Loggable):
 
             self.final_stale_pages = self.stale_pages | self.change_tracker.get_stale_pages()
 
+        try:
+            old_page = pickle.load(open(os.path.join(self.output, 'index.p'),
+            'rb'))
+        except IOError:
+            old_page = None
+
+        if old_page is not None:
+            parsed_pages = {}
+            self.__get_parsed_pages(old_page, parsed_pages)
+            self.page_parser.parsed_pages = parsed_pages
+            self.page_parser.reparse(old_page)
+            self.__display_page_tree(old_page)
+            return
+
         n = datetime.now()
         page = self.page_parser.parse (self.index_file)
         print "parsing pages took", datetime.now() - n
@@ -257,6 +282,7 @@ class DocTool(Loggable):
             'symbols_table.p'), 'wb'))
         pickle.dump(self.change_tracker, open(os.path.join(self.output,
             'change_tracker.p'), 'wb'))
+        pickle.dump(page, open(os.path.join(self.output, 'index.p'), 'wb'))
         self.session.commit()
         self.finalize()
 

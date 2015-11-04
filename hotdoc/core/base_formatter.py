@@ -107,7 +107,6 @@ class Formatter(object):
 
     def __format_page (self, page):
         if self.doc_tool.page_is_stale(page):
-            print "Actually rendering", page.source_file
             self.__format_symbols(page.symbols)
             page.detailed_description = self.doc_tool.formatter._format_page (page)[0]
             self.doc_tool.formatter._write_page (page)
@@ -115,7 +114,7 @@ class Formatter(object):
         for cpage in page.subpages:
             formatter = self.doc_tool.get_formatter(cpage.extension_name)
             if formatter and formatter != self.doc_tool.formatter:
-                self.doc_tool.formatter = cpage.formatter
+                self.doc_tool.formatter = formatter
                 self.doc_tool.formatter.format(cpage)
             else:
                 self.__format_page (cpage)

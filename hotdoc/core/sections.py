@@ -17,13 +17,16 @@ class Page(object):
         self.link = Link (pagename, name, name) 
         self.source_file = source_file
         self.extension_name = extension_name
-
         self.parsed_page = None
+        self.short_description = ''
+        self.title = ''
 
     def __getstate__(self):
         return {'symbol_names': self.symbol_names,
                 'subpages': self.subpages,
                 'link': self.link,
+                'title': self.title,
+                'short_description': self.short_description,
                 'source_file': self.source_file,
                 'extension_name': self.extension_name}
 
@@ -45,8 +48,6 @@ class Page(object):
         self.typed_symbols[VFunctionSymbol] = TypedSymbolsList ("Virtual Methods")
         self.typed_symbols[ClassSymbol] = TypedSymbolsList ("Classes")
 
-        self.short_description = ''
-        self.title = ''
         self.formatted_contents = None
         self.formatted_doc = ''
 
