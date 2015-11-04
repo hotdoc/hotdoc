@@ -14,6 +14,7 @@ from .links import LinkResolver
 from .symbols import Symbol
 from .base_extension import BaseExtension
 from .alchemy_integration import Base
+from .inc_parser import DocTree
 
 from ..utils.utils import all_subclasses
 from ..utils.simple_signals import Signal
@@ -117,7 +118,6 @@ class DocTool(Loggable):
         self.index_file = None
         self.raw_comment_parser = None
         self.doc_parser = None
-        self.page_parser = None
         self.extensions = []
         self.__comments = {}
         self.full_scan = False
@@ -198,7 +198,8 @@ class DocTool(Loggable):
 
     def __resolve_page_symbols(self, page):
         page.resolve_symbols(self)
-        for cpage in page.subpages:
+        for pagename in page.subpages:
+            cpage = self.pages[pagename]
             self.__resolve_page_symbols(cpage)
 
     def page_is_stale(self, page):
@@ -225,8 +226,14 @@ class DocTool(Loggable):
         self.__setup()
         self.parse_args ()
 
-        self.__create_symbols_table()
+        self.root = self.doc_tree.build_tree(self.index_file)
+        pickle.dump(self.pages, open('pages.p', 'wb'))
+
+        #self.__create_symbols_table()
         self.__create_change_tracker()
+
+        print self.index_file
+
 
         # We're done setting up, extensions can setup too
         for extension in self.extensions:
@@ -239,50 +246,18 @@ class DocTool(Loggable):
             self.__comments.update (extension.get_comments())
             print "Extension done", datetime.now() - n, extension.EXTENSION_NAME
 
-
-        if self.incremental:
-            for comment in self.__comments.values():
-                self.mark_stale_pages(comment.name)
-
-            self.final_stale_pages = self.stale_pages | self.change_tracker.get_stale_pages()
-
-        try:
-            old_page = pickle.load(open(os.path.join(self.output, 'index.p'),
-            'rb'))
-        except IOError:
-            old_page = None
-
-        if old_page is not None:
-            parsed_pages = {}
-            self.__get_parsed_pages(old_page, parsed_pages)
-            self.page_parser.parsed_pages = parsed_pages
-            self.page_parser.reparse(old_page)
-            self.__display_page_tree(old_page)
-            return
-
-        n = datetime.now()
-        page = self.page_parser.parse (self.index_file)
-        print "parsing pages took", datetime.now() - n
-        n = datetime.now()
-        self.__resolve_page_symbols(page)
-        print "resolving symbols took", datetime.now() - n
-        n = datetime.now()
-        self.change_tracker.update_pages_mtimes(page)
-
         self.session.flush()
 
-        print "flushing session took", datetime.now() - n
-        n = datetime.now()
-
         self.formatter = HtmlFormatter(self, [])
-        self.formatter.format(page)
+        self.__resolve_page_symbols(self.root)
+        self.formatter.format(self.root)
         print "currently optimizable:", datetime.now() - n
 
-        pickle.dump(self.symbols_table, open(os.path.join(self.output,
-            'symbols_table.p'), 'wb'))
+        #pickle.dump(self.symbols_table, open(os.path.join(self.output,
+        #    'symbols_table.p'), 'wb'))
         pickle.dump(self.change_tracker, open(os.path.join(self.output,
             'change_tracker.p'), 'wb'))
-        pickle.dump(page, open(os.path.join(self.output, 'index.p'), 'wb'))
+        #pickle.dump(page, open(os.path.join(self.output, 'index.p'), 'wb'))
         self.session.commit()
         self.finalize()
 
@@ -312,8 +287,6 @@ class DocTool(Loggable):
                 default="html", dest="output_format")
         self.parser.add_argument ("-I", "--include-path", action="append",
                 default=[], dest="include_paths")
-
-        self.page_parser = CommonMarkParser (self)
 
         extension_subclasses = all_subclasses (BaseExtension)
         subparsers = self.parser.add_subparsers (title="extensions",
@@ -363,12 +336,21 @@ class DocTool(Loggable):
                     self.output_format)
 
         self.__setup_output ()
-        self.__parse_extensions (args)
 
         if not args[0].index:
             nif = NaiveIndexFormatter (self.c_source_scanner.symbols)
             args[0].index = "tmp_markdown_files/tmp_index.markdown"
         self.index_file = args[0].index
+
+        try:
+            self.pages = pickle.load(open('pages.p', 'rb'))
+        except:
+            self.pages = {}
+
+        prefix = os.path.dirname(self.index_file)
+        self.doc_tree = DocTree(self.pages, prefix)
+
+        self.__parse_extensions (args)
 
     def finalize (self):
         self.session.close()

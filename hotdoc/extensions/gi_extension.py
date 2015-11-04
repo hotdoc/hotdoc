@@ -12,7 +12,7 @@ from ..utils.loggable import Loggable
 from .gi_raw_parser import GtkDocRawCommentParser
 from .gi_html_formatter import GIHtmlFormatter
 from hotdoc.core.links import Link
-from hotdoc.core.sections import Page
+from hotdoc.core.inc_parser import Page
 
 
 class Annotation (object):
@@ -427,8 +427,8 @@ class GIExtension(BaseExtension):
         self.major_version = args.major_version
         self.gir_parser = None
 
-        doc_tool.register_well_known_name ('gobject-api', self)
-        doc_tool.register_well_known_name ('gobject-hierarchy', self)
+        doc_tool.doc_tree.page_parser.register_well_known_name ('gobject-api',
+                self.gi_index_handler)
 
         # Make sure C always gets formatted first
         if 'c' in self.languages:
@@ -992,7 +992,24 @@ class GIExtension(BaseExtension):
 
         return res
 
-    def handle_well_known_name (self, wkn):
+    def gi_index_handler (self, doc_tree):
+        gen_contents = ''
+        gen_index_page = Page('gen-index')
+
+        for language in self.languages:
+            dest = '%s/gobject-api.html' % language
+            gen_contents += '### [%s API](%s)\n' % \
+                    (language.capitalize (), dest)
+
+        parsed_page = doc_tree.page_parser.parse_contents(gen_contents)
+        gen_index_page.parsed_page = parsed_page
+
+        doc_tree.pages['gen-index'] = gen_index_page
+        index_path = os.path.join(doc_tree.prefix, 'gobject-api.markdown')
+        gen_index_page.subpages.append(index_path)
+        new_page = doc_tree.build_tree(index_path, 'gi-extension')
+        return "gen-index"
+
         if wkn == 'gobject-api':
             contents = ''
             for language in self.languages:
@@ -1013,5 +1030,5 @@ class GIExtension(BaseExtension):
         self.__gather_gtk_doc_links()
         self.gir_parser = GIRParser (self.doc_tool, self.gir_file)
         formatter = self.get_formatter(self.doc_tool.output_format)
-        self.doc_tool.page_parser.symbol_added_signal.connect (self.__adding_symbol)
+        self.doc_tool.doc_tree.symbol_added_signal.connect (self.__adding_symbol)
         formatter.formatting_symbol_signals[Symbol].connect(self.__formatting_symbol)

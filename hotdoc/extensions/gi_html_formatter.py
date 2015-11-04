@@ -410,7 +410,7 @@ class GIHtmlFormatter(HtmlFormatter):
             new_names = self.__gi_extension.gir_parser.javascript_names
 
         if new_names is not None:
-            self.doc_tool.page_parser.rename_headers (page.parsed_page,
+            self.doc_tool.doc_tree.page_parser.rename_headers (page.parsed_page,
                     new_names)
         return HtmlFormatter._format_page (self, page)
 
