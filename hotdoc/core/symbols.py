@@ -26,6 +26,7 @@ class Symbol (Base):
     _type_ = Column(String)
     extension_contents = Column(MutableDict.as_mutable(PickleType))
     extension_attributes = Column(MutableDict.as_mutable(PickleType))
+    link = Column(Link.as_mutable(PickleType))
     skip = Column(Boolean)
 
     __mapper_args__ = {
@@ -71,8 +72,11 @@ class Symbol (Base):
         return self.location
 
     def resolve_links(self, link_resolver):
-        link = Link(self._make_unique_id(), self._make_name(),
-                    self._make_unique_id())
+        if self.link is None:
+            link = Link(self._make_unique_id(), self._make_name(),
+                        self._make_unique_id())
+        else:
+            link = self.link
         self.link = link_resolver.upsert_link(link)
 
 class Tag:
@@ -300,7 +304,9 @@ class QualifiedSymbol (MutableObject):
 
         for tok in self.input_tokens:
             if isinstance(tok, Link):
-                self.type_link = link_resolver.upsert_link(tok)
+                self.type_link = link_resolver.get_named_link(tok.id_)
+                if not self.type_link:
+                    self.type_link = link_resolver.upsert_link(tok)
                 self.type_tokens.append (self.type_link)
             else:
                 self.type_tokens.append (tok)

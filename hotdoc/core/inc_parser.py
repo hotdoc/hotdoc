@@ -21,7 +21,7 @@ class Page(object):
         pagename = '%s.html' % name
 
         self.symbol_names = []
-        self.subpages = []
+        self.subpages = set({})
         self.link = Link (pagename, name, name) 
         self.title = ''
         self.short_description = ''
@@ -72,7 +72,8 @@ class Page(object):
             if sym:
                 self.resolve_symbol (sym)
 
-            new_symbols = sum(doc_tool.doc_tree.symbol_added_signal(self, sym), [])
+            new_symbols = sum(doc_tool.doc_tree.symbol_added_signal(self, sym),
+                    [])
             for symbol in new_symbols:
                 self.resolve_symbol (symbol)
 
@@ -113,12 +114,15 @@ class PageParser(object):
             handler = self.well_known_names.get(node.destination)
             if handler:
                 subpage = handler(self.doc_tree)
-                page.subpages.append (subpage)
+                page.subpages.add (subpage)
                 node.destination = '%s.html' % subpage
             elif parent_node and parent_node.t == 'ATXHeader' and node.destination and \
                     os.path.exists(os.path.join(self.prefix, node.destination)):
-                page.subpages.append (os.path.join(self.prefix,
-                    node.destination))
+                path = os.path.join(self.prefix, node.destination)
+                if not path in self.doc_tree.seen_pages:
+                    page.subpages.add (path)
+                    self.doc_tree.seen_pages.add (path)
+
                 original_name = node.label[0].c
                 page.parsed_page.headers[original_name] = node
                 node.destination = '%s.html' % os.path.splitext(node.destination)[0]
@@ -193,7 +197,7 @@ class PageParser(object):
 
 class DocTree(object):
     def __init__(self, pages, prefix):
-        self.parsed_pages = set({})
+        self.seen_pages = set({})
         self.page_parser = PageParser(self, prefix)
         self.pages = pages
         self.prefix = prefix
@@ -233,11 +237,8 @@ class DocTree(object):
 
         self.pages[source_file] = page
 
-        self.parsed_pages.add(source_file)
-
         for subpage in page.subpages:
-            if not subpage in self.parsed_pages:
-                self.build_tree(subpage, extension_name=extension_name)
+            self.build_tree(subpage, extension_name=extension_name)
 
         return page
 

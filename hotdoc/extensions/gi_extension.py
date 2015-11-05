@@ -1006,7 +1006,7 @@ class GIExtension(BaseExtension):
 
         doc_tree.pages['gen-index'] = gen_index_page
         index_path = os.path.join(doc_tree.prefix, 'gobject-api.markdown')
-        gen_index_page.subpages.append(index_path)
+        gen_index_page.subpages.add(index_path)
         new_page = doc_tree.build_tree(index_path, 'gi-extension')
         return "gen-index"
 

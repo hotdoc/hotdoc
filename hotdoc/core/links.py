@@ -33,7 +33,7 @@ class LinkResolver(object):
         if name in self.__links:
             return self.__links[name]
 
-        sym = self.doc_tool.get_symbol(name)
+        sym = self.doc_tool.get_symbol(name, prefer_class=True)
         if sym:
             self.__links[name] = sym.link
             return sym.link

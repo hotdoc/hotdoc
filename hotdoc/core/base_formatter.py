@@ -7,6 +7,8 @@ import pygraphviz as pg
 
 from xml.sax.saxutils import unescape
 
+from datetime import datetime
+
 from .symbols import *
 from .sections import Page
 from ..utils.simple_signals import Signal
@@ -107,7 +109,7 @@ class Formatter(object):
 
     def __format_page (self, page):
         if self.doc_tool.page_is_stale(page):
-            page.resolve_symbols(self.doc_tool)
+            n = datetime.now()
             self.__format_symbols(page.symbols)
             page.detailed_description = self.doc_tool.formatter._format_page (page)[0]
             self.doc_tool.formatter._write_page (page)

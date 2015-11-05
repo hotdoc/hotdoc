@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker, mapper
 
 from .naive_index import NaiveIndexFormatter
 from .links import LinkResolver
-from .symbols import Symbol
+from .symbols import *
 from .base_extension import BaseExtension
 from .alchemy_integration import Base
 from .inc_parser import DocTree
@@ -129,8 +129,18 @@ class DocTool(Loggable):
         self.incremental = False
         self.symbols_maps = {}
 
-    def get_symbol(self, name):
-        sym = self.session.query(Symbol).filter(Symbol.name == name).first()
+    def get_symbol(self, name, prefer_class=False):
+        sym = None
+
+        syms = self.session.query(Symbol).filter(Symbol.name == name).all()
+
+        if len(syms) == 1:
+            sym = syms[0]
+        else:
+            for sym in syms:
+                if type(sym) != StructSymbol or not prefer_class:
+                    break
+
         if sym:
             sym.resolve_links(self.link_resolver)
         return sym
@@ -232,6 +242,13 @@ class DocTool(Loggable):
                 symbol_map[page.source_file] = page
                 self.symbols_maps[name] = symbol_map
 
+    def __resolve_symbols(self, page):
+        if self.page_is_stale(page):
+            page.resolve_symbols(self)
+        for pagename in page.subpages:
+            cpage = self.pages[pagename]
+            self.__resolve_symbols(cpage)
+
     def parse_and_format (self):
         self.__setup()
         self.parse_args ()
@@ -239,9 +256,7 @@ class DocTool(Loggable):
         self.root = self.doc_tree.build_tree(self.index_file)
         self.__fill_symbols_map()
 
-        #self.__create_symbols_table()
         self.__create_change_tracker()
-
 
         # We're done setting up, extensions can setup too
         for extension in self.extensions:
@@ -254,7 +269,6 @@ class DocTool(Loggable):
             self.__comments.update (extension.get_comments())
             print "Extension done", datetime.now() - n, extension.EXTENSION_NAME
 
-        self.session.flush()
 
         if self.incremental:
             for comment in self.__comments.values():
@@ -265,20 +279,22 @@ class DocTool(Loggable):
                     self.final_stale_pages.add (page.source_file)
             self.final_stale_pages |= self.stale_pages
 
-        print "ze stale pages are", self.final_stale_pages
+        self.__resolve_symbols(self.root)
+
+        n = datetime.now()
+
+        n = datetime.now()
+        self.session.flush()
 
         self.formatter = HtmlFormatter(self, [])
         self.formatter.format(self.root)
 
         print "currently optimizable:", datetime.now() - n
 
-        #pickle.dump(self.symbols_table, open(os.path.join(self.output,
-        #    'symbols_table.p'), 'wb'))
+        self.session.commit()
         pickle.dump(self.change_tracker, open(os.path.join(self.output,
             'change_tracker.p'), 'wb'))
         pickle.dump(self.pages, open('pages.p', 'wb'))
-        #pickle.dump(page, open(os.path.join(self.output, 'index.p'), 'wb'))
-        self.session.commit()
         self.finalize()
 
     def register_well_known_name (self, name, extension):
