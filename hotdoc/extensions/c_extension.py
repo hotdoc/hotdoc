@@ -9,7 +9,7 @@ from datetime import datetime
 from hotdoc.core.base_extension import BaseExtension
 from hotdoc.utils.loggable import Loggable, progress_bar
 from hotdoc.core.symbols import *
-from hotdoc.core.comment_block import CommentBlock, comment_from_tag
+from hotdoc.core.comment_block import comment_from_tag
 from hotdoc.lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
 from hotdoc.core.links import Link
 

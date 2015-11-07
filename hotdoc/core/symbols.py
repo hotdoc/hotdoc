@@ -79,11 +79,6 @@ class Symbol (Base):
             link = self.link
         self.link = link_resolver.upsert_link(link)
 
-class Tag:
-    def __init__(self, name, value):
-        self.name = name
-        self.description = value
-
 class FunctionSymbol (Symbol):
     __tablename__ = 'functions'
     id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)

@@ -1,7 +1,6 @@
 from ..core.base_extension import BaseExtension
 from hotdoc.utils.loggable import Loggable, progress_bar
 from hotdoc.core.symbols import *
-from hotdoc.core.comment_block import CommentBlock
 from hotdoc.extensions.python_doc_parser import google_doc_to_native
 import pyment.docstring as docs
 import os, ast

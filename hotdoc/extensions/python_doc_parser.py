@@ -3,7 +3,7 @@ from sphinx.ext.napoleon import docstring
 from docutils.core import publish_doctree
 from docutils import nodes
 from docutils.parsers.rst import roles
-from hotdoc.core.comment_block import CommentBlock, GtkDocParameter
+from hotdoc.core.comment_block import Comment
 
 class NativeCommentTranslator(nodes.NodeVisitor):
     def __init__(self, document):
@@ -12,7 +12,7 @@ class NativeCommentTranslator(nodes.NodeVisitor):
         self.parent_comments = []
 
     def visit_document(self, node):
-        self.comment = CommentBlock()
+        self.comment = Comment()
         self.comment.description = ''
 
     def depart_document(self, node):
@@ -113,16 +113,16 @@ class NativeCommentTranslator(nodes.NodeVisitor):
             parent_comment = self.parent_comments[-1]
             param_comment = parent_comment.params.get(param_name)
             if param_comment:
-                self.comment = CommentBlock()
+                self.comment = Comment()
                 param_comment.type_comment = self.comment
         elif text == 'returns':
-            self.comment = CommentBlock()
+            self.comment = Comment()
             parent_comment = self.parent_comments[-1]
             parent_comment.set_return_block (self.comment)
         elif text == 'rtype':
             parent_comment = self.parent_comments[-1]
             return_comment = parent_comment.tags.get('returns')
-            self.comment = CommentBlock()
+            self.comment = Comment()
             return_comment.type_comment = self.comment
 
     def depart_field_name(self, node):

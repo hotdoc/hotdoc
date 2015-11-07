@@ -39,17 +39,17 @@ class GtkDocRawCommentParser (object):
         arg = {}
         kvs = self.kv_regex.findall (string)
         kvs = dict([kv.split('=', 1) for kv in kvs])
-        return GtkDocAnnotation (name=name, argument=kvs)
+        return Annotation (name=name, argument=kvs)
 
     def parse_annotation (self, string):
         split = string.split ()
         name = split[0].strip()
         if len (split) == 1:
-            return GtkDocAnnotation (name=name)
+            return Annotation (name=name)
         elif '=' in split[1]:
             return self.parse_key_value_annotation (name, split[1])
         else:
-            return GtkDocAnnotation (name=name, argument=[split[1]])
+            return Annotation (name=name, argument=[split[1]])
 
     def parse_annotations (self, string):
         parsed_annotations = []
@@ -99,7 +99,7 @@ class GtkDocRawCommentParser (object):
         desc, annotations = self.extract_annotations (desc)
         annotations = {annotation.name: annotation for annotation in
                 annotations}
-        return CommentBlock (name=name, annotations=annotations,
+        return Comment (name=name, annotations=annotations,
                 description=desc)
 
     def parse_title_and_parameters (self, tp):
@@ -111,13 +111,13 @@ class GtkDocRawCommentParser (object):
         return title, parameters, annotations
 
     def parse_since_tag (self, name, desc):
-        return GtkDocTag (name=name, description=desc)
+        return Tag (name=name, description=desc)
 
     def parse_returns_tag (self, name, desc):
         desc, annotations = self.extract_annotations (desc)
         annotations = {annotation.name: annotation for annotation in
                 annotations}
-        return GtkDocTag (name=name, annotations=annotations, description=desc)
+        return Tag (name=name, annotations=annotations, description=desc)
 
     def parse_tag (self, name, desc):
         if name.lower() == "since":
@@ -177,7 +177,7 @@ class GtkDocRawCommentParser (object):
                 annotations}
         tags = {tag.name.lower(): tag for tag in tags}
 
-        block = CommentBlock (name=block_name, filename=filename, lineno=lineno,
+        block = Comment (name=block_name, filename=filename, lineno=lineno,
                 annotations=annotations, params=actual_parameters,
                 description = description, short_description=short_description,
                 title=title, tags=tags, raw_comment=raw_comment)

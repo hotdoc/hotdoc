@@ -6,7 +6,7 @@ import clang.cindex
 import pygraphviz as pg
 
 from ..core.symbols import *
-from ..core.comment_block import GtkDocParameter, CommentBlock, comment_from_tag
+from ..core.comment_block import Comment, comment_from_tag
 from ..core.base_extension import BaseExtension
 from ..utils.loggable import Loggable
 from .gi_raw_parser import GtkDocRawCommentParser
@@ -976,7 +976,7 @@ class GIExtension(BaseExtension):
                 if not comment:
                     continue
 
-                block = CommentBlock (name=vfunc_node.attrib['name'],
+                block = Comment (name=vfunc_node.attrib['name'],
                         description=comment.description,
                         filename=parent_comment.filename)
                 sym = self.__create_vfunc_symbol (vfunc_node, block,
