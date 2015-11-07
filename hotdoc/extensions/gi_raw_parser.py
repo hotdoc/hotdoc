@@ -1,6 +1,5 @@
 import sys, re
 from itertools import izip_longest
-from datetime import datetime
 from hotdoc.core.comment_block import *
 
 #http://stackoverflow.com/questions/434287/what-is-the-most-pythonic-way-to-iterate-over-a-list-in-chunks
@@ -188,5 +187,4 @@ if __name__ == "__main__":
     dp = GtkDocRawCommentParser()
     with open (sys.argv[1], 'r') as f:
         c = f.read()
-        n = datetime.now()
         block = dp.parse_comment (c, sys.argv[1], 0)
