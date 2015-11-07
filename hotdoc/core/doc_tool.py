@@ -3,7 +3,6 @@ import os, sys, argparse
 reload(sys)  
 sys.setdefaultencoding('utf8')
 
-import pygraphviz as pg
 import cPickle as pickle
 
 from sqlalchemy import create_engine, event
@@ -17,15 +16,9 @@ from .alchemy_integration import Base
 from .inc_parser import DocTree
 
 from ..utils.utils import all_subclasses
-from ..utils.simple_signals import Signal
 from ..utils.loggable import Loggable
 from ..utils.loggable import init as loggable_init
 from ..formatters.html.html_formatter import HtmlFormatter
-from ..extensions.common_mark_parser import CommonMarkParser
-
-from datetime import datetime
-
-import time
 
 class ConfigError(Exception):
     pass
@@ -63,28 +56,26 @@ class ChangeTracker(object):
 
         extension.set_stale_source_files(stale)
 
-
+# FIXME: put all persisted things in an internal folder,
+# separate from the output
 class DocTool(Loggable):
     def __init__(self):
         Loggable.__init__(self)
 
         self.output = None
-        self.style = None
         self.index_file = None
         self.raw_comment_parser = None
         self.doc_parser = None
         self.extensions = []
         self.__comments = {}
-        self.full_scan = False
-        self.full_scan_patterns = ['*.h']
         self.link_resolver = LinkResolver(self)
-        self.well_known_names = {}
         self.stale_pages = set({})
         self.final_stale_pages = None
         self.incremental = False
         self.symbols_maps = {}
 
     def get_symbol(self, name, prefer_class=False):
+        # FIXME: make names unique
         sym = None
 
         syms = self.session.query(Symbol).filter(Symbol.name == name).all()
@@ -100,10 +91,8 @@ class DocTool(Loggable):
             sym.resolve_links(self.link_resolver)
         return sym
 
-    def get_all_symbols(self):
-        return self.session.query(Symbol).all()
-
     def format_symbol(self, symbol_name):
+        # FIXME this will be API, raise meaningful errors
         pages = self.symbols_maps.get(symbol_name)
         if not pages:
             return None
@@ -117,12 +106,14 @@ class DocTool(Loggable):
 
         sym = self.get_symbol(symbol_name)
         if not sym:
-            return ''
+            return None
 
         self.formatter.format_symbol(sym) 
+
         return sym.detailed_description
 
     def mark_stale_pages(self, symbol_name):
+        # FIXME put this in the incremental page parser
         containing_pages = self.symbols_maps.get(symbol_name)
         if containing_pages is not None:
             for source_file, page in containing_pages.items():
@@ -165,6 +156,7 @@ class DocTool(Loggable):
         self.session.add (target)
 
     def __create_change_tracker(self):
+        # FIXME: ideally integrate md pages to this.
         try:
             self.change_tracker = pickle.load(open(os.path.join(self.output,
                 'change_tracker.p'), 'rb'))
@@ -172,6 +164,7 @@ class DocTool(Loggable):
             self.change_tracker = ChangeTracker()
 
     def get_formatter(self, extension_name):
+        # FIXME: use a dict ..
         for ext in self.extensions:
             if ext.EXTENSION_NAME == extension_name:
                 return ext.get_formatter(self.output_format)
@@ -191,17 +184,6 @@ class DocTool(Loggable):
             return True
 
         return False
-
-    def __get_parsed_pages(self, page, all_pages):
-        if not self.page_is_stale (page):
-            all_pages[page.source_file] = page
-        for cpage in page.subpages:
-            self.__get_parsed_pages(cpage, all_pages)
-
-    def __display_page_tree(self, page, level=0):
-        print '  ' * level, page.source_file
-        for cpage in page.subpages:
-            self.__display_page_tree(cpage, level + 1)
 
     def __fill_symbols_map(self):
         for page in self.doc_tree.pages.values():
@@ -227,6 +209,7 @@ class DocTool(Loggable):
             self.session.flush()
             self.__comments.update (extension.get_comments())
 
+        # FIXME: should go in incremental page parser
         if self.incremental:
             for comment in self.__comments.values():
                 self.mark_stale_pages(comment.name)
@@ -244,12 +227,6 @@ class DocTool(Loggable):
         self.formatter = HtmlFormatter(self, [])
         self.formatter.format(self.root)
 
-    def register_well_known_name (self, name, extension):
-        self.well_known_names[name] = extension
-
-    def get_well_known_name_handler (self, name):
-        return self.well_known_names.get(name)
-
     def get_comment (self, name):
         return self.__comments.get(name)
 
@@ -260,8 +237,6 @@ class DocTool(Loggable):
             self.datadir = "/usr/share"
 
         self.parser = argparse.ArgumentParser()
-        self.parser.add_argument("-s", "--style", action="store", default="gnome",
-                dest="style")
         self.parser.add_argument ("-i", "--index", action="store",
                 dest="index", help="location of the index file")
         self.parser.add_argument ("-o", "--output", action="store", default='doc',
@@ -300,6 +275,7 @@ class DocTool(Loggable):
             ext = self.__extension_dict[args[0].extension_name](self, args[0])
             self.extensions.append (ext)
 
+            # FIXME: this is crap
             if self.raw_comment_parser is None:
                 self.raw_comment_parser = ext.get_raw_comment_parser()
             if self.doc_parser is None:
@@ -313,7 +289,6 @@ class DocTool(Loggable):
 
         self.output = args[0].output
         self.output_format = args[0].output_format
-        self.style = args[0].style
         self.include_paths = args[0].include_paths
 
         if self.output_format not in ["html"]:
@@ -322,11 +297,14 @@ class DocTool(Loggable):
 
         self.__setup_output ()
 
+        # FIXME: we might actually want not to be naive
         if not args[0].index:
             nif = NaiveIndexFormatter (self.c_source_scanner.symbols)
             args[0].index = "tmp_markdown_files/tmp_index.markdown"
+
         self.index_file = args[0].index
 
+        # FIXME: self should be doc_tree
         try:
             self.pages = pickle.load(open('pages.p', 'rb'))
             self.incremental = True
@@ -338,6 +316,7 @@ class DocTool(Loggable):
 
         self.__create_extensions (args)
 
+        # FIXME: should be doc_tree.root
         self.root = self.doc_tree.build_tree(self.index_file)
         self.__fill_symbols_map()
 
