@@ -1,6 +1,6 @@
 import os
-from pprint import pprint
 
+# FIXME: be less naive :)
 class NaiveIndexFormatter(object):
     def __init__(self, symbols):
         pages = {}
