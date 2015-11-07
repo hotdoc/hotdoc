@@ -146,6 +146,9 @@ class GtkDocRawCommentParser (object):
         return comment.strip()
 
     def parse_comment (self, comment, filename, lineno, stripped=False):
+        if not stripped and not comment.startswith ('/**'):
+            return None
+
         raw_comment = comment
         comment = unicode(comment.encode('utf8'))
         if not stripped:

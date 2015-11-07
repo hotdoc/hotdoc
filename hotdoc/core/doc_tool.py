@@ -91,6 +91,10 @@ class DocTool(Loggable):
             sym.resolve_links(self.link_resolver)
         return sym
 
+    def update_symbol_comment(self, comment):
+        self.session.query(Symbol).filter(Symbol.name ==
+                comment.name).update({'comment': comment})
+
     def format_symbol(self, symbol_name):
         # FIXME this will be API, raise meaningful errors
         pages = self.symbols_maps.get(symbol_name)

@@ -51,9 +51,12 @@ class ClangScanner(Loggable):
                     cs = get_comments (filename)
                     for c in cs:
                         block = self.doc_tool.raw_comment_parser.parse_comment(c[0], c[1], c[2])
+                        if block is None:
+                            continue
+
                         self.comments[block.name] = block
                         if incremental:
-                            self.__update_symbol_comment(block)
+                            self.doc_tool.update_symbol_comment(block)
 
         for filename in self.filenames:
             if filename in self.parsed:
@@ -168,11 +171,6 @@ class ClangScanner(Loggable):
 
         tokens.reverse()
         return tokens
-
-    def __update_symbol_comment(self, comment):
-        esym = self.doc_tool.get_symbol (comment.name)
-        if esym:
-            esym.comment = comment
 
     # FIXME: this belongs in doc_tool
     def __get_comment (self, comment_name):
