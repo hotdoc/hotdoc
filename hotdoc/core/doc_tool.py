@@ -124,7 +124,7 @@ class DocTool(Loggable):
                 if not page.is_stale:
                     page.is_stale = True
                     self.doc_tree.page_parser.reparse(page)
-                self.stale_pages.add(page)
+                self.stale_pages.add(page.source_file)
 
     def get_or_create_symbol(self, type_, **kwargs):
         name = kwargs.pop('name')
