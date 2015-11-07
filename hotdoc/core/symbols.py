@@ -68,7 +68,7 @@ class Symbol (Base):
                         self._make_unique_id())
         else:
             link = self.link
-        self.link = link_resolver.upsert_link(link)
+        self.link = link_resolver.upsert_link(link, overwrite_ref=True)
 
 class FunctionSymbol (Symbol):
     __tablename__ = 'functions'
