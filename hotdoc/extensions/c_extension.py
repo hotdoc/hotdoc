@@ -253,6 +253,9 @@ class ClangScanner(Loggable):
                         type_tokens=type_tokens, comment=param_comment)
                 parameters.append (parameter)
 
+        if not return_value:
+            return_value = ReturnValueSymbol(type_tokens=[], comment=None)
+
         sym = self.doc_tool.get_or_create_symbol(CallbackSymbol, parameters=parameters,
                 return_value=return_value, comment=comment, name=node.spelling,
                 filename=str(node.location.file), lineno=node.location.line)
@@ -475,6 +478,7 @@ class ClangScanner(Loggable):
         sym = self.doc_tool.get_or_create_symbol(FunctionSymbol, parameters=parameters,
                 return_value=return_value, comment=comment, name=node.spelling,
                 filename=str(node.location.file), lineno=node.location.line)
+
         return sym
 
     def __create_exported_variable_symbol (self, node):

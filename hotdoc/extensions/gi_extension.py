@@ -623,6 +623,9 @@ class GIExtension(BaseExtension):
         if type(symbol) in [ReturnValueSymbol, ParameterSymbol]:
             self.__add_annotations (symbol)
 
+        if isinstance (symbol, QualifiedSymbol):
+            return
+
         c_name = symbol._make_name ()
 
         if type (symbol) == StructSymbol:
@@ -912,6 +915,7 @@ class GIExtension(BaseExtension):
 
         gi_name = retval.get_extension_attribute ('gi-extension',
                 'gi_name')
+
         func.return_value.add_extension_attribute ('gi-extension', 'gi_name',
                 gi_name)
 

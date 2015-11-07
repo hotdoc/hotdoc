@@ -10,6 +10,7 @@ from xml.sax.saxutils import unescape
 from datetime import datetime
 
 from .symbols import *
+from .comment_block import *
 from .sections import Page
 from ..utils.simple_signals import Signal
 from ..utils.loggable import progress_bar
@@ -30,6 +31,10 @@ class Formatter(object):
         symbol_subclasses = all_subclasses (Symbol)
         symbol_subclasses.append(Symbol)
         for klass in symbol_subclasses:
+            self.formatting_symbol_signals[klass] = Signal()
+        qs_subclasses = all_subclasses(QualifiedSymbol)
+        qs_subclasses.append(QualifiedSymbol)
+        for klass in qs_subclasses:
             self.formatting_symbol_signals[klass] = Signal()
 
         self.fill_index_columns_signal = Signal()
@@ -66,7 +71,23 @@ class Formatter(object):
         self.__progress_bar.update (percent, "%d / %d" %
                 (self.__total_rendered_pages, self.__total_pages))
 
+    def __update_children_comments(self, symbol):
+        if not symbol.comment:
+            return
+
+        for param in symbol.parameters:
+            param.comment = symbol.comment.params.get(param.argname)
+
+        if symbol.return_value:
+            rv_tag = symbol.comment.tags.get('returns')
+            symbol.return_value.comment = comment_from_tag(rv_tag)
+
     def format_symbol (self, symbol):
+        #if isinstance(symbol, FunctionSymbol):
+        #    self.__update_children_comments(symbol)
+
+        self.__format_symbols(symbol.get_children_symbols())
+
         if isinstance (symbol, QualifiedSymbol):
             symbol.resolve_links(self.doc_tool.link_resolver)
 
@@ -104,7 +125,6 @@ class Formatter(object):
         for symbol in symbols:
             if symbol is None:
                 continue
-            self.__format_symbols (symbol.get_children_symbols())
             symbol.skip = not self.format_symbol(symbol)
 
     def __format_page (self, page):

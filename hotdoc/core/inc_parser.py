@@ -51,6 +51,7 @@ class Page(object):
         self.symbols = []
 
         self.typed_symbols = {}
+        self.typed_symbols[Symbol] = TypedSymbolsList ('FIXME symbols')
         self.typed_symbols[FunctionSymbol] = TypedSymbolsList ("Functions")
         self.typed_symbols[CallbackSymbol] = TypedSymbolsList ("Callback Functions")
         self.typed_symbols[FunctionMacroSymbol] = TypedSymbolsList ("Function Macros")
@@ -99,12 +100,13 @@ class Page(object):
         return self.title
 
 class PageParser(object):
-    def __init__(self, doc_tree, prefix):
+    def __init__(self, doc_tool, doc_tree, prefix):
         self.__cmp = CommonMark.DocParser()
         self.__cmr = CommonMark.HTMLRenderer()
         self.well_known_names = {}
         self.doc_tree = doc_tree
         self.prefix = prefix
+        self.doc_tool = doc_tool
 
     def register_well_known_name (self, wkn, callback):
         self.well_known_names[wkn] = callback
@@ -187,7 +189,20 @@ class PageParser(object):
         parsed_page.ast = ast
         return parsed_page
 
+    def _update_links (self, node):
+        if node.t == 'Link':
+            link = self.doc_tool.link_resolver.get_named_link (node.destination)
+            node.label[-1].c += ' '
+            if link and link.get_link() is not None:
+                node.destination = link.get_link()
+
+        for c in node.inline_content:
+            self._update_links (c)
+        for c in node.children:
+            self._update_links (c)
+
     def render_parsed_page (self, page):
+        self._update_links (page.ast)
         return self.__cmr.render (page.ast) 
 
     def rename_headers(self, parsed_page, new_names):
@@ -196,9 +211,9 @@ class PageParser(object):
                 elem.label[0].c = new_names.get(original_name)
 
 class DocTree(object):
-    def __init__(self, pages, prefix):
+    def __init__(self, doc_tool, pages, prefix):
         self.seen_pages = set({})
-        self.page_parser = PageParser(self, prefix)
+        self.page_parser = PageParser(doc_tool, self, prefix)
         self.pages = pages
         self.prefix = prefix
         self.symbol_added_signal = Signal()
