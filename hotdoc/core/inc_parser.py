@@ -247,6 +247,8 @@ class DocTree(object):
                     page.is_stale = False
             except OSError:
                 page = epage
+                if page.mtime == -1:
+                    page.is_stale = False
 
         if not page:
             page = self.page_parser.parse(source_file)
