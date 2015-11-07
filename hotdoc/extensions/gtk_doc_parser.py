@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/env python
 
-from subprocess import PIPE, Popen
 import sys
 import re
 
-from datetime import datetime
 
+# Lifted from g-ir-doc-tool, muahaha
 class DocScanner(object):
     def __init__(self):
         specs = [
