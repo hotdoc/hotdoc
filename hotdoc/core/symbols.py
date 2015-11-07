@@ -1,16 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import os
-import re
-import linecache
-import uuid
-
-from .links import Link
-from ..utils.simple_signals import Signal
-from ..utils.utils import all_subclasses
-
 from sqlalchemy import (Column, String, Integer, Boolean,
         ForeignKey, PickleType)
+
+from hotdoc.core.links import Link
 from hotdoc.core.alchemy_integration import *
 
 
@@ -42,6 +35,7 @@ class Symbol (Base):
 
         Base.__init__(self, **kwargs)
 
+    # FIXME: this is a bit awkward to use.
     def add_extension_attribute (self, ext_name, key, value):
         attributes = self.extension_attributes.pop (ext_name, {})
         attributes[key] = value
@@ -67,9 +61,6 @@ class Symbol (Base):
 
     def get_type_name (self):
         return ''
-
-    def get_source_location (self):
-        return self.location
 
     def resolve_links(self, link_resolver):
         if self.link is None:
@@ -114,6 +105,7 @@ class SignalSymbol (FunctionSymbol):
     flags = Column(PickleType)
 
     def __init__(self, **kwargs):
+        # FIXME: flags are gobject-specific
         self.flags = []
         FunctionSymbol.__init__(self, **kwargs)
 
@@ -210,6 +202,7 @@ class StructSymbol (Symbol):
     def _make_unique_id (self):
         return self.name + "-struct"
 
+# FIXME: and this is C-specific
 class MacroSymbol (Symbol):
     __tablename__ = 'macros'
     id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
@@ -259,16 +252,7 @@ class ExportedVariableSymbol (MacroSymbol):
     def get_type_name (self):
         return "Exported variable"
 
-class TypeSymbol(object):
-    def __init__(self, tokens):
-        self.tokens = tokens
-        self._constructed()
-
-    def __setstate__(self):
-        object.__setstate__(self, state)
-        self._constructed()
-
-
+# FIXME: is mutable really needed here ?
 class QualifiedSymbol (MutableObject):
     def __init__(self, type_tokens=[]):
         self.input_tokens = type_tokens
@@ -322,6 +306,7 @@ class ReturnValueSymbol (QualifiedSymbol):
 class ParameterSymbol (QualifiedSymbol):
     def __init__(self, argname='', comment=None, **kwargs):
         QualifiedSymbol.__init__(self, **kwargs)
+        # FIXME: gir specific
         self.array_nesting = 0
         self.argname = argname
         self.comment = comment
@@ -360,6 +345,7 @@ class ClassSymbol (Symbol):
     __mapper_args__ = {
             'polymorphic_identity': 'classes',
     }
+    # FIXME: multiple inheritance
     hierarchy = Column(PickleType)
     children = Column(PickleType)
 
