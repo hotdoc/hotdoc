@@ -1,8 +1,7 @@
-import re, os
+import os
 from hotdoc.formatters.html.html_formatter import HtmlFormatter
 from hotdoc.core.links import Link
 from hotdoc.core.symbols import *
-from hotdoc.core.sections import Page
 
 
 class GIHtmlFormatter(HtmlFormatter):
@@ -11,6 +10,8 @@ class GIHtmlFormatter(HtmlFormatter):
         searchpath = [os.path.join(module_path, "templates")]
         self.__gi_extension = gi_extension
         HtmlFormatter.__init__(self, doc_tool, searchpath)
+
+        # FIXME : these links do not belong here
         self.python_fundamentals = self.__create_python_fundamentals()
         self.javascript_fundamentals = self.__create_javascript_fundamentals()
 
@@ -180,6 +181,7 @@ class GIHtmlFormatter(HtmlFormatter):
         if self.__gi_extension.language != 'c':
             new_tokens = []
             for tok in type_tokens:
+                # FIXME : shouldn't we rather QualifiedSymbol.get_type_link() ?
                 if tok not in ['*', 'const', 'restrict', 'volatile']:
                     new_tokens.append (tok)
             return HtmlFormatter._format_type_tokens (self, new_tokens)
