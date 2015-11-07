@@ -7,13 +7,8 @@ import pygraphviz as pg
 
 from xml.sax.saxutils import unescape
 
-from datetime import datetime
-
 from .symbols import *
-from .comment_block import *
-from .sections import Page
 from ..utils.simple_signals import Signal
-from ..utils.loggable import progress_bar
 
 def all_subclasses(cls):
         return cls.__subclasses__() + [g for s in cls.__subclasses__()
@@ -24,9 +19,7 @@ class Formatter(object):
         self.doc_tool = doc_tool
         self._output = doc_tool.output
 
-        # Used to warn subclasses a method isn't implemented
-        self.__not_implemented_methods = {}
-
+        # FIXME: check if we need this level of detail performance-wise
         self.formatting_symbol_signals = {}
         symbol_subclasses = all_subclasses (Symbol)
         symbol_subclasses.append(Symbol)
@@ -37,14 +30,12 @@ class Formatter(object):
         for klass in qs_subclasses:
             self.formatting_symbol_signals[klass] = Signal()
 
-        self.fill_index_columns_signal = Signal()
-        self.fill_index_row_signal = Signal()
-
-        # Hardcoded for now
+        # FIXME: hardcoded for now
         self.__cmp = CommonMark.DocParser()
         self.__cmr = CommonMark.HTMLRenderer()
 
     def _create_hierarchy_graph (self, hierarchy):
+        # FIXME: handle multiple inheritance
         graph = pg.AGraph(directed=True, strict=True)
 
         for pair in hierarchy:
@@ -60,18 +51,9 @@ class Formatter(object):
 
         return graph
 
-    def __update_progress (self):
-        if self.__progress_bar is None:
-            return
-
-        if self.__total_pages == 0:
-            return
-
-        percent = float (self.__total_rendered_pages) / float (self.__total_pages)
-        self.__progress_bar.update (percent, "%d / %d" %
-                (self.__total_rendered_pages, self.__total_pages))
-
     def __update_children_comments(self, symbol):
+        # FIXME: for live previewing, editing parameters doesn't work
+        # unless this is called, refactor correctly.
         if not symbol.comment:
             return
 
@@ -88,6 +70,8 @@ class Formatter(object):
 
         self.__format_symbols(symbol.get_children_symbols())
 
+        # We only need to resolve qualified symbols now because
+        # they're referring to an actual type, not referred to.
         if isinstance (symbol, QualifiedSymbol):
             symbol.resolve_links(self.doc_tool.link_resolver)
 
@@ -106,16 +90,11 @@ class Formatter(object):
         out, standalone = self._format_symbol (symbol)
         symbol.detailed_description = out
 
+        # FIXME: figure out whether this approach is desirable
         if standalone:
             self._write_page (symbol)
 
         return True
-
-    def __get_subpages_count (self, page):
-        count = 1
-        for subpage in page.subpages:
-            count += self.__get_subpages_count (subpage)
-        return count
 
     def format (self, page):
         self.__format_page (page)
@@ -129,7 +108,6 @@ class Formatter(object):
 
     def __format_page (self, page):
         if self.doc_tool.page_is_stale(page):
-            n = datetime.now()
             self.__format_symbols(page.symbols)
             page.detailed_description = self.doc_tool.formatter._format_page (page)[0]
             self.doc_tool.formatter._write_page (page)
@@ -137,6 +115,9 @@ class Formatter(object):
         for pagename in page.subpages:
             cpage = self.doc_tool.pages[pagename]
             formatter = self.doc_tool.get_formatter(cpage.extension_name)
+
+            # This is a bit funky, might be better to not have
+            # other code use doc_tool.formatter, but a provided one.
             if formatter and formatter != self.doc_tool.formatter:
                 self.doc_tool.formatter = formatter
                 self.doc_tool.formatter.format(cpage)
@@ -154,16 +135,6 @@ class Formatter(object):
             basename = os.path.basename (f)
             path = os.path.join (asset_path, basename)
             shutil.copy (f, path)
-
-    def __write_API_index (self, content):
-        path = os.path.join (self._output, 'api_index.html')
-        with open (path, 'w') as f:
-            f.write (content.encode('utf-8'))
-
-    def __write_hierarchy (self, content):
-        path = os.path.join (self._output, 'object_hierarchy.html')
-        with open (path, 'w') as f:
-            f.write (content.encode('utf-8'))
 
     def _write_page (self, page):
         path = os.path.join (self._output, page.link.ref)
@@ -187,21 +158,6 @@ class Formatter(object):
         if comment:
             out += self._format_doc_string (comment.description)
         return out
-
-    def __warn_not_implemented (self, func):
-        if func in self.__not_implemented_methods:
-            return
-        self.__not_implemented_methods [func] = True
-
-    # Virtual methods
-
-    def _get_extension (self):
-        """
-        The extension to append to the filename
-        ('markdown', 'html')
-        """
-        self.__warn_not_implemented (self._get_extension)
-        return ""
 
     def _get_extra_files (self):
         return []
