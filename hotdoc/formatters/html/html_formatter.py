@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import json
 import os
 import re
 import tempfile
@@ -13,6 +12,7 @@ from ...core.symbols import *
 from ...core.base_formatter import Formatter
 from ...core.links import Link
 
+# FIXME: pretty useless
 class Callable(object):
     def __init__(self, return_value, name, parameters):
         self.return_value = return_value
@@ -50,7 +50,6 @@ class HtmlFormatter (Formatter):
                 VFunctionSymbol: self._format_vfunction_symbol,
                 PropertySymbol: self._format_property_symbol,
                 ClassSymbol: self._format_class_symbol,
-                #ObjectHierarchySymbol: self._format_object_hierarchy_symbol,
                 }
 
         self._summary_formatters = {
@@ -124,6 +123,7 @@ class HtmlFormatter (Formatter):
         if isinstance (symbol, QualifiedSymbol):
             out += self._format_type_tokens (symbol.type_tokens)
 
+        # FIXME : ugly
         elif hasattr (symbol, "link"):
             out += self._format_link (symbol.link.get_link(), symbol.link.title)
 
@@ -184,6 +184,7 @@ class HtmlFormatter (Formatter):
                 True,
                 True)
 
+    # FIXME : C-specific
     def _format_function_macro_summary (self, func):
         return self._format_callable_summary (
                 "#define ",
