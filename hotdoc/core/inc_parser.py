@@ -2,6 +2,8 @@ import CommonMark
 import os
 import cPickle as pickle
 
+from ..utils.simple_signals import Signal
+
 from .symbols import *
 from .links import Link
 
