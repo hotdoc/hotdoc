@@ -2,19 +2,16 @@ import os
 import re
 
 from lxml import etree
-import clang.cindex
-import pygraphviz as pg
 
-from ..core.symbols import *
-from ..core.comment_block import Comment, comment_from_tag
-from ..core.base_extension import BaseExtension
-from ..utils.loggable import Loggable
-from .gi_raw_parser import GtkDocRawCommentParser
-from .gi_html_formatter import GIHtmlFormatter
+from hotdoc.core.symbols import *
+from hotdoc.core.comment_block import Comment, comment_from_tag
+from hotdoc.core.base_extension import BaseExtension
+from hotdoc.extensions.gi_html_formatter import GIHtmlFormatter
 from hotdoc.core.links import Link
 from hotdoc.core.inc_parser import Page
 
 
+# FIXME: might conflict with comment_block.Annotation
 class Annotation (object):
     def __init__(self, nick, help_text, value=None):
         self.nick = nick
@@ -26,7 +23,7 @@ class Flag (object):
         self.nick = nick
         self.link = link
 
-
+# FIXME: is that subclassing really helpful ?
 class RunLastFlag (Flag):
     def __init__(self):
         Flag.__init__ (self, "Run Last",
@@ -140,6 +137,7 @@ class GIClassInfo(GIInfo):
         self.properties = {}
         self.is_interface = is_interface
 
+# FIXME: this code is quite a mess
 class GIRParser(object):
     def __init__(self, doc_tool, gir_file):
         self.namespace = None
@@ -152,7 +150,6 @@ class GIRParser(object):
         self.gir_children_map = {}
         self.gir_hierarchies = {}
         self.gir_types = {}
-        self.all_infos = {}
         self.global_hierarchy = None
         self.doc_tool = doc_tool
 
@@ -287,7 +284,6 @@ class GIRParser(object):
             self.gir_class_map['%s%s' % (ns_name, class_struct_name)] = gi_class_info
 
         self.gir_class_infos[c_name] = gi_class_info
-        self.all_infos[c_name] = gi_class_info
         self.c_names[c_name] = c_name
         self.python_names[c_name] = name
         self.javascript_names[c_name] = name
@@ -329,7 +325,6 @@ class GIRParser(object):
 
         info = GIInfo (callable_, class_name)
         self.gir_callable_infos[c_id] = info
-        self.all_infos[c_id] = info
 
     def __parse_gir_vmethod (self, nsmap, class_name, vmethod):
         name = vmethod.attrib['name']
@@ -347,7 +342,6 @@ class GIRParser(object):
     def __parse_gir_property (self, nsmap, class_name, prop):
         name = prop.attrib["name"]
         c_name = "%s:::%s---%s" % (class_name, name, 'property')
-        self.all_infos[c_name] = GIInfo (prop, class_name)
 
     def __parse_gir_function (self, nsmap, class_name, function,
             is_method=False, is_constructor=False):
@@ -423,7 +417,6 @@ class GIExtension(BaseExtension):
         self.gi_index = args.gi_index
         self.languages = [l.lower() for l in args.languages]
         self.language = 'c'
-        self.namespace = None
         self.major_version = args.major_version
         self.gir_parser = None
 
@@ -451,7 +444,6 @@ class GIExtension(BaseExtension):
                  "default": self.__make_default_annotation,
                 }
 
-        self.__raw_comment_parser = GtkDocRawCommentParser()
         self._formatters["html"] = GIHtmlFormatter(self.doc_tool, self)
 
         self.__translated_names = {}
@@ -580,7 +572,7 @@ class GIExtension(BaseExtension):
             return None
         return factory (annotation_name, annotation_value)
 
-    def get_annotations (self, parameter):
+    def __make_annotations (self, parameter):
         if not parameter.comment:
             return []
 
@@ -613,7 +605,9 @@ class GIExtension(BaseExtension):
 
     def __add_annotations (self, symbol):
         if self.language == 'c':
-            annotations = self.get_annotations (symbol)
+            annotations = self.__make_annotations (symbol)
+
+            # FIXME: OK this is format time but still seems strange
             extra_content = self.doc_tool.formatter._format_annotations (annotations)
         else:
             extra_content = ''
@@ -626,6 +620,7 @@ class GIExtension(BaseExtension):
         if isinstance (symbol, QualifiedSymbol):
             return
 
+        # FIXME : this is not correct
         c_name = symbol._make_name ()
 
         if type (symbol) == StructSymbol:
@@ -634,6 +629,7 @@ class GIExtension(BaseExtension):
         # We discard symbols at formatting time because they might be exposed
         # in other languages
         if self.language != 'c':
+            # FIXME: maybe skip symbols that are not in the gir at all.
             if c_name in self.gir_parser.unintrospectable_symbols:
                 return False
             if type (symbol) in [FunctionMacroSymbol, ExportedVariableSymbol]:
@@ -829,6 +825,7 @@ class GIExtension(BaseExtension):
         if no_hooks == '1':
             flags.append (NoHooksFlag())
 
+        # This is incorrect, it's not yet format time
         extra_content = self.get_formatter(self.doc_tool.output_format)._format_flags (flags)
         res.extension_contents['Flags'] = extra_content
 
@@ -921,6 +918,7 @@ class GIExtension(BaseExtension):
 
         self.__sort_parameters (func, func.return_value, func_parameters)
 
+    # FIXME : this belongs in doc_tool
     def __get_comment (self, symbol_name, comment_name):
         comment = self.doc_tool.get_comment(comment_name)
         if not comment:
@@ -1013,22 +1011,6 @@ class GIExtension(BaseExtension):
         gen_index_page.subpages.add(index_path)
         new_page = doc_tree.build_tree(index_path, 'gi-extension')
         return "gen-index"
-
-        if wkn == 'gobject-api':
-            contents = ''
-            for language in self.languages:
-                dest = '%s/gobject-api.html' % language
-                contents += '### [%s API](%s)\n' % \
-                        (language.capitalize (), dest)
-                self.doc_tool.page_parser.final_destinations[dest] = True
-
-            index_page = self.doc_tool.page_parser.parse_contents (contents,
-                    'gobject-api', 'generated-gobject-index')
-
-            self.doc_tool.page_parser._current_page = index_page
-            page = self.doc_tool.page_parser.parse (self.gi_index,
-                    self.EXTENSION_NAME)
-            return None, page
 
     def setup (self):
         self.__gather_gtk_doc_links()
