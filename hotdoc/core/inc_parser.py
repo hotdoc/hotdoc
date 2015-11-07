@@ -205,8 +205,8 @@ class PageParser(object):
         self._update_links (page.ast)
         return self.__cmr.render (page.ast) 
 
-    def rename_headers(self, parsed_page, new_names):
-        for original_name, elem in parsed_page.headers.items():
+    def rename_headers(self, page, new_names):
+        for original_name, elem in page.parsed_page.headers.items():
             if original_name in new_names:
                 elem.label[0].c = new_names.get(original_name)
 
