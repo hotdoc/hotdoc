@@ -810,9 +810,9 @@ class GIExtension(BaseExtension):
         comment = self.doc_tool.get_comment(unique_name)
 
         parameters, retval = self.__create_parameters_and_retval (node, comment)
-        res = self.doc_tool.get_or_create_symbol(SignalSymbol, object_name=object_name,
+        res = self.doc_tool.get_or_create_symbol(SignalSymbol,
                 parameters=parameters, return_value=retval,
-                comment=comment, name=name)
+                comment=comment, display_name=name, unique_name=unique_name)
 
         flags = []
 
@@ -857,8 +857,9 @@ class GIExtension(BaseExtension):
         elif construct == '1':
             flags.append (ConstructFlag())
 
-        res = self.doc_tool.get_or_create_symbol(PropertySymbol, prop_type=type_, object_name=object_name,
-                comment=comment, name=name)
+        res = self.doc_tool.get_or_create_symbol(PropertySymbol,
+                prop_type=type_, comment=comment,
+                display_name=name, unique_name=unique_name)
 
         extra_content = self.get_formatter(self.doc_tool.output_format)._format_flags (flags)
         res.extension_contents['Flags'] = extra_content
@@ -866,9 +867,13 @@ class GIExtension(BaseExtension):
         return res
 
     def __create_vfunc_symbol (self, node, comment, object_name, name):
+        unique_name = '%s:::%s' % (object_name, name)
+
         parameters, retval = self.__create_parameters_and_retval (node, comment)
-        symbol = self.doc_tool.get_or_create_symbol(VFunctionSymbol, object_name=object_name, parameters=parameters, 
-                return_value=retval, comment=comment, name=name)
+        symbol = self.doc_tool.get_or_create_symbol(VFunctionSymbol,
+                parameters=parameters, 
+                return_value=retval, comment=comment, display_name=name,
+                unique_name=unique_name)
 
         self.__sort_parameters (symbol, retval, parameters)
 
@@ -881,11 +886,17 @@ class GIExtension(BaseExtension):
         children = self.gir_parser.gir_children_map.get (gi_name)
 
         if class_comment:
-            class_symbol = self.doc_tool.get_or_create_symbol(ClassSymbol, hierarchy=hierarchy, children=children,
-                    comment=class_comment, name=symbol.display_name)
+            class_symbol = self.doc_tool.get_or_create_symbol(ClassSymbol,
+                    hierarchy=hierarchy,
+                    children=children,
+                    comment=class_comment,
+                    display_name=symbol.display_name,
+                    unique_name=comment_name)
         else:
-            class_symbol = self.doc_tool.get_or_create_symbol(ClassSymbol, hierarchy=hierarchy, children=children,
-                    name=symbol.display_name)
+            class_symbol = self.doc_tool.get_or_create_symbol(ClassSymbol,
+                    hierarchy=hierarchy, children=children,
+                    display_name=symbol.display_name,
+                    unique_name=comment_name)
 
         return class_symbol
 

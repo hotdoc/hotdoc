@@ -12,6 +12,7 @@ class Symbol (Base):
 
     id = Column(Integer, primary_key=True)
     comment = Column(PickleType)
+    unique_name = Column(String)
     display_name = Column(String)
     filename = Column(String)
     lineno = Column(Integer)
@@ -52,9 +53,6 @@ class Symbol (Base):
     def _make_name (self):
         return self.display_name
 
-    def _make_unique_id (self):
-        return self.display_name
-
     def get_extra_links (self):
         return []
 
@@ -63,8 +61,8 @@ class Symbol (Base):
 
     def resolve_links(self, link_resolver):
         if self.link is None:
-            link = Link(self._make_unique_id(), self._make_name(),
-                        self._make_unique_id())
+            link = Link(self.unique_name, self._make_name(),
+                        self.unique_name)
             self.link = link_resolver.upsert_link(link, overwrite_ref=True)
 
 class FunctionSymbol (Symbol):
@@ -98,7 +96,6 @@ class SignalSymbol (FunctionSymbol):
     __mapper_args__ = {
             'polymorphic_identity': 'signals',
     }
-    object_name = Column(String)
     flags = Column(PickleType)
 
     def __init__(self, **kwargs):
@@ -109,16 +106,12 @@ class SignalSymbol (FunctionSymbol):
     def get_type_name (self):
         return "Signal"
 
-    def _make_unique_id (self):
-        return '%s:::%s---signal' % (self.object_name, self.display_name)
-
 class VFunctionSymbol (FunctionSymbol):
     __tablename__ = 'vfunctions'
     id = Column(Integer, ForeignKey('functions.id'), primary_key=True)
     __mapper_args__ = {
             'polymorphic_identity': 'vfunctions',
     }
-    object_name = Column(String)
     flags = Column(PickleType)
 
     def __init__(self, **kwargs):
@@ -128,20 +121,13 @@ class VFunctionSymbol (FunctionSymbol):
     def get_type_name (self):
         return "Virtual Method"
 
-    def _make_unique_id (self):
-        return '%s:::%s---vfunc' % (self.object_name, self.display_name)
-
 class PropertySymbol (Symbol):
     __tablename__ = 'properties'
     id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
     __mapper_args__ = {
             'polymorphic_identity': 'properties',
     }
-    object_name = Column(String)
     prop_type = Column(PickleType)
-
-    def _make_unique_id (self):
-        return '%s:::%s---property' % (self.object_name, self.display_name)
 
     def get_children_symbols(self):
         return [self.prop_type]
@@ -195,9 +181,6 @@ class StructSymbol (Symbol):
 
     def get_type_name (self):
         return "Structure"
-
-    def _make_unique_id (self):
-        return self.display_name + "-struct"
 
 # FIXME: and this is C-specific
 class MacroSymbol (Symbol):

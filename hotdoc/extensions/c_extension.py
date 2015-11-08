@@ -199,7 +199,7 @@ class ClangScanner(Loggable):
             return_value = ReturnValueSymbol(type_tokens=[], comment=None)
 
         sym = self.doc_tool.get_or_create_symbol(CallbackSymbol, parameters=parameters,
-                return_value=return_value, comment=comment, name=node.spelling,
+                return_value=return_value, comment=comment, display_name=node.spelling,
                 filename=str(node.location.file), lineno=node.location.line)
         return sym
 
@@ -306,7 +306,7 @@ class ClangScanner(Loggable):
             members.append (member)
 
         return self.doc_tool.get_or_create_symbol(StructSymbol, raw_text=raw_text, members=members,
-                comment=comment, name=node.spelling,
+                comment=comment, display_name=node.spelling,
                 filename=str(decl.location.file), lineno=decl.location.line)
 
     def __create_enum_symbol (self, node, comment):
@@ -320,20 +320,20 @@ class ClangScanner(Loggable):
                 member_comment = None
             member_value = member.enum_value
             # FIXME: this is pretty much a macro symbol ?
-            member = self.doc_tool.get_or_create_symbol(Symbol, comment=member_comment, name=member.spelling,
+            member = self.doc_tool.get_or_create_symbol(Symbol, comment=member_comment, display_name=member.spelling,
                     filename=str(member.location.file),
                     lineno=member.location.line)
             member.enum_value = member_value
             members.append (member)
 
-        return self.doc_tool.get_or_create_symbol(EnumSymbol, members=members, comment=comment, name=node.spelling,
+        return self.doc_tool.get_or_create_symbol(EnumSymbol, members=members, comment=comment, display_name=node.spelling,
                 filename=str(decl.location.file), lineno=decl.location.line)
 
     def __create_alias_symbol (self, node, comment):
         type_tokens = self.make_c_style_type_name(node.underlying_typedef_type)
         aliased_type = QualifiedSymbol (type_tokens=type_tokens)
         return self.doc_tool.get_or_create_symbol(AliasSymbol, aliased_type=aliased_type, comment=comment,
-                name=node.spelling, filename=str(node.location.file),
+                display_name=node.spelling, filename=str(node.location.file),
                 lineno=node.location.line)
 
     def __create_typedef_symbol (self, node): 
@@ -367,13 +367,13 @@ class ClangScanner(Loggable):
 
         sym = self.doc_tool.get_or_create_symbol(FunctionMacroSymbol, return_value=return_value,
                 parameters=parameters, original_text=original_text,
-                comment=comment, name=node.spelling,
+                comment=comment, display_name=node.spelling,
                 filename=str(node.location.file), lineno=node.location.line)
         return sym
 
     def __create_constant_symbol (self, node, comment, original_text):
         return self.doc_tool.get_or_create_symbol(ConstantSymbol, original_text=original_text, comment=comment,
-                name=node.spelling, filename=str(node.location.file),
+                display_name=node.spelling, filename=str(node.location.file),
                 lineno=node.location.line)
 
     def __create_macro_symbol (self, node):
@@ -419,7 +419,7 @@ class ClangScanner(Loggable):
                     type_tokens=type_tokens, comment=param_comment)
             parameters.append (parameter)
         sym = self.doc_tool.get_or_create_symbol(FunctionSymbol, parameters=parameters,
-                return_value=return_value, comment=comment, name=node.spelling,
+                return_value=return_value, comment=comment, display_name=node.spelling,
                 filename=str(node.location.file), lineno=node.location.line)
 
         return sym
@@ -438,7 +438,7 @@ class ClangScanner(Loggable):
 
         sym = self.doc_tool.get_or_create_symbol(ExportedVariableSymbol, original_text=original_text,
                 comment=self.doc_tool.get_comment (node.spelling),
-                name=node.spelling, filename=str(node.location.file),
+                display_name=node.spelling, filename=str(node.location.file),
                 lineno=node.location.line)
         return sym
 

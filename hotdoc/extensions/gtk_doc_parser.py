@@ -117,7 +117,7 @@ class GtkDocParser (object):
     def format_property (self, match, props):
         type_name = props['type_name']
         property_name = props['property_name']
-        linkname = "%s:::%s---property" % (type_name, property_name)
+        linkname = "%s:%s" % (type_name, property_name)
         link = self.doc_tool.link_resolver.get_named_link (linkname)
 
         if link and link.id_ in self.__translated_names:
@@ -131,7 +131,7 @@ class GtkDocParser (object):
     def format_signal (self, match, props):
         type_name = props['type_name']
         signal_name = props['signal_name']
-        linkname = "%s:::%s---signal" % (type_name, signal_name)
+        linkname = "%s::%s" % (type_name, signal_name)
         link = self.doc_tool.link_resolver.get_named_link (linkname)
 
         if link and link.id_ in self.__translated_names:
@@ -144,7 +144,16 @@ class GtkDocParser (object):
 
     def format_type_name (self, match, props):
         type_name = props['type_name']
-        link = self.doc_tool.link_resolver.get_named_link (type_name)
+
+        # It is assumed that when there is a name collision
+        # between a struct and a class name, the link is to be made
+        # to the class
+
+        class_name = 'SECTION:%s' % type_name.lower()
+        link = self.doc_tool.link_resolver.get_named_link (class_name)
+
+        if link is None:
+            link = self.doc_tool.link_resolver.get_named_link (type_name)
 
         if link and link.id_ in self.__translated_names:
             link.title = self.__translated_names[link.id_]

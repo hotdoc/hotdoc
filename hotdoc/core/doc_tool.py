@@ -77,25 +77,16 @@ class DocTool(Loggable):
         self.symbol_updated_signal = Signal()
 
     def get_symbol(self, name, prefer_class=False):
-        # FIXME: make names unique
         # FIXME: reimplement self.symbols to speed up things
-        sym = None
-
-        syms = self.session.query(Symbol).filter(Symbol.display_name == name).all()
-
-        if len(syms) == 1:
-            sym = syms[0]
-        else:
-            for sym in syms:
-                if type(sym) != StructSymbol or not prefer_class:
-                    break
+        sym = self.session.query(Symbol).filter(Symbol.unique_name ==
+                name).first()
 
         if sym:
             sym.resolve_links(self.link_resolver)
         return sym
 
     def __update_symbol_comment(self, comment):
-        self.session.query(Symbol).filter(Symbol.name ==
+        self.session.query(Symbol).filter(Symbol.unique_name ==
                 comment.name).update({'comment': comment})
         self.comment_updated_signal(comment)
 
@@ -131,16 +122,22 @@ class DocTool(Loggable):
                 self.stale_pages.add(page.source_file)
 
     def get_or_create_symbol(self, type_, **kwargs):
-        name = kwargs.pop('name')
+        unique_name = kwargs.get('unique_name')
+        if not unique_name:
+            unique_name = kwargs.get('display_name')
+            kwargs['unique_name'] = unique_name
+
+        if not unique_name:
+            print "WTF babe"
 
         filename = kwargs.get('filename')
         if filename:
             kwargs['filename'] = os.path.abspath(filename)
 
-        symbol = self.session.query(type_).filter(type_.display_name == name).first()
+        symbol = self.session.query(type_).filter(type_.unique_name == unique_name).first()
 
         if not symbol:
-            symbol = type_(display_name=name)
+            symbol = type_()
 
         for key, value in kwargs.items():
             setattr(symbol, key, value)
