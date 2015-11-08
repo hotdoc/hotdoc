@@ -113,7 +113,7 @@ class Formatter(object):
             self.doc_tool.formatter._write_page (page)
 
         for pagename in page.subpages:
-            cpage = self.doc_tool.pages[pagename]
+            cpage = self.doc_tool.doc_tree.pages[pagename]
             formatter = self.doc_tool.get_formatter(cpage.extension_name)
 
             # This is a bit funky, might be better to not have

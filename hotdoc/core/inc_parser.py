@@ -157,8 +157,9 @@ class PageParser(object):
         with open(source_file, 'r') as f:
             contents = f.read()
 
-        ast = self.__cmp.parse(contents)
         page = Page(source_file)
+
+        ast = self.__cmp.parse(contents)
         page.ast = ast
 
         for c in ast.children:
@@ -194,6 +195,7 @@ class PageParser(object):
             self._update_links (c)
 
     def render (self, page):
+        print page.source_file
         self._update_links (page.ast)
         return self.__cmr.render (page.ast) 
 
@@ -203,12 +205,17 @@ class PageParser(object):
                 elem.label[0].c = new_names.get(original_name)
 
 class DocTree(object):
-    def __init__(self, doc_tool, pages, prefix):
+    def __init__(self, doc_tool, prefix):
         self.seen_pages = set({})
         self.page_parser = PageParser(doc_tool, self, prefix)
-        self.pages = pages
+        try:
+            self.pages = pickle.load(open('pages.p', 'rb'))
+        except:
+            self.pages = {}
         self.prefix = prefix
         self.symbol_added_signal = Signal()
+        self.doc_tool = doc_tool
+        self.root = None
 
     def print_tree (self, page, level=0):
         if level == 0:
@@ -224,6 +231,9 @@ class DocTree(object):
                 else:
                     cpage = self.pages[subpage]
                     self.print_tree(cpage, level + 1)
+
+    def persist(self):
+        pickle.dump(self.pages, open('pages.p', 'wb'))
 
     def build_tree (self, source_file, extension_name=None):
         page = None
@@ -246,7 +256,20 @@ class DocTree(object):
 
         self.pages[source_file] = page
 
+
         for subpage in page.subpages:
             self.build_tree(subpage, extension_name=extension_name)
 
+        self.root = page
+
         return page
+
+    def resolve_symbols(self, page=None):
+        if page is None:
+            page = self.root
+
+        if self.doc_tool.page_is_stale(page):
+            page.resolve_symbols(self.doc_tool)
+        for pagename in page.subpages:
+            cpage = self.pages[pagename]
+            self.resolve_symbols(cpage)

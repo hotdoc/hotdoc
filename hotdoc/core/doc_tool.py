@@ -164,6 +164,7 @@ class DocTool(Loggable):
         try:
             self.change_tracker = pickle.load(open(os.path.join(self.output,
                 'change_tracker.p'), 'rb'))
+            self.incremental = True
         except IOError:
             self.change_tracker = ChangeTracker()
 
@@ -173,12 +174,6 @@ class DocTool(Loggable):
             if ext.EXTENSION_NAME == extension_name:
                 return ext.get_formatter(self.output_format)
         return None
-
-    def __resolve_page_symbols(self, page):
-        page.resolve_symbols(self)
-        for pagename in page.subpages:
-            cpage = self.pages[pagename]
-            self.__resolve_page_symbols(cpage)
 
     def page_is_stale(self, page):
         if self.final_stale_pages is None:
@@ -196,23 +191,23 @@ class DocTool(Loggable):
                 symbol_map[page.source_file] = page
                 self.symbols_maps[name] = symbol_map
 
-    def __resolve_symbols(self, page):
-        if self.page_is_stale(page):
-            page.resolve_symbols(self)
-        for pagename in page.subpages:
-            cpage = self.pages[pagename]
-            self.__resolve_symbols(cpage)
-
     def setup(self, args):
+        from datetime import datetime
+
+        n = datetime.now()
         self.__setup(args)
+        print "core setup takes", datetime.now() - n
 
         for extension in self.extensions:
+            n = datetime.now()
             self.change_tracker.mark_extension_stale_sources(extension)
             extension.setup ()
             self.change_tracker.update_extension_sources_mtimes(extension)
             self.session.flush()
             self.__comments.update (extension.get_comments())
+            print "extension", extension.EXTENSION_NAME, 'takes', datetime.now() - n
 
+        n = datetime.now()
         # FIXME: should go in incremental page parser
         if self.incremental:
             for comment in self.__comments.values():
@@ -223,13 +218,24 @@ class DocTool(Loggable):
                     self.final_stale_pages.add (page.source_file)
             self.final_stale_pages |= self.stale_pages
 
-        self.__resolve_symbols(self.root)
+        print "figuring out stale pages takes", datetime.now() - n
+        print "stale pages are", self.final_stale_pages
 
+        n = datetime.now()
+        self.doc_tree.resolve_symbols()
+        print "symbol resolution takes", datetime.now() - n
+
+        n = datetime.now()
         self.session.flush()
+        print "flushing takes", datetime.now() - n
 
     def format (self):
+        from datetime import datetime
+
+        n = datetime.now()
         self.formatter = HtmlFormatter(self, [])
-        self.formatter.format(self.root)
+        self.formatter.format(self.doc_tree.root)
+        print "formatting takes", datetime.now() - n
 
     def get_comment (self, name):
         return self.__comments.get(name)
@@ -308,20 +314,12 @@ class DocTool(Loggable):
 
         self.index_file = args[0].index
 
-        # FIXME: self should be doc_tree
-        try:
-            self.pages = pickle.load(open('pages.p', 'rb'))
-            self.incremental = True
-        except:
-            self.pages = {}
-
         prefix = os.path.dirname(self.index_file)
-        self.doc_tree = DocTree(self, self.pages, prefix)
+        self.doc_tree = DocTree(self, prefix)
 
         self.__create_extensions (args)
 
-        # FIXME: should be doc_tree.root
-        self.root = self.doc_tree.build_tree(self.index_file)
+        self.doc_tree.build_tree(self.index_file)
         self.__fill_symbols_map()
 
         self.__create_change_tracker()
@@ -330,7 +328,7 @@ class DocTool(Loggable):
         self.session.commit()
         pickle.dump(self.change_tracker, open(os.path.join(self.output,
             'change_tracker.p'), 'wb'))
-        pickle.dump(self.pages, open('pages.p', 'wb'))
+        self.doc_tree.persist()
 
     def finalize (self):
         self.session.close()
