@@ -12,7 +12,7 @@ class Symbol (Base):
 
     id = Column(Integer, primary_key=True)
     comment = Column(PickleType)
-    name = Column(String)
+    display_name = Column(String)
     filename = Column(String)
     lineno = Column(Integer)
     location = Column(PickleType)
@@ -30,7 +30,6 @@ class Symbol (Base):
     def __init__(self, **kwargs):
         self.extension_contents = {}
         self.extension_attributes = {}
-        self.name = kwargs.get('name')
         self.skip = False
 
         Base.__init__(self, **kwargs)
@@ -51,10 +50,10 @@ class Symbol (Base):
         return []
 
     def _make_name (self):
-        return self.name
+        return self.display_name
 
     def _make_unique_id (self):
-        return self.name
+        return self.display_name
 
     def get_extra_links (self):
         return []
@@ -66,9 +65,7 @@ class Symbol (Base):
         if self.link is None:
             link = Link(self._make_unique_id(), self._make_name(),
                         self._make_unique_id())
-        else:
-            link = self.link
-        self.link = link_resolver.upsert_link(link, overwrite_ref=True)
+            self.link = link_resolver.upsert_link(link, overwrite_ref=True)
 
 class FunctionSymbol (Symbol):
     __tablename__ = 'functions'
@@ -113,7 +110,7 @@ class SignalSymbol (FunctionSymbol):
         return "Signal"
 
     def _make_unique_id (self):
-        return '%s:::%s---signal' % (self.object_name, self.name)
+        return '%s:::%s---signal' % (self.object_name, self.display_name)
 
 class VFunctionSymbol (FunctionSymbol):
     __tablename__ = 'vfunctions'
@@ -132,7 +129,7 @@ class VFunctionSymbol (FunctionSymbol):
         return "Virtual Method"
 
     def _make_unique_id (self):
-        return '%s:::%s---vfunc' % (self.object_name, self.name)
+        return '%s:::%s---vfunc' % (self.object_name, self.display_name)
 
 class PropertySymbol (Symbol):
     __tablename__ = 'properties'
@@ -144,7 +141,7 @@ class PropertySymbol (Symbol):
     prop_type = Column(PickleType)
 
     def _make_unique_id (self):
-        return '%s:::%s---property' % (self.object_name, self.name)
+        return '%s:::%s---property' % (self.object_name, self.display_name)
 
     def get_children_symbols(self):
         return [self.prop_type]
@@ -200,7 +197,7 @@ class StructSymbol (Symbol):
         return "Structure"
 
     def _make_unique_id (self):
-        return self.name + "-struct"
+        return self.display_name + "-struct"
 
 # FIXME: and this is C-specific
 class MacroSymbol (Symbol):

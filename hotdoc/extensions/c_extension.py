@@ -42,7 +42,6 @@ class ClangScanner(Loggable):
         args.extend (options)
 
         self.symbols = {}
-        self.comments = {}
         self.parsed = set({})
 
         if not full_scan:
@@ -51,12 +50,8 @@ class ClangScanner(Loggable):
                     cs = get_comments (filename)
                     for c in cs:
                         block = self.doc_tool.raw_comment_parser.parse_comment(c[0], c[1], c[2])
-                        if block is None:
-                            continue
-
-                        self.comments[block.name] = block
-                        if incremental:
-                            self.doc_tool.update_symbol_comment(block)
+                        if block is not None:
+                            self.doc_tool.add_comment(block)
 
         for filename in self.filenames:
             if filename in self.parsed:
@@ -76,7 +71,6 @@ class ClangScanner(Loggable):
                     self.__parse_file (os.path.abspath(str(include.include)), tu)
 
         self.info ("%d symbols found" % len (self.symbols))
-        self.info ("%d comments found" % len (self.comments))
 
     def __parse_file (self, filename, tu):
         if filename in self.parsed:
@@ -122,9 +116,9 @@ class ClangScanner(Loggable):
                                 (node.spelling, str(node.location)))
                         continue
 
-                    self.comments[node.spelling] = \
-                        self.doc_tool.raw_comment_parser.parse_comment \
+                    block = self.doc_tool.raw_comment_parser.parse_comment \
                                 (node.raw_comment, str(node.location.file), 0)
+                    self.doc_tool.add_comment(block)
 
                 self.debug ("Found symbol [%s] of kind %s at location %s" %
                         (node.spelling, str(node.kind), str (node.location)))
@@ -171,15 +165,6 @@ class ClangScanner(Loggable):
 
         tokens.reverse()
         return tokens
-
-    # FIXME: this belongs in doc_tool
-    def __get_comment (self, comment_name):
-        comment = self.comments.get(comment_name)
-        if not comment:
-            esym = self.doc_tool.get_symbol(comment_name)
-            if esym:
-                comment = esym.comment
-        return comment
 
     def __create_callback_symbol (self, node, comment):
         parameters = []
@@ -353,7 +338,7 @@ class ClangScanner(Loggable):
 
     def __create_typedef_symbol (self, node): 
         t = node.underlying_typedef_type
-        comment = self.__get_comment (node.spelling)
+        comment = self.doc_tool.get_comment (node.spelling)
         if ast_node_is_function_pointer (t):
             sym = self.__create_callback_symbol (node, comment)
         else:
@@ -401,7 +386,7 @@ class ClangScanner(Loggable):
         original_lines = [linecache.getline(filename, i).rstrip() for i in range(start,
             end)]
         original_text = '\n'.join(original_lines)
-        comment = self.__get_comment (node.spelling)
+        comment = self.doc_tool.get_comment (node.spelling)
         if '(' in split[1]:
             sym = self.__create_function_macro_symbol (node, comment, original_text)
         else:
@@ -410,7 +395,7 @@ class ClangScanner(Loggable):
         return sym
 
     def __create_function_symbol (self, node):
-        comment = self.__get_comment (node.spelling)
+        comment = self.doc_tool.get_comment (node.spelling)
         parameters = []
 
         if comment:
@@ -449,10 +434,10 @@ class ClangScanner(Loggable):
         original_lines = [linecache.getline(filename, i).rstrip() for i in range(start,
             end)]
         original_text = '\n'.join(original_lines)
-        comment = self.__get_comment (node.spelling)
+        comment = self.doc_tool.get_comment (node.spelling)
 
         sym = self.doc_tool.get_or_create_symbol(ExportedVariableSymbol, original_text=original_text,
-                comment=self.__get_comment (node.spelling),
+                comment=self.doc_tool.get_comment (node.spelling),
                 name=node.spelling, filename=str(node.location.file),
                 lineno=node.location.line)
         return sym
@@ -475,9 +460,6 @@ class CExtension(BaseExtension):
 
     def get_extra_symbols(self):
         return self.scanner.symbols
-
-    def get_comments(self):
-        return self.scanner.comments
 
     @staticmethod
     def add_arguments (parser):

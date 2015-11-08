@@ -31,9 +31,6 @@ class BaseExtension(Loggable):
     def get_extra_symbols (self):
         return {}
 
-    def get_comments(self):
-        return {}
-
     def get_source_files(self):
         return []
 

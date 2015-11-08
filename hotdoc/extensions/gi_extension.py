@@ -805,7 +805,10 @@ class GIExtension(BaseExtension):
         retval.add_extension_attribute('gi-extension', 'out_parameters',
                 out_parameters)
 
-    def __create_signal_symbol (self, node, comment, object_name, name):
+    def __create_signal_symbol (self, node, object_name, name):
+        unique_name = '%s::%s' % (object_name, name)
+        comment = self.doc_tool.get_comment(unique_name)
+
         parameters, retval = self.__create_parameters_and_retval (node, comment)
         res = self.doc_tool.get_or_create_symbol(SignalSymbol, object_name=object_name,
                 parameters=parameters, return_value=retval,
@@ -833,7 +836,10 @@ class GIExtension(BaseExtension):
 
         return res
 
-    def __create_property_symbol (self, node, comment, object_name, name):
+    def __create_property_symbol (self, node, object_name, name):
+        unique_name = '%s:%s' % (object_name, name)
+        comment = self.doc_tool.get_comment(unique_name)
+
         type_tokens, gi_name = self.__type_tokens_and_gi_name_from_gi_node(node)
         type_ = QualifiedSymbol (type_tokens=type_tokens)
         type_.add_extension_attribute ('gi-extension', 'gi_name', gi_name)
@@ -869,17 +875,17 @@ class GIExtension(BaseExtension):
         return symbol
 
     def __create_class_symbol (self, symbol, gi_name):
-        comment_name = 'SECTION:%s' % symbol.name.lower()
+        comment_name = 'SECTION:%s' % symbol.display_name.lower()
         class_comment = self.doc_tool.get_comment(comment_name)
         hierarchy = self.gir_parser.gir_hierarchies.get (gi_name)
         children = self.gir_parser.gir_children_map.get (gi_name)
 
         if class_comment:
             class_symbol = self.doc_tool.get_or_create_symbol(ClassSymbol, hierarchy=hierarchy, children=children,
-                    comment=class_comment, name=symbol.name)
+                    comment=class_comment, name=symbol.display_name)
         else:
             class_symbol = self.doc_tool.get_or_create_symbol(ClassSymbol, hierarchy=hierarchy, children=children,
-                    name=symbol.name)
+                    name=symbol.display_name)
 
         return class_symbol
 
@@ -918,25 +924,16 @@ class GIExtension(BaseExtension):
 
         self.__sort_parameters (func, func.return_value, func_parameters)
 
-    # FIXME : this belongs in doc_tool
-    def __get_comment (self, symbol_name, comment_name):
-        comment = self.doc_tool.get_comment(comment_name)
-        if not comment:
-            esym = self.doc_tool.get_symbol(symbol_name)
-            if esym:
-                comment = esym.comment
-        return comment
-
     def __update_struct (self, symbol):
-        split = symbol.name.split(self.gir_parser.namespace)
+        split = symbol.display_name.split(self.gir_parser.namespace)
         if len (split) < 2:
             return []
 
         gi_name = '%s.%s' % (self.gir_parser.namespace, split[1])
-        if not symbol.name in self.gir_parser.gir_class_infos:
+        if not symbol.display_name in self.gir_parser.gir_class_infos:
             return []
 
-        gi_class_info = self.gir_parser.gir_class_infos[symbol.name]
+        gi_class_info = self.gir_parser.gir_class_infos[symbol.display_name]
 
         symbols = []
         gir_node = gi_class_info.node
@@ -950,24 +947,17 @@ class GIExtension(BaseExtension):
 
         if klass_name:
             for signal_name, signal_node in gi_class_info.signals.iteritems():
-                block_name = '%s::%s' % (klass_name, signal_name)
-                comment = self.__get_comment(signal_name, block_name)
-                sym = self.__create_signal_symbol (signal_node, comment,
-                        klass_name, signal_name)
+                sym = self.__create_signal_symbol (signal_node, klass_name, signal_name)
                 symbols.append (sym)
 
             for prop_name, prop_node in gi_class_info.properties.iteritems():
-                block_name = '%s:%s' % (klass_name, prop_name)
-                comment = self.__get_comment(prop_name, block_name)
-                sym = self.__create_property_symbol (prop_node, comment,
-                        klass_name, prop_name)
+                sym = self.__create_property_symbol (prop_node, klass_name, prop_name)
                 symbols.append (sym)
 
         class_struct_name = gi_class_info.class_struct_name
         if class_struct_name:
             for vfunc_name, vfunc_node in gi_class_info.vmethods.iteritems():
-                parent_comment = self.__get_comment(class_struct_name,
-                        class_struct_name)
+                parent_comment = self.doc_tool.get_comment(class_struct_name)
                 comment = None
                 if parent_comment:
                     comment = parent_comment.params.get (vfunc_node.attrib['name'])

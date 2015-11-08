@@ -78,9 +78,10 @@ class DocTool(Loggable):
 
     def get_symbol(self, name, prefer_class=False):
         # FIXME: make names unique
+        # FIXME: reimplement self.symbols to speed up things
         sym = None
 
-        syms = self.session.query(Symbol).filter(Symbol.name == name).all()
+        syms = self.session.query(Symbol).filter(Symbol.display_name == name).all()
 
         if len(syms) == 1:
             sym = syms[0]
@@ -93,7 +94,7 @@ class DocTool(Loggable):
             sym.resolve_links(self.link_resolver)
         return sym
 
-    def update_symbol_comment(self, comment):
+    def __update_symbol_comment(self, comment):
         self.session.query(Symbol).filter(Symbol.name ==
                 comment.name).update({'comment': comment})
         self.comment_updated_signal(comment)
@@ -136,10 +137,10 @@ class DocTool(Loggable):
         if filename:
             kwargs['filename'] = os.path.abspath(filename)
 
-        symbol = self.session.query(type_).filter(type_.name == name).first()
+        symbol = self.session.query(type_).filter(type_.display_name == name).first()
 
         if not symbol:
-            symbol = type_(name=name)
+            symbol = type_(display_name=name)
 
         for key, value in kwargs.items():
             setattr(symbol, key, value)
@@ -147,7 +148,7 @@ class DocTool(Loggable):
         symbol.resolve_links(self.link_resolver)
 
         if self.incremental:
-            self.mark_stale_pages(symbol.name)
+            self.mark_stale_pages(symbol.display_name)
             self.symbol_updated_signal(symbol)
 
         return symbol
@@ -201,7 +202,6 @@ class DocTool(Loggable):
             extension.setup ()
             self.change_tracker.update_extension_sources_mtimes(extension)
             self.session.flush()
-            self.__comments.update (extension.get_comments())
             print "extension", extension.EXTENSION_NAME, 'takes', datetime.now() - n
 
         n = datetime.now()
@@ -234,8 +234,18 @@ class DocTool(Loggable):
         self.formatter.format(self.doc_tree.root)
         print "formatting takes", datetime.now() - n
 
+    def add_comment(self, comment):
+        self.__comments[comment.name] = comment
+        if self.incremental:
+            self.__update_symbol_comment (comment)
+
     def get_comment (self, name):
-        return self.__comments.get(name)
+        comment = self.__comments.get(name)
+        if not comment:
+            esym = self.get_symbol(name)
+            if esym:
+                comment = esym.comment
+        return comment
 
     def __setup (self, args):
         if os.name == 'nt':
