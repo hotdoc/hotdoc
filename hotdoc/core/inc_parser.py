@@ -12,11 +12,6 @@ class TypedSymbolsList (object):
         self.name = name
         self.symbols = []
 
-class ParsedPage(object):
-    def __init__(self):
-        self.ast = None
-        self.headers = {}
-
 class Page(object):
     def __init__(self, source_file):
         name = os.path.splitext(os.path.basename(source_file))[0]
@@ -34,8 +29,9 @@ class Page(object):
         except OSError:
             self.mtime = -1
 
-        self.parsed_page = None
         self.is_stale = True
+        self.ast = None
+        self.headers = {}
 
     def __getstate__(self):
         return {'symbol_names': self.symbol_names,
@@ -45,7 +41,8 @@ class Page(object):
                 'short_description': self.short_description,
                 'source_file': self.source_file,
                 'extension_name': self.extension_name,
-                'parsed_page': None,
+                'ast': None,
+                'headers': {},
                 'is_stale': self.is_stale,
                 'mtime': self.mtime}
 
@@ -128,7 +125,7 @@ class PageParser(object):
                     self.doc_tree.seen_pages.add (path)
 
                 original_name = node.label[0].c
-                page.parsed_page.headers[original_name] = node
+                page.headers[original_name] = node
                 node.destination = '%s.html' % os.path.splitext(node.destination)[0]
 
         for c in node.inline_content:
@@ -162,9 +159,7 @@ class PageParser(object):
 
         ast = self.__cmp.parse(contents)
         page = Page(source_file)
-        parsed_page = ParsedPage()
-        parsed_page.ast = ast
-        page.parsed_page = parsed_page
+        page.ast = ast
 
         for c in ast.children:
             if c.t == "List":
@@ -179,17 +174,12 @@ class PageParser(object):
             contents = f.read()
 
         ast = self.__cmp.parse(contents)
-        parsed_page = ParsedPage()
-        parsed_page.ast = ast
-        page.parsed_page = parsed_page
+        page.ast = ast
 
         self.check_links(page, ast)
 
-    def parse_contents(self, contents):
-        ast = self.__cmp.parse(contents)
-        parsed_page = ParsedPage()
-        parsed_page.ast = ast
-        return parsed_page
+    def parse_contents(self, page, contents):
+        page.ast = self.__cmp.parse(contents)
 
     def _update_links (self, node):
         if node.t == 'Link':
@@ -203,12 +193,12 @@ class PageParser(object):
         for c in node.children:
             self._update_links (c)
 
-    def render_parsed_page (self, page):
+    def render (self, page):
         self._update_links (page.ast)
         return self.__cmr.render (page.ast) 
 
     def rename_headers(self, page, new_names):
-        for original_name, elem in page.parsed_page.headers.items():
+        for original_name, elem in page.headers.items():
             if original_name in new_names:
                 elem.label[0].c = new_names.get(original_name)
 
@@ -260,14 +250,3 @@ class DocTree(object):
             self.build_tree(subpage, extension_name=extension_name)
 
         return page
-
-
-if __name__=='__main__':
-    try:
-        pages = pickle.load(open('pages.p', 'rb'))
-    except:
-        pages = {}
-
-    dt = DocTree(pages)
-
-    pickle.dump(pages, open('pages.p', 'wb'))

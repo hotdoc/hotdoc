@@ -323,8 +323,8 @@ class HtmlFormatter (Formatter):
         return (out, False)
 
     def _format_page(self, page):
-        if page.parsed_page and not page.symbols:
-            page.formatted_contents = self.doc_tool.doc_tree.page_parser.render_parsed_page(page.parsed_page)
+        if not page.symbols:
+            page.formatted_contents = self.doc_tool.doc_tree.page_parser.render(page)
 
         toc_sections = []
         symbols_details = []

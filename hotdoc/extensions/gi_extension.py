@@ -1003,8 +1003,7 @@ class GIExtension(BaseExtension):
             gen_contents += '### [%s API](%s)\n' % \
                     (language.capitalize (), dest)
 
-        parsed_page = doc_tree.page_parser.parse_contents(gen_contents)
-        gen_index_page.parsed_page = parsed_page
+        doc_tree.page_parser.parse_contents(gen_index_page, gen_contents)
 
         doc_tree.pages['gen-index'] = gen_index_page
         index_path = os.path.join(doc_tree.prefix, 'gobject-api.markdown')
