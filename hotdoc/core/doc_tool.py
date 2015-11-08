@@ -16,6 +16,7 @@ from .alchemy_integration import Base
 from .inc_parser import DocTree
 
 from ..utils.utils import all_subclasses
+from ..utils.simple_signals import Signal
 from ..utils.loggable import Loggable
 from ..utils.loggable import init as loggable_init
 from ..formatters.html.html_formatter import HtmlFormatter
@@ -72,7 +73,8 @@ class DocTool(Loggable):
         self.stale_pages = set({})
         self.final_stale_pages = None
         self.incremental = False
-        self.symbols_maps = {}
+        self.comment_updated_signal = Signal()
+        self.symbol_updated_signal = Signal()
 
     def get_symbol(self, name, prefer_class=False):
         # FIXME: make names unique
@@ -94,10 +96,11 @@ class DocTool(Loggable):
     def update_symbol_comment(self, comment):
         self.session.query(Symbol).filter(Symbol.name ==
                 comment.name).update({'comment': comment})
+        self.comment_updated_signal(comment)
 
     def format_symbol(self, symbol_name):
         # FIXME this will be API, raise meaningful errors
-        pages = self.symbols_maps.get(symbol_name)
+        pages = self.doc_tree.symbol_maps.get(symbol_name)
         if not pages:
             return None
 
@@ -118,7 +121,7 @@ class DocTool(Loggable):
 
     def mark_stale_pages(self, symbol_name):
         # FIXME put this in the incremental page parser
-        containing_pages = self.symbols_maps.get(symbol_name)
+        containing_pages = self.doc_tree.symbol_maps.get(symbol_name)
         if containing_pages is not None:
             for source_file, page in containing_pages.items():
                 if not page.is_stale:
@@ -145,6 +148,7 @@ class DocTool(Loggable):
 
         if self.incremental:
             self.mark_stale_pages(symbol.name)
+            self.symbol_updated_signal(symbol)
 
         return symbol
 
@@ -183,13 +187,6 @@ class DocTool(Loggable):
             return True
 
         return False
-
-    def __fill_symbols_map(self):
-        for page in self.doc_tree.pages.values():
-            for name in page.symbol_names:
-                symbol_map = self.symbols_maps.pop(name, {})
-                symbol_map[page.source_file] = page
-                self.symbols_maps[name] = symbol_map
 
     def setup(self, args):
         from datetime import datetime
@@ -320,7 +317,7 @@ class DocTool(Loggable):
         self.__create_extensions (args)
 
         self.doc_tree.build_tree(self.index_file)
-        self.__fill_symbols_map()
+        self.doc_tree.fill_symbol_maps()
 
         self.__create_change_tracker()
 

@@ -195,7 +195,6 @@ class PageParser(object):
             self._update_links (c)
 
     def render (self, page):
-        print page.source_file
         self._update_links (page.ast)
         return self.__cmr.render (page.ast) 
 
@@ -215,22 +214,17 @@ class DocTree(object):
         self.prefix = prefix
         self.symbol_added_signal = Signal()
         self.doc_tool = doc_tool
+        doc_tool.comment_updated_signal.connect(self.__comment_updated)
+        doc_tool.symbol_updated_signal.connect(self.__symbol_updated)
         self.root = None
+        self.symbol_maps = {}
 
-    def print_tree (self, page, level=0):
-        if level == 0:
-            self.walked_pages = set({})
-
-        print '  ' * level + page.source_file, page.extension_name
-
-        self.walked_pages.add(page.source_file)
-        if page.subpages:
-            for subpage in page.subpages:
-                if subpage in self.walked_pages:
-                    print '  ' * (level + 1) + subpage, '(already seen)'
-                else:
-                    cpage = self.pages[subpage]
-                    self.print_tree(cpage, level + 1)
+    def fill_symbol_maps(self):
+        for page in self.pages.values():
+            for name in page.symbol_names:
+                symbol_map = self.symbol_maps.pop(name, {})
+                symbol_map[page.source_file] = page
+                self.symbol_maps[name] = symbol_map
 
     def persist(self):
         pickle.dump(self.pages, open('pages.p', 'wb'))
@@ -273,3 +267,11 @@ class DocTree(object):
         for pagename in page.subpages:
             cpage = self.pages[pagename]
             self.resolve_symbols(cpage)
+
+    def __comment_updated(self, comment):
+        return
+        print "comment updated", comment.name
+
+    def __symbol_updated(self, symbol):
+        return
+        print "symbol updated", symbol.name
