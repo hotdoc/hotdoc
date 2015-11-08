@@ -458,9 +458,6 @@ class CExtension(BaseExtension):
     def get_source_files(self):
         return self.sources
 
-    def get_extra_symbols(self):
-        return self.scanner.symbols
-
     @staticmethod
     def add_arguments (parser):
         parser.add_argument ("--c-sources", action="store", nargs="+",

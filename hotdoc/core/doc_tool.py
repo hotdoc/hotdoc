@@ -69,6 +69,7 @@ class DocTool(Loggable):
         self.doc_parser = None
         self.extensions = []
         self.__comments = {}
+        self.__symbols = {}
         self.link_resolver = LinkResolver(self)
         self.stale_pages = set({})
         self.final_stale_pages = None
@@ -77,11 +78,14 @@ class DocTool(Loggable):
         self.symbol_updated_signal = Signal()
 
     def get_symbol(self, name, prefer_class=False):
-        # FIXME: reimplement self.symbols to speed up things
-        sym = self.session.query(Symbol).filter(Symbol.unique_name ==
-                name).first()
+        sym = self.__symbols.get(name)
+        if not sym:
+            sym = self.session.query(Symbol).filter(Symbol.unique_name ==
+                    name).first()
 
         if sym:
+            # Faster look up next time around
+            self.__symbols[name] = sym
             sym.resolve_links(self.link_resolver)
         return sym
 
@@ -147,6 +151,8 @@ class DocTool(Loggable):
         if self.incremental:
             self.mark_stale_pages(symbol.display_name)
             self.symbol_updated_signal(symbol)
+
+        self.__symbols[unique_name] = symbol
 
         return symbol
 

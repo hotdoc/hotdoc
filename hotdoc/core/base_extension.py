@@ -28,9 +28,6 @@ class BaseExtension(Loggable):
     def setup (self):
         pass
 
-    def get_extra_symbols (self):
-        return {}
-
     def get_source_files(self):
         return []
 
