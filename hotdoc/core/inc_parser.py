@@ -43,7 +43,7 @@ class Page(object):
                 'extension_name': self.extension_name,
                 'ast': None,
                 'headers': {},
-                'is_stale': self.is_stale,
+                'is_stale': False, # At pickle time, we can assume non-staleness
                 'mtime': self.mtime}
 
     def resolve_symbols (self, doc_tool):
@@ -213,7 +213,6 @@ class DocTree(object):
             self.pages = {}
         self.prefix = prefix
         self.symbol_added_signal = Signal()
-        self.doc_tool = doc_tool
         doc_tool.comment_updated_signal.connect(self.__comment_updated)
         doc_tool.symbol_updated_signal.connect(self.__symbol_updated)
         self.root = None
@@ -238,11 +237,8 @@ class DocTree(object):
                 mtime = os.path.getmtime(source_file)
                 if mtime == epage.mtime:
                     page = epage
-                    page.is_stale = False
             except OSError:
                 page = epage
-                if page.mtime == -1:
-                    page.is_stale = False
 
         if not page:
             page = self.page_parser.parse(source_file)
@@ -258,20 +254,23 @@ class DocTree(object):
 
         return page
 
-    def resolve_symbols(self, page=None):
+    def resolve_symbols(self, doc_tool, page=None):
         if page is None:
             page = self.root
 
-        if self.doc_tool.page_is_stale(page):
-            page.resolve_symbols(self.doc_tool)
+        if page.is_stale:
+            page.resolve_symbols(doc_tool)
         for pagename in page.subpages:
             cpage = self.pages[pagename]
-            self.resolve_symbols(cpage)
+            self.resolve_symbols(doc_tool, page=cpage)
+
+    def __stale_symbol_pages (self, symbol_name):
+        pages = self.symbol_maps.get(symbol_name, {})
+        for page in pages.values():
+            page.is_stale = True
 
     def __comment_updated(self, comment):
-        return
-        print "comment updated", comment.name
+        self.__stale_symbol_pages(comment.name)
 
     def __symbol_updated(self, symbol):
-        return
-        print "symbol updated", symbol.name
+        self.__stale_symbol_pages(symbol.unique_name)

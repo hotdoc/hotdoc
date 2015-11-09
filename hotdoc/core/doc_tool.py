@@ -71,8 +71,6 @@ class DocTool(Loggable):
         self.__comments = {}
         self.__symbols = {}
         self.link_resolver = LinkResolver(self)
-        self.stale_pages = set({})
-        self.final_stale_pages = None
         self.incremental = False
         self.comment_updated_signal = Signal()
         self.symbol_updated_signal = Signal()
@@ -115,16 +113,6 @@ class DocTool(Loggable):
 
         return sym.detailed_description
 
-    def mark_stale_pages(self, symbol_name):
-        # FIXME put this in the incremental page parser
-        containing_pages = self.doc_tree.symbol_maps.get(symbol_name)
-        if containing_pages is not None:
-            for source_file, page in containing_pages.items():
-                if not page.is_stale:
-                    page.is_stale = True
-                    self.doc_tree.page_parser.reparse(page)
-                self.stale_pages.add(page.source_file)
-
     def get_or_create_symbol(self, type_, **kwargs):
         unique_name = kwargs.get('unique_name')
         if not unique_name:
@@ -149,7 +137,6 @@ class DocTool(Loggable):
         symbol.resolve_links(self.link_resolver)
 
         if self.incremental:
-            self.mark_stale_pages(symbol.display_name)
             self.symbol_updated_signal(symbol)
 
         self.__symbols[unique_name] = symbol
@@ -168,7 +155,6 @@ class DocTool(Loggable):
         self.session.add (target)
 
     def __create_change_tracker(self):
-        # FIXME: ideally integrate md pages to this.
         try:
             self.change_tracker = pickle.load(open(os.path.join(self.output,
                 'change_tracker.p'), 'rb'))
@@ -182,15 +168,6 @@ class DocTool(Loggable):
             if ext.EXTENSION_NAME == extension_name:
                 return ext.get_formatter(self.output_format)
         return None
-
-    def page_is_stale(self, page):
-        if self.final_stale_pages is None:
-            return True
-
-        if page.source_file in self.final_stale_pages:
-            return True
-
-        return False
 
     def setup(self, args):
         from datetime import datetime
@@ -208,21 +185,7 @@ class DocTool(Loggable):
             print "extension", extension.EXTENSION_NAME, 'takes', datetime.now() - n
 
         n = datetime.now()
-        # FIXME: should go in incremental page parser
-        if self.incremental:
-            for comment in self.__comments.values():
-                self.mark_stale_pages(comment.name)
-            self.final_stale_pages = set({})
-            for page in self.doc_tree.pages.values():
-                if page.is_stale:
-                    self.final_stale_pages.add (page.source_file)
-            self.final_stale_pages |= self.stale_pages
-
-        print "figuring out stale pages takes", datetime.now() - n
-        print "stale pages are", self.final_stale_pages
-
-        n = datetime.now()
-        self.doc_tree.resolve_symbols()
+        self.doc_tree.resolve_symbols(self)
         print "symbol resolution takes", datetime.now() - n
 
         n = datetime.now()

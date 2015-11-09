@@ -107,12 +107,13 @@ class Formatter(object):
             symbol.skip = not self.format_symbol(symbol)
 
     def __format_page (self, page):
-        if self.doc_tool.page_is_stale(page):
+        if page.is_stale:
             self.__format_symbols(page.symbols)
             page.detailed_description = self.doc_tool.formatter._format_page (page)[0]
             self.doc_tool.formatter._write_page (page)
 
         for pagename in page.subpages:
+            # FIXME: should go through a getter
             cpage = self.doc_tool.doc_tree.pages[pagename]
             formatter = self.doc_tool.get_formatter(cpage.extension_name)
 
