@@ -241,8 +241,10 @@ class DocTree(object):
     def __init__(self, doc_tool, prefix):
         self.seen_pages = set({})
         self.page_parser = PageParser(doc_tool, self, prefix)
+
+        self.pages_path = os.path.join(doc_tool.get_private_folder(), 'pages.p')
         try:
-            self.pages = pickle.load(open('pages.p', 'rb'))
+            self.pages = pickle.load(open(self.pages_path, 'rb'))
         except:
             self.pages = {}
         self.prefix = prefix
@@ -263,7 +265,7 @@ class DocTree(object):
                 self.symbol_maps[name] = symbol_map
 
     def persist(self):
-        pickle.dump(self.pages, open('pages.p', 'wb'))
+        pickle.dump(self.pages, open(self.pages_path, 'wb'))
 
     def build_tree (self, source_file, extension_name=None):
         page = None

@@ -57,8 +57,6 @@ class ChangeTracker(object):
 
         extension.set_stale_source_files(stale)
 
-# FIXME: put all persisted things in an internal folder,
-# separate from the output
 class DocTool(Loggable):
     def __init__(self):
         Loggable.__init__(self)
@@ -144,7 +142,8 @@ class DocTool(Loggable):
         return symbol
 
     def __setup_database(self):
-        self.engine = create_engine('sqlite:///hotdoc.db')
+        db_path = os.path.join(self.get_private_folder(), 'hotdoc.db')
+        self.engine = create_engine('sqlite:///%s' % db_path)
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
         self.session.autoflush = False
@@ -156,7 +155,7 @@ class DocTool(Loggable):
 
     def __create_change_tracker(self):
         try:
-            self.change_tracker = pickle.load(open(os.path.join(self.output,
+            self.change_tracker = pickle.load(open(os.path.join(self.get_private_folder(),
                 'change_tracker.p'), 'rb'))
             self.incremental = True
         except IOError:
@@ -241,17 +240,15 @@ class DocTool(Loggable):
 
         loggable_init("DOC_DEBUG")
 
-        self.__setup_database()
-
         self.parse_args(args)
 
-    def __setup_output(self):
-        if os.path.exists (self.output):
-            if not os.path.isdir (self.output):
-                self.error ("Specified output exists but is not a directory")
+    def __setup_folder(self, folder):
+        if os.path.exists (folder):
+            if not os.path.isdir (folder):
+                self.error ("Folder %s exists but is not a directory", folder)
                 raise ConfigError ()
         else:
-            os.mkdir (self.output)
+            os.mkdir (folder)
 
     def __create_extensions (self, args):
         if args[0].extension_name:
@@ -267,7 +264,11 @@ class DocTool(Loggable):
                 args = self.parser.parse_known_args (args[1])
                 self.__create_extensions (args)
 
+    def get_private_folder(self):
+        return os.path.abspath('hotdoc-private')
+
     def parse_args (self, args):
+        self.args = args
         args = self.parser.parse_known_args(args)
 
         self.output = args[0].output
@@ -278,7 +279,8 @@ class DocTool(Loggable):
             raise ConfigError ("Unsupported output format : %s" %
                     self.output_format)
 
-        self.__setup_output ()
+        self.__setup_folder(self.output)
+        self.__setup_folder('hotdoc-private')
 
         # FIXME: we might actually want not to be naive
         if not args[0].index:
@@ -296,11 +298,14 @@ class DocTool(Loggable):
         self.doc_tree.fill_symbol_maps()
 
         self.__create_change_tracker()
+        self.__setup_database()
 
     def persist(self):
         self.session.commit()
-        pickle.dump(self.change_tracker, open(os.path.join(self.output,
+        pickle.dump(self.change_tracker, open(os.path.join(self.get_private_folder(),
             'change_tracker.p'), 'wb'))
+        pickle.dump(self.args, open(os.path.join(self.get_private_folder(),
+            'args.p'), 'wb'))
         self.doc_tree.persist()
 
     def finalize (self):

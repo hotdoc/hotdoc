@@ -39,7 +39,6 @@ if __name__=="__main__":
         doc_tool.format()
         doc_tool.persist()
         doc_tool.finalize()
-        pickle.dump(sys.argv[1:], open('args.p', 'wb'))
     except Exception as e:
         if os.environ.get ("DOC_DEBUG"):
             traceback.print_exc (e)
