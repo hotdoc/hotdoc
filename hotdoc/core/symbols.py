@@ -329,6 +329,11 @@ class ClassSymbol (Symbol):
     hierarchy = Column(PickleType)
     children = Column(PickleType)
 
+    def __init__(self, **kwargs):
+        self.hierarchy = []
+        self.children = {}
+        Symbol.__init__(self, **kwargs)
+
     def get_type_name (self):
         return "Class"
 

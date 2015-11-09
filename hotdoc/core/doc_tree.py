@@ -131,7 +131,8 @@ class PageParser(object):
             if handler:
                 subpage = handler(self.doc_tree)
                 page.subpages.add (subpage)
-                node.destination = '%s.html' % subpage
+                new_dest = os.path.splitext(os.path.basename(subpage))[0]
+                node.destination = '%s.html' % new_dest
             elif parent_node and parent_node.t == 'ATXHeader' and path:
                 if not path in self.doc_tree.seen_pages:
                     page.subpages.add (path)

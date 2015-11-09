@@ -5,20 +5,18 @@ from hotdoc.utils.loggable import Loggable, progress_bar
 from dbusapi.interfaceparser import InterfaceParser
 from hotdoc.core.symbols import *
 from hotdoc.core.naive_index import NaiveIndexFormatter
+from hotdoc.extensions.gi_raw_parser import GtkDocRawCommentParser
 
-class Location:
-    def __init__(self, filename, lineno):
-        self.file = filename
-        self.lineno = lineno
 
 class DBusScanner(Loggable):
-    def __init__(self, sources):
+    def __init__(self, doc_tool, sources):
         Loggable.__init__(self)
         self.__current_filename = None
         self.symbols = {}
+        self.doc_tool = doc_tool
+        self.__raw_comment_parser = GtkDocRawCommentParser() 
         for filename in sources:
             self.__current_filename = filename
-            print "parsing", filename
             ip = InterfaceParser(filename)
             for name, interface in ip.parse().iteritems():
                 self.__create_class_symbol (interface)
@@ -43,39 +41,43 @@ class DBusScanner(Loggable):
             if not omit_direction:
                 type_tokens.append (param.direction.upper() + ' ')
             type_tokens.append (param.type)
-            parameters.append (ParameterSymbol (param.name, type_tokens,
-                param_comment))
+            parameters.append (ParameterSymbol (argname=param.name,
+                type_tokens=type_tokens,
+                comment=param_comment))
 
         return parameters
 
     def __create_function_symbol (self, node):
         comment = '\n'.join([l.strip() for l in node.comment.split('\n')])
-        comment = doc_tool.raw_comment_parser.parse_comment (comment,
+        comment = self.__raw_comment_parser.parse_comment (comment,
                 self.__current_filename, 0, stripped=True)
 
         parameters = self.__create_parameters (node.arguments, comment)
 
-        loc = Location (self.__current_filename, 0)
-        sym = FunctionSymbol (parameters, None, comment, node.name,
-                loc)
-
-        self.symbols['%s.%s' % (self.__current_class_name, node.name)] = sym
+        unique_name = '%s.%s' % (self.__current_class_name, node.name)
+        self.doc_tool.get_or_create_symbol(FunctionSymbol,
+                parameters=parameters,
+                comment=comment,
+                display_name=node.name,
+                filename=self.__current_filename,
+                unique_name=unique_name)
 
     def __create_class_symbol (self, node):
         self.__current_class_name = node.name
         comment = '\n'.join([l.strip() for l in node.comment.split('\n')])
-        comment = doc_tool.raw_comment_parser.parse_comment (comment,
+        comment = self.__raw_comment_parser.parse_comment (comment,
                 self.__current_filename, 0, stripped = True)
-        loc = Location (self.__current_filename, 0)
-        sym = ClassSymbol ([], {}, comment, node.name, loc)
-        self.symbols[node.name] = sym
+        self.doc_tool.get_or_create_symbol(ClassSymbol,
+                comment=comment,
+                display_name=node.name,
+                filename=self.__current_filename)
 
     def __create_property_symbol (self, node):
         comment = '\n'.join([l.strip() for l in node.comment.split('\n')])
-        comment = doc_tool.raw_comment_parser.parse_comment (comment,
+        comment = self.__raw_comment_parser.parse_comment (comment,
                 self.__current_filename, 0, stripped = True)
         type_tokens = [node.type]
-        type_ = QualifiedSymbol (type_tokens, None)
+        type_ = QualifiedSymbol (type_tokens=type_tokens)
 
         flags = ''
         if node.access == node.ACCESS_READ:
@@ -85,39 +87,44 @@ class DBusScanner(Loggable):
         elif node.access == node.ACCESS_READWRITE:
             flags = 'Read / Write'
 
-        loc = Location (self.__current_filename, 0)
-        sym = PropertySymbol (type_, self.__current_class_name, comment,
-                node.name, location=loc)
+        unique_name = '%s.%s' % (self.__current_class_name, node.name)
+        sym = self.doc_tool.get_or_create_symbol(PropertySymbol,
+                prop_type=type_, comment=comment,
+                display_name=node.name,
+                unique_name=unique_name,
+                filename=self.__current_filename)
 
         if flags:
             sym.extension_contents['Flags'] = flags
 
-        self.symbols['%s.%s' % (self.__current_class_name, node.name)] = sym
-
     def __create_signal_symbol (self, node):
         comment = '\n'.join([l.strip() for l in node.comment.split('\n')])
-        comment = doc_tool.raw_comment_parser.parse_comment (comment,
+        comment = self.__raw_comment_parser.parse_comment (comment,
                 self.__current_filename, 0, stripped=True)
 
         parameters = self.__create_parameters (node.arguments, comment,
                 omit_direction=True)
 
-        loc = Location (self.__current_filename, 0)
-        sym = SignalSymbol (self.__current_class_name, parameters, None, comment, node.name,
-                loc)
-
-        self.symbols['%s.%s' % (self.__current_class_name, node.name)] = sym
+        unique_name = '%s.%s' % (self.__current_class_name, node.name)
+        self.doc_tool.get_or_create_symbol(SignalSymbol,
+                parameters=parameters, comment=comment,
+                display_name=node.name, unique_name=unique_name,
+                filename=self.__current_filename)
 
 
 class DBusExtension(BaseExtension):
     EXTENSION_NAME = 'dbus-extension'
 
-    def __init__(self, args):
+    def __init__(self, doc_tool, args):
+        BaseExtension.__init__(self, doc_tool, args)
         self.sources = args.dbus_sources
-        self.scanner = DBusScanner (self.sources)
+        self.dbus_index = args.dbus_index
 
-    def get_extra_symbols (self):
-        return self.scanner.symbols
+        doc_tool.doc_tree.page_parser.register_well_known_name ('dbus-api',
+                self.dbus_index_handler)
+
+    def setup (self):
+        self.scanner = DBusScanner (self.doc_tool, self.sources)
 
     @staticmethod
     def add_arguments (parser):
@@ -125,3 +132,10 @@ class DBusExtension(BaseExtension):
                 dest="dbus_sources", help="DBus interface files to parse",
                 default=[], required = True)
         parser.add_argument ("--end-dbus-sources", action="store_true")
+        parser.add_argument ("--dbus-index", action="store",
+                dest="dbus_index", required=True)
+
+    def dbus_index_handler(self, doc_tree):
+        index_path = os.path.join(doc_tree.prefix, self.dbus_index)
+        doc_tree.build_tree(index_path, self.EXTENSION_NAME)
+        return index_path
