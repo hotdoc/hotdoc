@@ -65,7 +65,8 @@ class DocTool(Loggable):
         self.index_file = None
         self.raw_comment_parser = None
         self.doc_parser = None
-        self.extensions = []
+        self.__extension_classes = {}
+        self.extensions = {}
         self.__comments = {}
         self.__symbols = {}
         self.link_resolver = LinkResolver(self)
@@ -162,10 +163,9 @@ class DocTool(Loggable):
             self.change_tracker = ChangeTracker()
 
     def get_formatter(self, extension_name):
-        # FIXME: use a dict ..
-        for ext in self.extensions:
-            if ext.EXTENSION_NAME == extension_name:
-                return ext.get_formatter(self.output_format)
+        ext = self.extensions.get(extension_name)
+        if ext:
+            return ext.get_formatter(self.output_format)
         return None
 
     def setup(self, args):
@@ -175,7 +175,7 @@ class DocTool(Loggable):
         self.__setup(args)
         print "core setup takes", datetime.now() - n
 
-        for extension in self.extensions:
+        for extension in self.extensions.values():
             n = datetime.now()
             self.change_tracker.mark_extension_stale_sources(extension)
             extension.setup ()
@@ -232,11 +232,11 @@ class DocTool(Loggable):
         subparsers = self.parser.add_subparsers (title="extensions",
                                             help="Extensions for parsing and formatting documentation",
                                             dest="extension_name")
-        self.__extension_dict = {}
+
         for subclass in extension_subclasses:
             subparser = subparsers.add_parser(subclass.EXTENSION_NAME)
             subclass.add_arguments (subparser)
-            self.__extension_dict[subclass.EXTENSION_NAME] = subclass
+            self.__extension_classes[subclass.EXTENSION_NAME] = subclass
 
         loggable_init("DOC_DEBUG")
 
@@ -252,8 +252,8 @@ class DocTool(Loggable):
 
     def __create_extensions (self, args):
         if args[0].extension_name:
-            ext = self.__extension_dict[args[0].extension_name](self, args[0])
-            self.extensions.append (ext)
+            ext = self.__extension_classes[args[0].extension_name](self, args[0])
+            self.extensions[ext.EXTENSION_NAME] = ext
 
             # FIXME: this is crap
             if self.raw_comment_parser is None:
