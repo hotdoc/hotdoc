@@ -1000,14 +1000,14 @@ class GIExtension(BaseExtension):
         gen_index_page = Page('gen-index')
 
         for language in self.languages:
-            dest = '%s/gobject-api.html' % language
+            dest = '%s/%s.html' % (language, os.path.splitext(self.gi_index)[0])
             gen_contents += '### [%s API](%s)\n' % \
                     (language.capitalize (), dest)
 
         doc_tree.page_parser.parse_contents(gen_index_page, gen_contents)
 
         doc_tree.pages['gen-index'] = gen_index_page
-        index_path = os.path.join(doc_tree.prefix, 'gobject-api.markdown')
+        index_path = os.path.join(doc_tree.prefix, self.gi_index)
         gen_index_page.subpages.add(index_path)
         new_page = doc_tree.build_tree(index_path, 'gi-extension')
         return "gen-index"
