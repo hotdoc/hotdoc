@@ -8,7 +8,7 @@ from hotdoc.core.comment_block import Comment, comment_from_tag
 from hotdoc.core.base_extension import BaseExtension
 from hotdoc.extensions.gi_html_formatter import GIHtmlFormatter
 from hotdoc.core.links import Link
-from hotdoc.core.inc_parser import Page
+from hotdoc.core.doc_tree import Page
 
 
 # FIXME: might conflict with comment_block.Annotation

@@ -13,7 +13,7 @@ from .links import LinkResolver
 from .symbols import *
 from .base_extension import BaseExtension
 from .alchemy_integration import Base
-from .inc_parser import DocTree
+from .doc_tree import DocTree
 
 from ..utils.utils import all_subclasses
 from ..utils.simple_signals import Signal
