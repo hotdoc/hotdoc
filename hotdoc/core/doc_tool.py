@@ -63,7 +63,6 @@ class DocTool(Loggable):
 
         self.output = None
         self.index_file = None
-        self.raw_comment_parser = None
         self.doc_parser = None
         self.__extension_classes = {}
         self.extensions = {}
@@ -256,8 +255,6 @@ class DocTool(Loggable):
             self.extensions[ext.EXTENSION_NAME] = ext
 
             # FIXME: this is crap
-            if self.raw_comment_parser is None:
-                self.raw_comment_parser = ext.get_raw_comment_parser()
             if self.doc_parser is None:
                 self.doc_parser = ext.get_doc_parser()
             if args[1]:

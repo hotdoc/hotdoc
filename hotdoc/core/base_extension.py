@@ -1,4 +1,3 @@
-from ..extensions.gi_raw_parser import GtkDocRawCommentParser
 from ..utils.loggable import Loggable
 from ..formatters.html.html_formatter import HtmlFormatter
 from ..extensions.gtk_doc_parser import GtkDocParser
@@ -8,16 +7,12 @@ class BaseExtension(Loggable):
         Loggable.__init__(self)
         self.doc_tool = doc_tool
         self._formatters = {"html": HtmlFormatter(doc_tool, [])}
-        self._raw_parser = GtkDocRawCommentParser()
         self._doc_parser = GtkDocParser(doc_tool)
         self.stale_source_files = []
 
     @staticmethod
     def add_arguments (parser):
         pass
-
-    def get_raw_comment_parser (self):
-        return self._raw_parser
 
     def get_doc_parser (self):
         return self._doc_parser

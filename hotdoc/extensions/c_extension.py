@@ -10,6 +10,7 @@ from hotdoc.core.symbols import *
 from hotdoc.core.comment_block import comment_from_tag
 from hotdoc.lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
 from hotdoc.core.links import Link
+from hotdoc.extensions.gi_raw_parser import GtkDocRawCommentParser
 
 def ast_node_is_function_pointer (ast_node):
     if ast_node.kind == clang.cindex.TypeKind.POINTER and \
@@ -24,6 +25,7 @@ class ClangScanner(Loggable):
             incremental):
         Loggable.__init__(self)
 
+        self.__raw_comment_parser = GtkDocRawCommentParser() 
         self.doc_tool = doc_tool
         if options:
             options = options[0].split(' ')
@@ -49,7 +51,7 @@ class ClangScanner(Loggable):
                 with open (filename, 'r') as f:
                     cs = get_comments (filename)
                     for c in cs:
-                        block = self.doc_tool.raw_comment_parser.parse_comment(c[0], c[1], c[2])
+                        block = self.__raw_comment_parser.parse_comment(c[0], c[1], c[2])
                         if block is not None:
                             self.doc_tool.add_comment(block)
 
@@ -116,7 +118,7 @@ class ClangScanner(Loggable):
                                 (node.spelling, str(node.location)))
                         continue
 
-                    block = self.doc_tool.raw_comment_parser.parse_comment \
+                    block = self.__raw_comment_parser.parse_comment \
                                 (node.raw_comment, str(node.location.file), 0)
                     self.doc_tool.add_comment(block)
 
