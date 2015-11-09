@@ -167,6 +167,12 @@ class DocTool(Loggable):
             return ext.get_formatter(self.output_format)
         return None
 
+    def update_doc_parser(self, extension_name):
+        ext = self.extensions.get(extension_name)
+        self.doc_parser = None
+        if ext:
+            self.doc_parser = ext.get_doc_parser()
+
     def setup(self, args):
         from datetime import datetime
 
@@ -254,9 +260,6 @@ class DocTool(Loggable):
             ext = self.__extension_classes[args[0].extension_name](self, args[0])
             self.extensions[ext.EXTENSION_NAME] = ext
 
-            # FIXME: this is crap
-            if self.doc_parser is None:
-                self.doc_parser = ext.get_doc_parser()
             if args[1]:
                 args = self.parser.parse_known_args (args[1])
                 self.__create_extensions (args)

@@ -663,7 +663,7 @@ class GIExtension(BaseExtension):
         else:
             self.__translated_names = {}
 
-        self.doc_tool.doc_parser.set_translated_names(self.__translated_names)
+        self._doc_parser.set_translated_names(self.__translated_names)
 
     def __unnest_type (self, parameter):
         array_nesting = 0
