@@ -405,14 +405,13 @@ class GIHtmlFormatter(HtmlFormatter):
         return [os.path.join('..', s) for s in scripts]
 
     def _format_page (self, page):
-        new_names = None
+        new_names = {}
         if self.__gi_extension.language == 'python':
             new_names = self.__gi_extension.gir_parser.python_names
         elif self.__gi_extension.language == 'javascript':
             new_names = self.__gi_extension.gir_parser.javascript_names
 
-        if new_names is not None:
-            self.doc_tool.doc_tree.page_parser.rename_headers (page,
+        self.doc_tool.doc_tree.page_parser.rename_headers (page,
                     new_names)
         return HtmlFormatter._format_page (self, page)
 

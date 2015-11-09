@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
+
 import CommonMark
 import os
 import cPickle as pickle
+from xml.sax.saxutils import unescape
 
 from ..utils.simple_signals import Signal
 
@@ -20,8 +23,8 @@ class Page(object):
         self.symbol_names = []
         self.subpages = set({})
         self.link = Link (pagename, name, name) 
-        self.title = ''
-        self.short_description = ''
+        self.title = None
+        self.short_description = None
         self.source_file = source_file
         self.extension_name = None
         try:
@@ -98,6 +101,11 @@ class Page(object):
     def get_title (self):
         return self.title
 
+class ParsedHeader(object):
+    def __init__(self, ast_node, original_destination):
+        self.ast_node = ast_node
+        self.original_destination = original_destination
+
 class PageParser(object):
     def __init__(self, doc_tool, doc_tree, prefix):
         self.__cmp = CommonMark.DocParser()
@@ -112,20 +120,26 @@ class PageParser(object):
 
     def check_links(self, page, node, parent_node=None):
         if node.t == 'Link':
+            if node.destination:
+                path = os.path.join(self.prefix, node.destination)
+                if not os.path.exists(path):
+                    path = None
+            else:
+                path = None
+
             handler = self.well_known_names.get(node.destination)
             if handler:
                 subpage = handler(self.doc_tree)
                 page.subpages.add (subpage)
                 node.destination = '%s.html' % subpage
-            elif parent_node and parent_node.t == 'ATXHeader' and node.destination and \
-                    os.path.exists(os.path.join(self.prefix, node.destination)):
-                path = os.path.join(self.prefix, node.destination)
+            elif parent_node and parent_node.t == 'ATXHeader' and path:
                 if not path in self.doc_tree.seen_pages:
                     page.subpages.add (path)
                     self.doc_tree.seen_pages.add (path)
 
                 original_name = node.label[0].c
-                page.headers[original_name] = node
+                parsed_header = ParsedHeader(parent_node.inline_content, path)
+                page.headers[original_name] = parsed_header
                 node.destination = '%s.html' % os.path.splitext(node.destination)[0]
 
         for c in node.inline_content:
@@ -199,9 +213,29 @@ class PageParser(object):
         return self.__cmr.render (page.ast) 
 
     def rename_headers(self, page, new_names):
-        for original_name, elem in page.headers.items():
-            if original_name in new_names:
-                elem.label[0].c = new_names.get(original_name)
+        for original_name, parsed_header in page.headers.items():
+            ast_node = parsed_header.ast_node
+            page = self.doc_tree.get_page(parsed_header.original_destination)
+
+            title = page.get_title()
+
+            if title is not None:
+                ast_node[0].label[0].c = title
+            elif original_name in new_names:
+                ast_node[0].label[0].c = new_names[original_name]
+
+            desc = page.get_short_description()
+            if desc:
+                del ast_node[1:]
+                desc = self.doc_tool.doc_parser.translate (desc)
+                docstring = unescape (desc)
+                desc = u' — %s' % desc.encode ('utf-8')
+                sub_ast = self.__cmp.parse (desc)
+
+                # I know, very specific naming
+                for thing in sub_ast.children:
+                    for other_thing in thing.inline_content:
+                        ast_node.append (other_thing)
 
 class DocTree(object):
     def __init__(self, doc_tool, prefix):
@@ -217,6 +251,9 @@ class DocTree(object):
         doc_tool.symbol_updated_signal.connect(self.__symbol_updated)
         self.root = None
         self.symbol_maps = {}
+
+    def get_page(self, name):
+        return self.pages.get(name)
 
     def fill_symbol_maps(self):
         for page in self.pages.values():
