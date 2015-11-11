@@ -21,6 +21,8 @@ from ..utils.loggable import Loggable
 from ..utils.loggable import init as loggable_init
 from ..formatters.html.html_formatter import HtmlFormatter
 
+from hotdoc.extensions.gi_raw_parser import GtkDocRawCommentParser
+
 class ConfigError(Exception):
     pass
 
@@ -68,6 +70,7 @@ class DocTool(Loggable):
         self.extensions = {}
         self.__comments = {}
         self.__symbols = {}
+        self.raw_comment_parser = GtkDocRawCommentParser()
         self.link_resolver = LinkResolver(self)
         self.incremental = False
         self.comment_updated_signal = Signal()
@@ -88,6 +91,9 @@ class DocTool(Loggable):
     def __update_symbol_comment(self, comment):
         self.session.query(Symbol).filter(Symbol.unique_name ==
                 comment.name).update({'comment': comment})
+        esym = self.__symbols.get(comment.name)
+        if esym:
+            esym.comment = comment
         self.comment_updated_signal(comment)
 
     def format_symbol(self, symbol_name):
@@ -200,6 +206,7 @@ class DocTool(Loggable):
         from datetime import datetime
 
         n = datetime.now()
+        self.__setup_folder(self.output)
         self.formatter = HtmlFormatter(self, [])
         self.formatter.format(self.doc_tree.root)
         print "formatting takes", datetime.now() - n
@@ -279,7 +286,6 @@ class DocTool(Loggable):
             raise ConfigError ("Unsupported output format : %s" %
                     self.output_format)
 
-        self.__setup_folder(self.output)
         self.__setup_folder('hotdoc-private')
 
         # FIXME: we might actually want not to be naive
