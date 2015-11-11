@@ -229,6 +229,8 @@ class GIHtmlFormatter(HtmlFormatter):
             gi_name = parameter.get_extension_attribute ('gi-extension', 'gi_name')
 
             parameter.extension_contents['type-link'] = self._format_linked_symbol (parameter)
+        else:
+            parameter.extension_contents.pop('type-link', None)
 
         return HtmlFormatter._format_parameter_symbol (self, parameter)
 
