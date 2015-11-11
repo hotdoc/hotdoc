@@ -145,7 +145,7 @@ class GtkDocRawCommentParser (object):
         comment = re.sub ('\n[ \t]*\*', '\n', comment)
         return comment.strip()
 
-    def parse_comment (self, comment, filename, lineno, stripped=False):
+    def parse_comment (self, comment, filename, lineno, endlineno, stripped=False):
         if not stripped and not comment.startswith ('/**'):
             return None
 
@@ -180,6 +180,7 @@ class GtkDocRawCommentParser (object):
         tags = {tag.name.lower(): tag for tag in tags}
 
         block = Comment (name=block_name, filename=filename, lineno=lineno,
+                endlineno=endlineno,
                 annotations=annotations, params=actual_parameters,
                 description = description, short_description=short_description,
                 title=title, tags=tags, raw_comment=raw_comment)

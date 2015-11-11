@@ -3,13 +3,14 @@ import linecache
 
 class Comment(object):
     def __init__(self, name='', title='', params={}, filename='',
-            lineno=-1, annotations={}, description='', short_description='',
+            lineno=-1, endlineno=-1, annotations={}, description='', short_description='',
             tags={}, raw_comment=''):
         self.name = name
         self.title = title
         self.params = params
         self.filename = os.path.abspath(filename)
         self.lineno = lineno
+        self.endlineno = endlineno
         self.annotations = annotations
         self.description = description
         self.short_description = short_description

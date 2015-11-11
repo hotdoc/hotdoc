@@ -51,7 +51,8 @@ class ClangScanner(Loggable):
                 with open (filename, 'r') as f:
                     cs = get_comments (filename)
                     for c in cs:
-                        block = self.__raw_comment_parser.parse_comment(c[0], c[1], c[2])
+                        block = self.__raw_comment_parser.parse_comment(c[0],
+                                c[1], c[2], c[3])
                         if block is not None:
                             self.doc_tool.add_comment(block)
 
