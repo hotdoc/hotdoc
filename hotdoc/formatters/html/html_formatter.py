@@ -404,7 +404,7 @@ class HtmlFormatter (Formatter):
         tags.pop('returns', None)
 
         out = template.render ({'prototype': prototype,
-                                'callable': callable_,
+                                'symbol': callable_,
                                 'return_value': return_value_detail,
                                 'parameters': parameters,
                                 'callable_type': callable_type,
@@ -474,7 +474,7 @@ class HtmlFormatter (Formatter):
             return_value_detail = function_macro.return_value.detailed_description
 
         out = template.render ({'prototype': prototype,
-                                'callable': function_macro,
+                                'symbol': function_macro,
                                 'return_value': return_value_detail,
                                 'parameters': parameters,
                                 'callable_type': "function macro",

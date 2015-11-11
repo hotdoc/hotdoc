@@ -1,49 +1,53 @@
-@require(prototype, callable, return_value, parameters, callable_type, tags, extra)
-<div class="refsect2">
-	<a name=@callable.link.id_></a>
-	<h3 class="method">
-		<span class="entry">The <code>“@callable.link.title”</code> @callable_type</span>
-	</h3>
-	@prototype
-	@callable.formatted_doc
-	@if parameters:
-		<div class="refsect3">
-			<h4>Parameters</h4>
-			<table style="width:100%">
-				<colgroup>
-					<col class="parameters_name" style="width:20%" />
-					<col class="parameters_description" style="width:60%" />
-					<col class="parameters_annotations" style="width:20%" />
-				</colgroup>
-				<tbody>
-					@for parameter in parameters:
-						@parameter
-					@end
-				</tbody>
-			</table>
-		</div>
-	@end
+@require(prototype, symbol, return_value, parameters, callable_type, tags, extra)
+@extends('base_symbol.html')
 
-	@if return_value:
-		@return_value
-	@end
+@def header():
+<h3 class="method">
+	<span class="entry">The <code>“@symbol.link.title”</code> @callable_type</span>
+</h3>
+@end
+@def content():
+@prototype
+@symbol.formatted_doc
+@if parameters:
+	<div class="refsect3">
+		<h4>Parameters</h4>
+		<table style="width:100%">
+			<colgroup>
+				<col class="parameters_name" style="width:20%" />
+				<col class="parameters_description" style="width:60%" />
+				<col class="parameters_annotations" style="width:20%" />
+			</colgroup>
+			<tbody>
+				@for parameter in parameters:
+					@parameter
+				@end
+			</tbody>
+		</table>
+	</div>
+@end
 
-	@if extra:
-	\
-	@for name, ex in extra.iteritems():
+@if return_value:
+	@return_value
+@end
+
+@if extra:
+\
+@for name, ex in extra.iteritems():
+<p>
+	@name :\
+	@ex
+</p>
+@end
+@end
+
+@for tag in tags.values():
 	<p>
-		@name :\
-		@ex
+	@tag.name\
+	@if tag.description:
+		: @tag.description
+	@end
 	</p>
-	@end
-	@end
-
-	@for tag in tags.values():
-		<p>
-		@tag.name\
-		@if tag.description:
-       			: @tag.description
-		@end
-		</p>
-	@end
-</div>
+@end
+\
+@end
