@@ -5,8 +5,6 @@ include hotdoc/lexer_parsers/scanner.l
 include hotdoc/lexer_parsers/scanner.h
 include hotdoc/lexer_parsers/c_comment_scanner/scanner.l
 include hotdoc/lexer_parsers/c_comment_scanner/scanner.h
-include hotdoc/core/pandoc_interface/translator.hs
-include hotdoc/core/pandoc_interface/doc_translator.c
 include hotdoc/formatters/html/templates/*
 include hotdoc/formatters/html/*.css
 include hotdoc/formatters/html/*.js

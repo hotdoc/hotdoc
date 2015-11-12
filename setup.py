@@ -168,5 +168,6 @@ setup(name='hotdoc',
                           'CommonMark',
                           'lxml',
                           'pygraphviz',
-                          'dbus-deviation'],
+                          'dbus-deviation',
+                          'sqlalchemy'],
       zip_safe=False)
