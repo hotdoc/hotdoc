@@ -19,33 +19,10 @@
 #
 
 import sys, os, traceback
-import pkgutil, importlib
 import cPickle as pickle
 
 from hotdoc.core.doc_tool import DocTool
-
-def load_extensions(dirname):
-    package = importlib.import_module(dirname)
-    prefix = package.__name__ + '.'
-    for importer, modname, ispkg in pkgutil.iter_modules(package.__path__,
-            prefix):
-        if modname in sys.modules:
-            continue
-        try:
-            module = importlib.import_module(modname)
-        except Exception as e:
-            print "Extension %s disabled : %s" % (modname, e)
-
-def load_all_extensions():
-    extension_paths = os.environ.get('HOTDOC_EXTENSION_PATH')
-    if extension_paths:
-        extension_paths = extension_paths.split(':')
-    else:
-        extension_paths = []
-
-    extension_paths.append('hotdoc.extensions')
-    for path in extension_paths:
-        load_extensions(path)
+from hotdoc.utils.utils import load_all_extensions
 
 if __name__=="__main__":
     load_all_extensions()
