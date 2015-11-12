@@ -126,9 +126,6 @@ class DocTool(Loggable):
             unique_name = kwargs.get('display_name')
             kwargs['unique_name'] = unique_name
 
-        if not unique_name:
-            print "WTF babe"
-
         filename = kwargs.get('filename')
         if filename:
             kwargs['filename'] = os.path.abspath(filename)
@@ -137,6 +134,7 @@ class DocTool(Loggable):
 
         if not symbol:
             symbol = type_()
+            self.session.add(symbol)
 
         for key, value in kwargs.items():
             setattr(symbol, key, value)
@@ -160,10 +158,6 @@ class DocTool(Loggable):
         self.session = Session()
         self.session.autoflush = False
         Base.metadata.create_all(self.engine)
-        event.listen(mapper, 'init', self.__auto_add)
-
-    def __auto_add (self, target, args, kwargs):
-        self.session.add (target)
 
     def __create_change_tracker(self):
         try:
