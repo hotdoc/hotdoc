@@ -63,6 +63,7 @@ class DocTool(Loggable):
     def __init__(self):
         Loggable.__init__(self)
 
+        self.session = None
         self.output = None
         self.index_file = None
         self.doc_parser = None
@@ -113,6 +114,8 @@ class DocTool(Loggable):
         if not sym:
             return None
 
+        self.update_doc_parser(page.extension_name)
+
         self.formatter.format_symbol(sym) 
 
         return sym.detailed_description
@@ -148,6 +151,9 @@ class DocTool(Loggable):
         return symbol
 
     def __setup_database(self):
+        if self.session is not None:
+            return
+
         db_path = os.path.join(self.get_private_folder(), 'hotdoc.db')
         self.engine = create_engine('sqlite:///%s' % db_path)
         Session = sessionmaker(bind=self.engine)
