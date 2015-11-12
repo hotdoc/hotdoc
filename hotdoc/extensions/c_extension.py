@@ -109,6 +109,15 @@ class ClangScanner(Loggable):
     def __create_symbols(self, nodes, tu):
         for node in nodes:
             node._tu = tu
+
+            # This is dubious, needed to parse G_DECLARE_FINAL_TYPE
+            # investigate further (fortunately this doesn't seem to
+            # significantly impact performance ( ~ 5% )
+            if node.kind == clang.cindex.CursorKind.TYPE_REF:
+                node = node.get_definition()
+                if not node:
+                    continue
+
             if node.kind in [clang.cindex.CursorKind.FUNCTION_DECL,
                             clang.cindex.CursorKind.TYPEDEF_DECL,
                             clang.cindex.CursorKind.MACRO_DEFINITION,
