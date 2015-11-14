@@ -4,7 +4,7 @@
 @def header_links():
 
 @for toc_section in toc_sections:
-<span id="nav_@toc_section.name">
+<span id="nav_@toc_section.id_">
 	<span class="dim">|</span>
 	<a href="#@toc_section.id_">@toc_section.name</a>
 </span>
