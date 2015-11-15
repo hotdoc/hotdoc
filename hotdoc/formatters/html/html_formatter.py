@@ -543,6 +543,7 @@ class HtmlFormatter (Formatter):
 
     def _get_style_sheets(self, page):
         stylesheets = [self._get_style_sheet()]
+        stylesheets = []
         stylesheets.extend(self._get_extra_style_sheets(page))
         self.__stylesheets = self.__stylesheets.union(set(stylesheets))
 
@@ -563,7 +564,8 @@ class HtmlFormatter (Formatter):
         return os.path.join("assets", "style.css")
 
     def _get_extra_style_sheets(self, page):
-        extra_style_sheets = ["prism.css"]
+        #extra_style_sheets = ["prism.css"]
+        extra_style_sheets = []
         if page == "index.html":
             extra_style_sheets.append("index.css")
         extra_style_sheets = [os.path.join ('assets', s) for s in

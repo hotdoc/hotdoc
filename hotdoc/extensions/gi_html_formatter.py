@@ -382,6 +382,7 @@ class GIHtmlFormatter(HtmlFormatter):
             res.append('c.css')
         res = [os.path.join('assets', s) for s in res]
         res.extend(super(GIHtmlFormatter, self)._get_extra_style_sheets(page))
+        res = []
         return res
 
     def _do_get_scripts(self, page):
