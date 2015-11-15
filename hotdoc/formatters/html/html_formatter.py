@@ -20,8 +20,8 @@ class Callable(object):
         self.parameters = parameters
 
 class TocSection (object):
-    def __init__(self, summary, name):
-        self.summary = summary
+    def __init__(self, summaries, name):
+        self.summaries = summaries
         self.name = name
         self.id_ = ''.join(name.split())
 
@@ -251,18 +251,11 @@ class HtmlFormatter (Formatter):
         return template.render({'klass': klass,
                                 'short_description': short_desc})
 
-    def _format_summary (self, summaries, summary_type):
-        if not summaries:
-            return None
-
+    def _format_summary (self, toc_sections):
         template = self.engine.get_template('summary.html')
 
-        if summary_type == 'Classes':
-            summary_type = ''
-
-        return template.render({'summary_type': summary_type,
-                                'summaries': summaries
-                            })
+        return template.render({'toc_sections': toc_sections,
+                               })
 
     def _format_symbols_toc_section (self, symbols_type, symbols_list):
         summary_formatter = self._summary_formatters.get(symbols_type)
@@ -284,9 +277,7 @@ class HtmlFormatter (Formatter):
 
         toc_section = None
         if toc_section_summaries:
-            summary = self._format_summary (toc_section_summaries,
-                    symbol_type)
-            toc_section = TocSection (summary, symbol_type)
+            toc_section = TocSection (toc_section_summaries, symbol_type)
 
         symbol_descriptions = None
         if detailed_descriptions:
@@ -345,10 +336,12 @@ class HtmlFormatter (Formatter):
 
         template = self.engine.get_template('page.html')
 
+        toc = self._format_summary(toc_sections)
+
         stylesheets = self._get_style_sheets(page.link.ref)
         scripts = self._get_scripts(page.link.ref)
         out = template.render ({'page': page,
-                                'toc_sections': toc_sections,
+                                'toc': toc,
                                 'stylesheets': stylesheets,
                                 'scripts': scripts,
                                 'assets_path': self._get_assets_path(),

@@ -1,15 +1,17 @@
-@require(summary_type, summaries)
-@if summary_type:
-<h2>@summary_type</h2>
-@end
+@require(toc_sections)
 <div class="informaltable">
 	<table>
 		<colgroup>
 			<col/>
 			<col/>
+			<col/>
 		</colgroup>
-		@for summary in summaries:
-		@summary
+		@for toc_section in toc_sections:
+			<th colspan=3>@toc_section.name</th>
+			@for summary in toc_section.summaries:
+			@summary
+			@end
+		\
 		@end
 	</table>
 </div>
