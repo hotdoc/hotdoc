@@ -1,27 +1,27 @@
 @require(return_value, function_name, is_callable, is_pointer)
 <tr>
     @if return_value:
-    <td class="function_type">
+    <td>
 	    <span>@return_value</span>
     </td>
     @end
-    <td class="function_name">
+    <td>
 	    <span>\
 @if is_pointer:
-<span class="c_punctuation">(*</span>\
+<span>(*</span>\
 @end
 @function_name\
 @if is_pointer:
-<span class="c_punctuation">)</span>\
+<span>)</span>\
 @end
 
 @if is_callable:
-<span class="c_punctuation">()</span>\
+<span>()</span>\
 @end
 </span>
 </td>
 @if False:
-<td class="signal_flags">
+<td>
 @for flag in flags:
 
 @if flag.link:

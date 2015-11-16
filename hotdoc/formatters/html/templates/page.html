@@ -1,13 +1,9 @@
 @require(page, toc, symbols_details)
 @extends('base_page.html')
 
-@def header_links():
-
-@end
-
 @def content():
 
-<div class="refentry">
+<div class="page_container">
 
 	@if page.formatted_contents:
 	@page.formatted_contents
@@ -16,7 +12,7 @@
 	@toc
 
 	@for symbols_detail in symbols_details:
-	<div class="refsect1">
+	<div class="symbols_container">
 		@if symbols_detail.name:
 		<a name="@symbols_detail.name"></a>
 		<h2>@symbols_detail.name</h2>

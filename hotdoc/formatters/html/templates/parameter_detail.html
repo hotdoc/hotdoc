@@ -1,13 +1,13 @@
 @require(name, detail, extra)
 <tr>
 	@if name:
-	<td class="parameter_name">
+	<td>
 		<p>
 		<i>@name:</i>
 		</p>
 	</td>
 	@end
-	<td class="parameter_description">@detail</td>
+	<td>@detail</td>
 @for name, ex in extra.iteritems():
 <td>
 @ex

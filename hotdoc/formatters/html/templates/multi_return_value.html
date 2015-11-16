@@ -1,5 +1,5 @@
 @require(return_values)
-<div class="refsect3">
+<div class="multi_return_value_details">
 	@if len (return_values) == 1:
 		<h4>Returns:</h4>
 	@else:
@@ -7,14 +7,14 @@
 	@end
 	<table>
 		<colgroup>
-			<col class="parameters_name"/>
-			<col class="parameters_description"/>
-			<col class="parameters_type"/>
+			<col/>
+			<col/>
+			<col/>
 		</colgroup>
 		<tbody>
 			@for value in return_values:
 			<tr>
-				<td class="parameter_name">
+				<td>
 					<p>
 					@if hasattr(value, "argname"):
 					<i>@value.argname:</i>

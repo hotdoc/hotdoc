@@ -1,14 +1,14 @@
 @require(klass, hierarchy)
 
 @if hierarchy:
-<div class="refsect1">
+<div class="hierarchy_container">
 	<a name="hierarchy"></a>
 	@hierarchy
 </div>
 @end
 
 @if klass.formatted_doc:
-<div class="refsect1">
+<div class="class_details">
 	<h2>Instance description</h2>
 	@klass.formatted_doc
 </div>
