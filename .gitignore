@@ -4,3 +4,6 @@
 *.swp
 *.so
 *.dot
+build
+dist
+hotdoc.egg-info/
