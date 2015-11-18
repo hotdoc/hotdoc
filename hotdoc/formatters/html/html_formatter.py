@@ -72,6 +72,10 @@ class HtmlFormatter (Formatter):
                 ExportedVariableSymbol, AliasSymbol, CallbackSymbol]
 
         module_path = os.path.dirname(__file__)
+
+        self.__theme_path = doc_tool.html_theme_path
+        self.__parse_theme(searchpath)
+
         searchpath.append (os.path.join(module_path, "templates"))
         self.engine = Engine(
             loader=FileLoader(searchpath, encoding='UTF-8'),
@@ -79,6 +83,11 @@ class HtmlFormatter (Formatter):
         )
         self.__stylesheets = set()
         self.__scripts = set()
+
+    def __parse_theme(self, searchpath):
+        if not self.__theme_path:
+            return
+        searchpath.insert (0, os.path.join(self.__theme_path, 'templates'))
 
     def _get_extension (self):
         return "html"
@@ -583,5 +592,13 @@ class HtmlFormatter (Formatter):
 
         res.extend([os.path.join (dir_, 'assets', "API_index.js"),
                 os.path.join (dir_, 'assets', "home.png")])
+
+        if self.__theme_path:
+            theme_files = os.listdir(self.__theme_path)
+            theme_files.remove('templates')
+            theme_files = [os.path.join(self.__theme_path, dir_) for dir_ in
+                    theme_files]
+
+            res.extend(theme_files)
 
         return res

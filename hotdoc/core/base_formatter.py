@@ -135,7 +135,11 @@ class Formatter(object):
         for f in self._get_extra_files():
             basename = os.path.basename (f)
             path = os.path.join (asset_path, basename)
-            shutil.copy (f, path)
+            if os.path.isfile(f):
+                shutil.copy (f, path)
+            elif os.path.isdir(f):
+                shutil.rmtree(path, ignore_errors=True)
+                shutil.copytree(f, path)
 
     def _write_page (self, page):
         path = os.path.join (self._output, page.link.ref)

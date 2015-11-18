@@ -239,6 +239,8 @@ class DocTool(Loggable):
                 default="html", dest="output_format")
         self.parser.add_argument ("-I", "--include-path", action="append",
                 default=[], dest="include_paths")
+        self.parser.add_argument ("--html-theme", action="store",
+                dest="html_theme", default=None)
 
         extension_subclasses = all_subclasses (BaseExtension)
         subparsers = self.parser.add_subparsers (title="extensions",
@@ -281,6 +283,7 @@ class DocTool(Loggable):
         self.output = args[0].output
         self.output_format = args[0].output_format
         self.include_paths = args[0].include_paths
+        self.html_theme_path = args[0].html_theme
 
         if self.output_format not in ["html"]:
             raise ConfigError ("Unsupported output format : %s" %
