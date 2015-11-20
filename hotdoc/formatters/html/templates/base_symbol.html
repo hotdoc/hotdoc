@@ -14,27 +14,20 @@ tags.pop('returns', None)
 @end
 ">
 	<a name=@symbol.link.id_></a>
-	<table>
-		<colgroup>
-			<col/>
-			<col/>
-		<tbody>
-			<tr>
-				<td>
-				@def header():
-				@end
-				@header()
-				</td>
-				<td>
-					<a href="http://dev.example.com:5055/editor/@symbol.link.id_">
-						<p>
-							Edit
-						</p>
-					</a>
-				</td>
-			</tr>
-		</tbody>
-	</table>
+	<ul class="base_symbol_header">
+		<li class="base_symbol_name">
+		@def header():
+		@end
+		@header()
+		</li>
+		<li class="edit_button">
+			<a href="http://dev.example.com:5055/editor/@symbol.link.id_">
+				<p>
+					Edit
+				</p>
+			</a>
+		</li>
+	</ul>
 @def content():
 @end
 @content()
