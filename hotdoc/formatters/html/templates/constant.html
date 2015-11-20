@@ -1,12 +1,15 @@
 @require(definition, constant)
-<div class="constant_details">
-	<a name=@constant.link.id_></a>
-	<h3 class="constant">
-		@constant.link.title
-	</h3>
-	@if definition:
-	@definition
-	@end
+@extends('base_symbol.html')
+
+@def header():
+<h3 class="constant">
+	@constant.link.title
+</h3>
+@end
+@def content():
 \
-	@constant.formatted_doc
-</div>
+@if definition:
+@definition
+@end
+@constant.formatted_doc
+@end

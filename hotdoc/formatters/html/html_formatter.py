@@ -6,6 +6,7 @@ import tempfile
 
 from wheezy.template.engine import Engine
 from wheezy.template.ext.core import CoreExtension
+from wheezy.template.ext.code import CodeExtension
 from wheezy.template.loader import FileLoader
 
 from ...core.symbols import *
@@ -79,7 +80,7 @@ class HtmlFormatter (Formatter):
         searchpath.append (os.path.join(module_path, "templates"))
         self.engine = Engine(
             loader=FileLoader(searchpath, encoding='UTF-8'),
-            extensions=[CoreExtension()]
+            extensions=[CoreExtension(), CodeExtension()]
         )
         self.__stylesheets = set()
         self.__scripts = set()
@@ -357,9 +358,10 @@ class HtmlFormatter (Formatter):
         members_list = self._format_members_list (struct.members, 'Fields')
 
         template = self.engine.get_template ("struct.html")
-        out = template.render ({"struct": struct,
-                          "raw_code": raw_code,
-                          "members_list": members_list})
+        out = template.render ({"symbol": struct,
+                                "struct": struct,
+                                "raw_code": raw_code,
+                                "members_list": members_list})
         return (out, False)
 
     def _format_enum (self, enum):
@@ -372,7 +374,8 @@ class HtmlFormatter (Formatter):
 
         members_list = self._format_members_list (enum.members, 'Members')
         template = self.engine.get_template ("enum.html")
-        out = template.render ({"enum": enum,
+        out = template.render ({"symbol": enum,
+                                "enum": enum,
                                 "members_list": members_list})
         return (out, False)
 
@@ -481,7 +484,8 @@ class HtmlFormatter (Formatter):
         prototype = template.render ({'property_name': prop.link.title,
                                       'property_type': type_link})
         template = self.engine.get_template ('property.html')
-        res = template.render ({'prototype': prototype,
+        res = template.render ({'symbol': prop,
+                                'prototype': prototype,
                                'property': prop,
                                'extra': prop.extension_contents})
         return (res, False)
@@ -501,7 +505,8 @@ class HtmlFormatter (Formatter):
                                         'klass': klass})
 
         template = self.engine.get_template ('class.html')
-        return (template.render ({'klass': klass,
+        return (template.render ({'symbol': klass,
+                                  'klass': klass,
                                   'hierarchy': hierarchy}),
                 False)
 
@@ -542,13 +547,15 @@ class HtmlFormatter (Formatter):
     def _format_alias (self, alias):
         template = self.engine.get_template('alias.html')
         aliased_type = self._format_linked_symbol (alias.aliased_type)
-        return (template.render ({'alias': alias, 'aliased_type':
-                aliased_type}), False)
+        return (template.render ({'symbol': alias,
+                                  'alias': alias,
+                                  'aliased_type': aliased_type}), False)
 
     def _format_constant(self, constant):
         template = self.engine.get_template('constant.html')
         definition = self._format_raw_code (constant.original_text)
-        out = template.render ({'definition': definition,
+        out = template.render ({'symbol': constant,
+                                'definition': definition,
                                 'constant': constant})
         return (out, False)
 

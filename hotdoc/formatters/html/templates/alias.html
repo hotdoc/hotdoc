@@ -1,11 +1,14 @@
 @require(alias, aliased_type)
-<div class="alias_details">
-	<a name=@alias.link.id_></a>
-	<h3>
-		@alias.link.title
-	</h3>
-	<pre>
+@extends('base_symbol.html')
+
+@def header():
+<h3>
+	@alias.link.title
+</h3>
+@end
+@def content():
+<pre>
 typedef @aliased_type @alias.link.title\
-	</pre>
-	@alias.formatted_doc
-</div>
+</pre>
+@alias.formatted_doc
+@end

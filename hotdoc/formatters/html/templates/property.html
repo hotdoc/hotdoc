@@ -1,21 +1,22 @@
 @require(prototype, property, extra)
+@extends('base_symbol.html')
 
-<div class="property_container">
-	<a name=@property.link.id_></a>
-	<h3 class="method">
-		<span>The <code>“@property.link.title”</code> property</span>
-	</h3>
-	@prototype
-	@property.formatted_doc
+@def header():
+<h3 class="method">
+	<span>The <code>“@property.link.title”</code> property</span>
+</h3>
+@end
+@def content():
+@prototype
+@property.formatted_doc
 
-	@if extra:
-	\
-	@for name, ex in extra.iteritems():
-	<p>
-		@name :\
-		@ex
-	</p>
-	@end
-	@end
-
-</div>
+@if extra:
+\
+@for name, ex in extra.iteritems():
+<p>
+	@name :\
+	@ex
+</p>
+@end
+@end
+@end

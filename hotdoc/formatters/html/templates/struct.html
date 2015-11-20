@@ -1,15 +1,19 @@
 @require(struct, raw_code, members_list)
-<div class="struct_container">
-	<a name=@struct.link.id_></a>
-	<h3>
-		struct @struct.link.title
-	</h3>
-	@if raw_code:
-	@raw_code
-	@end
+@extends('base_symbol.html')
+
+@def header():
+<h3>
+	struct @struct.link.title
+</h3>
+@end
+@def content():
 \
-	@if struct.formatted_doc:
-	@struct.formatted_doc
-	@end
-	@members_list
-</div>
+@if raw_code:
+@raw_code
+@end
+\
+@if struct.formatted_doc:
+@struct.formatted_doc
+@end
+@members_list
+@end
