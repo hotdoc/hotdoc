@@ -3,29 +3,24 @@
 
 @def content():
 
-<div class="page_container">
+@if page.formatted_contents:
+@page.formatted_contents
+@end
 
-	@if page.formatted_contents:
-	@page.formatted_contents
-	@end
+@toc
 
-	@toc
+@for symbols_detail in symbols_details:
+@if symbols_detail.name:
+<h2 class="symbol_section" id="@symbols_detail.name">@symbols_detail.name</h2>
+@end
+\
+@for i, description in enumerate(symbols_detail.descriptions):
 
-	@for symbols_detail in symbols_details:
-	<div class="symbols_container">
-		@if symbols_detail.name:
-		<a name="@symbols_detail.name"></a>
-		<h2>@symbols_detail.name</h2>
-		@end
-		\
-		@for i, description in enumerate(symbols_detail.descriptions):
-
-		@if i != 0:
-		<hr>
-		@end
-		@description
-		@end
-	</div>
-	@end
-</div>
+@if i != 0:
+<hr>
+@end
+@description
+@end
+@end
+\
 @end
