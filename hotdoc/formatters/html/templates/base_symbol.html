@@ -1,6 +1,10 @@
-@require(symbol)
+@require(symbol, tags)
 
-<div class="base_symbol_container">
+<div class="base_symbol_container" data-hotdoc-tags="\
+@for tag in tags.values():
+@tag.name.lower():@tag.description;\
+@end
+">
 	<a name=@symbol.link.id_></a>
 	<table>
 		<colgroup>
