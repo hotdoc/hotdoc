@@ -1,9 +1,9 @@
 @require(alias)
-<tr>
-    <td>
-	    <span>typedef</span>
-    </td>
-    <td>
-	    <span>@alias</span>
-    </td>
-</tr>
+@extends('base_symbol_summary.html')
+
+@def type():
+<span>typedef</span>
+@end
+@def name():
+<span>@alias</span>
+@end

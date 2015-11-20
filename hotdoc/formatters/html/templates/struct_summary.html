@@ -1,9 +1,9 @@
 @require(struct)
-<tr>
-    <td>
-	    <span>struct</span>
-    </td>
-    <td>
-	    <span>@struct</span>
-    </td>
-</tr>
+@extends('base_symbol_summary.html')
+
+@def type():
+<span>struct</span>
+@end
+@def name():
+<span>@struct</span>
+@end

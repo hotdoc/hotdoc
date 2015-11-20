@@ -1,9 +1,9 @@
 @require(constant)
-<tr>
-    <td>
-	    <span>#define</span>
-    </td>
-    <td>
-	    <span>@constant</span>
-    </td>
-</tr>
+@extends('base_symbol_summary.html')
+
+@def type():
+<span>#define</span>
+@end
+@def name():
+<span>@constant</span>
+@end

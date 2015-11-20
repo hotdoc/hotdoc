@@ -1,0 +1,23 @@
+@require(symbol, tags)
+
+<tr class="base_symbol_summary" data-hotdoc-tags="\
+@for tag in tags.values():
+@tag.name.lower():@tag.description;\
+@end
+">
+	<td>
+		@def type():
+		@end
+		@type()
+	</td>
+	<td>
+		@def name():
+		@end
+		@name()
+	</td>
+	<td>
+		@def extra():
+		@end
+		@extra()
+	</td>
+</tr>

@@ -1,9 +1,9 @@
 @require(extern)
-<tr>
-    <td>
-	    <span>extern</span>
-    </td>
-    <td>
-	    <span>@extern</span>
-    </td>
-</tr>
+@extends('base_symbol_summary.html')
+
+@def type():
+<span>extern</span>
+@end
+@def name():
+<span>@extern</span>
+@end

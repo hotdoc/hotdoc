@@ -1,9 +1,9 @@
 @require(klass, short_description)
-<tr>
-	<td>
-		<span>class</span>
-	</td>
-	<td>
-		<span>@klass.link.title</span>
-	</td>
-</tr>
+@extends('base_symbol_summary.html')
+
+@def type():
+<span>class</span>
+@end
+@def name():
+<span>@klass.link.title</span>
+@end

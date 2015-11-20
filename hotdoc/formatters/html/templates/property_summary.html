@@ -1,18 +1,18 @@
-@require(property_type, property_link, extra)
-<tr>
+@require(property_type, property_link, extra_contents)
+@extends('base_symbol_summary.html')
+
+@def type():
+\
     @if property_type:
-    <td>
-	    <span>@property_type</span>
-    </td>
+	<span>@property_type</span>
     @end
-    <td>
-	    <span>@property_link</span>
-    </td>
-
-    @for name, ex in extra.iteritems():
-    <td>
+@end
+@def name():
+<span>@property_link</span>
+@end
+@def extra():
+\
+    @for name, ex in extra_contents.iteritems():
     @ex
-    </td>
     @end
-
-</tr>
+@end

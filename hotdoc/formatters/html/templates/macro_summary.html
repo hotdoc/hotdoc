@@ -1,13 +1,13 @@
 @require(macro, is_callable)
-<tr>
-    <td>
-	    <span>#define</span>
-    </td>
-    <td>
+@extends('base_symbol_summary.html')
+
+@def type():
+<span>#define</span>
+@end
+@def name():
 <span>@macro\
 @if is_callable:
 <span>()</span>\
 @end
 </span>
-    </td>
-</tr>
+@end

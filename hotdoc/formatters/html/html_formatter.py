@@ -169,11 +169,19 @@ class HtmlFormatter (Formatter):
                                  'extra': extra
                                 })
 
-    def _format_callable_summary (self, return_value, function_name,
+    def _format_callable_summary (self, callable_, return_value, function_name,
             is_callable, is_pointer):
         template = self.engine.get_template('callable_summary.html')
 
-        return template.render({'return_value': return_value,
+        tags = {}
+        if callable_.comment:
+            tags = callable_.comment.tags
+
+        tags.pop('returns', None)
+
+        return template.render({'symbol': callable_,
+                                'tags': tags,
+                                'return_value': return_value,
                                 'function_name': function_name,
                                 'is_callable': is_callable,
                                 'is_pointer': is_pointer,
@@ -181,6 +189,7 @@ class HtmlFormatter (Formatter):
 
     def _format_function_summary (self, func):
         return self._format_callable_summary (
+                func,
                 self._format_linked_symbol (func.return_value),
                 self._format_linked_symbol (func),
                 True,
@@ -188,6 +197,7 @@ class HtmlFormatter (Formatter):
 
     def _format_callback_summary (self, callback):
         return self._format_callable_summary (
+                callback,
                 self._format_linked_symbol (callback.return_value),
                 self._format_linked_symbol (callback),
                 True,
@@ -196,6 +206,7 @@ class HtmlFormatter (Formatter):
     # FIXME : C-specific
     def _format_function_macro_summary (self, func):
         return self._format_callable_summary (
+                func,
                 "#define ",
                 self._format_linked_symbol (func),
                 True,
@@ -204,30 +215,60 @@ class HtmlFormatter (Formatter):
     def _format_constant_summary (self, constant):
         template = self.engine.get_template('constant_summary.html')
         constant_link = self._format_linked_symbol (constant)
-        return template.render({'constant': constant_link})
+
+        tags = {}
+        if constant.comment:
+            tags = constant.comment.tags
+
+        return template.render({'symbol': constant,
+                                'tags': tags,
+                                'constant': constant_link})
 
     def _format_exported_variable_summary (self, extern):
         template = self.engine.get_template('exported_variable_summary.html')
         extern_link = self._format_linked_symbol (extern)
-        return template.render({'extern': extern_link})
+        tags = {}
+        if extern.comment:
+            tags = extern.comment.tags
+
+        return template.render({'symbol': extern,
+                                'tags': tags,
+                                'extern': extern_link})
 
     def _format_alias_summary (self, alias):
         template = self.engine.get_template('alias_summary.html')
         alias_link = self._format_linked_symbol (alias)
-        return template.render({'alias': alias_link})
+        tags = {}
+        if alias.comment:
+            tags = alias.comment.tags
+
+        return template.render({'symbol': alias,
+                                'tags': tags,
+                                'alias': alias_link})
 
     def _format_struct_summary (self, struct):
         template = self.engine.get_template('struct_summary.html')
         struct_link = self._format_linked_symbol (struct)
-        return template.render({'struct': struct_link})
+        tags = {}
+        if struct.comment:
+            tags = struct.comment.tags
+        return template.render({'symbol': struct,
+                                'tags': tags,
+                                'struct': struct_link})
 
     def _format_enum_summary (self, enum):
         template = self.engine.get_template('enum_summary.html')
         enum_link = self._format_linked_symbol (enum)
-        return template.render({'enum': enum_link})
+        tags = {}
+        if enum.comment:
+            tags = enum.comment.tags
+        return template.render({'symbol': enum,
+                                'tags': tags,
+                                'enum': enum_link})
 
     def _format_signal_summary (self, signal):
         return self._format_callable_summary (
+                signal,
                 self._format_linked_symbol (signal.return_value),
                 self._format_linked_symbol (signal),
                 True,
@@ -235,6 +276,7 @@ class HtmlFormatter (Formatter):
 
     def _format_vfunction_summary (self, vmethod):
         return self._format_callable_summary (
+                vmethod,
                 self._format_linked_symbol (vmethod.return_value),
                 self._format_linked_symbol (vmethod),
                 True,
@@ -246,18 +288,30 @@ class HtmlFormatter (Formatter):
 
         prop_link = self._format_linked_symbol (prop)
 
-        return template.render({'property_type': property_type,
+        tags = {}
+        if prop.comment:
+            tags = prop.comment.tags
+
+        return template.render({'symbol': prop,
+                                'tags': tags,
+                                'property_type': property_type,
                                 'property_link': prop_link,
-                                'extra': prop.extension_contents,
+                                'extra_contents': prop.extension_contents,
                                })
 
     def _format_class_summary (self, klass):
         if not klass.comment:
             return ''
 
+        tags = {}
+        if klass.comment:
+            tags = klass.comment.tags
+
         short_desc = self._format_doc_string (klass.comment.short_description)
         template = self.engine.get_template('class_summary.html')
-        return template.render({'klass': klass,
+        return template.render({'symbol': klass,
+                                'tags': tags,
+                                'klass': klass,
                                 'short_description': short_desc})
 
     def _format_summary (self, toc_sections):

@@ -168,13 +168,13 @@ class GIHtmlFormatter(HtmlFormatter):
         out = template.render ({'flags': flags})
         return out
 
-    def _format_callable_summary (self, return_value, function_name,
+    def _format_callable_summary (self, callable_, return_value, function_name,
             is_callable, is_pointer):
         if self.__gi_extension.language in ["python", "javascript"]:
             is_pointer = False
             return_value = None
 
-        return HtmlFormatter._format_callable_summary (self, return_value,
+        return HtmlFormatter._format_callable_summary (self, callable_, return_value,
                 function_name, is_callable, is_pointer)
 
     def _format_type_tokens (self, type_tokens):

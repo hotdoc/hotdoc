@@ -1,12 +1,15 @@
 @require(return_value, function_name, is_callable, is_pointer)
-<tr>
-    @if return_value:
-    <td>
-	    <span>@return_value</span>
-    </td>
-    @end
-    <td>
-	    <span>\
+@extends('base_symbol_summary.html')
+
+@def type():
+\
+@if return_value:
+	<span>@return_value</span>
+@end
+\
+@end
+@def name():
+<span>\
 @if is_pointer:
 <span>(*</span>\
 @end
@@ -19,17 +22,4 @@
 <span>()</span>\
 @end
 </span>
-</td>
-@if False:
-<td>
-@for flag in flags:
-
-@if flag.link:
-<a href="@flag.link">@flag.nick</a>
-@else:
-@flag.nick
 @end
-@end
-</td>
-@end
-</tr>
