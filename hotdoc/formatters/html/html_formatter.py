@@ -323,8 +323,7 @@ class HtmlFormatter (Formatter):
         return (out, False)
 
     def _format_page(self, page):
-        if not page.symbols:
-            page.formatted_contents = self.doc_tool.doc_tree.page_parser.render(page)
+        page.formatted_contents = self.doc_tool.doc_tree.page_parser.render(page)
 
         toc_sections = []
         symbols_details = []
@@ -573,12 +572,12 @@ class HtmlFormatter (Formatter):
         return os.path.join("assets", "style.css")
 
     def _get_extra_style_sheets(self, page):
-        #extra_style_sheets = ["prism.css"]
-        extra_style_sheets = []
+        extra_style_sheets = ["prism.css"]
         if page == "index.html":
             extra_style_sheets.append("index.css")
         extra_style_sheets = [os.path.join ('assets', s) for s in
                 extra_style_sheets]
+        return []
         return extra_style_sheets
 
     def _get_extra_files (self):

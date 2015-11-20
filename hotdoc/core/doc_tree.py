@@ -149,21 +149,26 @@ class PageParser(object):
             self.check_links (page, c, node)
 
     def parse_list (self, page, l):
+        non_symbol_children = list(l.children)
         for c in l.children:
             for c2 in c.children:
                 if c2.t == "Paragraph" and len (c2.inline_content) == 1:
-                    self.parse_para (page, c2)
+                    if self.parse_para (page, c2):
+                        non_symbol_children.remove(c)
+        l.children = non_symbol_children
 
     def parse_para(self, page, paragraph):
         ic = paragraph.inline_content[0]
 
         if ic.t != "Link":
-            return
+            return False
 
         if not ic.destination and ic.label:
             name = paragraph.strings[0].strip('[]() ')
             page.symbol_names.append(name)
             ic.destination = "not_an_actual_link_sorry"
+            return True
+        return False
 
     def parse(self, source_file):
         if not os.path.exists(source_file):
