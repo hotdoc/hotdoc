@@ -112,6 +112,9 @@ class GtkDocRawCommentParser (object):
     def parse_since_tag (self, name, desc):
         return Tag (name=name, description=desc)
 
+    def parse_stability_tag (self, name, desc):
+        return Tag (name=name, description=desc)
+
     def parse_returns_tag (self, name, desc):
         desc, annotations = self.extract_annotations (desc)
         annotations = {annotation.name: annotation for annotation in
@@ -125,9 +128,11 @@ class GtkDocRawCommentParser (object):
             return self.parse_returns_tag (name, desc)
         elif name.lower() == "return value":
             return self.parse_returns_tag ("returns", desc)
+        elif name.lower() == "stability":
+            return self.parse_stability_tag ("stability", desc)
 
     def parse_description_and_tags (self, dt):
-        dts = re.split (r'((?:^|\n)[ \t]*(returns|Returns|since|Since|Return value):)', dt)
+        dts = re.split (r'((?:^|\n)[ \t]*(returns|Returns|since|Since|stability|Stability|Return value):)', dt)
         tags = []
 
         desc = dts[0]
