@@ -1,4 +1,4 @@
-import os, linecache
+import os, sys, linecache, pkgconfig, glob
 
 import clang.cindex
 from ctypes import *
@@ -11,6 +11,7 @@ from hotdoc.core.comment_block import comment_from_tag
 from hotdoc.lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
 from hotdoc.core.links import Link
 from hotdoc.extensions.gi_raw_parser import GtkDocRawCommentParser
+from hotdoc.core.wizard import Skip
 
 def ast_node_is_function_pointer (ast_node):
     if ast_node.kind == clang.cindex.TypeKind.POINTER and \
@@ -21,32 +22,32 @@ def ast_node_is_function_pointer (ast_node):
 
 
 class ClangScanner(Loggable):
-    def __init__(self, doc_tool, filenames, options, full_scan, full_scan_patterns,
-            incremental):
+    def __init__(self, doc_tool, full_scan, full_scan_patterns):
         Loggable.__init__(self)
 
         self.__raw_comment_parser = GtkDocRawCommentParser() 
         self.doc_tool = doc_tool
-        if options:
-            options = options[0].split(' ')
+        self.full_scan = full_scan
+        self.full_scan_patterns = full_scan_patterns
 
+    def scan(self, filenames, options, incremental, fail_fast=False):
         index = clang.cindex.Index.create()
         flags = clang.cindex.TranslationUnit.PARSE_SKIP_FUNCTION_BODIES |\
                 clang.cindex.TranslationUnit.PARSE_INCOMPLETE |\
                 clang.cindex.TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
 
         self.filenames = filenames
-        self.full_scan = full_scan
-        self.full_scan_patterns = full_scan_patterns
 
         # FIXME: er maybe don't do that ?
         args = ["-isystem/usr/lib/clang/3.5.0/include/", "-Wno-attributes"]
         args.extend (options)
 
+        print "scanning with options", args
+
         self.symbols = {}
         self.parsed = set({})
 
-        if not full_scan:
+        if not self.full_scan:
             for filename in filenames:
                 with open (filename, 'r') as f:
                     cs = get_comments (filename)
@@ -60,7 +61,7 @@ class ClangScanner(Loggable):
             if filename in self.parsed:
                 continue
 
-            do_full_scan = any(fnmatch(filename, p) for p in full_scan_patterns)
+            do_full_scan = any(fnmatch(filename, p) for p in self.full_scan_patterns)
             if do_full_scan:
                 tu = index.parse(filename, args=args, options=flags)
                 for diag in tu.diagnostics:
@@ -69,11 +70,16 @@ class ClangScanner(Loggable):
                     else:
                         self.error ("Clang issue : %s" % str (diag))
 
+                if tu.diagnostics:
+                    return False
+
                 self.__parse_file (filename, tu)
                 for include in tu.get_includes():
                     self.__parse_file (os.path.abspath(str(include.include)), tu)
 
         self.info ("%d symbols found" % len (self.symbols))
+
+        return True
 
     def __parse_file (self, filename, tu):
         if filename in self.parsed:
@@ -454,6 +460,143 @@ class ClangScanner(Loggable):
                 lineno=node.location.line)
         return sym
 
+DESCRIPTION =\
+"""
+Parse C source files to extract comments and symbols.
+"""
+
+CFLAGS_PROMPT=\
+"""
+The C extension uses clang to parse the source code
+of your project, and discover the symbols exposed.
+
+It thus needs to be provided with the set of flags
+used to compile the library.
+
+In this stage of the configuration, you will first be
+prompted for the package names the library depends
+upon, as you would pass them to pkg-config, for
+example if the library depends on the glib, the call
+to pkg-config would be:
+
+$ pkg-config glib-2.0 --cflags
+
+so you would want to return:
+
+>>> ['glib-2.0']
+
+here.
+
+You will then be prompted for any additional flags needed
+for the compilation, for example:
+
+>>> ["-Dfoo=bar"]
+
+After the flags have been confirmed, the extension will
+try to compile your library. If clang can't compile
+without warnings, compilation will stop, the batch
+of warnings will be displayed, and you'll be given the chance
+to correct the flags you passed.
+"""
+
+def prompt_pkg_config(chief_wizard, qsshell, arg):
+    chief_wizard.clear_screen()
+
+    print CFLAGS_PROMPT 
+
+    correct_type = False
+    existing_packages = True
+    flags = []
+
+    while not correct_type or not existing_packages:
+        correct_type = False
+        try:
+            res = qsshell.ask('>>> What packages does the library depend upon ?')
+        except Skip:
+            break
+
+        if type(res) == list:
+            correct_type = True
+        else:
+            print "Incorrect type, expected list or None"
+            continue
+
+        existing_packages = True
+        for package in res:
+            if not pkgconfig.exists(package):
+                existing_packages = False
+                print "package %s does not exist" % package
+                continue
+            flags.extend(pkgconfig.cflags(package).split(' '))
+
+    correct_type = False
+    while not correct_type:
+        try:
+            extra_flags = qsshell.ask('>>> Additional flags (-I, -D, ...) ?')
+        except Skip:
+            extra_flags = []
+            break
+
+        if type(extra_flags) == list:
+            flags.extend (extra_flags)
+            correct_type = True
+
+    sources = resolve_patterns(chief_wizard.args.get('c_sources', []))
+    filters = resolve_patterns(chief_wizard.args.get('c_source_filters', []))
+    sources = [item for item in sources if item not in filters]
+
+    if not sources:
+        return flags
+
+    print "scanning", sources
+    print "with flags", flags
+    scanner = ClangScanner(chief_wizard, False,
+                ['*.h'])
+
+    if not scanner.scan(sources, flags, False, fail_fast=True):
+        if qsshell.ask_confirmation("Scanning failed, try again [y,n]? "):
+            return prompt_pkg_config(chief_wizard, qsshell, arg)
+
+    chief_wizard.args['extra_c_flags'] = extra_flags
+
+    print '\nScanning complete, no errors\n'
+    print '%d symbols found' % len(chief_wizard.symbols)
+    print '%d comments found\n' % len(chief_wizard.comments)
+
+    qsshell.wait_for_continue()
+
+    return res
+
+def resolve_patterns(source_patterns):
+    source_files = []
+    for item in source_patterns:
+        source_files.extend(glob.glob(item))
+
+    return source_files
+
+def prompt_source_files(chief_wizard, qsshell, parser):
+    return chief_wizard.default_prompt_filenames(chief_wizard, qsshell, parser,
+            extra_prompt="You will be prompted for possible filters afterwards")
+
+def prompt_source_filters(chief_wizard, qsshell, parser):
+    source_files = resolve_patterns(chief_wizard.args.get('c_sources', []))
+
+    extra_prompt = 'current files to be parsed : %s' % source_files
+
+    res = chief_wizard.default_prompt_filenames(chief_wizard, qsshell, parser,
+            extra_prompt=extra_prompt)
+
+    filters = resolve_patterns(res)
+
+    source_files = [item for item in source_files if item not in filters]
+
+    print "The files to be parsed would now be %s" % source_files
+
+    if qsshell.ask_confirmation():
+        return res
+
+    return prompt_source_filters(chief_wizard, qsshell, parser)
+
 class CExtension(BaseExtension):
     EXTENSION_NAME = 'c-extension'
 
@@ -462,19 +605,30 @@ class CExtension(BaseExtension):
         self.sources = [os.path.abspath(filename) for filename in
                 args.c_sources]
         self.clang_options = args.clang_options
+        self.scanner = ClangScanner(doc_tool, False,
+                ['*.h'])
 
     def setup(self):
-        self.scanner = ClangScanner(self.doc_tool, self.stale_source_files, self.clang_options, False,
-                ['*.h'], self.doc_tool.incremental)
+        self.scanner.scan(self.stale_source_files, self.clang_options,
+                self.doc_tool.incremental)
 
     def get_source_files(self):
         return self.sources
 
     @staticmethod
     def add_arguments (parser):
-        parser.add_argument ("--c-sources", action="store", nargs="+",
+        group = parser.add_argument_group('C extension', DESCRIPTION)
+        group.add_argument ("--c-sources", action="store", nargs="+",
                 dest="c_sources", help="C source files to parse",
-                default=[], required = True)
-        parser.add_argument ("--clang-options", action="store", nargs="+",
-                dest="clang_options", help="Flags to pass to clang", default="")
-        parser.add_argument ("--end-c-sources", action="store_true")
+                default=[], prompt_action=prompt_source_files)
+        group.add_argument ("--c-source-filters", action="store", nargs="+",
+                dest="c_source_filters", help="C source files to ignore",
+                default=[], prompt_action=prompt_source_filters)
+        group.add_argument ("--pkg-config-packages", action="store", nargs="+",
+                dest="pkg_config_packages", help="Packages the library depends upon",
+                default=[],
+                prompt_action=prompt_pkg_config)
+        group.add_argument ("--extra-c-flags", action="store", nargs="+",
+                dest="extra_c_flags", help="Packages the library depends upon",
+                default=[],
+                prompt_action=None)

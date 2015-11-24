@@ -4,6 +4,8 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 import cPickle as pickle
+import glob
+import json
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, mapper
@@ -14,10 +16,11 @@ from .symbols import *
 from .base_extension import BaseExtension
 from .alchemy_integration import Base
 from .doc_tree import DocTree
+from .wizard import QuickStartWizard, QUICKSTART_HELP
 
 from ..utils.utils import all_subclasses
 from ..utils.simple_signals import Signal
-from ..utils.loggable import Loggable
+from ..utils.loggable import Loggable, TerminalController
 from ..utils.loggable import init as loggable_init
 from ..formatters.html.html_formatter import HtmlFormatter
 
@@ -58,6 +61,101 @@ class ChangeTracker(object):
                     stale.append(source_file)
 
         extension.set_stale_source_files(stale)
+
+HOTDOC_ASCII =\
+"""/**    __  __   ____     ______   ____     ____     ______
+ *    / / / /  / __ \   /_  __/  / __ \   / __ \   / ____/
+ *   / /_/ /  / / / /    / /    / / / /  / / / /  / /     
+ *  / __  /  / /_/ /    / /    / /_/ /  / /_/ /  / /___   
+ * /_/ /_/   \____/    /_/    /_____/   \____/   \____/   
+ *
+ * The Tastiest Documentation Tool.
+ */                                                      
+"""
+
+
+class HotdocWizard(QuickStartWizard):
+    def __init__(self, *args, **kwargs):
+        QuickStartWizard.__init__(self, *args, **kwargs)
+        self.comments = {}
+        self.symbols = {}
+        self.tc = TerminalController()
+
+    def add_comment(self, comment):
+        self.comments[comment.name] = comment
+
+    def get_comment(self, name):
+        return self.comments.get(name)
+
+    def get_or_create_symbol(self, type_, **kwargs):
+        unique_name = kwargs.get('unique_name')
+        if not unique_name:
+            unique_name = kwargs.get('display_name')
+            kwargs['unique_name'] = unique_name
+
+        filename = kwargs.get('filename')
+        if filename:
+            kwargs['filename'] = os.path.abspath(filename)
+
+        symbol = type_()
+
+        for key, value in kwargs.items():
+            setattr(symbol, key, value)
+
+        self.symbols[unique_name] = symbol
+
+        return symbol
+
+    def clear_screen(self):
+        sys.stdout.write(self.tc.CLEAR_SCREEN)
+        sys.stdout.write(self.tc.RED + self.tc.BOLD + HOTDOC_ASCII +
+                self.tc.NORMAL)
+
+    def default_arg_prompt(self, chief_wizard, qsshell, arg):
+        self.clear_screen()
+        return QuickStartWizard.default_arg_prompt(self, chief_wizard, qsshell,
+                arg)
+
+    def default_group_prompt(self, chief_wizard, qsshell, group):
+        self.clear_screen()
+        return QuickStartWizard.default_group_prompt(self, chief_wizard, qsshell, group)
+
+    def default_main_prompt(self, chief_wizard, qsshell, parser):
+        self.clear_screen()
+        print self.tc.BOLD + "Hotdoc started without arguments, starting setup" + self.tc.NORMAL
+        print self.tc.CYAN + QUICKSTART_HELP + self.tc.NORMAL
+
+        if self.args:
+            print "\nFound existing configuration file (hotdoc.json)\n"
+            print self.tc.RED + self.tc.BOLD + \
+                    "Preparing to update, remove hotdoc.json to start from scratch" + \
+                    self.tc.NORMAL
+
+        return qsshell.wait_for_continue('\nPress Enter to start setup ')
+
+    def default_prompt_filenames(self, chief_wizard, qsshell, parser,
+            extra_prompt=None):
+        self.clear_screen()
+        res = QuickStartWizard.default_prompt_filenames(self, chief_wizard, qsshell,
+                parser, extra_prompt)
+        return res
+
+    def quick_start(self):
+        try:
+            with open('hotdoc.json', 'r') as f:
+                contents = f.read()
+        except IOError:
+            contents = '{}'
+
+        try:
+            self.args = json.loads(contents)
+        except ValueError:
+            self.args = {}
+
+        QuickStartWizard.quick_start(self)
+
+        with open('hotdoc.json', 'w') as f:
+            f.write(json.dumps(self.args, indent=4))
 
 class DocTool(Loggable):
     def __init__(self):
@@ -231,6 +329,14 @@ class DocTool(Loggable):
             self.datadir = "/usr/share"
 
         self.parser = argparse.ArgumentParser()
+        wizard = HotdocWizard(self.parser)
+
+        extension_subclasses = all_subclasses (BaseExtension)
+
+        for subclass in extension_subclasses:
+            subclass.add_arguments (self.parser)
+            self.__extension_classes[subclass.EXTENSION_NAME] = subclass
+
         self.parser.add_argument ("-i", "--index", action="store",
                 dest="index", help="location of the index file")
         self.parser.add_argument ("-o", "--output", action="store", default='doc',
@@ -242,18 +348,13 @@ class DocTool(Loggable):
         self.parser.add_argument ("--html-theme", action="store",
                 dest="html_theme", default=None)
 
-        extension_subclasses = all_subclasses (BaseExtension)
-        subparsers = self.parser.add_subparsers (title="extensions",
-                                            help="Extensions for parsing and formatting documentation",
-                                            dest="extension_name")
-
-        for subclass in extension_subclasses:
-            subparser = subparsers.add_parser(subclass.EXTENSION_NAME)
-            subclass.add_arguments (subparser)
-            self.__extension_classes[subclass.EXTENSION_NAME] = subclass
-
         loggable_init("DOC_DEBUG")
 
+        if not args:
+            res = wizard.quick_start()
+            print res
+            sys.exit(0)
+        
         self.parse_args(args)
 
     def __setup_folder(self, folder):

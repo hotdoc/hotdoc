@@ -169,5 +169,7 @@ setup(name='hotdoc',
                           'lxml',
                           'pygraphviz',
                           'dbus-deviation',
-                          'sqlalchemy'],
+                          'sqlalchemy',
+                          'ipython',
+                          'pkgconfig'],
       zip_safe=False)

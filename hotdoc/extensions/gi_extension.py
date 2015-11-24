@@ -408,6 +408,28 @@ class GIRParser(object):
 
         return tokens
 
+DESCRIPTION=\
+"""
+Parse a gir file and add signals, properties, classes
+and virtual methods. Can output documentation for various
+languages. Must be used in combination with the C extension.
+"""
+
+def port_from_gtk_doc(chief_wizard, qsshell):
+    pass
+
+def prompt_gi_index(chief_wizard, qsshell, parser):
+    chief_wizard.clear_screen()
+    choice = qsshell.propose_choice(
+            ["Create index from a gtk-doc project",
+             "Generate index from scratch",
+             "Use a custom index"
+             ]
+            )
+
+    if choice == 0:
+        port_from_gtk_doc(chief_wizard, qsshell)
+
 class GIExtension(BaseExtension):
     EXTENSION_NAME = "gi-extension"
 
@@ -450,14 +472,20 @@ class GIExtension(BaseExtension):
 
     @staticmethod
     def add_arguments (parser):
-        parser.add_argument ("--gir-file", action="store",
-                dest="gir_file", required=True)
-        parser.add_argument ("--languages", action="store",
-                nargs='*', default=['c'])
-        parser.add_argument ("--major-version", action="store",
-                dest="major_version", default='')
-        parser.add_argument ("--gi-index", action="store",
-                dest="gi_index", required=True)
+        group = parser.add_argument_group('GObject-introspection extension', DESCRIPTION)
+        group.add_argument ("--gir-file", action="store",
+                dest="gir_file", required=True,
+                help="Path to the gir file of the documented library")
+        group.add_argument ("--languages", action="store",
+                nargs='*', default=['c'],
+                help="Languages to translate documentation in")
+        group.add_argument ("--major-version", action="store",
+                dest="major_version", default='',
+                help="Major version of the library")
+        group.add_argument ("--gi-index", action="store",
+                dest="gi_index", required=True,
+                help="Path to the root markdown file",
+                prompt_action=prompt_gi_index)
 
     def __gather_gtk_doc_links (self):
         sgml_dir = os.path.join(self.doc_tool.datadir, "gtk-doc", "html")

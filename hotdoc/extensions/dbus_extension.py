@@ -111,6 +111,11 @@ class DBusScanner(Loggable):
                 display_name=node.name, unique_name=unique_name,
                 filename=self.__current_filename)
 
+DESCRIPTION=\
+"""
+Parse DBus XML files and extract symbols and comments.
+"""
+
 
 class DBusExtension(BaseExtension):
     EXTENSION_NAME = 'dbus-extension'
@@ -128,12 +133,13 @@ class DBusExtension(BaseExtension):
 
     @staticmethod
     def add_arguments (parser):
-        parser.add_argument ("--dbus-sources", action="store", nargs="+",
+        group = parser.add_argument_group('DBus extension', DESCRIPTION)
+        group.add_argument ("--dbus-sources", action="store", nargs="+",
                 dest="dbus_sources", help="DBus interface files to parse",
                 default=[], required = True)
-        parser.add_argument ("--end-dbus-sources", action="store_true")
-        parser.add_argument ("--dbus-index", action="store",
-                dest="dbus_index", required=True)
+        group.add_argument ("--dbus-index", action="store",
+                dest="dbus_index", required=True,
+                help="The dbus root markdown file")
 
     def dbus_index_handler(self, doc_tree):
         index_path = os.path.join(doc_tree.prefix, self.dbus_index)

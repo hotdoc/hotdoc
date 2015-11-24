@@ -652,13 +652,14 @@ def printHandler(level, object, category, file, line, message):
     # Make the file path more compact for readability
     file = os.path.relpath(file)
     where = "(%s:%d)" % (file, line)
+    where = ''
 
     # If GST_DEBUG is not set, we can assume only PITIVI_DEBUG is set, so don't
     # show a bazillion of debug details that are not relevant to Pitivi.
     if not _enableCrackOutput:
-        safeprintf(_outfile, '%s %-8s %-17s %-2s %s %s\n',
-                   getFormattedLevelName(level), time.strftime("%H:%M:%S"),
-                   category, object, message, where)
+        safeprintf(_outfile, '%s %-17s %s %s\n',
+                   getFormattedLevelName(level),
+                   category, message, where)
     else:
         o = ""
         if object:
