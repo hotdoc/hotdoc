@@ -1,6 +1,7 @@
 import shlex
 import pkgutil, importlib, sys, os
 import subprocess
+import traceback
 
 def PkgConfig(args):
     cmd = ['pkg-config'] + shlex.split(args)
@@ -23,6 +24,9 @@ def load_extensions(dirname):
             module = importlib.import_module(modname)
         except Exception as e:
             print "Extension %s disabled : %s" % (modname, e)
+            if os.environ.get('DOC_DEBUG'):
+                traceback.print_exc()
+
 
 def load_all_extensions():
     extension_paths = os.environ.get('HOTDOC_EXTENSION_PATH')

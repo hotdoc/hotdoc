@@ -42,8 +42,6 @@ class ClangScanner(Loggable):
         args = ["-isystem/usr/lib/clang/3.5.0/include/", "-Wno-attributes"]
         args.extend (options)
 
-        print "scanning with options", args
-
         self.symbols = {}
         self.parsed = set({})
 
@@ -567,6 +565,40 @@ def prompt_pkg_config(chief_wizard, qsshell, arg):
 
     return res
 
+def source_files_from_args(args):
+    sources = resolve_patterns(args.get('c_sources', []))
+    filters = resolve_patterns(args.get('c_source_filters', []))
+    sources = [item for item in sources if item not in filters]
+    return sources
+
+def flags_from_args(args):
+    flags = []
+
+    for package in args.get('pkg_config_packages', []):
+        flags.extend(pkgconfig.cflags(package).split(' '))
+
+    flags.extend(args.get('extra_c_flags', []))
+    return flags
+
+def c_prompt_done(chief_wizard, qsshell, group):
+    if chief_wizard.comments or chief_wizard.symbols:
+        return
+
+    sources = source_files_from_args(chief_wizard.args)
+
+    if not sources:
+        return
+
+    flags = flags_from_args(chief_wizard.args)
+
+    print "scanning C sources"
+    scanner = ClangScanner(chief_wizard, False,
+                ['*.h'])
+
+    if not scanner.scan(sources, flags, False, fail_fast=True):
+        if qsshell.ask_confirmation("Scanning failed, try again [y,n]? "):
+            return c_prompt_done(chief_wizard, qsshell, group)
+
 def resolve_patterns(source_patterns):
     source_files = []
     for item in source_patterns:
@@ -617,7 +649,8 @@ class CExtension(BaseExtension):
 
     @staticmethod
     def add_arguments (parser):
-        group = parser.add_argument_group('C extension', DESCRIPTION)
+        group = parser.add_argument_group('C extension', DESCRIPTION,
+                prompt_done_action=c_prompt_done)
         group.add_argument ("--c-sources", action="store", nargs="+",
                 dest="c_sources", help="C source files to parse",
                 default=[], prompt_action=prompt_source_files)

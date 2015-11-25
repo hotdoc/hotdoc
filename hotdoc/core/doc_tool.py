@@ -107,6 +107,7 @@ class HotdocWizard(QuickStartWizard):
         return symbol
 
     def clear_screen(self):
+        return
         sys.stdout.write(self.tc.CLEAR_SCREEN)
         sys.stdout.write(self.tc.RED + self.tc.BOLD + HOTDOC_ASCII +
                 self.tc.NORMAL)

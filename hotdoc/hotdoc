@@ -36,8 +36,8 @@ if __name__=="__main__":
         doc_tool.finalize()
     except Exception as e:
         if os.environ.get ("DOC_DEBUG"):
-            traceback.print_exc (e)
+            traceback.print_exc ()
         else:
-            print '\033[91m' + e.message + '\033[0m'
+            print e.message
         sys.exit (1)
     sys.exit(0)

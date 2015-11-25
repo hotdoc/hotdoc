@@ -171,5 +171,6 @@ setup(name='hotdoc',
                           'dbus-deviation',
                           'sqlalchemy',
                           'ipython',
-                          'pkgconfig'],
+                          'pkgconfig',
+                          'pygit2'],
       zip_safe=False)

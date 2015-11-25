@@ -1,6 +1,7 @@
 import argparse
 import json
 import glob
+import os
 from IPython.terminal.embed import InteractiveShellEmbed
 from traitlets.config.loader import Config
 
@@ -158,7 +159,8 @@ You will be prompted for confirmation.
 
 class QuickStartWizard(object):
     def __init__(self, parser,
-            chief_wizard=None):
+            chief_wizard=None,
+            prompt_done_action=None):
         self.parser = parser
         self._add_argument = parser.add_argument
         parser.add_argument = self._add_argument_override
@@ -169,6 +171,7 @@ class QuickStartWizard(object):
         self.chief_wizard = chief_wizard
         if self.chief_wizard is None:
             self.chief_wizard = self
+        self.prompt_done_action = prompt_done_action
 
     def default_arg_prompt(self, chief_wizard, qsshell, arg):
         return qsshell.ask('>>> %s ? ' % arg.help)
@@ -233,10 +236,21 @@ class QuickStartWizard(object):
 
         return res
 
+    def prompt_filename(self, qsshell, needs_to_exist=False):
+        res = qsshell.ask('>>> Path ? ')
+
+        if needs_to_exist and not os.path.exists(res):
+            print "The provided path (%s) does not exist" % res
+            return self.prompt_filename(qsshell, needs_to_exist=True)
+
+        return res
+
     def _add_argument_group_override(self, parser, *args, **kwargs):
+        prompt_done_action = kwargs.pop('prompt_done_action', None)
         res = self._add_argument_group(parser, *args, **kwargs)
         wizard = type(self)(res,
-                chief_wizard=self.chief_wizard)
+                chief_wizard=self.chief_wizard,
+                prompt_done_action=prompt_done_action)
         self._qs_objects.append(wizard)
         return res
 
@@ -267,6 +281,8 @@ class QuickStartWizard(object):
             prompt = self.default_group_prompt
 
         if not prompt(self.chief_wizard, qsshell, self.parser):
+            if self.prompt_done_action:
+                self.prompt_done_action(self.chief_wizard, qsshell, self.parser)
             return False
 
         for obj in self._qs_objects:
@@ -274,6 +290,9 @@ class QuickStartWizard(object):
                 obj.do_quick_start(qsshell, args)
             except Skip:
                 pass
+
+        if self.prompt_done_action:
+            self.prompt_done_action(self.chief_wizard, qsshell, self.parser)
 
 
 if __name__=='__main__':

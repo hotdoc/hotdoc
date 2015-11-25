@@ -1,5 +1,6 @@
 import os
 import re
+import subprocess
 
 from lxml import etree
 
@@ -9,7 +10,12 @@ from hotdoc.core.base_extension import BaseExtension
 from hotdoc.extensions.gi_html_formatter import GIHtmlFormatter
 from hotdoc.core.links import Link
 from hotdoc.core.doc_tree import Page
+from hotdoc.core.wizard import Skip
+from hotdoc.transition_scripts.sgml_to_sections import parse_sections, convert_to_markdown
+from hotdoc.transition_scripts.patcher import Patcher
+from distutils.spawn import find_executable
 
+from lxml import etree as ET
 
 # FIXME: might conflict with comment_block.Annotation
 class Annotation (object):
@@ -415,11 +421,245 @@ and virtual methods. Can output documentation for various
 languages. Must be used in combination with the C extension.
 """
 
+PROMPT_GTK_PORT_MAIN=\
+"""
+Porting from gtk-doc is a bit involved, and you will
+want to manually go over generated markdown files to
+improve pandoc's conversion (or contribute patches
+to pandoc's docbook reader if you know haskell. I don't.
+
+You'll want to make sure you have built the documentation
+with gtk-doc first, it should be easy as checking that
+there is an xml directory in the old documentation folder.
+
+If not, you'll want to verify you have run make,
+and possibly run ./configure --enable-gtk-doc in the
+root directory beforehand.
+"""
+
+PROMPT_INSTALL_PANDOC=\
+"""
+The conversion tool relies on pandoc to do its job.
+
+It seems like it's either not installed, or not
+in your PATH.
+
+You need to correct this to go to the next stage.
+"""
+
+PROMPT_SECTIONS_FILE=\
+"""
+Good.
+
+The first thing this conversion tool will need is the
+path to the "sections" file. It usually is located in
+the project's documentation folder, with a name such as
+'$(project_name)-sections.txt'.
+"""
+
+PROMPT_SECTIONS_CONVERSION=\
+"""
+Thanks, I don't know what I would do without you.
+
+Probably just sit there idling.
+
+Anyway, the next step is to go over certain comments
+in the source code and either rename them or place
+them in the markdown files.
+
+These comments are the "SECTION" comments, which
+either document classes and should stay in the source
+code, or were generic comments that have nothing to do
+in the source code and belong in the standalone markdown
+pages.
+
+FYI, I have found %d section comments and %d class comments.
+
+Don't worry, I can do that for you, I'll just need
+your permission to slightly modify the source files.
+"""
+
+PROMPT_COMMIT=\
+"""
+Sweet.
+
+If you use git, I can commit these changes myself,
+just give me the path to the root of the repository.
+
+Return None if you prefer to do that yourself.
+"""
+
+PROMPT_DESTINATION=\
+"""
+Nice.
+
+We can now finalize the port, by generating the standalone
+markdown pages that will form the skeleton of your documentation.
+
+I'll need you to provide me with a directory in which
+to output these files (markdown_files seems like a pretty sane
+choice but feel free to go wild).
+
+If the directory does not exist it will be created.
+"""
+
+PROMPT_SGML_FILE=\
+"""
+I'll also need the path to the sgml file, it should look
+something like $(project_name)-docs.sgml
+
+The port should be finished after this I promise.
+"""
+
+def get_section_comments(chief_wizard):
+    sections = parse_sections('hotdoc-tmp-sections.txt')
+
+    section_comments = []
+    class_comments = []
+
+    for comment in chief_wizard.comments.values():
+        if not comment.name.startswith('SECTION:'):
+            continue
+        structure_name = comment.name.split('SECTION:')[1]
+        section = sections.get(structure_name)
+        if section is None:
+            print "That's weird"
+            continue
+
+        section_title = section.find('TITLE')
+        if section_title is not None:
+            section_title = section_title.text
+            print "One section title", section_title
+            if chief_wizard.symbols.get(section_title):
+                comment.new_name = ('%s::%s' % (section_title,
+                    section_title))
+                class_comments.append(comment)
+                continue
+
+        section_comments.append(comment)
+
+    return section_comments, class_comments
+
+def rename_comments(patcher, comments):
+    for comment in comments:
+        comment.raw_comment = comment.raw_comment.replace(comment.name,
+                comment.new_name)
+        patcher.patch(comment.filename, comment.lineno - 1,
+                comment.endlineno, comment.raw_comment)
+
+def create_markdown_files(chief_wizard, qsshell):
+    chief_wizard.clear_screen()
+
+    print PROMPT_DESTINATION
+
+    correct_folder = False
+
+    while not correct_folder:
+        correct_folder = True
+        markdown_folder = chief_wizard.prompt_filename(qsshell)
+        if os.path.exists (markdown_folder):
+            if not os.path.isdir (markdown_folder):
+                print "Folder %s exists but is not a directory" % folder
+                correct_folder = False
+        else:
+            os.mkdir (markdown_folder)
+
+    chief_wizard.clear_screen()
+
+    print PROMPT_SGML_FILE
+
+    sgml_path = chief_wizard.prompt_filename(qsshell, needs_to_exist=True)
+
+    convert_to_markdown(sgml_path, 'hotdoc-tmp-sections.txt', markdown_folder)
+
 def port_from_gtk_doc(chief_wizard, qsshell):
-    pass
+    chief_wizard.clear_screen()
+    print PROMPT_GTK_PORT_MAIN
+    qsshell.wait_for_continue('Press Enter once you made sure of that ')
+
+    while not find_executable('pandoc'):
+        chief_wizard.clear_screen()
+        print PROMPT_INSTALL_PANDOC
+        qsshell.wait_for_continue('Press Enter once pandoc was installed ')
+
+    chief_wizard.clear_screen()
+
+    print PROMPT_SECTIONS_FILE
+
+    sections_path = chief_wizard.prompt_filename(qsshell,
+            needs_to_exist=True)
+
+    chief_wizard.clear_screen()
+
+    module_path = os.path.dirname(__file__)
+    trans_shscript_path = os.path.join(module_path, '..', 'transition_scripts',
+            'translate_sections.sh')
+    cmd = [trans_shscript_path, sections_path, 'hotdoc-tmp-sections.txt']
+    subprocess.check_call(cmd)
+
+    section_comments, class_comments = get_section_comments(chief_wizard)
+
+    print PROMPT_SECTIONS_CONVERSION % (len(section_comments),
+            len(class_comments))
+
+    if not qsshell.ask_confirmation("Permission granted [y,n]? "):
+        raise Skip
+
+    patcher = Patcher(None)
+
+    if class_comments:
+        rename_comments(patcher, class_comments)
+
+        chief_wizard.clear_screen()
+
+        print PROMPT_COMMIT
+
+        try:
+            valid_repo_path = False
+            while not valid_repo_path:
+                repo_path = chief_wizard.prompt_filename(qsshell, needs_to_exist=True)
+                try:
+                    patcher.set_repo_path(repo_path)
+                    valid_repo_path = True
+                except KeyError as e:
+                    print "That does not look like a repo to me ?", e
+
+            for comment in class_comments:
+                patcher.add(comment.filename)
+            commit_message = "Port to hotdoc: convert class comments"
+            patcher.commit('hotdoc', 'hotdoc@hotdoc.net', commit_message)
+        except Skip:
+            pass
+
+    create_markdown_files(chief_wizard, qsshell)
+
+    while True:
+        pass
+
+PROMPT_GI_INDEX=\
+"""
+You will now need to provide a markdown index for introspected
+symbols.
+
+You can learn more about standalone markdown files at [FIXME],
+for now suffice to say that these files provide the basic skeleton
+for the output documentation, and list which symbols should be
+documented in which page.
+
+The index is the root, it will usually link to various subpages.
+
+There are three ways to provide this index:
+
+- Converting existing gtk-doc files.
+- Generating one
+- Pass one that you wrote yourself following the guidelines linked to above.
+
+You can of course skip this phase for now, and come back to it later.
+"""
 
 def prompt_gi_index(chief_wizard, qsshell, parser):
     chief_wizard.clear_screen()
+    print PROMPT_GI_INDEX
     choice = qsshell.propose_choice(
             ["Create index from a gtk-doc project",
              "Generate index from scratch",
