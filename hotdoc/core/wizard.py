@@ -236,12 +236,40 @@ class QuickStartWizard(object):
 
         return res
 
-    def prompt_filename(self, qsshell, needs_to_exist=False):
-        res = qsshell.ask('>>> Path ? ')
+    def prompt_filename(self, qsshell, needs_to_exist=False, prompt='>>> Path ? '):
+        res = qsshell.ask(prompt)
 
         if needs_to_exist and not os.path.exists(res):
             print "The provided path (%s) does not exist" % res
             return self.prompt_filename(qsshell, needs_to_exist=True)
+
+        return res
+
+    def prompt_key(self, key, qsshell, prompt=None, title=None,
+            store=True, validate_function=None):
+        if title is None:
+            title = key
+
+        if key in self.args:
+            print 'Current value for %s : %s' % (title,
+                    self.args[key])
+            if not qsshell.ask_confirmation('Update [y,n]? '):
+                return self.args[key]
+
+        if not prompt:
+            prompt = 'New value for %s? ' % title
+
+        validated = False
+
+        while not validated:
+            res = qsshell.ask(prompt)
+            if validate_function is None:
+                validated = True
+            else:
+                validated = validate_function(res)
+
+        if store:
+            self.args[key] = res
 
         return res
 

@@ -483,11 +483,7 @@ PROMPT_COMMIT=\
 """
 Sweet.
 
-If you use git, I can commit these changes myself,
-just give me the path to the root of the repository.
-
-Return None if you prefer to do that yourself.
-"""
+Should I commit the files I modified [y,n]? """
 
 PROMPT_DESTINATION=\
 """
@@ -612,24 +608,14 @@ def port_from_gtk_doc(chief_wizard, qsshell):
 
         chief_wizard.clear_screen()
 
-        print PROMPT_COMMIT
+        if chief_wizard.git_interface is not None:
+            if qsshell.ask_confirmation(PROMPT_COMMIT):
 
-        try:
-            valid_repo_path = False
-            while not valid_repo_path:
-                repo_path = chief_wizard.prompt_filename(qsshell, needs_to_exist=True)
-                try:
-                    patcher.set_repo_path(repo_path)
-                    valid_repo_path = True
-                except KeyError as e:
-                    print "That does not look like a repo to me ?", e
+                for comment in class_comments:
+                    chief_wizard.git_interface.add(comment.filename)
 
-            for comment in class_comments:
-                patcher.add(comment.filename)
-            commit_message = "Port to hotdoc: convert class comments"
-            patcher.commit('hotdoc', 'hotdoc@hotdoc.net', commit_message)
-        except Skip:
-            pass
+                commit_message = "Port to hotdoc: convert class comments"
+                chief_wizard.git_interface.commit('hotdoc', 'hotdoc@hotdoc.net', commit_message)
 
     create_markdown_files(chief_wizard, qsshell)
 

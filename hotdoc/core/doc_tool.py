@@ -23,6 +23,7 @@ from ..utils.simple_signals import Signal
 from ..utils.loggable import Loggable, TerminalController
 from ..utils.loggable import init as loggable_init
 from ..formatters.html.html_formatter import HtmlFormatter
+from ..transition_scripts.patcher import GitInterface
 
 from hotdoc.extensions.gi_raw_parser import GtkDocRawCommentParser
 
@@ -73,6 +74,20 @@ HOTDOC_ASCII =\
  */                                                      
 """
 
+PROMPT_GIT_REPO=\
+"""
+If you use git, I can commit the files created or
+modified during setup, you will be prompted for confirmation
+when that is the case.
+
+The author name and mail address will be 'hotdoc' and
+'hotdoc@hotdoc.net'.
+
+Note: here as everywhere else, you can answer None to
+skip the question.
+
+Path to the root git repository?
+"""
 
 class HotdocWizard(QuickStartWizard):
     def __init__(self, *args, **kwargs):
@@ -80,6 +95,7 @@ class HotdocWizard(QuickStartWizard):
         self.comments = {}
         self.symbols = {}
         self.tc = TerminalController()
+        self.git_interface = None
 
     def add_comment(self, comment):
         self.comments[comment.name] = comment
@@ -121,6 +137,26 @@ class HotdocWizard(QuickStartWizard):
         self.clear_screen()
         return QuickStartWizard.default_group_prompt(self, chief_wizard, qsshell, group)
 
+    def prompt_key(self, *args, **kwargs):
+        self.clear_screen()
+        return QuickStartWizard.prompt_key(self, *args, **kwargs)
+
+    def validate_git_repo(self, path):
+        try:
+            git_interface = GitInterface(path)
+            return True
+        except Exception as e:
+            print "This does not look like a git repo : %s" % path
+            return False
+
+    def prompt_for_git_repo(self, chief_wizard, qsshell):
+        path = self.prompt_key('git_repo', qsshell, prompt=PROMPT_GIT_REPO,
+                title="the path to the root of the git repository",
+                validate_function=self.validate_git_repo)
+
+        if path:
+            self.git_interface = GitInterface(path)
+
     def default_main_prompt(self, chief_wizard, qsshell, parser):
         self.clear_screen()
         print self.tc.BOLD + "Hotdoc started without arguments, starting setup" + self.tc.NORMAL
@@ -132,7 +168,12 @@ class HotdocWizard(QuickStartWizard):
                     "Preparing to update, remove hotdoc.json to start from scratch" + \
                     self.tc.NORMAL
 
-        return qsshell.wait_for_continue('\nPress Enter to start setup ')
+        if not qsshell.wait_for_continue('\nPress Enter to start setup '):
+            return False
+
+        self.prompt_for_git_repo(chief_wizard, qsshell)
+
+        return True
 
     def default_prompt_filenames(self, chief_wizard, qsshell, parser,
             extra_prompt=None):
