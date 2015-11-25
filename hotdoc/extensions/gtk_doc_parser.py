@@ -90,7 +90,7 @@ class DocScanner(object):
 
 
 class GtkDocParser (object):
-    def __init__(self, doc_tool):
+    def __init__(self, doc_tool=None):
         self.funcs = {
             'other': self.format_other,
             'new_line': self.format_other,
@@ -117,6 +117,10 @@ class GtkDocParser (object):
     def format_property (self, match, props):
         type_name = props['type_name']
         property_name = props['property_name']
+
+        if self.doc_tool is None:
+            return u'[](%s:%s)' % (type_name, prop_name)
+
         linkname = "%s:%s" % (type_name, property_name)
         link = self.doc_tool.link_resolver.get_named_link (linkname)
 
@@ -131,6 +135,9 @@ class GtkDocParser (object):
     def format_signal (self, match, props):
         type_name = props['type_name']
         signal_name = props['signal_name']
+        if self.doc_tool is None:
+            return u'[](%s::%s)' % (type_name, signal_name)
+
         linkname = "%s::%s" % (type_name, signal_name)
         link = self.doc_tool.link_resolver.get_named_link (linkname)
 
@@ -149,7 +156,10 @@ class GtkDocParser (object):
         # between a struct and a class name, the link is to be made
         # to the class
 
-        class_name = 'SECTION:%s' % type_name.lower()
+        if self.doc_tool is None:
+            return u'[](%s)' % (type_name)
+
+        class_name = '%s::%s' % (type_name, type_name)
         link = self.doc_tool.link_resolver.get_named_link (class_name)
 
         if link is None:
@@ -165,6 +175,10 @@ class GtkDocParser (object):
 
     def format_enum_value (self, match, props):
         member_name = props['member_name']
+
+        if self.doc_tool is None:
+            return '[](%s)' % member_name
+
         link = self.doc_tool.link_resolver.get_named_link (member_name)
 
         if link and link.id_ in self.__translated_names:
@@ -181,6 +195,9 @@ class GtkDocParser (object):
 
     def format_function_call (self, match, props):
         func_name = props['symbol_name']
+        if self.doc_tool is None:
+            return '[](%s)' % func_name
+
         link = self.doc_tool.link_resolver.get_named_link (func_name)
 
         if link and link.id_ in self.__translated_names:

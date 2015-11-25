@@ -13,7 +13,7 @@ from hotdoc.core.doc_tree import Page
 from hotdoc.core.wizard import Skip
 from hotdoc.transition_scripts.sgml_to_sections import parse_sections, convert_to_markdown
 from hotdoc.transition_scripts.patcher import Patcher
-from distutils.spawn import find_executable
+from hotdoc.extensions.gtk_doc_parser import GtkDocParser
 
 from lxml import etree as ET
 
@@ -426,7 +426,7 @@ PROMPT_GTK_PORT_MAIN=\
 Porting from gtk-doc is a bit involved, and you will
 want to manually go over generated markdown files to
 improve pandoc's conversion (or contribute patches
-to pandoc's docbook reader if you know haskell. I don't.
+to pandoc's docbook reader if you know haskell. I don't).
 
 You'll want to make sure you have built the documentation
 with gtk-doc first, it should be easy as checking that
@@ -435,17 +435,8 @@ there is an xml directory in the old documentation folder.
 If not, you'll want to verify you have run make,
 and possibly run ./configure --enable-gtk-doc in the
 root directory beforehand.
-"""
 
-PROMPT_INSTALL_PANDOC=\
-"""
-The conversion tool relies on pandoc to do its job.
-
-It seems like it's either not installed, or not
-in your PATH.
-
-You need to correct this to go to the next stage.
-"""
+Press Enter once you made sure you're all set. """
 
 PROMPT_SECTIONS_FILE=\
 """
@@ -455,7 +446,8 @@ The first thing this conversion tool will need is the
 path to the "sections" file. It usually is located in
 the project's documentation folder, with a name such as
 '$(project_name)-sections.txt'.
-"""
+
+Path to the sections file ? """
 
 PROMPT_SECTIONS_CONVERSION=\
 """
@@ -477,7 +469,8 @@ FYI, I have found %d section comments and %d class comments.
 
 Don't worry, I can do that for you, I'll just need
 your permission to slightly modify the source files.
-"""
+
+Permission granted [y,n]? """
 
 PROMPT_COMMIT=\
 """
@@ -497,7 +490,8 @@ to output these files (markdown_files seems like a pretty sane
 choice but feel free to go wild).
 
 If the directory does not exist it will be created.
-"""
+
+Where should I write the markdown pages ? """
 
 PROMPT_SGML_FILE=\
 """
@@ -505,12 +499,14 @@ I'll also need the path to the sgml file, it should look
 something like $(project_name)-docs.sgml
 
 The port should be finished after this I promise.
-"""
+
+Path to the SGML file ? """
 
 def get_section_comments(chief_wizard):
     sections = parse_sections('hotdoc-tmp-sections.txt')
+    translator = GtkDocParser()
 
-    section_comments = []
+    section_comments = {}
     class_comments = []
 
     for comment in chief_wizard.comments.values():
@@ -525,99 +521,74 @@ def get_section_comments(chief_wizard):
         section_title = section.find('TITLE')
         if section_title is not None:
             section_title = section_title.text
-            print "One section title", section_title
             if chief_wizard.symbols.get(section_title):
-                comment.new_name = ('%s::%s' % (section_title,
+                new_name = ('%s::%s' % (section_title,
                     section_title))
                 class_comments.append(comment)
+                comment.raw_comment = comment.raw_comment.replace(comment.name,
+                        new_name)
                 continue
 
-        section_comments.append(comment)
+        comment.raw_comment = ''
+        comment.description = translator.translate(comment.description)
+        if comment.short_description:
+            comment.short_description = \
+            translator.translate(comment.short_description)
+        section_comments[structure_name] = comment
 
     return section_comments, class_comments
 
-def rename_comments(patcher, comments):
+def patch_comments(wizard, patcher, comments):
+    if not comments:
+        return
+
     for comment in comments:
-        comment.raw_comment = comment.raw_comment.replace(comment.name,
-                comment.new_name)
         patcher.patch(comment.filename, comment.lineno - 1,
                 comment.endlineno, comment.raw_comment)
 
-def create_markdown_files(chief_wizard, qsshell):
-    chief_wizard.clear_screen()
+    if wizard.git_interface is not None:
+        if wizard.ask_confirmation(PROMPT_COMMIT):
 
-    print PROMPT_DESTINATION
+            for comment in comments:
+                wizard.git_interface.add(comment.filename)
 
-    correct_folder = False
+            commit_message = "Port to hotdoc: convert class comments"
+            wizard.git_interface.commit('hotdoc', 'hotdoc@hotdoc.net', commit_message)
 
-    while not correct_folder:
-        correct_folder = True
-        markdown_folder = chief_wizard.prompt_filename(qsshell)
-        if os.path.exists (markdown_folder):
-            if not os.path.isdir (markdown_folder):
-                print "Folder %s exists but is not a directory" % folder
-                correct_folder = False
-        else:
-            os.mkdir (markdown_folder)
-
-    chief_wizard.clear_screen()
-
-    print PROMPT_SGML_FILE
-
-    sgml_path = chief_wizard.prompt_filename(qsshell, needs_to_exist=True)
-
-    convert_to_markdown(sgml_path, 'hotdoc-tmp-sections.txt', markdown_folder)
-
-def port_from_gtk_doc(chief_wizard, qsshell):
-    chief_wizard.clear_screen()
-    print PROMPT_GTK_PORT_MAIN
-    qsshell.wait_for_continue('Press Enter once you made sure of that ')
-
-    while not find_executable('pandoc'):
-        chief_wizard.clear_screen()
-        print PROMPT_INSTALL_PANDOC
-        qsshell.wait_for_continue('Press Enter once pandoc was installed ')
-
-    chief_wizard.clear_screen()
-
-    print PROMPT_SECTIONS_FILE
-
-    sections_path = chief_wizard.prompt_filename(qsshell,
-            needs_to_exist=True)
-
-    chief_wizard.clear_screen()
-
+def translate_section_file(sections_path):
     module_path = os.path.dirname(__file__)
     trans_shscript_path = os.path.join(module_path, '..', 'transition_scripts',
             'translate_sections.sh')
     cmd = [trans_shscript_path, sections_path, 'hotdoc-tmp-sections.txt']
     subprocess.check_call(cmd)
 
+def port_from_gtk_doc(chief_wizard, qsshell):
+    patcher = Patcher()
+
+    chief_wizard.wait_for_continue(PROMPT_GTK_PORT_MAIN)
+    chief_wizard.prompt_executable('pandoc')
+    sections_path = chief_wizard.prompt_key('sections_file',
+            prompt=PROMPT_SECTIONS_FILE, store=False,
+            validate_function=chief_wizard.check_path_is_file)
+    translate_section_file(sections_path)
+
     section_comments, class_comments = get_section_comments(chief_wizard)
 
-    print PROMPT_SECTIONS_CONVERSION % (len(section_comments),
-            len(class_comments))
-
-    if not qsshell.ask_confirmation("Permission granted [y,n]? "):
+    if not chief_wizard.ask_confirmation(PROMPT_SECTIONS_CONVERSION %
+            (len(section_comments), len(class_comments))):
         raise Skip
 
-    patcher = Patcher(None)
+    patch_comments(chief_wizard, patcher, class_comments +
+            section_comments.values())
+    folder = chief_wizard.prompt_key('markdown_folder',
+            prompt=PROMPT_DESTINATION, store=False,
+            validate_function=chief_wizard.validate_folder)
+    sgml_path = chief_wizard.prompt_key('sgml_path',
+            prompt=PROMPT_SGML_FILE, store=False,
+            validate_function=chief_wizard.check_path_is_file)
 
-    if class_comments:
-        rename_comments(patcher, class_comments)
-
-        chief_wizard.clear_screen()
-
-        if chief_wizard.git_interface is not None:
-            if qsshell.ask_confirmation(PROMPT_COMMIT):
-
-                for comment in class_comments:
-                    chief_wizard.git_interface.add(comment.filename)
-
-                commit_message = "Port to hotdoc: convert class comments"
-                chief_wizard.git_interface.commit('hotdoc', 'hotdoc@hotdoc.net', commit_message)
-
-    create_markdown_files(chief_wizard, qsshell)
+    convert_to_markdown(sgml_path, 'hotdoc-tmp-sections.txt', folder,
+            section_comments)
 
     while True:
         pass

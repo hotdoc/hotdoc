@@ -4,6 +4,7 @@ import glob
 import os
 from IPython.terminal.embed import InteractiveShellEmbed
 from traitlets.config.loader import Config
+from distutils.spawn import find_executable
 
 QUICKSTART_HELP = \
 """
@@ -157,6 +158,12 @@ You can of course answer None:
 You will be prompted for confirmation.
 """
 
+PROMPT_EXECUTABLE=\
+"""
+%s is needed for the setup to continue.
+
+Press Enter once it is installed """
+
 class QuickStartWizard(object):
     def __init__(self, parser,
             chief_wizard=None,
@@ -245,15 +252,50 @@ class QuickStartWizard(object):
 
         return res
 
-    def prompt_key(self, key, qsshell, prompt=None, title=None,
+    def ask_confirmation(self, prompt='Confirm [y,n]? '):
+        res = None
+        while res is None:
+            user_res = self.qsshell.raw_input(prompt)
+            if user_res == 'y':
+                res = True
+            elif user_res == 'n':
+                res = False
+        return res
+
+    def validate_folder(self, path):
+        res = True
+        if not os.path.exists(path):
+            os.mkdir(path)
+            res = True
+        elif not os.path.isdir(path):
+            print "Path %s is not a folder" % path
+            res = False
+
+        return res
+
+    def check_path_is_file(self, path):
+        res = True
+
+        if not os.path.exists(path):
+            print "Path %s does not exist" % path
+            res = False
+        elif not os.path.isfile(path):
+            print "Path %s is not a file" % path
+            res = False
+
+        return res
+
+    def prompt_key(self, key, prompt=None, title=None,
             store=True, validate_function=None):
+        self.before_prompt()
+
         if title is None:
             title = key
 
         if key in self.args:
             print 'Current value for %s : %s' % (title,
                     self.args[key])
-            if not qsshell.ask_confirmation('Update [y,n]? '):
+            if not self.qsshell.ask_confirmation('Update [y,n]? '):
                 return self.args[key]
 
         if not prompt:
@@ -262,7 +304,7 @@ class QuickStartWizard(object):
         validated = False
 
         while not validated:
-            res = qsshell.ask(prompt)
+            res = self.qsshell.ask(prompt)
             if validate_function is None:
                 validated = True
             else:
@@ -290,8 +332,24 @@ class QuickStartWizard(object):
             prompt_action, extra_prompt))
         return arg
 
+    def wait_for_continue(self, prompt='Press Enter to continue '):
+        self.before_prompt()
+        self.qsshell.raw_input(prompt)
+        return True
+
+    def prompt_executable(self, executable, prompt=None):
+        if prompt is None:
+            prompt = PROMPT_EXECUTABLE % executable
+
+        while not find_executable(executable):
+            self.wait_for_continue(prompt)
+
+    def before_prompt(self):
+        pass
+
     def quick_start(self):
         qsshell = QuickStartShell()
+        self.qsshell = qsshell
 
         try:
             if not self.do_quick_start(qsshell, self.args):

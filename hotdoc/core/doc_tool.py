@@ -128,6 +128,9 @@ class HotdocWizard(QuickStartWizard):
         sys.stdout.write(self.tc.RED + self.tc.BOLD + HOTDOC_ASCII +
                 self.tc.NORMAL)
 
+    def before_prompt(self):
+        self.clear_screen()
+
     def default_arg_prompt(self, chief_wizard, qsshell, arg):
         self.clear_screen()
         return QuickStartWizard.default_arg_prompt(self, chief_wizard, qsshell,
@@ -136,10 +139,6 @@ class HotdocWizard(QuickStartWizard):
     def default_group_prompt(self, chief_wizard, qsshell, group):
         self.clear_screen()
         return QuickStartWizard.default_group_prompt(self, chief_wizard, qsshell, group)
-
-    def prompt_key(self, *args, **kwargs):
-        self.clear_screen()
-        return QuickStartWizard.prompt_key(self, *args, **kwargs)
 
     def validate_git_repo(self, path):
         try:
@@ -150,7 +149,7 @@ class HotdocWizard(QuickStartWizard):
             return False
 
     def prompt_for_git_repo(self, chief_wizard, qsshell):
-        path = self.prompt_key('git_repo', qsshell, prompt=PROMPT_GIT_REPO,
+        path = self.prompt_key('git_repo', prompt=PROMPT_GIT_REPO,
                 title="the path to the root of the git repository",
                 validate_function=self.validate_git_repo)
 
