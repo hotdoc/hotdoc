@@ -498,18 +498,16 @@ PROMPT_SGML_FILE=\
 I'll also need the path to the sgml file, it should look
 something like $(project_name)-docs.sgml
 
-The port should be finished after this I promise.
-
 Path to the SGML file ? """
 
-def get_section_comments(chief_wizard):
+def get_section_comments(wizard):
     sections = parse_sections('hotdoc-tmp-sections.txt')
     translator = GtkDocParser()
 
     section_comments = {}
     class_comments = []
 
-    for comment in chief_wizard.comments.values():
+    for comment in wizard.comments.values():
         if not comment.name.startswith('SECTION:'):
             continue
         structure_name = comment.name.split('SECTION:')[1]
@@ -521,7 +519,7 @@ def get_section_comments(chief_wizard):
         section_title = section.find('TITLE')
         if section_title is not None:
             section_title = section_title.text
-            if chief_wizard.symbols.get(section_title):
+            if wizard.symbols.get(section_title):
                 new_name = ('%s::%s' % (section_title,
                     section_title))
                 class_comments.append(comment)
@@ -562,36 +560,35 @@ def translate_section_file(sections_path):
     cmd = [trans_shscript_path, sections_path, 'hotdoc-tmp-sections.txt']
     subprocess.check_call(cmd)
 
-def port_from_gtk_doc(chief_wizard, qsshell):
+def port_from_gtk_doc(wizard):
     patcher = Patcher()
 
-    chief_wizard.wait_for_continue(PROMPT_GTK_PORT_MAIN)
-    chief_wizard.prompt_executable('pandoc')
-    sections_path = chief_wizard.prompt_key('sections_file',
+    wizard.wait_for_continue(PROMPT_GTK_PORT_MAIN)
+    wizard.prompt_executable('pandoc')
+    sections_path = wizard.prompt_key('sections_file',
             prompt=PROMPT_SECTIONS_FILE, store=False,
-            validate_function=chief_wizard.check_path_is_file)
+            validate_function=wizard.check_path_is_file)
     translate_section_file(sections_path)
 
-    section_comments, class_comments = get_section_comments(chief_wizard)
+    section_comments, class_comments = get_section_comments(wizard)
 
-    if not chief_wizard.ask_confirmation(PROMPT_SECTIONS_CONVERSION %
+    if not wizard.ask_confirmation(PROMPT_SECTIONS_CONVERSION %
             (len(section_comments), len(class_comments))):
         raise Skip
 
-    patch_comments(chief_wizard, patcher, class_comments +
+    patch_comments(wizard, patcher, class_comments +
             section_comments.values())
-    folder = chief_wizard.prompt_key('markdown_folder',
-            prompt=PROMPT_DESTINATION, store=False,
-            validate_function=chief_wizard.validate_folder)
-    sgml_path = chief_wizard.prompt_key('sgml_path',
+    sgml_path = wizard.prompt_key('sgml_path',
             prompt=PROMPT_SGML_FILE, store=False,
-            validate_function=chief_wizard.check_path_is_file)
+            validate_function=wizard.check_path_is_file)
+    folder = wizard.prompt_key('markdown_folder',
+            prompt=PROMPT_DESTINATION, store=False,
+            validate_function=wizard.validate_folder)
 
     convert_to_markdown(sgml_path, 'hotdoc-tmp-sections.txt', folder,
-            section_comments)
+            section_comments, 'gobject-api.markdown')
 
-    while True:
-        pass
+    return (os.path.join(folder), 'gobject-api.markdown')
 
 PROMPT_GI_INDEX=\
 """
@@ -614,18 +611,19 @@ There are three ways to provide this index:
 You can of course skip this phase for now, and come back to it later.
 """
 
-def prompt_gi_index(chief_wizard, qsshell, parser):
-    chief_wizard.clear_screen()
-    print PROMPT_GI_INDEX
-    choice = qsshell.propose_choice(
+def prompt_gi_index(wizard, qsshell, parser):
+    choice = wizard.propose_choice(
             ["Create index from a gtk-doc project",
              "Generate index from scratch",
              "Use a custom index"
              ]
             )
 
+    res = None
     if choice == 0:
-        port_from_gtk_doc(chief_wizard, qsshell)
+        res = port_from_gtk_doc(wizard)
+
+    return res
 
 class GIExtension(BaseExtension):
     EXTENSION_NAME = "gi-extension"

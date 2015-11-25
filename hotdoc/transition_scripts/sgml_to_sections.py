@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# FIXME: this is horrible code. horrible.
+# Ideally we would want pandoc to rescue us ..
+
 import sys
 import os
 
@@ -86,7 +89,8 @@ def parse_sgml_chapters (part, filename, path, level, sections, output,
     with open (filename, 'w') as f:
         f.write (out)
 
-def parse_sgml_parts (parent, path, sections, output, section_comments):
+def parse_sgml_parts (parent, path, sections, output, section_comments,
+        index_name):
     out = ""
     for part in parent.findall ("part"):
         title = part.find("title").text
@@ -96,10 +100,11 @@ def parse_sgml_parts (parent, path, sections, output, section_comments):
         parse_sgml_chapters (part, os.path.join (output,
             filename), path, 2, sections, output, section_comments)
 
-    with open (os.path.join (output, "index.markdown"), 'w') as f:
+    with open (os.path.join (output, index_name), 'w') as f:
         f.write (out)
 
-def parse_sgml_book_chapters (parent, path, sections, output, section_comments):
+def parse_sgml_book_chapters (parent, path, sections, output, section_comments,
+        index_name):
     out = ""
     for part in parent.findall (".//chapter"):
         title = part.find("title").text
@@ -109,7 +114,7 @@ def parse_sgml_book_chapters (parent, path, sections, output, section_comments):
         parse_sgml_chapters (part, os.path.join (output,
             filename), path, 2, sections, output, section_comments)
 
-    with open (os.path.join (output, "index.markdown"), 'w') as f:
+    with open (os.path.join (output, index_name), 'w') as f:
         f.write (out)
 
 def parse_sections(sections_file):
@@ -120,7 +125,8 @@ def parse_sections(sections_file):
 
     return sections
 
-def convert_to_markdown(sgml_path, sections_path, output, section_comments):
+def convert_to_markdown(sgml_path, sections_path, output, section_comments,
+        index_name):
     prefix_map = {'xi': 'http://www.w3.org/2003/XInclude'}
     parser = ET.XMLParser(load_dtd=True, resolve_entities=False)
 
@@ -129,6 +135,8 @@ def convert_to_markdown(sgml_path, sections_path, output, section_comments):
     sections = parse_sections(sections_path)
     path = os.path.dirname (os.path.abspath(sgml_path))
     if root.findall("part"):
-        parse_sgml_parts (root, path, sections, output, section_comments)
+        parse_sgml_parts (root, path, sections, output, section_comments,
+                index_name)
     else:
-        parse_sgml_book_chapters (root, path, sections, output, section_comments)
+        parse_sgml_book_chapters (root, path, sections, output,
+                section_comments, index_name)

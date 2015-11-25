@@ -82,41 +82,6 @@ class QuickStartShell(InteractiveShellEmbed):
 
         return self.result
 
-    def propose_choice(self, choices, skippable=True):
-        skip_choice = -1
-
-        if skippable:
-            skip_choice = len(choices)
-            choices.append("Skip")
-
-        prompt = "Make your choice ["
-
-        for i, choice in enumerate(choices):
-            print '%s) %s' % (str(i), choice)
-            if i != 0:
-                prompt += ','
-            prompt += str(i)
-
-        print ""
-
-        prompt += ']? '
-
-        valid_choice = False
-
-        while not valid_choice:
-            res = self.raw_input(prompt)
-            try:
-                valid_choice = int(res) in range(len(choices))
-            except:
-                valid_choice = False
-
-            if not valid_choice:
-                print "Invalid choice %s" % res
-
-        if int(res) == skip_choice:
-            raise Skip
-
-        return int(res)
 
 class QuickStartArgument(object):
     def __init__(self, chief_wizard, argument, prompt_action, extra_prompt):
@@ -243,6 +208,44 @@ class QuickStartWizard(object):
 
         return res
 
+    def propose_choice(self, choices, skippable=True):
+        self.before_prompt()
+
+        skip_choice = -1
+
+        if skippable:
+            skip_choice = len(choices)
+            choices.append("Skip")
+
+        prompt = "Make your choice ["
+
+        for i, choice in enumerate(choices):
+            print '%s) %s' % (str(i), choice)
+            if i != 0:
+                prompt += ','
+            prompt += str(i)
+
+        print ""
+
+        prompt += ']? '
+
+        valid_choice = False
+
+        while not valid_choice:
+            res = self.qsshell.raw_input(prompt)
+            try:
+                valid_choice = int(res) in range(len(choices))
+            except:
+                valid_choice = False
+
+            if not valid_choice:
+                print "Invalid choice %s" % res
+
+        if int(res) == skip_choice:
+            raise Skip
+
+        return int(res)
+
     def prompt_filename(self, qsshell, needs_to_exist=False, prompt='>>> Path ? '):
         res = qsshell.ask(prompt)
 
@@ -272,6 +275,9 @@ class QuickStartWizard(object):
             res = False
 
         return res
+
+    def validate_list(self, thing):
+        return type(thing) == list
 
     def check_path_is_file(self, path):
         res = True

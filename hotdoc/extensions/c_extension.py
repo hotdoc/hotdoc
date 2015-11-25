@@ -495,75 +495,20 @@ try to compile your library. If clang can't compile
 without warnings, compilation will stop, the batch
 of warnings will be displayed, and you'll be given the chance
 to correct the flags you passed.
-"""
 
-def prompt_pkg_config(chief_wizard, qsshell, arg):
-    chief_wizard.clear_screen()
+>>> What packages does the library depend upon ? """
 
-    print CFLAGS_PROMPT 
+def validate_pkg_config_packages(packages):
+    if type(packages) != list:
+        print "Incorrect type, expected list or None"
+        return False
 
-    correct_type = False
-    existing_packages = True
-    flags = []
+    for package in packages:
+        if not pkgconfig.exists(package):
+            print "package %s does not exist" % package
+            return False
 
-    while not correct_type or not existing_packages:
-        correct_type = False
-        try:
-            res = qsshell.ask('>>> What packages does the library depend upon ?')
-        except Skip:
-            break
-
-        if type(res) == list:
-            correct_type = True
-        else:
-            print "Incorrect type, expected list or None"
-            continue
-
-        existing_packages = True
-        for package in res:
-            if not pkgconfig.exists(package):
-                existing_packages = False
-                print "package %s does not exist" % package
-                continue
-            flags.extend(pkgconfig.cflags(package).split(' '))
-
-    correct_type = False
-    while not correct_type:
-        try:
-            extra_flags = qsshell.ask('>>> Additional flags (-I, -D, ...) ?')
-        except Skip:
-            extra_flags = []
-            break
-
-        if type(extra_flags) == list:
-            flags.extend (extra_flags)
-            correct_type = True
-
-    sources = resolve_patterns(chief_wizard.args.get('c_sources', []))
-    filters = resolve_patterns(chief_wizard.args.get('c_source_filters', []))
-    sources = [item for item in sources if item not in filters]
-
-    if not sources:
-        return flags
-
-    print "scanning", sources
-    print "with flags", flags
-    scanner = ClangScanner(chief_wizard, False,
-                ['*.h'])
-
-    if not scanner.scan(sources, flags, False, fail_fast=True):
-        if qsshell.ask_confirmation("Scanning failed, try again [y,n]? "):
-            return prompt_pkg_config(chief_wizard, qsshell, arg)
-
-    chief_wizard.args['extra_c_flags'] = extra_flags
-
-    print '\nScanning complete, no errors\n'
-    print '%d symbols found' % len(chief_wizard.symbols)
-    print '%d comments found\n' % len(chief_wizard.comments)
-
-    qsshell.wait_for_continue()
-
-    return res
+    return True
 
 def source_files_from_args(args):
     sources = resolve_patterns(args.get('c_sources', []))
@@ -580,24 +525,57 @@ def flags_from_args(args):
     flags.extend(args.get('extra_c_flags', []))
     return flags
 
-def c_prompt_done(chief_wizard, qsshell, group):
-    if chief_wizard.comments or chief_wizard.symbols:
+def prompt_pkg_config(wizard, qsshell, arg):
+    flags = []
+    packages = wizard.prompt_key('pkg_config_packages',
+            prompt=CFLAGS_PROMPT, title='pkg config packages',
+            validate_function=validate_pkg_config_packages)
+    extra_flags = wizard.prompt_key('extra_c_flags',
+            prompt='>>> Additional flags (-I, -D, ...) ?',
+            title='additional flags',
+            validate_function=wizard.validate_list)
+
+    sources = source_files_from_args(wizard.args)
+    flags = flags_from_args(wizard.args)
+
+    if not sources:
+        return packages
+
+    print "scanning", sources
+    print "with flags", flags
+    scanner = ClangScanner(wizard, False,
+                ['*.h'])
+
+    if not scanner.scan(sources, flags, False, fail_fast=True):
+        if wizard.ask_confirmation("Scanning failed, try again [y,n]? "):
+            return prompt_pkg_config(wizard, qsshell, arg)
+
+    print '\nScanning complete, no errors\n'
+    print '%d symbols found' % len(wizard.symbols)
+    print '%d comments found\n' % len(wizard.comments)
+
+    wizard.wait_for_continue()
+
+    return packages
+
+def c_prompt_done(wizard, qsshell, group):
+    if wizard.comments or wizard.symbols:
         return
 
-    sources = source_files_from_args(chief_wizard.args)
+    sources = source_files_from_args(wizard.args)
 
     if not sources:
         return
 
-    flags = flags_from_args(chief_wizard.args)
+    flags = flags_from_args(wizard.args)
 
     print "scanning C sources"
-    scanner = ClangScanner(chief_wizard, False,
+    scanner = ClangScanner(wizard, False,
                 ['*.h'])
 
     if not scanner.scan(sources, flags, False, fail_fast=True):
         if qsshell.ask_confirmation("Scanning failed, try again [y,n]? "):
-            return c_prompt_done(chief_wizard, qsshell, group)
+            return c_prompt_done(wizard, qsshell, group)
 
 def resolve_patterns(source_patterns):
     source_files = []
@@ -606,16 +584,16 @@ def resolve_patterns(source_patterns):
 
     return source_files
 
-def prompt_source_files(chief_wizard, qsshell, parser):
-    return chief_wizard.default_prompt_filenames(chief_wizard, qsshell, parser,
+def prompt_source_files(wizard, qsshell, parser):
+    return wizard.default_prompt_filenames(wizard, qsshell, parser,
             extra_prompt="You will be prompted for possible filters afterwards")
 
-def prompt_source_filters(chief_wizard, qsshell, parser):
-    source_files = resolve_patterns(chief_wizard.args.get('c_sources', []))
+def prompt_source_filters(wizard, qsshell, parser):
+    source_files = resolve_patterns(wizard.args.get('c_sources', []))
 
     extra_prompt = 'current files to be parsed : %s' % source_files
 
-    res = chief_wizard.default_prompt_filenames(chief_wizard, qsshell, parser,
+    res = wizard.default_prompt_filenames(wizard, qsshell, parser,
             extra_prompt=extra_prompt)
 
     filters = resolve_patterns(res)
@@ -627,7 +605,7 @@ def prompt_source_filters(chief_wizard, qsshell, parser):
     if qsshell.ask_confirmation():
         return res
 
-    return prompt_source_filters(chief_wizard, qsshell, parser)
+    return prompt_source_filters(wizard, qsshell, parser)
 
 class CExtension(BaseExtension):
     EXTENSION_NAME = 'c-extension'
