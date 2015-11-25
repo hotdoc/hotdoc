@@ -23,7 +23,8 @@ QUICKSTART_HELP = \
 |
 | To skip a question, return None:
 |
-| >>> None"""
+| >>> None
+"""
 
 class Skip(KeyboardInterrupt):
     pass
@@ -84,28 +85,19 @@ class QuickStartShell(InteractiveShellEmbed):
 
 
 class QuickStartArgument(object):
-    def __init__(self, chief_wizard, argument, prompt_action, extra_prompt):
+    def __init__(self, chief_wizard, argument, extra_prompt,
+            validate_function):
         self.argument = argument
-        self.prompt_action = prompt_action
         self.chief_wizard = chief_wizard
         self.extra_prompt = extra_prompt
+        self.validate_function = validate_function
 
     def do_quick_start(self, result_dict):
-        if not self.prompt_action:
-            raise Skip
-
-        update = True
-        current_value = result_dict.get(self.argument.dest)
-        if current_value is not None:
-            print 'Current value for %s : %s' % (self.argument.dest,
-                    current_value)
-            update = self.chief_wizard.ask_confirmation('Update [y,n]? ')
-
-        if not update:
-            raise Skip
-
-        res = self.prompt_action(self.chief_wizard, self.argument)
-        result_dict[self.argument.dest] = res
+        return self.chief_wizard.prompt_key(self.argument.dest,
+                prompt='>>> %s ?' % self.argument.help,
+                extra_prompt=self.extra_prompt,
+                title=self.argument.help,
+                validate_function=self.validate_function)
 
 FILENAMES_PROMPT=\
 """
@@ -132,7 +124,7 @@ Press Enter once it is installed """
 class QuickStartWizard(object):
     def __init__(self, parser,
             chief_wizard=None,
-            prompt_done_action=None):
+            validate_function=None):
         self.parser = parser
         self._add_argument = parser.add_argument
         parser.add_argument = self._add_argument_override
@@ -143,20 +135,26 @@ class QuickStartWizard(object):
         self.chief_wizard = chief_wizard
         if self.chief_wizard is None:
             self.chief_wizard = self
-        self.prompt_done_action = prompt_done_action
+            self.qsshell = QuickStartShell()
+        else:
+            self.qsshell = chief_wizard.qsshell
+
+        self.validate_function = validate_function
 
     def default_arg_prompt(self, chief_wizard, arg):
-        return chief_wizard.qsshell.ask('>>> %s ? ' % arg.help)
+        return self.qsshell.ask('>>> %s ? ' % arg.help)
 
     def default_group_prompt(self, chief_wizard, group):
+        self.before_prompt()
+
         if type(group) == argparse.ArgumentParser:
             title = group.prog
         else:
             title = group.title
 
-        question = "\nSetting up %s\n" % title
+        print "\nSetting up %s" % title
         if group.description:
-            question += "\n\nDescription: %s\n" % group.description
+            print "\nDescription: %s" % group.description
 
         print "Current configuration:\n"
         for qs_object in self._qs_objects:
@@ -164,7 +162,7 @@ class QuickStartWizard(object):
                 current_value = chief_wizard.args.get(qs_object.argument.dest)
                 print '%s : %s' % (qs_object.argument.dest, current_value)
 
-        question += 'Would you like to configure %s [y,n]? ' % title
+        question = '\nWould you like to configure %s [y,n]? ' % title
 
         return chief_wizard.ask_confirmation(question)
 
@@ -263,9 +261,9 @@ class QuickStartWizard(object):
         print "The expression(s) currently resolve(s) to:"
         print resolved
 
-        return wizard.qsshell.ask_confirmation()
+        return self.qsshell.ask_confirmation()
 
-    def prompt_key(self, key, prompt=None, title=None,
+    def prompt_key(self, key, prompt=None, extra_prompt=None, title=None,
             store=True, validate_function=None):
         self.before_prompt()
 
@@ -277,6 +275,9 @@ class QuickStartWizard(object):
                     self.args[key])
             if not self.qsshell.ask_confirmation('Update [y,n]? '):
                 return self.args[key]
+
+        if extra_prompt:
+            print extra_prompt
 
         if not prompt:
             prompt = 'New value for %s? ' % title
@@ -296,20 +297,21 @@ class QuickStartWizard(object):
         return res
 
     def _add_argument_group_override(self, parser, *args, **kwargs):
-        prompt_done_action = kwargs.pop('prompt_done_action', None)
+        validate_function = kwargs.pop('validate_function', None)
+        wizard_class = kwargs.pop('wizard_class', type(self.chief_wizard))
         res = self._add_argument_group(parser, *args, **kwargs)
-        wizard = type(self)(res,
+        wizard = wizard_class(res,
                 chief_wizard=self.chief_wizard,
-                prompt_done_action=prompt_done_action)
+                validate_function=validate_function)
         self._qs_objects.append(wizard)
         return res
 
     def _add_argument_override(self, parser, *args, **kwargs):
-        prompt_action = kwargs.pop('prompt_action', self.default_arg_prompt)
+        validate_function = kwargs.pop('validate_function', None)
         extra_prompt = kwargs.pop('extra_prompt', None)
         arg = self._add_argument(parser, *args, **kwargs)
         self._qs_objects.append(QuickStartArgument(self.chief_wizard, arg,
-            prompt_action, extra_prompt))
+            extra_prompt, validate_function))
         return arg
 
     def wait_for_continue(self, prompt='Press Enter to continue '):
@@ -328,9 +330,6 @@ class QuickStartWizard(object):
         pass
 
     def quick_start(self):
-        qsshell = QuickStartShell()
-        self.qsshell = qsshell
-
         try:
             if not self.do_quick_start(self.args):
                 return None
@@ -347,8 +346,6 @@ class QuickStartWizard(object):
             prompt = self.default_group_prompt
 
         if not prompt(self.chief_wizard, self.parser):
-            if self.prompt_done_action:
-                self.prompt_done_action(self.chief_wizard, self.parser)
             return False
 
         for obj in self._qs_objects:
@@ -357,5 +354,6 @@ class QuickStartWizard(object):
             except Skip:
                 pass
 
-        if self.prompt_done_action:
-            self.prompt_done_action(self.chief_wizard, self.parser)
+        if self.validate_function:
+            if not self.validate_function(self.chief_wizard, self.parser):
+                return self.do_quick_start(args)

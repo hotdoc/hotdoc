@@ -458,12 +458,7 @@ class ClangScanner(Loggable):
                 lineno=node.location.line)
         return sym
 
-DESCRIPTION =\
-"""
-Parse C source files to extract comments and symbols.
-"""
-
-CFLAGS_PROMPT=\
+PKG_PROMPT=\
 """
 The C extension uses clang to parse the source code
 of your project, and discover the symbols exposed.
@@ -495,9 +490,31 @@ try to compile your library. If clang can't compile
 without warnings, compilation will stop, the batch
 of warnings will be displayed, and you'll be given the chance
 to correct the flags you passed.
+"""
 
->>> What packages does the library depend upon ? """
+C_SOURCES_PROMPT=\
+"""
+Please pass a list of c source files (headers and implementation).
 
+You can pass wildcards here, for example:
+
+>>> ['../foo/*.c', '../foo/*.h']
+
+These wildcards will be evaluated each time hotdoc is run.
+
+You will be prompted for source files to ignore afterwards.
+"""
+
+C_FILTERS_PROMPT=\
+"""
+Please pass a list of c source files to ignore.
+
+You can pass wildcards here, for example:
+
+>>> ['../foo/*priv*']
+
+These wildcards will be evaluated each time hotdoc is run.
+"""
 def validate_pkg_config_packages(wizard, packages):
     if type(packages) != list:
         print "Incorrect type, expected list or None"
@@ -525,43 +542,7 @@ def flags_from_args(args):
     flags.extend(args.get('extra_c_flags', []))
     return flags
 
-def prompt_pkg_config(wizard, arg):
-    flags = []
-    packages = wizard.prompt_key('pkg_config_packages',
-            prompt=CFLAGS_PROMPT, title='pkg config packages',
-            validate_function=validate_pkg_config_packages)
-    extra_flags = wizard.prompt_key('extra_c_flags',
-            prompt='>>> Additional flags (-I, -D, ...) ?',
-            title='additional flags',
-            validate_function=QuickStartWizard.validate_list)
-
-    sources = source_files_from_args(wizard.args)
-    flags = flags_from_args(wizard.args)
-
-    if not sources:
-        return packages
-
-    print "scanning", sources
-    print "with flags", flags
-    scanner = ClangScanner(wizard, False,
-                ['*.h'])
-
-    if not scanner.scan(sources, flags, False, fail_fast=True):
-        if wizard.ask_confirmation("Scanning failed, try again [y,n]? "):
-            return prompt_pkg_config(wizard, arg)
-
-    print '\nScanning complete, no errors\n'
-    print '%d symbols found' % len(wizard.symbols)
-    print '%d comments found\n' % len(wizard.comments)
-
-    wizard.wait_for_continue()
-
-    return packages
-
-def c_prompt_done(wizard, group):
-    if wizard.comments or wizard.symbols:
-        return
-
+def validate_c_extension(wizard, group):
     sources = source_files_from_args(wizard.args)
 
     if not sources:
@@ -574,8 +555,10 @@ def c_prompt_done(wizard, group):
                 ['*.h'])
 
     if not scanner.scan(sources, flags, False, fail_fast=True):
-        if wizard.ask_confirmation("Scanning failed, try again [y,n]? "):
-            return c_prompt_done(wizard, group)
+        if not wizard.ask_confirmation("Scanning failed, try again [y,n]? "):
+            raise Skip
+        return False
+    return True
 
 def resolve_patterns(source_patterns):
     source_files = []
@@ -583,12 +566,6 @@ def resolve_patterns(source_patterns):
         source_files.extend(glob.glob(item))
 
     return source_files
-
-def prompt_source_files(wizard, parser):
-    return wizard.prompt_key('c_sources',
-            prompt="You will be prompted for possible filters afterwards ? ",
-            title='C source files to parse',
-            validate_function=QuickStartWizard.validate_globs_list)
 
 def validate_filters(wizard, thing):
     if not QuickStartWizard.validate_globs_list(wizard, thing):
@@ -604,11 +581,10 @@ def validate_filters(wizard, thing):
 
     return wizard.ask_confirmation()
 
-def prompt_source_filters(wizard, parser):
-    return wizard.prompt_key('c_source_filters',
-            prompt="Filters ? ",
-            title='C source filters',
-            validate_function=validate_filters)
+DESCRIPTION =\
+"""
+Parse C source files to extract comments and symbols.
+"""
 
 class CExtension(BaseExtension):
     EXTENSION_NAME = 'c-extension'
@@ -631,18 +607,22 @@ class CExtension(BaseExtension):
     @staticmethod
     def add_arguments (parser):
         group = parser.add_argument_group('C extension', DESCRIPTION,
-                prompt_done_action=c_prompt_done)
+                validate_function=validate_c_extension)
         group.add_argument ("--c-sources", action="store", nargs="+",
                 dest="c_sources", help="C source files to parse",
-                default=[], prompt_action=prompt_source_files)
+                extra_prompt=C_SOURCES_PROMPT,
+                default=[],
+                validate_function=QuickStartWizard.validate_globs_list)
         group.add_argument ("--c-source-filters", action="store", nargs="+",
                 dest="c_source_filters", help="C source files to ignore",
-                default=[], prompt_action=prompt_source_filters)
+                extra_prompt=C_FILTERS_PROMPT,
+                default=[], validate_function=validate_filters)
         group.add_argument ("--pkg-config-packages", action="store", nargs="+",
                 dest="pkg_config_packages", help="Packages the library depends upon",
                 default=[],
-                prompt_action=prompt_pkg_config)
+                extra_prompt=PKG_PROMPT,
+                validate_function=validate_pkg_config_packages)
         group.add_argument ("--extra-c-flags", action="store", nargs="+",
-                dest="extra_c_flags", help="Packages the library depends upon",
+                dest="extra_c_flags", help="Extra C flags (-D, -I)",
                 default=[],
-                prompt_action=None)
+                validate_function=QuickStartWizard.validate_list)

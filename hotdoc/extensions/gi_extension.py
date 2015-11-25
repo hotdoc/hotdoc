@@ -14,6 +14,8 @@ from hotdoc.core.wizard import Skip
 from hotdoc.transition_scripts.sgml_to_sections import parse_sections, convert_to_markdown
 from hotdoc.transition_scripts.patcher import Patcher
 from hotdoc.extensions.gtk_doc_parser import GtkDocParser
+from hotdoc.core.doc_tool import HotdocWizard
+from hotdoc.extensions.c_extension import validate_c_extension
 
 from lxml import etree as ET
 
@@ -545,6 +547,7 @@ def patch_comments(wizard, patcher, comments):
                 comment.endlineno, comment.raw_comment)
 
     if wizard.git_interface is not None:
+        wizard.before_prompt()
         if wizard.ask_confirmation(PROMPT_COMMIT):
 
             for comment in comments:
@@ -561,6 +564,7 @@ def translate_section_file(sections_path):
     subprocess.check_call(cmd)
 
 def port_from_gtk_doc(wizard):
+    validate_c_extension(wizard, None)
     patcher = Patcher()
 
     wizard.wait_for_continue(PROMPT_GTK_PORT_MAIN)
@@ -571,6 +575,8 @@ def port_from_gtk_doc(wizard):
     translate_section_file(sections_path)
 
     section_comments, class_comments = get_section_comments(wizard)
+
+    wizard.before_prompt()
 
     if not wizard.ask_confirmation(PROMPT_SECTIONS_CONVERSION %
             (len(section_comments), len(class_comments))):
@@ -588,7 +594,7 @@ def port_from_gtk_doc(wizard):
     convert_to_markdown(sgml_path, 'hotdoc-tmp-sections.txt', folder,
             section_comments, 'gobject-api.markdown')
 
-    return (os.path.join(folder), 'gobject-api.markdown')
+    return 'gobject-api.markdown'
 
 PROMPT_GI_INDEX=\
 """
@@ -606,12 +612,11 @@ There are three ways to provide this index:
 
 - Converting existing gtk-doc files.
 - Generating one
-- Pass one that you wrote yourself following the guidelines linked to above.
 
 You can of course skip this phase for now, and come back to it later.
 """
 
-def prompt_gi_index(wizard, parser):
+def prompt_gi_index(wizard):
     choice = wizard.propose_choice(
             ["Create index from a gtk-doc project",
              "Generate index from scratch",
@@ -624,6 +629,28 @@ def prompt_gi_index(wizard, parser):
         res = port_from_gtk_doc(wizard)
 
     return res
+
+class GIWizard(HotdocWizard):
+    def do_quick_start(self, args):
+        if not HotdocWizard.default_group_prompt(self, self.chief_wizard,
+                self.parser):
+            return False
+
+        self.before_prompt()
+        print PROMPT_GI_INDEX
+        choice = self.chief_wizard.propose_choice(
+                ["Create index from a gtk-doc project",
+                 "Generate index from scratch",
+                 ]
+                )
+
+        if choice == 0:
+            args['gi_index'] = port_from_gtk_doc(self.chief_wizard)
+
+        return HotdocWizard.do_quick_start(self, args)
+
+    def default_group_prompt(self, chief_wizard, parser):
+        return True
 
 class GIExtension(BaseExtension):
     EXTENSION_NAME = "gi-extension"
@@ -667,7 +694,8 @@ class GIExtension(BaseExtension):
 
     @staticmethod
     def add_arguments (parser):
-        group = parser.add_argument_group('GObject-introspection extension', DESCRIPTION)
+        group = parser.add_argument_group('GObject-introspection extension',
+                DESCRIPTION, wizard_class=GIWizard)
         group.add_argument ("--gir-file", action="store",
                 dest="gir_file", required=True,
                 help="Path to the gir file of the documented library")
@@ -679,8 +707,7 @@ class GIExtension(BaseExtension):
                 help="Major version of the library")
         group.add_argument ("--gi-index", action="store",
                 dest="gi_index", required=True,
-                help="Path to the root markdown file",
-                prompt_action=prompt_gi_index)
+                help="Path to the root markdown file")
 
     def __gather_gtk_doc_links (self):
         sgml_dir = os.path.join(self.doc_tool.datadir, "gtk-doc", "html")

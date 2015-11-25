@@ -16,7 +16,7 @@ from .symbols import *
 from .base_extension import BaseExtension
 from .alchemy_integration import Base
 from .doc_tree import DocTree
-from .wizard import QuickStartWizard, QUICKSTART_HELP
+from .wizard import QuickStartWizard, QUICKSTART_HELP, Skip
 
 from ..utils.utils import all_subclasses
 from ..utils.simple_signals import Signal
@@ -85,9 +85,15 @@ The author name and mail address will be 'hotdoc' and
 
 Note: here as everywhere else, you can answer None to
 skip the question.
-
-Path to the root git repository?
 """
+
+def validate_git_repo(wizard, path):
+    try:
+        git_interface = GitInterface(path)
+        return True
+    except Exception as e:
+        print "This does not look like a git repo : %s" % path
+        return False
 
 class HotdocWizard(QuickStartWizard):
     def __init__(self, *args, **kwargs):
@@ -123,8 +129,6 @@ class HotdocWizard(QuickStartWizard):
         return symbol
 
     def clear_screen(self):
-        print "screen cleared"
-        return
         sys.stdout.write(self.tc.CLEAR_SCREEN)
         sys.stdout.write(self.tc.RED + self.tc.BOLD + HOTDOC_ASCII +
                 self.tc.NORMAL)
@@ -132,37 +136,28 @@ class HotdocWizard(QuickStartWizard):
     def before_prompt(self):
         self.clear_screen()
 
-    def validate_git_repo(self, wizard, path):
-        try:
-            git_interface = GitInterface(path)
-            return True
-        except Exception as e:
-            print "This does not look like a git repo : %s" % path
-            return False
-
-    def prompt_for_git_repo(self, wizard):
-        path = self.prompt_key('git_repo', prompt=PROMPT_GIT_REPO,
-                title="the path to the root of the git repository",
-                validate_function=self.validate_git_repo)
-
-        if path:
-            self.git_interface = GitInterface(path)
-
     def default_main_prompt(self, wizard, parser):
-        self.clear_screen()
-        print self.tc.BOLD + "Hotdoc started without arguments, starting setup" + self.tc.NORMAL
-        print self.tc.CYAN + QUICKSTART_HELP + self.tc.NORMAL
+        prompt = self.tc.BOLD + "\nHotdoc started without arguments, starting setup\n" + self.tc.NORMAL
+        prompt += self.tc.CYAN + QUICKSTART_HELP + self.tc.NORMAL
 
         if self.args:
-            print "\nFound existing configuration file (hotdoc.json)\n"
-            print self.tc.RED + self.tc.BOLD + \
-                    "Preparing to update, remove hotdoc.json to start from scratch" + \
+            prompt += "\nFound existing configuration file (hotdoc.json)\n"
+            prompt += self.tc.RED + self.tc.BOLD + \
+                    "\nPreparing to update, remove hotdoc.json to start from scratch\n" + \
                     self.tc.NORMAL
 
-        if not wizard.wait_for_continue('\nPress Enter to start setup '):
+        prompt += '\nPress Enter to start setup '
+        if not wizard.wait_for_continue(prompt):
             return False
 
-        self.prompt_for_git_repo(wizard)
+        try:
+            repo_path = self.prompt_key('git_repo', prompt=">>> Path to the git repo ? ",
+                    title="the path to the root of the git repository",
+                    extra_prompt=PROMPT_GIT_REPO,
+                    validate_function=validate_git_repo)
+            self.git_interface = GitInterface(repo_path)
+        except Skip:
+            pass
 
         return True
 
