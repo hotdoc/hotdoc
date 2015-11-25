@@ -527,28 +527,28 @@ def validate_pkg_config_packages(wizard, packages):
 
     return True
 
-def source_files_from_args(args):
-    sources = resolve_patterns(args.get('c_sources', []))
-    filters = resolve_patterns(args.get('c_source_filters', []))
+def source_files_from_config(config):
+    sources = resolve_patterns(config.get('c_sources', []))
+    filters = resolve_patterns(config.get('c_source_filters', []))
     sources = [item for item in sources if item not in filters]
     return sources
 
-def flags_from_args(args):
+def flags_from_config(config):
     flags = []
 
-    for package in args.get('pkg_config_packages', []):
+    for package in config.get('pkg_config_packages', []):
         flags.extend(pkgconfig.cflags(package).split(' '))
 
-    flags.extend(args.get('extra_c_flags', []))
+    flags.extend(config.get('extra_c_flags', []))
     return flags
 
-def validate_c_extension(wizard, group):
-    sources = source_files_from_args(wizard.args)
+def validate_c_extension(wizard):
+    sources = source_files_from_config(wizard.config)
 
     if not sources:
         return
 
-    flags = flags_from_args(wizard.args)
+    flags = flags_from_config(wizard.config)
 
     print "scanning C sources"
     scanner = ClangScanner(wizard, False,
@@ -571,7 +571,7 @@ def validate_filters(wizard, thing):
     if not QuickStartWizard.validate_globs_list(wizard, thing):
         return False
 
-    source_files = resolve_patterns(wizard.args.get('c_sources', []))
+    source_files = resolve_patterns(wizard.config.get('c_sources', []))
 
     filters = resolve_patterns(thing)
 

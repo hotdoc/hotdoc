@@ -546,7 +546,7 @@ def patch_comments(wizard, patcher, comments):
         patcher.patch(comment.filename, comment.lineno - 1,
                 comment.endlineno, comment.raw_comment)
 
-    if wizard.git_interface is not None:
+    if wizard.git_interface.repo_path is not None:
         wizard.before_prompt()
         if wizard.ask_confirmation(PROMPT_COMMIT):
 
@@ -564,7 +564,7 @@ def translate_section_file(sections_path):
     subprocess.check_call(cmd)
 
 def port_from_gtk_doc(wizard):
-    validate_c_extension(wizard, None)
+    validate_c_extension(wizard)
     patcher = Patcher()
 
     wizard.wait_for_continue(PROMPT_GTK_PORT_MAIN)
@@ -614,42 +614,28 @@ There are three ways to provide this index:
 - Generating one
 
 You can of course skip this phase for now, and come back to it later.
+
 """
 
-def prompt_gi_index(wizard):
-    choice = wizard.propose_choice(
-            ["Create index from a gtk-doc project",
-             "Generate index from scratch",
-             "Use a custom index"
-             ]
-            )
-
-    res = None
-    if choice == 0:
-        res = port_from_gtk_doc(wizard)
-
-    return res
-
 class GIWizard(HotdocWizard):
-    def do_quick_start(self, args):
-        if not HotdocWizard.default_group_prompt(self, self.chief_wizard,
-                self.parser):
+    def do_quick_start(self):
+        if not HotdocWizard.group_prompt(self):
             return False
 
         self.before_prompt()
-        print PROMPT_GI_INDEX
-        choice = self.chief_wizard.propose_choice(
+        choice = self.propose_choice(
                 ["Create index from a gtk-doc project",
                  "Generate index from scratch",
-                 ]
+                 ],
+                extra_prompt=PROMPT_GI_INDEX
                 )
 
         if choice == 0:
-            args['gi_index'] = port_from_gtk_doc(self.chief_wizard)
+            self.config['gi_index'] = port_from_gtk_doc(self)
 
-        return HotdocWizard.do_quick_start(self, args)
+        return HotdocWizard.do_quick_start(self)
 
-    def default_group_prompt(self, chief_wizard, parser):
+    def group_prompt(self):
         return True
 
 class GIExtension(BaseExtension):

@@ -11,7 +11,16 @@ class Patcher(object):
             f.write(res)
 
 class GitInterface(object):
-    def __init__(self, repo_path):
+    def __init__(self, repo_path=None):
+        if repo_path:
+            self.repo_path = os.path.abspath(repo_path)
+            self.repo = git.Repository(self.repo_path)
+            self.index = self.repo.index
+            self.commiter = git.Signature('hotdoc', 'hotdoc@hotdoc.net')
+        else:
+            self.repo_path = None
+
+    def set_repo_path(self, repo_path):
         self.repo_path = os.path.abspath(repo_path)
         self.repo = git.Repository(self.repo_path)
         self.index = self.repo.index

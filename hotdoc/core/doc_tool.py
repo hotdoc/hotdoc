@@ -98,10 +98,27 @@ def validate_git_repo(wizard, path):
 class HotdocWizard(QuickStartWizard):
     def __init__(self, *args, **kwargs):
         QuickStartWizard.__init__(self, *args, **kwargs)
-        self.comments = {}
-        self.symbols = {}
-        self.tc = TerminalController()
-        self.git_interface = None
+        if self.parent == self:
+            self.comments = {}
+            self.symbols = {}
+            self.tc = TerminalController()
+            self.git_interface = GitInterface()
+
+            try:
+                with open('hotdoc.json', 'r') as f:
+                    contents = f.read()
+            except IOError:
+                contents = '{}'
+
+            try:
+                self.config = json.loads(contents)
+            except ValueError:
+                pass
+        else:
+            self.comments = self.parent.comments
+            self.symbols = self.parent.symbols
+            self.tc = self.parent.tc
+            self.git_interface = self.parent.git_interface
 
     def add_comment(self, comment):
         self.comments[comment.name] = comment
@@ -128,26 +145,21 @@ class HotdocWizard(QuickStartWizard):
 
         return symbol
 
-    def clear_screen(self):
-        sys.stdout.write(self.tc.CLEAR_SCREEN)
-        sys.stdout.write(self.tc.RED + self.tc.BOLD + HOTDOC_ASCII +
-                self.tc.NORMAL)
-
     def before_prompt(self):
-        self.clear_screen()
+        self.__clear_screen()
 
-    def default_main_prompt(self, wizard, parser):
+    def main_prompt(self):
         prompt = self.tc.BOLD + "\nHotdoc started without arguments, starting setup\n" + self.tc.NORMAL
         prompt += self.tc.CYAN + QUICKSTART_HELP + self.tc.NORMAL
 
-        if self.args:
+        if self.config:
             prompt += "\nFound existing configuration file (hotdoc.json)\n"
             prompt += self.tc.RED + self.tc.BOLD + \
                     "\nPreparing to update, remove hotdoc.json to start from scratch\n" + \
                     self.tc.NORMAL
 
         prompt += '\nPress Enter to start setup '
-        if not wizard.wait_for_continue(prompt):
+        if not self.wait_for_continue(prompt):
             return False
 
         try:
@@ -155,28 +167,22 @@ class HotdocWizard(QuickStartWizard):
                     title="the path to the root of the git repository",
                     extra_prompt=PROMPT_GIT_REPO,
                     validate_function=validate_git_repo)
-            self.git_interface = GitInterface(repo_path)
+            self.git_interface.set_repo_path(repo_path)
         except Skip:
             pass
 
         return True
 
     def quick_start(self):
-        try:
-            with open('hotdoc.json', 'r') as f:
-                contents = f.read()
-        except IOError:
-            contents = '{}'
-
-        try:
-            self.args = json.loads(contents)
-        except ValueError:
-            self.args = {}
-
         QuickStartWizard.quick_start(self)
 
         with open('hotdoc.json', 'w') as f:
-            f.write(json.dumps(self.args, indent=4))
+            f.write(json.dumps(self.config, indent=4))
+
+    def __clear_screen(self):
+        sys.stdout.write(self.tc.CLEAR_SCREEN)
+        sys.stdout.write(self.tc.RED + self.tc.BOLD + HOTDOC_ASCII +
+                self.tc.NORMAL)
 
 class DocTool(Loggable):
     def __init__(self):
