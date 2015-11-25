@@ -11,7 +11,7 @@ from hotdoc.core.comment_block import comment_from_tag
 from hotdoc.lexer_parsers.c_comment_scanner.c_comment_scanner import get_comments
 from hotdoc.core.links import Link
 from hotdoc.extensions.gi_raw_parser import GtkDocRawCommentParser
-from hotdoc.core.wizard import Skip
+from hotdoc.core.wizard import Skip, QuickStartWizard
 
 def ast_node_is_function_pointer (ast_node):
     if ast_node.kind == clang.cindex.TypeKind.POINTER and \
@@ -498,7 +498,7 @@ to correct the flags you passed.
 
 >>> What packages does the library depend upon ? """
 
-def validate_pkg_config_packages(packages):
+def validate_pkg_config_packages(wizard, packages):
     if type(packages) != list:
         print "Incorrect type, expected list or None"
         return False
@@ -525,7 +525,7 @@ def flags_from_args(args):
     flags.extend(args.get('extra_c_flags', []))
     return flags
 
-def prompt_pkg_config(wizard, qsshell, arg):
+def prompt_pkg_config(wizard, arg):
     flags = []
     packages = wizard.prompt_key('pkg_config_packages',
             prompt=CFLAGS_PROMPT, title='pkg config packages',
@@ -533,7 +533,7 @@ def prompt_pkg_config(wizard, qsshell, arg):
     extra_flags = wizard.prompt_key('extra_c_flags',
             prompt='>>> Additional flags (-I, -D, ...) ?',
             title='additional flags',
-            validate_function=wizard.validate_list)
+            validate_function=QuickStartWizard.validate_list)
 
     sources = source_files_from_args(wizard.args)
     flags = flags_from_args(wizard.args)
@@ -548,7 +548,7 @@ def prompt_pkg_config(wizard, qsshell, arg):
 
     if not scanner.scan(sources, flags, False, fail_fast=True):
         if wizard.ask_confirmation("Scanning failed, try again [y,n]? "):
-            return prompt_pkg_config(wizard, qsshell, arg)
+            return prompt_pkg_config(wizard, arg)
 
     print '\nScanning complete, no errors\n'
     print '%d symbols found' % len(wizard.symbols)
@@ -558,7 +558,7 @@ def prompt_pkg_config(wizard, qsshell, arg):
 
     return packages
 
-def c_prompt_done(wizard, qsshell, group):
+def c_prompt_done(wizard, group):
     if wizard.comments or wizard.symbols:
         return
 
@@ -574,8 +574,8 @@ def c_prompt_done(wizard, qsshell, group):
                 ['*.h'])
 
     if not scanner.scan(sources, flags, False, fail_fast=True):
-        if qsshell.ask_confirmation("Scanning failed, try again [y,n]? "):
-            return c_prompt_done(wizard, qsshell, group)
+        if wizard.ask_confirmation("Scanning failed, try again [y,n]? "):
+            return c_prompt_done(wizard, group)
 
 def resolve_patterns(source_patterns):
     source_files = []
@@ -584,28 +584,31 @@ def resolve_patterns(source_patterns):
 
     return source_files
 
-def prompt_source_files(wizard, qsshell, parser):
-    return wizard.default_prompt_filenames(wizard, qsshell, parser,
-            extra_prompt="You will be prompted for possible filters afterwards")
+def prompt_source_files(wizard, parser):
+    return wizard.prompt_key('c_sources',
+            prompt="You will be prompted for possible filters afterwards ? ",
+            title='C source files to parse',
+            validate_function=QuickStartWizard.validate_globs_list)
 
-def prompt_source_filters(wizard, qsshell, parser):
+def validate_filters(wizard, thing):
+    if not QuickStartWizard.validate_globs_list(wizard, thing):
+        return False
+
     source_files = resolve_patterns(wizard.args.get('c_sources', []))
 
-    extra_prompt = 'current files to be parsed : %s' % source_files
-
-    res = wizard.default_prompt_filenames(wizard, qsshell, parser,
-            extra_prompt=extra_prompt)
-
-    filters = resolve_patterns(res)
+    filters = resolve_patterns(thing)
 
     source_files = [item for item in source_files if item not in filters]
 
     print "The files to be parsed would now be %s" % source_files
 
-    if qsshell.ask_confirmation():
-        return res
+    return wizard.ask_confirmation()
 
-    return prompt_source_filters(wizard, qsshell, parser)
+def prompt_source_filters(wizard, parser):
+    return wizard.prompt_key('c_source_filters',
+            prompt="Filters ? ",
+            title='C source filters',
+            validate_function=validate_filters)
 
 class CExtension(BaseExtension):
     EXTENSION_NAME = 'c-extension'

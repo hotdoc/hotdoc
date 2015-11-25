@@ -123,6 +123,7 @@ class HotdocWizard(QuickStartWizard):
         return symbol
 
     def clear_screen(self):
+        print "screen cleared"
         return
         sys.stdout.write(self.tc.CLEAR_SCREEN)
         sys.stdout.write(self.tc.RED + self.tc.BOLD + HOTDOC_ASCII +
@@ -131,16 +132,7 @@ class HotdocWizard(QuickStartWizard):
     def before_prompt(self):
         self.clear_screen()
 
-    def default_arg_prompt(self, chief_wizard, qsshell, arg):
-        self.clear_screen()
-        return QuickStartWizard.default_arg_prompt(self, chief_wizard, qsshell,
-                arg)
-
-    def default_group_prompt(self, chief_wizard, qsshell, group):
-        self.clear_screen()
-        return QuickStartWizard.default_group_prompt(self, chief_wizard, qsshell, group)
-
-    def validate_git_repo(self, path):
+    def validate_git_repo(self, wizard, path):
         try:
             git_interface = GitInterface(path)
             return True
@@ -148,7 +140,7 @@ class HotdocWizard(QuickStartWizard):
             print "This does not look like a git repo : %s" % path
             return False
 
-    def prompt_for_git_repo(self, chief_wizard, qsshell):
+    def prompt_for_git_repo(self, wizard):
         path = self.prompt_key('git_repo', prompt=PROMPT_GIT_REPO,
                 title="the path to the root of the git repository",
                 validate_function=self.validate_git_repo)
@@ -156,7 +148,7 @@ class HotdocWizard(QuickStartWizard):
         if path:
             self.git_interface = GitInterface(path)
 
-    def default_main_prompt(self, chief_wizard, qsshell, parser):
+    def default_main_prompt(self, wizard, parser):
         self.clear_screen()
         print self.tc.BOLD + "Hotdoc started without arguments, starting setup" + self.tc.NORMAL
         print self.tc.CYAN + QUICKSTART_HELP + self.tc.NORMAL
@@ -167,19 +159,12 @@ class HotdocWizard(QuickStartWizard):
                     "Preparing to update, remove hotdoc.json to start from scratch" + \
                     self.tc.NORMAL
 
-        if not qsshell.wait_for_continue('\nPress Enter to start setup '):
+        if not wizard.wait_for_continue('\nPress Enter to start setup '):
             return False
 
-        self.prompt_for_git_repo(chief_wizard, qsshell)
+        self.prompt_for_git_repo(wizard)
 
         return True
-
-    def default_prompt_filenames(self, chief_wizard, qsshell, parser,
-            extra_prompt=None):
-        self.clear_screen()
-        res = QuickStartWizard.default_prompt_filenames(self, chief_wizard, qsshell,
-                parser, extra_prompt)
-        return res
 
     def quick_start(self):
         try:

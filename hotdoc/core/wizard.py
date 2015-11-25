@@ -90,7 +90,7 @@ class QuickStartArgument(object):
         self.chief_wizard = chief_wizard
         self.extra_prompt = extra_prompt
 
-    def do_quick_start(self, qsshell, result_dict):
+    def do_quick_start(self, result_dict):
         if not self.prompt_action:
             raise Skip
 
@@ -99,12 +99,12 @@ class QuickStartArgument(object):
         if current_value is not None:
             print 'Current value for %s : %s' % (self.argument.dest,
                     current_value)
-            update = qsshell.ask_confirmation('Update [y,n]? ')
+            update = self.chief_wizard.ask_confirmation('Update [y,n]? ')
 
         if not update:
             raise Skip
 
-        res = self.prompt_action(self.chief_wizard, qsshell, self.argument)
+        res = self.prompt_action(self.chief_wizard, self.argument)
         result_dict[self.argument.dest] = res
 
 FILENAMES_PROMPT=\
@@ -145,10 +145,10 @@ class QuickStartWizard(object):
             self.chief_wizard = self
         self.prompt_done_action = prompt_done_action
 
-    def default_arg_prompt(self, chief_wizard, qsshell, arg):
-        return qsshell.ask('>>> %s ? ' % arg.help)
+    def default_arg_prompt(self, chief_wizard, arg):
+        return chief_wizard.qsshell.ask('>>> %s ? ' % arg.help)
 
-    def default_group_prompt(self, chief_wizard, qsshell, group):
+    def default_group_prompt(self, chief_wizard, group):
         if type(group) == argparse.ArgumentParser:
             title = group.prog
         else:
@@ -166,47 +166,10 @@ class QuickStartWizard(object):
 
         question += 'Would you like to configure %s [y,n]? ' % title
 
-        return qsshell.ask_confirmation(question)
+        return chief_wizard.ask_confirmation(question)
 
-    def default_main_prompt(self, chief_wizard, qsshell, chief):
-        return self.default_group_prompt(chief_wizard, qsshell, arg)
-
-    def default_prompt_filenames(self, chief_wizard, qsshell, arg,
-            extra_prompt=None):
-        print FILENAMES_PROMPT
-
-        if extra_prompt:
-            print extra_prompt
-
-        res = None
-        correct_type = False
-
-        while not correct_type:
-            try:
-                res = qsshell.ask('>>> %s ?' % arg.help)
-            except Skip:
-                break
-
-            if type(res) == list:
-                correct_type = True
-            else:
-                print "Incorrect type, expected list or None"
-
-        current_result = []
-
-        if res is None:
-            return []
-
-        for item in res:
-            current_result.extend (glob.glob(item))
-
-        print "The expression(s) currently resolve(s) to:"
-        print current_result
-
-        if not qsshell.ask_confirmation():
-            return self.default_prompt_filenames(chief_wizard, qsshell, arg)
-
-        return res
+    def default_main_prompt(self, chief_wizard, chief):
+        return self.default_group_prompt(chief_wizard, arg)
 
     def propose_choice(self, choices, skippable=True):
         self.before_prompt()
@@ -246,15 +209,6 @@ class QuickStartWizard(object):
 
         return int(res)
 
-    def prompt_filename(self, qsshell, needs_to_exist=False, prompt='>>> Path ? '):
-        res = qsshell.ask(prompt)
-
-        if needs_to_exist and not os.path.exists(res):
-            print "The provided path (%s) does not exist" % res
-            return self.prompt_filename(qsshell, needs_to_exist=True)
-
-        return res
-
     def ask_confirmation(self, prompt='Confirm [y,n]? '):
         res = None
         while res is None:
@@ -265,7 +219,8 @@ class QuickStartWizard(object):
                 res = False
         return res
 
-    def validate_folder(self, path):
+    @staticmethod
+    def validate_folder(wizard, path):
         res = True
         if not os.path.exists(path):
             os.mkdir(path)
@@ -276,10 +231,15 @@ class QuickStartWizard(object):
 
         return res
 
-    def validate_list(self, thing):
-        return type(thing) == list
+    @staticmethod
+    def validate_list(wizard, thing):
+        res = type(thing) == list
+        if not res:
+            print "%s is not a list" % thing
+        return res
 
-    def check_path_is_file(self, path):
+    @staticmethod
+    def check_path_is_file(wizard, path):
         res = True
 
         if not os.path.exists(path):
@@ -290,6 +250,20 @@ class QuickStartWizard(object):
             res = False
 
         return res
+
+    @staticmethod
+    def validate_globs_list(wizard, thing):
+        if not wizard.validate_list(wizard, thing):
+            return False
+
+        resolved = []
+        for item in thing:
+            resolved.extend (glob.glob(item))
+
+        print "The expression(s) currently resolve(s) to:"
+        print resolved
+
+        return wizard.qsshell.ask_confirmation()
 
     def prompt_key(self, key, prompt=None, title=None,
             store=True, validate_function=None):
@@ -314,7 +288,7 @@ class QuickStartWizard(object):
             if validate_function is None:
                 validated = True
             else:
-                validated = validate_function(res)
+                validated = validate_function(self, res)
 
         if store:
             self.args[key] = res
@@ -358,7 +332,7 @@ class QuickStartWizard(object):
         self.qsshell = qsshell
 
         try:
-            if not self.do_quick_start(qsshell, self.args):
+            if not self.do_quick_start(self.args):
                 return None
         except EOFError:
             print "Aborting quick start"
@@ -366,49 +340,22 @@ class QuickStartWizard(object):
 
         return self.args
 
-    def do_quick_start(self, qsshell, args):
+    def do_quick_start(self, args):
         if self == self.chief_wizard:
             prompt = self.default_main_prompt
         else:
             prompt = self.default_group_prompt
 
-        if not prompt(self.chief_wizard, qsshell, self.parser):
+        if not prompt(self.chief_wizard, self.parser):
             if self.prompt_done_action:
-                self.prompt_done_action(self.chief_wizard, qsshell, self.parser)
+                self.prompt_done_action(self.chief_wizard, self.parser)
             return False
 
         for obj in self._qs_objects:
             try:
-                obj.do_quick_start(qsshell, args)
+                obj.do_quick_start(args)
             except Skip:
                 pass
 
         if self.prompt_done_action:
-            self.prompt_done_action(self.chief_wizard, qsshell, self.parser)
-
-
-if __name__=='__main__':
-    def main_prompt(qsshell, parser):
-        print "Starting setup .."
-        print QUICKSTART_HELP
-        return True
-
-    parser = argparse.ArgumentParser(description='Documentation tool.')
-    wizard = QuickStartWizard(parser, prompt_action=main_prompt)
-
-    group = parser.add_argument_group('c-extension')
-
-    parser.add_argument('--index', action='store', dest='index',
-            help='Location of the index file')
-
-    group.add_argument("--c-sources", action="store", nargs="+",
-            dest="c_sources", help="C source files to parse",
-            default=[])
-
-    args = parser.parse_args()
-
-#print "ze command line args are:", json.dumps(vars(args), indent=4)
-
-    conf_args = wizard.quick_start ()
-
-    print "ze quick started conf is :", json.dumps(conf_args, indent=4)
+            self.prompt_done_action(self.chief_wizard, self.parser)

@@ -611,7 +611,7 @@ There are three ways to provide this index:
 You can of course skip this phase for now, and come back to it later.
 """
 
-def prompt_gi_index(wizard, qsshell, parser):
+def prompt_gi_index(wizard, parser):
     choice = wizard.propose_choice(
             ["Create index from a gtk-doc project",
              "Generate index from scratch",
