@@ -419,8 +419,12 @@ class GIRParser(object):
 DESCRIPTION=\
 """
 Parse a gir file and add signals, properties, classes
-and virtual methods. Can output documentation for various
-languages. Must be used in combination with the C extension.
+and virtual methods.
+
+Can output documentation for various
+languages.
+
+Must be used in combination with the C extension.
 """
 
 PROMPT_GTK_PORT_MAIN=\
@@ -623,15 +627,18 @@ class GIWizard(HotdocWizard):
             return False
 
         self.before_prompt()
-        choice = self.propose_choice(
-                ["Create index from a gtk-doc project",
-                 "Generate index from scratch",
-                 ],
-                extra_prompt=PROMPT_GI_INDEX
-                )
+        try:
+            choice = self.propose_choice(
+                    ["Create index from a gtk-doc project",
+                    "Generate index from scratch",
+                    ],
+                    extra_prompt=PROMPT_GI_INDEX
+                    )
 
-        if choice == 0:
-            self.config['gi_index'] = port_from_gtk_doc(self)
+            if choice == 0:
+                self.config['gi_index'] = port_from_gtk_doc(self)
+        except Skip:
+            pass
 
         return HotdocWizard.do_quick_start(self)
 
@@ -683,16 +690,16 @@ class GIExtension(BaseExtension):
         group = parser.add_argument_group('GObject-introspection extension',
                 DESCRIPTION, wizard_class=GIWizard)
         group.add_argument ("--gir-file", action="store",
-                dest="gir_file", required=True,
+                dest="gir_file",
                 help="Path to the gir file of the documented library")
         group.add_argument ("--languages", action="store",
-                nargs='*', default=['c'],
+                nargs='*',
                 help="Languages to translate documentation in")
         group.add_argument ("--major-version", action="store",
-                dest="major_version", default='',
+                dest="major_version",
                 help="Major version of the library")
         group.add_argument ("--gi-index", action="store",
-                dest="gi_index", required=True,
+                dest="gi_index",
                 help="Path to the root markdown file")
 
     def __gather_gtk_doc_links (self):

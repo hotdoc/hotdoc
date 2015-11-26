@@ -138,8 +138,7 @@ class DBusExtension(BaseExtension):
     def add_arguments (parser):
         group = parser.add_argument_group('DBus extension', DESCRIPTION)
         group.add_argument ("--dbus-sources", action="store", nargs="+",
-                dest="dbus_sources", help="DBus interface files to parse",
-                default=[])
+                dest="dbus_sources", help="DBus interface files to parse")
         group.add_argument ("--dbus-index", action="store",
                 dest="dbus_index",
                 help="The dbus root markdown file")

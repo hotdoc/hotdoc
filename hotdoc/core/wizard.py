@@ -111,9 +111,9 @@ class QuickStartWizard(object):
             validate_function=None):
         self.group = group
         self._add_argument = group.add_argument
-        group.add_argument = self.__add_argument_override
+        group.add_argument = self._add_argument_override
         self._add_argument_group = group.add_argument_group
-        group.add_argument_group = self.__add_argument_group_override
+        group.add_argument_group = self._add_argument_group_override
         self._qs_objects = []
         self.parent = parent
         if parent is None:
@@ -325,7 +325,7 @@ class QuickStartWizard(object):
 
         return wizard.ask_confirmation()
 
-    def __add_argument_group_override(self, parser, *args, **kwargs):
+    def _add_argument_group_override(self, parser, *args, **kwargs):
         validate_function = kwargs.pop('validate_function', None)
         wizard_class = kwargs.pop('wizard_class', type(self.parent))
         res = self._add_argument_group(parser, *args, **kwargs)
@@ -335,7 +335,7 @@ class QuickStartWizard(object):
         self._qs_objects.append(wizard)
         return res
 
-    def __add_argument_override(self, group, *args, **kwargs):
+    def _add_argument_override(self, group, *args, **kwargs):
         validate_function = kwargs.pop('validate_function', None)
         extra_prompt = kwargs.pop('extra_prompt', None)
         arg = self._add_argument(group, *args, **kwargs)

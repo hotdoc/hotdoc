@@ -110,5 +110,4 @@ class PythonExtension(BaseExtension):
         group = parser.add_argument_group('Python extension',
                 DESCRIPTION)
         group.add_argument ("--python-sources", action="store", nargs="+",
-                dest="python_sources", help="Python source files to parse",
-                default=[])
+                dest="python_sources", help="Python source files to parse")

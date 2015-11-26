@@ -103,17 +103,7 @@ class HotdocWizard(QuickStartWizard):
             self.symbols = {}
             self.tc = TerminalController()
             self.git_interface = GitInterface()
-
-            try:
-                with open('hotdoc.json', 'r') as f:
-                    contents = f.read()
-            except IOError:
-                contents = '{}'
-
-            try:
-                self.config = json.loads(contents)
-            except ValueError:
-                pass
+            self.config = {}
         else:
             self.comments = self.parent.comments
             self.symbols = self.parent.symbols
@@ -152,12 +142,6 @@ class HotdocWizard(QuickStartWizard):
         prompt = self.tc.BOLD + "\nHotdoc started without arguments, starting setup\n" + self.tc.NORMAL
         prompt += self.tc.CYAN + QUICKSTART_HELP + self.tc.NORMAL
 
-        if self.config:
-            prompt += "\nFound existing configuration file (hotdoc.json)\n"
-            prompt += self.tc.RED + self.tc.BOLD + \
-                    "\nPreparing to update, remove hotdoc.json to start from scratch\n" + \
-                    self.tc.NORMAL
-
         prompt += '\nPress Enter to start setup '
         if not self.wait_for_continue(prompt):
             return False
@@ -176,13 +160,21 @@ class HotdocWizard(QuickStartWizard):
     def quick_start(self):
         QuickStartWizard.quick_start(self)
 
-        with open('hotdoc.json', 'w') as f:
-            f.write(json.dumps(self.config, indent=4))
-
     def __clear_screen(self):
         sys.stdout.write(self.tc.CLEAR_SCREEN)
         sys.stdout.write(self.tc.RED + self.tc.BOLD + HOTDOC_ASCII +
                 self.tc.NORMAL)
+
+    def _add_argument_override(self, group, *args, **kwargs):
+        kwargs['default'] = argparse.SUPPRESS
+        return QuickStartWizard._add_argument_override(self, group, *args, **kwargs)
+
+SUBCOMMAND_DESCRIPTION="""
+Valid subcommands.
+
+Exactly one subcommand is required.
+Run hotdoc {subcommand} -h for more info
+"""
 
 class DocTool(Loggable):
     def __init__(self):
@@ -309,6 +301,7 @@ class DocTool(Loggable):
 
         n = datetime.now()
         self.__setup(args)
+
         print "core setup takes", datetime.now() - n
 
         for extension in self.extensions.values():
@@ -355,7 +348,21 @@ class DocTool(Loggable):
         else:
             self.datadir = "/usr/share"
 
-        self.parser = argparse.ArgumentParser()
+        self.parser = \
+                argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,)
+
+        subparsers = self.parser.add_subparsers(title='commands', dest='cmd',
+                description=SUBCOMMAND_DESCRIPTION)
+        run_parser = subparsers.add_parser('run', help='run hotdoc')
+        run_parser.add_argument('--conf-file', help='Path to the config file',
+                dest='conf_file', default='hotdoc.json')
+
+        conf_parser = subparsers.add_parser('conf', help='configure hotdoc')
+        conf_parser.add_argument('--quickstart', help='run a quickstart wizard',
+                action='store_true')
+        conf_parser.add_argument('--conf-file', help='Path to the config file',
+                dest='conf_file', default='hotdoc.json')
+
         wizard = HotdocWizard(self.parser)
 
         extension_subclasses = all_subclasses (BaseExtension)
@@ -366,23 +373,58 @@ class DocTool(Loggable):
 
         self.parser.add_argument ("-i", "--index", action="store",
                 dest="index", help="location of the index file")
-        self.parser.add_argument ("-o", "--output", action="store", default='doc',
+        self.parser.add_argument ("-o", "--output", action="store",
                 dest="output", help="where to output the rendered documentation")
         self.parser.add_argument ("--output-format", action="store",
-                default="html", dest="output_format")
+                dest="output_format", help="format for the output")
         self.parser.add_argument ("-I", "--include-path", action="append",
-                default=[], dest="include_paths")
+                dest="include_paths", help="markdown include paths")
         self.parser.add_argument ("--html-theme", action="store",
-                dest="html_theme", default=None)
+                dest="html_theme", help="html theme to use")
+
 
         loggable_init("DOC_DEBUG")
 
-        if not args:
-            res = wizard.quick_start()
-            print res
+        args = self.parser.parse_args(args)
+        conf_file = args.conf_file
+        self.load_config(args, conf_file, wizard)
+
+        exit_now = False
+
+        if args.cmd == 'run':
+            self.parse_config(wizard.config)
+        elif args.cmd == 'conf':
+            if args.quickstart == True:
+                wizard.quick_start()
+                print """Quick start done, rerun the tool with 'run' if you
+want to build the documentation now"""
+                exit_now = True
+
+        with open(conf_file, 'w') as f:
+            f.write(json.dumps(wizard.config, indent=4))
+
+        if exit_now:
             sys.exit(0)
-        
-        self.parse_args(args)
+
+    def load_config(self, args, conf_file, wizard):
+        try:
+            with open(conf_file, 'r') as f:
+                contents = f.read()
+        except IOError:
+            contents = '{}'
+
+        try:
+            config = json.loads(contents)
+        except ValueError:
+            config = {}
+
+        wizard.config.update(config)
+        cli = dict(vars(args))
+        cli.pop('cmd', None)
+        cli.pop('quickstart', None)
+        cli.pop('conf_file', None)
+
+        wizard.config.update(cli)
 
     def __setup_folder(self, folder):
         if os.path.exists (folder):
@@ -394,21 +436,17 @@ class DocTool(Loggable):
 
     def __create_extensions (self, args):
         for ext_class in self.__extension_classes.values():
-            print ext_class
             ext = ext_class(self, args)
             self.extensions[ext.EXTENSION_NAME] = ext
 
     def get_private_folder(self):
         return os.path.abspath('hotdoc-private')
 
-    def parse_args (self, args):
-        self.args = args
-        args = self.parser.parse_args(args)
-
-        self.output = args.output
-        self.output_format = args.output_format
-        self.include_paths = args.include_paths
-        self.html_theme_path = args.html_theme
+    def parse_config (self, config):
+        self.output = config.get('output')
+        self.output_format = config.get('output_format')
+        self.include_paths = config.get('include_paths')
+        self.html_theme_path = config.get('html_theme')
 
         if self.output_format not in ["html"]:
             raise ConfigError ("Unsupported output format : %s" %
@@ -417,17 +455,16 @@ class DocTool(Loggable):
         self.__setup_folder('hotdoc-private')
 
         # FIXME: we might actually want not to be naive
-        #if not args.index:
+        #if not config.index:
         #    nif = NaiveIndexFormatter (self.c_source_scanner.symbols)
-        #    args.index = "tmp_markdown_files/tmp_index.markdown"
+        #    config.index = "tmp_markdown_files/tmp_index.markdown"
 
-        self.index_file = args.index
+        self.index_file = config.get('index')
 
         prefix = os.path.dirname(self.index_file)
         self.doc_tree = DocTree(self, prefix)
 
-        print vars(args)
-        self.__create_extensions (vars(args))
+        self.__create_extensions (config)
 
         self.doc_tree.build_tree(self.index_file)
         self.doc_tree.fill_symbol_maps()
@@ -439,8 +476,8 @@ class DocTool(Loggable):
         self.session.commit()
         pickle.dump(self.change_tracker, open(os.path.join(self.get_private_folder(),
             'change_tracker.p'), 'wb'))
-        pickle.dump(self.args, open(os.path.join(self.get_private_folder(),
-            'args.p'), 'wb'))
+        #pickle.dump(self.args, open(os.path.join(self.get_private_folder(),
+        #    'args.p'), 'wb'))
         self.doc_tree.persist()
 
     def finalize (self):

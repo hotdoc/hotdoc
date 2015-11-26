@@ -612,18 +612,15 @@ class CExtension(BaseExtension):
         group.add_argument ("--c-sources", action="store", nargs="+",
                 dest="c_sources", help="C source files to parse",
                 extra_prompt=C_SOURCES_PROMPT,
-                default=[],
                 validate_function=QuickStartWizard.validate_globs_list)
         group.add_argument ("--c-source-filters", action="store", nargs="+",
                 dest="c_source_filters", help="C source files to ignore",
                 extra_prompt=C_FILTERS_PROMPT,
-                default=[], validate_function=validate_filters)
+                validate_function=validate_filters)
         group.add_argument ("--pkg-config-packages", action="store", nargs="+",
                 dest="pkg_config_packages", help="Packages the library depends upon",
-                default=[],
                 extra_prompt=PKG_PROMPT,
                 validate_function=validate_pkg_config_packages)
         group.add_argument ("--extra-c-flags", action="store", nargs="+",
                 dest="extra_c_flags", help="Extra C flags (-D, -I)",
-                default=[],
                 validate_function=QuickStartWizard.validate_list)
