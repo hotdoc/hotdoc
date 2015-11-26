@@ -641,13 +641,13 @@ class GIWizard(HotdocWizard):
 class GIExtension(BaseExtension):
     EXTENSION_NAME = "gi-extension"
 
-    def __init__(self, doc_tool, args):
-        BaseExtension.__init__(self, doc_tool, args)
-        self.gir_file = args.gir_file
-        self.gi_index = args.gi_index
-        self.languages = [l.lower() for l in args.languages]
+    def __init__(self, doc_tool, config):
+        BaseExtension.__init__(self, doc_tool, config)
+        self.gir_file = config.get('gir_file')
+        self.gi_index = config.get('gi_index')
+        self.languages = [l.lower() for l in config.get('languages', [])]
         self.language = 'c'
-        self.major_version = args.major_version
+        self.major_version = config.get('major_version')
         self.gir_parser = None
 
         doc_tool.doc_tree.page_parser.register_well_known_name ('gobject-api',
@@ -1249,6 +1249,9 @@ class GIExtension(BaseExtension):
         return "gen-index"
 
     def setup (self):
+        if not self.gir_file:
+            return
+
         self.__gather_gtk_doc_links()
         self.gir_parser = GIRParser (self.doc_tool, self.gir_file)
         formatter = self.get_formatter(self.doc_tool.output_format)

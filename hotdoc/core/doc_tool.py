@@ -393,25 +393,22 @@ class DocTool(Loggable):
             os.mkdir (folder)
 
     def __create_extensions (self, args):
-        if args[0].extension_name:
-            ext = self.__extension_classes[args[0].extension_name](self, args[0])
+        for ext_class in self.__extension_classes.values():
+            print ext_class
+            ext = ext_class(self, args)
             self.extensions[ext.EXTENSION_NAME] = ext
-
-            if args[1]:
-                args = self.parser.parse_known_args (args[1])
-                self.__create_extensions (args)
 
     def get_private_folder(self):
         return os.path.abspath('hotdoc-private')
 
     def parse_args (self, args):
         self.args = args
-        args = self.parser.parse_known_args(args)
+        args = self.parser.parse_args(args)
 
-        self.output = args[0].output
-        self.output_format = args[0].output_format
-        self.include_paths = args[0].include_paths
-        self.html_theme_path = args[0].html_theme
+        self.output = args.output
+        self.output_format = args.output_format
+        self.include_paths = args.include_paths
+        self.html_theme_path = args.html_theme
 
         if self.output_format not in ["html"]:
             raise ConfigError ("Unsupported output format : %s" %
@@ -420,16 +417,17 @@ class DocTool(Loggable):
         self.__setup_folder('hotdoc-private')
 
         # FIXME: we might actually want not to be naive
-        if not args[0].index:
-            nif = NaiveIndexFormatter (self.c_source_scanner.symbols)
-            args[0].index = "tmp_markdown_files/tmp_index.markdown"
+        #if not args.index:
+        #    nif = NaiveIndexFormatter (self.c_source_scanner.symbols)
+        #    args.index = "tmp_markdown_files/tmp_index.markdown"
 
-        self.index_file = args[0].index
+        self.index_file = args.index
 
         prefix = os.path.dirname(self.index_file)
         self.doc_tree = DocTree(self, prefix)
 
-        self.__create_extensions (args)
+        print vars(args)
+        self.__create_extensions (vars(args))
 
         self.doc_tree.build_tree(self.index_file)
         self.doc_tree.fill_symbol_maps()

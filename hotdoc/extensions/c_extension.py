@@ -589,16 +589,17 @@ Parse C source files to extract comments and symbols.
 class CExtension(BaseExtension):
     EXTENSION_NAME = 'c-extension'
 
-    def __init__(self, doc_tool, args):
-        BaseExtension.__init__(self, doc_tool, args)
+    def __init__(self, doc_tool, config):
+        BaseExtension.__init__(self, doc_tool, config)
+        self.flags = flags_from_config(config)
+        sources = source_files_from_config(config)
         self.sources = [os.path.abspath(filename) for filename in
-                args.c_sources]
-        self.clang_options = args.clang_options
+                sources]
         self.scanner = ClangScanner(doc_tool, False,
                 ['*.h'])
 
     def setup(self):
-        self.scanner.scan(self.stale_source_files, self.clang_options,
+        self.scanner.scan(self.stale_source_files, self.flags,
                 self.doc_tool.incremental)
 
     def get_source_files(self):

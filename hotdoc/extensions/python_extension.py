@@ -92,8 +92,14 @@ Parse python source files and extract symbols and comments.
 class PythonExtension(BaseExtension):
     EXTENSION_NAME = 'python-extension'
 
-    def __init__(self, args):
-        self.sources = args.python_sources
+    def __init__(self, doc_tool, config):
+        BaseExtension.__init__(self, doc_tool, config)
+        self.sources = config.get('python_sources')
+
+    def setup(self):
+        if not self.sources:
+            return
+
         self.scanner = PythonScanner (self.sources)
 
     def get_extra_symbols (self):
@@ -105,4 +111,4 @@ class PythonExtension(BaseExtension):
                 DESCRIPTION)
         group.add_argument ("--python-sources", action="store", nargs="+",
                 dest="python_sources", help="Python source files to parse",
-                default=[], required = True)
+                default=[])

@@ -120,15 +120,18 @@ Parse DBus XML files and extract symbols and comments.
 class DBusExtension(BaseExtension):
     EXTENSION_NAME = 'dbus-extension'
 
-    def __init__(self, doc_tool, args):
-        BaseExtension.__init__(self, doc_tool, args)
-        self.sources = args.dbus_sources
-        self.dbus_index = args.dbus_index
+    def __init__(self, doc_tool, config):
+        BaseExtension.__init__(self, doc_tool, config)
+        self.sources = config.get('dbus_sources')
+        self.dbus_index = config.get('dbus_index')
 
         doc_tool.doc_tree.page_parser.register_well_known_name ('dbus-api',
                 self.dbus_index_handler)
 
     def setup (self):
+        if not self.sources:
+            return
+
         self.scanner = DBusScanner (self.doc_tool, self.sources)
 
     @staticmethod
@@ -136,9 +139,9 @@ class DBusExtension(BaseExtension):
         group = parser.add_argument_group('DBus extension', DESCRIPTION)
         group.add_argument ("--dbus-sources", action="store", nargs="+",
                 dest="dbus_sources", help="DBus interface files to parse",
-                default=[], required = True)
+                default=[])
         group.add_argument ("--dbus-index", action="store",
-                dest="dbus_index", required=True,
+                dest="dbus_index",
                 help="The dbus root markdown file")
 
     def dbus_index_handler(self, doc_tree):
