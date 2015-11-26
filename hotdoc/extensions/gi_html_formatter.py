@@ -297,9 +297,16 @@ class GIHtmlFormatter(HtmlFormatter):
 
         prop_link = self._format_linked_symbol (prop)
 
-        return template.render({'property_type': property_type,
+        tags = {}
+        if prop.comment:
+            tags = prop.comment.tags
+
+        return template.render({
+                                'symbol': prop,
+                                'tags': tags,
+                                'property_type': property_type,
                                 'property_link': prop_link,
-                                'extra': prop.extension_contents,
+                                'extra_contents': prop.extension_contents,
                                })
 
     def _format_gi_vmethod_summary (self, vmethod):
@@ -365,7 +372,8 @@ class GIHtmlFormatter(HtmlFormatter):
             return HtmlFormatter._format_constant (self, constant)
 
         template = self.engine.get_template('constant.html')
-        out = template.render ({'definition': None,
+        out = template.render ({'symbol': constant,
+                                'definition': None,
                                 'constant': constant})
         return (out, False)
 
