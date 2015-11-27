@@ -297,15 +297,16 @@ class GIRParser(object):
 
         if is_class or is_interface:
             self.gir_class_infos[c_name] = gi_class_info
+            class_name = '%s::%s' % (c_name, c_name)
+
+            self.c_names[class_name] = c_name
+            self.python_names[class_name] = name
+            self.javascript_names[class_name] = name
 
         self.c_names[c_name] = c_name
         self.python_names[c_name] = name
         self.javascript_names[c_name] = name
 
-        struct_name = c_name + '-struct'
-        self.c_names[struct_name] = c_name
-        self.python_names[struct_name] = name
-        self.javascript_names[struct_name] = name
 
         for child in klass:
             if child.tag == "{http://www.gtk.org/introspection/core/1.0}method":
