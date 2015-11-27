@@ -1,13 +1,8 @@
 include hotdoc/lexer_parsers/doxygen_parser/doxenizer.h
 include hotdoc/lexer_parsers/doxygen_parser/doxparser.h
 include hotdoc/lexer_parsers/doxygen_parser/doxenizer.l
-include hotdoc/lexer_parsers/scanner.l
-include hotdoc/lexer_parsers/scanner.h
 include hotdoc/lexer_parsers/c_comment_scanner/scanner.l
 include hotdoc/lexer_parsers/c_comment_scanner/scanner.h
 include hotdoc/formatters/html/templates/*
-include hotdoc/formatters/html/*.css
-include hotdoc/formatters/html/*.js
-include hotdoc/formatters/html/home.png
 include hotdoc/extensions/templates/*
-include requirements.txt
+recursive-include hotdoc/default_theme *

@@ -4,12 +4,70 @@ from distutils.errors import DistutilsExecError
 from distutils.dep_util import newer_group
 from distutils.spawn import spawn
 from distutils.command.build_ext import build_ext as _build_ext
+from distutils.command.build import build
+from distutils.core import Command
+from setuptools.command.develop import develop
+from setuptools.command.sdist import sdist
+from setuptools.command.install import install
 import shlex
+import shutil
 import subprocess
-import os
+import os, urllib
+import tarfile
 
 source_dir = os.path.abspath('./')
-print "source dir is ", source_dir
+
+class DownloadDefaultTemplate(Command):
+    user_options = []
+    description = "Download default html template"
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        import requests
+        response = \
+                requests.get('https://people.collabora.com/~meh/hotdoc_bootstrap_theme/dist.tgz')
+
+        with open ('default_theme.tgz', 'wb') as f:
+            f.write(response.content)
+
+        tar = tarfile.open('default_theme.tgz')
+        extract_path = os.path.join(source_dir, 'hotdoc')
+        tar.extractall(extract_path)
+        tar.close()
+
+        extract_path = os.path.join(extract_path, 'dist')
+
+        shutil.move(extract_path, os.path.join(source_dir, 'hotdoc',
+            'default_theme'))
+
+        os.unlink('default_theme.tgz')
+
+class CustomDevelop(develop):
+    def run(self):
+        self.run_command('download_default_template')
+        return develop.run(self)
+
+class CustomBuild(build):
+    def run(self):
+        self.run_command('download_default_template')
+        return build.run(self)
+
+class CustomSDist(sdist):
+    def run(self):
+        self.run_command('download_default_template')
+        return sdist.run(self)
+
+class CustomInstall(install):
+    def run(self):
+        self.run_command('download_default_template')
+        install.run(self)
+
+source_dir = os.path.abspath('./')
 def src(filename):
     return os.path.join(source_dir, filename)
 
@@ -154,7 +212,12 @@ setup(name='hotdoc',
                 'hotdoc.lexer_parsers.c_comment_scanner',
                 'hotdoc.extensions',
                 'hotdoc.utils'],
-      cmdclass = {'build_ext': build_ext},
+      cmdclass = {'build_ext': build_ext,
+                  'build': CustomBuild,
+                  'sdist': CustomSDist,
+                  'install': CustomInstall,
+                  'develop': CustomDevelop,
+                  'download_default_template': DownloadDefaultTemplate},
       ext_modules = [doxygen_block_parser_module, c_comment_scanner_module],
       scripts =
       ['hotdoc/hotdoc',
@@ -163,6 +226,7 @@ setup(name='hotdoc',
       package_data = {
           'hotdoc.formatters.html': ['templates/*', 'assets/*'],
           'hotdoc.extensions': ['templates/*'],
+          'hotdoc': ['default_theme/*'],
           },
       install_requires = ['wheezy.template',
                           'CommonMark',
@@ -173,4 +237,5 @@ setup(name='hotdoc',
                           'ipython',
                           'pkgconfig',
                           'pygit2'],
+      setup_requires = ['requests'],
       zip_safe=False)
