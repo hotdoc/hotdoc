@@ -262,7 +262,7 @@ class GIRParser(object):
 
         for child in ns:
             if child.tag == "{http://www.gtk.org/introspection/core/1.0}class":
-                self.__parse_gir_record(nsmap, ns_name, child)
+                self.__parse_gir_record(nsmap, ns_name, child, is_class=True)
             elif child.tag == "{http://www.gtk.org/introspection/core/1.0}interface":
                 self.__parse_gir_record(nsmap, ns_name, child, is_interface=True)
             elif child.tag == "{http://www.gtk.org/introspection/core/1.0}record":
@@ -278,7 +278,8 @@ class GIRParser(object):
             elif child.tag == "{http://www.gtk.org/introspection/core/1.0}function":
                 self.__parse_gir_function (nsmap, ns_name, child)
 
-    def __parse_gir_record (self, nsmap, ns_name, klass, is_interface=False):
+    def __parse_gir_record (self, nsmap, ns_name, klass, is_interface=False,
+            is_class=False):
         name = '%s.%s' % (ns_name, klass.attrib["name"])
         self.gir_types[name] = klass
         self.gir_children_map[name] = {}
@@ -294,7 +295,9 @@ class GIRParser(object):
         if class_struct_name:
             self.gir_class_map['%s%s' % (ns_name, class_struct_name)] = gi_class_info
 
-        self.gir_class_infos[c_name] = gi_class_info
+        if is_class or is_interface:
+            self.gir_class_infos[c_name] = gi_class_info
+
         self.c_names[c_name] = c_name
         self.python_names[c_name] = name
         self.javascript_names[c_name] = name
@@ -1136,7 +1139,7 @@ class GIExtension(BaseExtension):
         return symbol
 
     def __create_class_symbol (self, symbol, gi_name):
-        comment_name = 'SECTION:%s' % symbol.display_name.lower()
+        comment_name = '%s::%s' % (symbol.unique_name, symbol.unique_name)
         class_comment = self.doc_tool.get_comment(comment_name)
         hierarchy = self.gir_parser.gir_hierarchies.get (gi_name)
         children = self.gir_parser.gir_children_map.get (gi_name)
