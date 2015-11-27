@@ -160,7 +160,7 @@ class HotdocWizard(QuickStartWizard):
                 index_path = obj.get_index_path()
                 index_name = obj.get_index_name()
                 if index_path:
-                    contents += '\n[%s](%s)\n' % (index_name, index_path)
+                    contents += '\n#### [%s](%s)\n' % (index_name, index_path)
 
         path = self.prompt_key('index_path',
                 prompt='Path to save the created index in',
