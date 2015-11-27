@@ -74,6 +74,7 @@ def parse_sgml_chapters (part, filename, path, level, sections, output,
                 if title_node is not None:
                     new_filename = create_symbol_file (sections[title],
                             title_node.text, output, ported_comment=ported_comment)
+                    title = title_node.text
                 else:
                     new_filename = create_symbol_file (sections[title], title,
                             output, ported_comment=ported_comment)
