@@ -5,5 +5,7 @@
 <span>class</span>
 @end
 @def name():
-<span>@klass.link.title</span>
+<a href="@klass.link.get_link()">
+	<span>@klass.link.title</span>
+</a>
 @end
