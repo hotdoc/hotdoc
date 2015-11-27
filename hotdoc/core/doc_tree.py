@@ -197,6 +197,11 @@ class PageParser(object):
         ast = self.__cmp.parse(contents)
         page.ast = ast
 
+        page.symbol_names = []
+        for c in ast.children:
+            if c.t == "List":
+                self.parse_list(page, c)
+
         self.check_links(page, ast)
 
     def parse_contents(self, page, contents):
@@ -205,7 +210,13 @@ class PageParser(object):
     def _update_links (self, node):
         if node.t == 'Link':
             link = self.doc_tool.link_resolver.get_named_link (node.destination)
-            node.label[-1].c += ' '
+            if node.label:
+                node.label[-1].c += ' '
+            elif link:
+                name_block = CommonMark.CommonMark.Block()
+                name_block.c = link.title
+                name_block.t = 'Str'
+                node.label.append(name_block)
             if link and link.get_link() is not None:
                 node.destination = link.get_link()
 
@@ -304,6 +315,9 @@ class DocTree(object):
             page = self.root
 
         if page.is_stale:
+            if page.mtime != -1 and not page.ast:
+                self.page_parser.reparse(page)
+
             page.resolve_symbols(doc_tool)
         for pagename in page.subpages:
             cpage = self.pages[pagename]
