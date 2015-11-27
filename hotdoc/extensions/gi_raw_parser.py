@@ -34,6 +34,8 @@ class GtkDocRawCommentParser (object):
     def parse_title (self, title):
         # Section comments never contain annotations,
         # We also normalize them here to not contain any spaces.
+        # FIXME: This code now only lives here for the purpose of gtk-doc conversion
+        # Could remove that one day
         if "SECTION" in title:
             return ''.join(title.split(' ')), []
 
