@@ -1,4 +1,12 @@
-@require(symbol, tags)
+@require(symbol)
+
+@(
+tags = {}
+if symbol.comment:
+    tags = symbol.comment.tags
+
+tags.pop('returns', None)
+)
 
 <tr class="base_symbol_summary" data-hotdoc-tags="\
 @for tag in tags.values():

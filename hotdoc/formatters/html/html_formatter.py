@@ -174,14 +174,7 @@ class HtmlFormatter (Formatter):
             is_callable, is_pointer):
         template = self.engine.get_template('callable_summary.html')
 
-        tags = {}
-        if callable_.comment:
-            tags = callable_.comment.tags
-
-        tags.pop('returns', None)
-
         return template.render({'symbol': callable_,
-                                'tags': tags,
                                 'return_value': return_value,
                                 'function_name': function_name,
                                 'is_callable': is_callable,
@@ -217,54 +210,33 @@ class HtmlFormatter (Formatter):
         template = self.engine.get_template('constant_summary.html')
         constant_link = self._format_linked_symbol (constant)
 
-        tags = {}
-        if constant.comment:
-            tags = constant.comment.tags
-
         return template.render({'symbol': constant,
-                                'tags': tags,
                                 'constant': constant_link})
 
     def _format_exported_variable_summary (self, extern):
         template = self.engine.get_template('exported_variable_summary.html')
         extern_link = self._format_linked_symbol (extern)
-        tags = {}
-        if extern.comment:
-            tags = extern.comment.tags
 
         return template.render({'symbol': extern,
-                                'tags': tags,
                                 'extern': extern_link})
 
     def _format_alias_summary (self, alias):
         template = self.engine.get_template('alias_summary.html')
         alias_link = self._format_linked_symbol (alias)
-        tags = {}
-        if alias.comment:
-            tags = alias.comment.tags
 
         return template.render({'symbol': alias,
-                                'tags': tags,
                                 'alias': alias_link})
 
     def _format_struct_summary (self, struct):
         template = self.engine.get_template('struct_summary.html')
         struct_link = self._format_linked_symbol (struct)
-        tags = {}
-        if struct.comment:
-            tags = struct.comment.tags
         return template.render({'symbol': struct,
-                                'tags': tags,
                                 'struct': struct_link})
 
     def _format_enum_summary (self, enum):
         template = self.engine.get_template('enum_summary.html')
         enum_link = self._format_linked_symbol (enum)
-        tags = {}
-        if enum.comment:
-            tags = enum.comment.tags
         return template.render({'symbol': enum,
-                                'tags': tags,
                                 'enum': enum_link})
 
     def _format_signal_summary (self, signal):
@@ -289,12 +261,7 @@ class HtmlFormatter (Formatter):
 
         prop_link = self._format_linked_symbol (prop)
 
-        tags = {}
-        if prop.comment:
-            tags = prop.comment.tags
-
         return template.render({'symbol': prop,
-                                'tags': tags,
                                 'property_type': property_type,
                                 'property_link': prop_link,
                                 'extra_contents': prop.extension_contents,
@@ -304,14 +271,9 @@ class HtmlFormatter (Formatter):
         if not klass.comment:
             return ''
 
-        tags = {}
-        if klass.comment:
-            tags = klass.comment.tags
-
         short_desc = self._format_doc_string (klass.comment.short_description)
         template = self.engine.get_template('class_summary.html')
         return template.render({'symbol': klass,
-                                'tags': tags,
                                 'klass': klass,
                                 'short_description': short_desc})
 
