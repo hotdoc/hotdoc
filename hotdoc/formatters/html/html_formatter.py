@@ -345,8 +345,6 @@ class HtmlFormatter (Formatter):
 
         symbol_descriptions = None
         if detailed_descriptions:
-            if symbol_type == 'Classes':
-                symbol_type = ''
             symbol_descriptions = SymbolDescriptions (detailed_descriptions,
                     symbol_type)
 
