@@ -26,7 +26,7 @@ QUICKSTART_HELP = \
 | >>> None
 """
 
-class Skip(KeyboardInterrupt):
+class Skip(Exception):
     pass
 
 class QuickStartShell(InteractiveShellEmbed):
@@ -47,6 +47,16 @@ class QuickStartShell(InteractiveShellEmbed):
         if res.result:
             self.result = res.result
             self.exit_now = True
+
+        return res
+
+    def raw_input(self, prompt):
+        res = None
+        while res is None:
+            try:
+                res = InteractiveShellEmbed.raw_input(self, prompt)
+            except KeyboardInterrupt:
+                print "\nUse ctrl + D to quit"
 
         return res
 
