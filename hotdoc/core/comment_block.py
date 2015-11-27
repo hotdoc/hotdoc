@@ -1,6 +1,13 @@
 import os
 import linecache
 
+class TagValidator(object):
+    def __init__(self, name):
+        self.name = name
+
+    def validate(self, value):
+        raise NotImplementedError
+
 class Comment(object):
     def __init__(self, name='', title='', params={}, filename='',
             lineno=-1, endlineno=-1, annotations={}, description='', short_description='',

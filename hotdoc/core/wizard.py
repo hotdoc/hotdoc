@@ -157,12 +157,15 @@ class QuickStartWizard(object):
     def quick_start(self):
         try:
             if not self.do_quick_start():
-                return None
+                return False
         except EOFError:
             print "Aborting quick start"
-            return None
+            return False
 
-        return self.config
+        return True
+
+    def before_quick_start(self, obj):
+        return
 
     def do_quick_start(self):
         if self == self.parent:
@@ -175,6 +178,7 @@ class QuickStartWizard(object):
 
         for obj in self._qs_objects:
             try:
+                self.before_quick_start(obj)
                 obj.do_quick_start()
             except Skip:
                 pass
@@ -182,6 +186,8 @@ class QuickStartWizard(object):
         if self.validate_function:
             if not self.validate_function(self):
                 return self.do_quick_start()
+
+        return True
 
     def propose_choice(self, choices, skippable=True, extra_prompt=None):
         self.before_prompt()
@@ -269,7 +275,9 @@ class QuickStartWizard(object):
 
     def wait_for_continue(self, prompt='Press Enter to continue '):
         self.before_prompt()
-        self.qsshell.raw_input(prompt)
+        res = self.qsshell.raw_input(prompt)
+        if res.lower() == "you're a wizard harry":
+            print "Indeed"
         return True
 
     def prompt_executable(self, executable, prompt=None):
@@ -338,7 +346,11 @@ class QuickStartWizard(object):
     def _add_argument_override(self, group, *args, **kwargs):
         validate_function = kwargs.pop('validate_function', None)
         extra_prompt = kwargs.pop('extra_prompt', None)
+        no_prompt = kwargs.pop('no_prompt', False)
         arg = self._add_argument(group, *args, **kwargs)
-        self._qs_objects.append(QuickStartArgument(self, arg,
-            extra_prompt, validate_function))
+
+        if not no_prompt:
+            self._qs_objects.append(QuickStartArgument(self, arg,
+                extra_prompt, validate_function))
+
         return arg

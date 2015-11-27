@@ -16,7 +16,8 @@ from .symbols import *
 from .base_extension import BaseExtension
 from .alchemy_integration import Base
 from .doc_tree import DocTree
-from .wizard import QuickStartWizard, QUICKSTART_HELP, Skip
+from .wizard import QuickStartWizard, QUICKSTART_HELP, Skip, QuickStartArgument
+from .comment_block import Tag, Comment
 
 from ..utils.utils import all_subclasses
 from ..utils.simple_signals import Signal
@@ -95,6 +96,11 @@ def validate_git_repo(wizard, path):
         print "This does not look like a git repo : %s" % path
         return False
 
+PROMPT_ROOT_INDEX=\
+"""
+I can now create a root index to tie all your sub indexes
+together, do you wish me to do that [y,n]? """
+
 class HotdocWizard(QuickStartWizard):
     def __init__(self, *args, **kwargs):
         QuickStartWizard.__init__(self, *args, **kwargs)
@@ -109,6 +115,8 @@ class HotdocWizard(QuickStartWizard):
             self.symbols = self.parent.symbols
             self.tc = self.parent.tc
             self.git_interface = self.parent.git_interface
+
+        self.tag_validators = {}
 
     def add_comment(self, comment):
         self.comments[comment.name] = comment
@@ -138,6 +146,43 @@ class HotdocWizard(QuickStartWizard):
     def before_prompt(self):
         self.__clear_screen()
 
+    def get_index_path(self):
+        return None
+
+    def get_index_name(self):
+        return None
+
+    def __create_root_index(self):
+        contents = 'Welcome to our documentation!\n'
+
+        for obj in self._qs_objects:
+            if isinstance(obj, HotdocWizard):
+                index_path = obj.get_index_path()
+                index_name = obj.get_index_name()
+                if index_path:
+                    contents += '\n[%s](%s)\n' % (index_name, index_path)
+
+        path = self.prompt_key('index_path',
+                prompt='Path to save the created index in',
+                store=False, validate_function=QuickStartWizard.validate_folder)
+
+        path = os.path.join(path, 'index.markdown')
+
+        with open (path, 'w') as f:
+            f.write(contents)
+
+        self.config['index'] = path
+
+    def before_quick_start(self, obj):
+        if type(obj) == QuickStartArgument and obj.argument.dest == 'index':
+            if self.config.get('index'):
+                return
+
+            self.before_prompt() 
+            if (self.ask_confirmation(PROMPT_ROOT_INDEX)):
+                self.__create_root_index()
+                raise Skip
+
     def main_prompt(self):
         prompt = self.tc.BOLD + "\nHotdoc started without arguments, starting setup\n" + self.tc.NORMAL
         prompt += self.tc.CYAN + QUICKSTART_HELP + self.tc.NORMAL
@@ -156,9 +201,6 @@ class HotdocWizard(QuickStartWizard):
             pass
 
         return True
-
-    def quick_start(self):
-        QuickStartWizard.quick_start(self)
 
     def __clear_screen(self):
         sys.stdout.write(self.tc.CLEAR_SCREEN)
@@ -188,7 +230,8 @@ class DocTool(Loggable):
         self.extensions = {}
         self.__comments = {}
         self.__symbols = {}
-        self.raw_comment_parser = GtkDocRawCommentParser()
+        self.tag_validators = {}
+        self.raw_comment_parser = GtkDocRawCommentParser(self)
         self.link_resolver = LinkResolver(self)
         self.incremental = False
         self.comment_updated_signal = Signal()
@@ -213,6 +256,9 @@ class DocTool(Loggable):
         if esym:
             esym.comment = comment
         self.comment_updated_signal(comment)
+
+    def register_tag_validator(self, validator):
+        self.tag_validators[validator.name] = validator
 
     def format_symbol(self, symbol_name):
         # FIXME this will be API, raise meaningful errors
@@ -255,6 +301,10 @@ class DocTool(Loggable):
 
         for key, value in kwargs.items():
             setattr(symbol, key, value)
+
+        if not symbol.comment:
+            symbol.comment = Comment(symbol.unique_name)
+            self.add_comment(symbol.comment)
 
         symbol.resolve_links(self.link_resolver)
 
@@ -331,6 +381,10 @@ class DocTool(Loggable):
 
     def add_comment(self, comment):
         self.__comments[comment.name] = comment
+        for validator in self.tag_validators.values():
+            if validator.default and not validator.name in comment.tags:
+                comment.tags[validator.name] = Tag(name=validator.name,
+                        description=validator.default)
         if self.incremental:
             self.__update_symbol_comment (comment)
 
@@ -381,7 +435,9 @@ class DocTool(Loggable):
                 dest="include_paths", help="markdown include paths")
         self.parser.add_argument ("--html-theme", action="store",
                 dest="html_theme", help="html theme to use")
-
+        self.parser.add_argument ("-", action="store_true", no_prompt=True,
+                help="Separator to allow finishing a list of arguments before a command",
+                dest="whatever")
 
         loggable_init("DOC_DEBUG")
 
@@ -395,10 +451,12 @@ class DocTool(Loggable):
             self.parse_config(wizard.config)
         elif args.cmd == 'conf':
             if args.quickstart == True:
-                wizard.quick_start()
-                print """Quick start done, rerun the tool with 'run' if you
-want to build the documentation now"""
                 exit_now = True
+                if wizard.quick_start():
+                    print "Setup complete, building the documentation now"
+                    if wizard.wait_for_continue("Setup complete, press Enter to build the doc now "):
+                        self.parse_config(wizard.config)
+                        exit_now = False
 
         with open(conf_file, 'w') as f:
             f.write(json.dumps(wizard.config, indent=4))

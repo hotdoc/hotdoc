@@ -117,6 +117,9 @@ SCOPE_ASYNC_HELP = \
 SCOPE_CALL_HELP = \
 "The callback is valid only during the call to the method"
 
+SCOPE_NOTIFIED_HELP=\
+"The callback is valid until the GDestroyNotify argument is called"
+
 NULLABLE_HELP = \
 "NULL may be passed to the value"
 
@@ -598,6 +601,8 @@ def port_from_gtk_doc(wizard):
     convert_to_markdown(sgml_path, 'hotdoc-tmp-sections.txt', folder,
             section_comments, 'gobject-api.markdown')
 
+    os.unlink('hotdoc-tmp-sections.txt')
+
     return 'gobject-api.markdown'
 
 PROMPT_GI_INDEX=\
@@ -641,6 +646,12 @@ class GIWizard(HotdocWizard):
             pass
 
         return HotdocWizard.do_quick_start(self)
+
+    def get_index_path(self):
+        return 'gobject-api'
+
+    def get_index_name(self):
+        return 'GObject API'
 
     def group_prompt(self):
         return True
@@ -798,6 +809,8 @@ class GIExtension(BaseExtension):
             return Annotation ("scope async", SCOPE_ASYNC_HELP)
         elif value[0] == "call":
             return Annotation ("scope call", SCOPE_CALL_HELP)
+        elif value[0] == 'notified':
+            return Annotation ("scope notified", SCOPE_NOTIFIED_HELP)
         return None
 
     def __make_closure_annotation (self, annotation, value):

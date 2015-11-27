@@ -8,7 +8,7 @@ def grouper(iterable, n, fillvalue=None):
     return izip_longest(*args, fillvalue=fillvalue)
 
 class GtkDocRawCommentParser (object):
-    def __init__(self):
+    def __init__(self, doc_tool):
         """
         Lifted from
         http://stackoverflow.com/questions/5323703/regex-how-to-match-sequence-of-key-value-pairs-at-end-of-string
@@ -20,6 +20,16 @@ class GtkDocRawCommentParser (object):
                                    (?!\S+=)\S+
                                    )+
                                    ''', re.VERBOSE)
+        self.doc_tool = doc_tool
+
+        tag_validation_regex = r'((?:^|\n)[ \t]*('
+        tag_validation_regex += 'returns|Returns|since|Since|stability|Stability|Return value'
+        for validator in doc_tool.tag_validators.values():
+            tag_validation_regex += '|%s|%s' % (validator.name,
+                    validator.name.lower())
+        tag_validation_regex += '):)'
+
+        self.tag_validation_regex = re.compile (tag_validation_regex)
 
     def parse_title (self, title):
         # Section comments never contain annotations,
@@ -130,9 +140,18 @@ class GtkDocRawCommentParser (object):
             return self.parse_returns_tag ("returns", desc)
         elif name.lower() == "stability":
             return self.parse_stability_tag ("stability", desc)
+        else:
+            validator = self.doc_tool.tag_validators.get(name)
+            if not validator:
+                print "FIXME no tag validator"
+                return None
+            if not validator.validate(desc):
+                print "invalid value for tag %s : %s" % name, desc
+                return None
+            return Tag(name=name, description=desc)
 
     def parse_description_and_tags (self, dt):
-        dts = re.split (r'((?:^|\n)[ \t]*(returns|Returns|since|Since|stability|Stability|Return value):)', dt)
+        dts = self.tag_validation_regex.split(dt)
         tags = []
 
         desc = dts[0]
@@ -140,7 +159,9 @@ class GtkDocRawCommentParser (object):
             return desc, tags
 
         for raw, name, tag_desc in grouper (dts[1:], 3):
-            tags.append (self.parse_tag (name.strip(), tag_desc.strip()))
+            tag = self.parse_tag (name.strip(), tag_desc.strip())
+            if tag:
+                tags.append(tag)
 
         return desc, tags
 

@@ -25,7 +25,7 @@ class ClangScanner(Loggable):
     def __init__(self, doc_tool, full_scan, full_scan_patterns):
         Loggable.__init__(self)
 
-        self.__raw_comment_parser = GtkDocRawCommentParser() 
+        self.__raw_comment_parser = GtkDocRawCommentParser(doc_tool)
         self.doc_tool = doc_tool
         self.full_scan = full_scan
         self.full_scan_patterns = full_scan_patterns
@@ -593,12 +593,13 @@ class CExtension(BaseExtension):
         BaseExtension.__init__(self, doc_tool, config)
         self.flags = flags_from_config(config)
         sources = source_files_from_config(config)
+        self.doc_tool = doc_tool
         self.sources = [os.path.abspath(filename) for filename in
                 sources]
-        self.scanner = ClangScanner(doc_tool, False,
-                ['*.h'])
 
     def setup(self):
+        self.scanner = ClangScanner(self.doc_tool, False,
+                ['*.h'])
         self.scanner.scan(self.stale_source_files, self.flags,
                 self.doc_tool.incremental)
 

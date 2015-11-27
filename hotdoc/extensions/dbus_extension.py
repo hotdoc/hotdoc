@@ -14,7 +14,7 @@ class DBusScanner(Loggable):
         self.__current_filename = None
         self.symbols = {}
         self.doc_tool = doc_tool
-        self.__raw_comment_parser = GtkDocRawCommentParser() 
+        self.__raw_comment_parser = GtkDocRawCommentParser(self.doc_tool)
         for filename in sources:
             self.__current_filename = filename
             ip = InterfaceParser(filename)
