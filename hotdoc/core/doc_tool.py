@@ -208,8 +208,14 @@ class HotdocWizard(QuickStartWizard):
                 self.tc.NORMAL)
 
     def _add_argument_override(self, group, *args, **kwargs):
+        set_default = kwargs.get('default')
         kwargs['default'] = argparse.SUPPRESS
-        return QuickStartWizard._add_argument_override(self, group, *args, **kwargs)
+        res = QuickStartWizard._add_argument_override(self, group, *args, **kwargs)
+
+        if set_default:
+            self.config[res.dest] = set_default
+
+        return res
 
 SUBCOMMAND_DESCRIPTION="""
 Valid subcommands.
@@ -501,10 +507,14 @@ class DocTool(Loggable):
         return os.path.abspath('hotdoc-private')
 
     def parse_config (self, config):
+        module_path = os.path.dirname(__file__)
+        default_theme_path = os.path.join(module_path, '..', 'default_theme')
+        default_theme_path = os.path.abspath(default_theme_path)
+
         self.output = config.get('output')
         self.output_format = config.get('output_format')
         self.include_paths = config.get('include_paths')
-        self.html_theme_path = config.get('html_theme')
+        self.html_theme_path = config.get('html_theme', default_theme_path)
 
         if self.output_format not in ["html"]:
             raise ConfigError ("Unsupported output format : %s" %
