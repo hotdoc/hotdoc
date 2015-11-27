@@ -324,7 +324,8 @@ class GIHtmlFormatter(HtmlFormatter):
     def _format_compound_summary (self, compound):
         template = self.engine.get_template('python_compound_summary.html')
         link = self._format_linked_symbol (compound)
-        return template.render({'compound': link})
+        return template.render({'symbol': compound,
+                                'compound': link})
 
     def _format_struct_summary (self, struct):
         if self.__gi_extension.language == 'c':
