@@ -209,10 +209,13 @@ class PageParser(object):
 
     def _update_links (self, node):
         if node.t == 'Link':
-            link = self.doc_tool.link_resolver.get_named_link (node.destination)
-            if node.label:
-                node.label[-1].c += ' '
-            elif link:
+            if not hasattr(node, 'original_dest'):
+                node.original_dest = node.destination
+                node.original_label = node.label
+
+            link = self.doc_tool.link_resolver.get_named_link(node.original_dest)
+            if link and not node.original_label:
+                node.label = []
                 name_block = CommonMark.CommonMark.Block()
                 name_block.c = link.title
                 name_block.t = 'Str'

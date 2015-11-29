@@ -109,7 +109,6 @@ class GtkDocParser (object):
         }
 
         self.doc_tool = doc_tool
-        self.__translated_names = {}
 
     def format_other(self, match, props):
         return match
@@ -124,9 +123,6 @@ class GtkDocParser (object):
         linkname = "%s:%s" % (type_name, property_name)
         link = self.doc_tool.link_resolver.get_named_link (linkname)
 
-        if link and link.id_ in self.__translated_names:
-            link.title = self.__translated_names[link.id_]
-
         if link:
             return u"[“%s”](%s)" % (link.title, link.get_link())
         else:
@@ -140,9 +136,6 @@ class GtkDocParser (object):
 
         linkname = "%s::%s" % (type_name, signal_name)
         link = self.doc_tool.link_resolver.get_named_link (linkname)
-
-        if link and link.id_ in self.__translated_names:
-            link.title = self.__translated_names[link.id_]
 
         if link:
             return u"[“%s”](%s)" % (link.title, link.get_link())
@@ -165,9 +158,6 @@ class GtkDocParser (object):
         if link is None:
             link = self.doc_tool.link_resolver.get_named_link (type_name)
 
-        if link and link.id_ in self.__translated_names:
-            link.title = self.__translated_names[link.id_]
-
         if link:
             return "[%s](%s)" % (link.title, link.get_link())
         else:
@@ -180,9 +170,6 @@ class GtkDocParser (object):
             return '[](%s)' % member_name
 
         link = self.doc_tool.link_resolver.get_named_link (member_name)
-
-        if link and link.id_ in self.__translated_names:
-            link.title = self.__translated_names[link.id_]
 
         if link:
             return "[%s](%s)" % (link.title, link.get_link ())
@@ -200,9 +187,6 @@ class GtkDocParser (object):
 
         link = self.doc_tool.link_resolver.get_named_link (func_name)
 
-        if link and link.id_ in self.__translated_names:
-            link.title = self.__translated_names[link.id_]
-
         if link:
             return "[%s()](%s)" % (link.title, link.get_link ())
         else:
@@ -216,9 +200,6 @@ class GtkDocParser (object):
 
     def format_code_end (self, match, props):
         return "\n```\n"
-
-    def set_translated_names(self, translated_names):
-        self.__translated_names = translated_names
 
     def translate (self, text):
         if not text:

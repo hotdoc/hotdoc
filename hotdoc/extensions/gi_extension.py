@@ -753,7 +753,7 @@ class GIExtension(BaseExtension):
                         href = filename
 
                     link = Link (href, title, title)
-                    self.doc_tool.link_resolver.upsert_link (link)
+                    self.doc_tool.link_resolver.upsert_link (link, external=True)
 
     def __make_type_annotation (self, annotation, value):
         if not value:
@@ -923,7 +923,7 @@ class GIExtension(BaseExtension):
         else:
             self.__translated_names = {}
 
-        self._doc_parser.set_translated_names(self.__translated_names)
+        self.doc_tool.link_resolver.set_translated_names(self.__translated_names)
 
     def __unnest_type (self, parameter):
         array_nesting = 0

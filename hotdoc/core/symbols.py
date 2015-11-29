@@ -61,9 +61,9 @@ class Symbol (Base):
 
     def resolve_links(self, link_resolver):
         if self.link is None:
-            link = Link(self.unique_name, self._make_name(),
+            self.link = Link(self.unique_name, self._make_name(),
                         self.unique_name)
-            self.link = link_resolver.upsert_link(link, overwrite_ref=True)
+        self.link = link_resolver.upsert_link(self.link, overwrite_ref=True)
 
 class FunctionSymbol (Symbol):
     __tablename__ = 'functions'
