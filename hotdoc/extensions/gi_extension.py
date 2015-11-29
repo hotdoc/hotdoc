@@ -639,7 +639,6 @@ class GIWizard(HotdocWizard):
         try:
             choice = self.propose_choice(
                     ["Create index from a gtk-doc project",
-                    "Generate index from scratch",
                     ],
                     extra_prompt=PROMPT_GI_INDEX
                     )
