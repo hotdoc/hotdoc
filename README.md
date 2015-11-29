@@ -24,14 +24,11 @@ It features:
   breakage until the 1.0 version of hotdoc is released
 + A built-in gobject-introspection extension, which will expose gobject-specific
   concepts (properties, signals, annotations ...)
+* Themeability (see [this example](https://github.com/MathieuDuponchelle/hotdoc_bootstrap_theme/commits/master)
+* Persisting of the documentation through sqlalchemy, with an API to access it.
+  An example project that uses this API is the hotdoc server, which will soon be made public.
 + Many more things !
 
-### Interesting resources
-
-* [Overview of the rendering design](documentation/design.markdown)
-* [Dependencies](documentation/dependencies.markdown)
-* [Porting from gtk-doc](documentation/porting.markdown)
-
-### Additional resources
+### Additional resources (FIXME: update extensions, outdated)
 
 Check out the [HotDoc extensions](https://github.com/MathieuDuponchelle/hotdoc_extensions)
