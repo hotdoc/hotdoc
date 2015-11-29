@@ -1,6 +1,7 @@
-# HotDoc
+![Hotdoc logo](https://cdn.rawgit.com/MathieuDuponchelle/hotdoc/develop/documentation/hotdoc.svg)
 
-*The tastiest documentation system*
+This project needs a logo. In the meantime, eyes will get hurt by this 
+horrible illustration of programmer art.
 
 Read [this](documentation/setup.markdown) if you just want to use hotdoc.
 
