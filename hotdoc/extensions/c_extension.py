@@ -531,7 +531,7 @@ def source_files_from_config(config):
     sources = resolve_patterns(config.get('c_sources', []))
     filters = resolve_patterns(config.get('c_source_filters', []))
     sources = [item for item in sources if item not in filters]
-    return sources
+    return [os.path.abspath(source) for source in sources]
 
 def flags_from_config(config):
     flags = []
