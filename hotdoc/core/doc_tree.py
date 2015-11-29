@@ -292,6 +292,7 @@ class DocTree(object):
 
         if source_file in self.pages:
             epage = self.pages[source_file]
+            extension_name = epage.extension_name
             try:
                 mtime = os.path.getmtime(source_file)
                 if mtime == epage.mtime:
