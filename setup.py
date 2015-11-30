@@ -42,8 +42,11 @@ class DownloadDefaultTemplate(Command):
 
         extract_path = os.path.join(extract_path, 'dist')
 
-        shutil.move(extract_path, os.path.join(source_dir, 'hotdoc',
-            'default_theme'))
+        theme_path = os.path.join(source_dir, 'hotdoc', 'default_theme')
+
+        shutil.rmtree(theme_path, ignore_errors=True)
+
+        shutil.move(extract_path, theme_path)
 
         os.unlink('default_theme.tgz')
 
@@ -65,7 +68,7 @@ class CustomSDist(sdist):
 class CustomInstall(install):
     def run(self):
         self.run_command('download_default_template')
-        install.run(self)
+        return install.run(self)
 
 source_dir = os.path.abspath('./')
 def src(filename):
@@ -196,7 +199,7 @@ c_comment_scanner_module = FlexExtension(
                             'hotdoc/lexer_parsers/c_comment_scanner/scanner.h'])
 
 setup(name='hotdoc',
-      version='0.5.9.2',
+      version='0.5.9.6',
       description='A documentation tool based on clang',
       keywords='documentation gnome clang doxygen',
       url='https://github.com/MathieuDuponchelle/hotdoc',
@@ -211,6 +214,7 @@ setup(name='hotdoc',
                 'hotdoc.lexer_parsers.doxygen_parser',
                 'hotdoc.lexer_parsers.c_comment_scanner',
                 'hotdoc.extensions',
+                'hotdoc.transition_scripts',
                 'hotdoc.utils'],
       cmdclass = {'build_ext': build_ext,
                   'build': CustomBuild,
@@ -226,16 +230,20 @@ setup(name='hotdoc',
       package_data = {
           'hotdoc.formatters.html': ['templates/*', 'assets/*'],
           'hotdoc.extensions': ['templates/*'],
-          'hotdoc': ['default_theme/*'],
+          'hotdoc': ['default_theme/templates/*',
+                     'default_theme/js/*',
+                     'default_theme/css/*',
+                     'default_theme/fonts/*'],
           },
-      install_requires = ['wheezy.template',
-                          'CommonMark',
-                          'lxml',
-                          'pygraphviz',
-                          'dbus-deviation',
-                          'sqlalchemy',
-                          'ipython',
-                          'pkgconfig',
-                          'pygit2'],
+      install_requires = ['cffi==1.3.0',
+                          'wheezy.template==0.1.167',
+                          'CommonMark==0.5.4',
+                          'lxml==3.4.4',
+                          'pygraphviz==1.3.1',
+                          'dbus-deviation==0.3.0',
+                          'sqlalchemy==1.0.9',
+                          'ipython==4.0.0',
+                          'pkgconfig==1.1.0',
+                          'pygit2==0.22.0'],
       setup_requires = ['requests'],
       zip_safe=False)
