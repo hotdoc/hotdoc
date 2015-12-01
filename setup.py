@@ -199,7 +199,7 @@ c_comment_scanner_module = FlexExtension(
                             'hotdoc/lexer_parsers/c_comment_scanner/scanner.h'])
 
 setup(name='hotdoc',
-      version='0.5.9.6',
+      version='0.5.9.7',
       description='A documentation tool based on clang',
       keywords='documentation gnome clang doxygen',
       url='https://github.com/MathieuDuponchelle/hotdoc',
@@ -224,9 +224,7 @@ setup(name='hotdoc',
                   'download_default_template': DownloadDefaultTemplate},
       ext_modules = [doxygen_block_parser_module, c_comment_scanner_module],
       scripts =
-      ['hotdoc/hotdoc',
-       'hotdoc/transition_scripts/sgml_to_sections.py',
-       'hotdoc/transition_scripts/translate_sections.sh'],
+      ['hotdoc/hotdoc'],
       package_data = {
           'hotdoc.formatters.html': ['templates/*', 'assets/*'],
           'hotdoc.extensions': ['templates/*'],
@@ -234,6 +232,7 @@ setup(name='hotdoc',
                      'default_theme/js/*',
                      'default_theme/css/*',
                      'default_theme/fonts/*'],
+          'hotdoc.transition_scripts': ['translate_sections.sh'],
           },
       install_requires = ['cffi==1.3.0',
                           'wheezy.template==0.1.167',
