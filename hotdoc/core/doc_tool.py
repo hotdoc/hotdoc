@@ -103,6 +103,7 @@ together, do you wish me to do that [y,n]? """
 
 class HotdocWizard(QuickStartWizard):
     def __init__(self, *args, **kwargs):
+        conf_path = kwargs.pop('conf_path', '')
         QuickStartWizard.__init__(self, *args, **kwargs)
         if self.parent == self:
             self.comments = {}
@@ -110,11 +111,13 @@ class HotdocWizard(QuickStartWizard):
             self.tc = TerminalController()
             self.git_interface = GitInterface()
             self.config = {}
+            self.conf_path = conf_path
         else:
             self.comments = self.parent.comments
             self.symbols = self.parent.symbols
             self.tc = self.parent.tc
             self.git_interface = self.parent.git_interface
+            self.conf_path = self.parent.conf_path
 
         self.tag_validators = {}
 
@@ -142,6 +145,10 @@ class HotdocWizard(QuickStartWizard):
         self.symbols[unique_name] = symbol
 
         return symbol
+
+    def resolve_config_path(self, path):
+        res = os.path.join(self.conf_path, path)
+        return os.path.abspath(res)
 
     def before_prompt(self):
         self.__clear_screen()
@@ -195,12 +202,32 @@ class HotdocWizard(QuickStartWizard):
             repo_path = self.prompt_key('git_repo', prompt=">>> Path to the git repo ? ",
                     title="the path to the root of the git repository",
                     extra_prompt=PROMPT_GIT_REPO,
-                    validate_function=validate_git_repo)
-            self.git_interface.set_repo_path(repo_path)
+                    validate_function=validate_git_repo,
+                    finalize_function=HotdocWizard.finalize_path)
+            self.git_interface.set_repo_path(self.resolve_config_path(repo_path))
         except Skip:
             pass
 
         return True
+
+    @staticmethod
+    def finalize_path(wizard, path):
+        if not path:
+            return path
+
+        return os.path.relpath(path, wizard.conf_path)
+
+    @staticmethod
+    def finalize_paths(wizard, paths):
+        if not paths:
+            return paths
+
+        res = []
+
+        for path in paths:
+            res.append(os.path.relpath(path, wizard.conf_path))
+
+        return res
 
     def __clear_screen(self):
         sys.stdout.write(self.tc.CLEAR_SCREEN)
@@ -423,7 +450,12 @@ class DocTool(Loggable):
         conf_parser.add_argument('--conf-file', help='Path to the config file',
                 dest='conf_file', default='hotdoc.json')
 
-        wizard = HotdocWizard(self.parser)
+        # First pass to get the conf path
+        init_args = self.parser.parse_known_args(args)[0]
+        conf_file = os.path.abspath(init_args.conf_file)
+        conf_path = os.path.dirname(conf_file)
+        wizard = HotdocWizard(self.parser, conf_path=conf_path)
+        self.wizard = wizard
 
         extension_subclasses = all_subclasses (BaseExtension)
 
@@ -432,7 +464,8 @@ class DocTool(Loggable):
             self.__extension_classes[subclass.EXTENSION_NAME] = subclass
 
         self.parser.add_argument ("-i", "--index", action="store",
-                dest="index", help="location of the index file")
+                dest="index", help="location of the index file",
+                finalize_function=HotdocWizard.finalize_path)
         self.parser.add_argument ("-o", "--output", action="store",
                 dest="output", help="where to output the rendered documentation")
         self.parser.add_argument ("--output-format", action="store",
@@ -440,7 +473,8 @@ class DocTool(Loggable):
         self.parser.add_argument ("-I", "--include-path", action="append",
                 dest="include_paths", help="markdown include paths")
         self.parser.add_argument ("--html-theme", action="store",
-                dest="html_theme", help="html theme to use")
+                dest="html_theme", help="html theme to use",
+                finalize_function=HotdocWizard.finalize_path)
         self.parser.add_argument ("-", action="store_true", no_prompt=True,
                 help="Separator to allow finishing a list of arguments before a command",
                 dest="whatever")
@@ -448,7 +482,6 @@ class DocTool(Loggable):
         loggable_init("DOC_DEBUG")
 
         args = self.parser.parse_args(args)
-        conf_file = args.conf_file
         self.load_config(args, conf_file, wizard)
 
         exit_now = False
@@ -506,6 +539,9 @@ class DocTool(Loggable):
     def get_private_folder(self):
         return os.path.abspath('hotdoc-private')
 
+    def resolve_config_path(self, path):
+        return self.wizard.resolve_config_path(path)
+
     def parse_config (self, config):
         module_path = os.path.dirname(__file__)
         default_theme_path = os.path.join(module_path, '..', 'default_theme')
@@ -515,6 +551,7 @@ class DocTool(Loggable):
         self.output_format = config.get('output_format')
         self.include_paths = config.get('include_paths')
         self.html_theme_path = config.get('html_theme', default_theme_path)
+        self.git_repo_path = self.resolve_config_path(config.get('git_repo'))
 
         if self.output_format not in ["html"]:
             raise ConfigError ("Unsupported output format : %s" %
@@ -527,7 +564,8 @@ class DocTool(Loggable):
         #    nif = NaiveIndexFormatter (self.c_source_scanner.symbols)
         #    config.index = "tmp_markdown_files/tmp_index.markdown"
 
-        self.index_file = config.get('index')
+        self.index_file = self.resolve_config_path(config.get('index'))
+        print self.index_file
 
         prefix = os.path.dirname(self.index_file)
         self.doc_tree = DocTree(self, prefix)

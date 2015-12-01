@@ -572,6 +572,7 @@ def translate_section_file(sections_path):
     trans_shscript_path = os.path.join(module_path, '..', 'transition_scripts',
             'translate_sections.sh')
     cmd = [trans_shscript_path, sections_path, 'hotdoc-tmp-sections.txt']
+    print "This is the cmd", cmd
     subprocess.check_call(cmd)
 
 def port_from_gtk_doc(wizard):
@@ -664,8 +665,8 @@ class GIExtension(BaseExtension):
 
     def __init__(self, doc_tool, config):
         BaseExtension.__init__(self, doc_tool, config)
-        self.gir_file = config.get('gir_file')
-        self.gi_index = config.get('gi_index')
+        self.gir_file = doc_tool.resolve_config_path(config.get('gir_file'))
+        self.gi_index = doc_tool.resolve_config_path(config.get('gi_index'))
         self.languages = [l.lower() for l in config.get('languages', [])]
         self.language = 'c'
         self.major_version = config.get('major_version')
@@ -705,7 +706,8 @@ class GIExtension(BaseExtension):
                 DESCRIPTION, wizard_class=GIWizard)
         group.add_argument ("--gir-file", action="store",
                 dest="gir_file",
-                help="Path to the gir file of the documented library")
+                help="Path to the gir file of the documented library",
+                finalize_function=HotdocWizard.finalize_path)
         group.add_argument ("--languages", action="store",
                 nargs='*',
                 help="Languages to translate documentation in")
@@ -714,7 +716,8 @@ class GIExtension(BaseExtension):
                 help="Major version of the library")
         group.add_argument ("--gi-index", action="store",
                 dest="gi_index",
-                help="Path to the root markdown file")
+                help="Path to the root markdown file",
+                finalize_function=HotdocWizard.finalize_path)
 
     def __gather_gtk_doc_links (self):
         sgml_dir = os.path.join(self.doc_tool.datadir, "gtk-doc", "html")
@@ -1259,7 +1262,8 @@ class GIExtension(BaseExtension):
         gen_index_page = Page('gen-index')
 
         for language in self.languages:
-            dest = '%s/%s.html' % (language, os.path.splitext(self.gi_index)[0])
+            dest = os.path.basename(self.gi_index)
+            dest = '%s/%s.html' % (language, os.path.splitext(dest)[0])
             gen_contents += '### [%s API](%s)\n' % \
                     (language.capitalize (), dest)
 

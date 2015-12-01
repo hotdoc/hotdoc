@@ -5,6 +5,7 @@ include hotdoc/lexer_parsers/c_comment_scanner/scanner.l
 include hotdoc/lexer_parsers/c_comment_scanner/scanner.h
 include hotdoc/formatters/html/templates/*
 include hotdoc/extensions/templates/*
+include hotdoc/transition_scripts/translate_sections.sh
 include hotdoc/default_theme/templates/*
 include hotdoc/default_theme/css/*
 include hotdoc/default_theme/js/*

@@ -96,18 +96,20 @@ class QuickStartShell(InteractiveShellEmbed):
 
 class QuickStartArgument(object):
     def __init__(self, wizard, argument, extra_prompt,
-            validate_function):
+            validate_function, finalize_function):
         self.argument = argument
         self.wizard = wizard
         self.extra_prompt = extra_prompt
         self.validate_function = validate_function
+        self.finalize_function = finalize_function
 
     def do_quick_start(self):
         return self.wizard.prompt_key(self.argument.dest,
                 prompt='>>> %s ?' % self.argument.help,
                 extra_prompt=self.extra_prompt,
                 title=self.argument.help,
-                validate_function=self.validate_function)
+                validate_function=self.validate_function,
+                finalize_function=self.finalize_function)
 
 PROMPT_EXECUTABLE=\
 """
@@ -251,7 +253,7 @@ class QuickStartWizard(object):
         return res
 
     def prompt_key(self, key, prompt=None, extra_prompt=None, title=None,
-            store=True, validate_function=None):
+            store=True, validate_function=None, finalize_function=None):
         self.before_prompt()
 
         if title is None:
@@ -277,6 +279,9 @@ class QuickStartWizard(object):
                 validated = True
             else:
                 validated = validate_function(self, res)
+
+        if finalize_function:
+            res = finalize_function(self, res)
 
         if store:
             self.config[key] = res
@@ -355,12 +360,13 @@ class QuickStartWizard(object):
 
     def _add_argument_override(self, group, *args, **kwargs):
         validate_function = kwargs.pop('validate_function', None)
+        finalize_function = kwargs.pop('finalize_function', None)
         extra_prompt = kwargs.pop('extra_prompt', None)
         no_prompt = kwargs.pop('no_prompt', False)
         arg = self._add_argument(group, *args, **kwargs)
 
         if not no_prompt:
             self._qs_objects.append(QuickStartArgument(self, arg,
-                extra_prompt, validate_function))
+                extra_prompt, validate_function, finalize_function))
 
         return arg

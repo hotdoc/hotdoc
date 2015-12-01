@@ -12,6 +12,7 @@ from hotdoc.lexer_parsers.c_comment_scanner.c_comment_scanner import get_comment
 from hotdoc.core.links import Link
 from hotdoc.extensions.gi_raw_parser import GtkDocRawCommentParser
 from hotdoc.core.wizard import Skip, QuickStartWizard
+from hotdoc.core.doc_tool import HotdocWizard
 
 def ast_node_is_function_pointer (ast_node):
     if ast_node.kind == clang.cindex.TypeKind.POINTER and \
@@ -527,9 +528,10 @@ def validate_pkg_config_packages(wizard, packages):
 
     return True
 
-def source_files_from_config(config):
-    sources = resolve_patterns(config.get('c_sources', []))
-    filters = resolve_patterns(config.get('c_source_filters', []))
+def source_files_from_config(config, conf_path_resolver):
+    sources = resolve_patterns(config.get('c_sources', []), conf_path_resolver)
+    filters = resolve_patterns(config.get('c_source_filters', []),
+            conf_path_resolver)
     sources = [item for item in sources if item not in filters]
     return [os.path.abspath(source) for source in sources]
 
@@ -543,7 +545,7 @@ def flags_from_config(config):
     return flags
 
 def validate_c_extension(wizard):
-    sources = source_files_from_config(wizard.config)
+    sources = source_files_from_config(wizard.config, wizard)
 
     if not sources:
         return
@@ -560,9 +562,10 @@ def validate_c_extension(wizard):
         return False
     return True
 
-def resolve_patterns(source_patterns):
+def resolve_patterns(source_patterns, conf_path_resolver):
     source_files = []
     for item in source_patterns:
+        item = conf_path_resolver.resolve_config_path(item)
         source_files.extend(glob.glob(item))
 
     return source_files
@@ -571,9 +574,9 @@ def validate_filters(wizard, thing):
     if not QuickStartWizard.validate_globs_list(wizard, thing):
         return False
 
-    source_files = resolve_patterns(wizard.config.get('c_sources', []))
+    source_files = resolve_patterns(wizard.config.get('c_sources', []), wizard)
 
-    filters = resolve_patterns(thing)
+    filters = resolve_patterns(thing, wizard)
 
     source_files = [item for item in source_files if item not in filters]
 
@@ -592,7 +595,7 @@ class CExtension(BaseExtension):
     def __init__(self, doc_tool, config):
         BaseExtension.__init__(self, doc_tool, config)
         self.flags = flags_from_config(config)
-        sources = source_files_from_config(config)
+        sources = source_files_from_config(config, doc_tool)
         self.doc_tool = doc_tool
         self.sources = [os.path.abspath(filename) for filename in
                 sources]
@@ -613,11 +616,13 @@ class CExtension(BaseExtension):
         group.add_argument ("--c-sources", action="store", nargs="+",
                 dest="c_sources", help="C source files to parse",
                 extra_prompt=C_SOURCES_PROMPT,
-                validate_function=QuickStartWizard.validate_globs_list)
+                validate_function=QuickStartWizard.validate_globs_list,
+                finalize_function=HotdocWizard.finalize_paths)
         group.add_argument ("--c-source-filters", action="store", nargs="+",
                 dest="c_source_filters", help="C source files to ignore",
                 extra_prompt=C_FILTERS_PROMPT,
-                validate_function=validate_filters)
+                validate_function=validate_filters,
+                finalize_function=HotdocWizard.finalize_paths)
         group.add_argument ("--pkg-config-packages", action="store", nargs="+",
                 dest="pkg_config_packages", help="Packages the library depends upon",
                 extra_prompt=PKG_PROMPT,
