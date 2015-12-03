@@ -174,7 +174,7 @@ class GtkDocRawCommentParser (object):
         return comment.strip()
 
     def parse_comment (self, comment, filename, lineno, endlineno, stripped=False):
-        if not stripped and not comment.startswith ('/**'):
+        if not stripped and not comment.lstrip().startswith ('/**'):
             return None
 
         raw_comment = comment

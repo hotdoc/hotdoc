@@ -78,6 +78,7 @@ class Page(object):
             new_symbols = sum(doc_tool.doc_tree.symbol_added_signal(self, sym),
                     [])
             for symbol in new_symbols:
+                doc_tool.doc_tree.add_to_symbol_map(self, symbol)
                 self.resolve_symbol (symbol)
 
     def resolve_symbol (self, symbol):
@@ -276,6 +277,11 @@ class DocTree(object):
 
     def get_page(self, name):
         return self.pages.get(name)
+
+    def add_to_symbol_map(self, page, sym):
+        symbol_map = self.symbol_maps.pop(sym.unique_name, {})
+        symbol_map[page.source_file] = page
+        self.symbol_maps[sym.unique_name] = symbol_map
 
     def fill_symbol_maps(self):
         for page in self.pages.values():

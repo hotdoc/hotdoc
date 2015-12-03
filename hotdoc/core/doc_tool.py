@@ -581,7 +581,6 @@ class DocTool(Loggable):
         #    config.index = "tmp_markdown_files/tmp_index.markdown"
 
         self.index_file = self.resolve_config_path(config.get('index'))
-        print self.index_file
 
         prefix = os.path.dirname(self.index_file)
         self.doc_tree = DocTree(self, prefix)
