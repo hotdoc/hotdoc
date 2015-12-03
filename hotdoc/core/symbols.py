@@ -5,6 +5,7 @@ from sqlalchemy import (Column, String, Integer, Boolean,
 
 from hotdoc.core.links import Link
 from hotdoc.core.alchemy_integration import *
+from hotdoc.core.comment_block import comment_from_tag
 
 
 class Symbol (Base):
@@ -49,6 +50,18 @@ class Symbol (Base):
 
     def get_children_symbols (self):
         return []
+
+    def update_children_comments(self):
+        for sym in self.get_children_symbols():
+            if type(sym) == ParameterSymbol:
+                sym.comment = self.comment.params.get(sym.argname)
+            elif type(sym) == FieldSymbol:
+                sym.comment = self.comment.params.get(sym.member_name)
+            elif type(sym) == ReturnValueSymbol:
+                tag = self.comment.tags.get('returns')
+                sym.comment = comment_from_tag(tag)
+            elif type(sym) == Symbol:
+                sym.comment = self.comment.params.get(sym.display_name)
 
     def _make_name (self):
         return self.display_name

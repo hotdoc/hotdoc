@@ -312,6 +312,7 @@ class DocTool(Loggable):
 
         self.update_doc_parser(page.extension_name)
 
+        sym.update_children_comments()
         self.formatter.format_symbol(sym) 
 
         return sym.detailed_description

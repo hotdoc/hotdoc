@@ -449,6 +449,7 @@ class GIHtmlFormatter(HtmlFormatter):
 
     def patch_page(self, page, symbol):
         self.doc_tool.update_doc_parser(page.extension_name)
+        symbol.update_children_comments()
         for l in self.__gi_extension.languages:
             self.set_fundamentals(l)
             self.__gi_extension.setup_language (l)
