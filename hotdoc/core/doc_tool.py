@@ -456,6 +456,7 @@ class DocTool(Loggable):
 
         subparsers = self.parser.add_subparsers(title='commands', dest='cmd',
                 description=SUBCOMMAND_DESCRIPTION)
+        subparsers.required = False
         run_parser = subparsers.add_parser('run', help='run hotdoc')
         run_parser.add_argument('--conf-file', help='Path to the config file',
                 dest='conf_file', default='hotdoc.json')
@@ -467,8 +468,17 @@ class DocTool(Loggable):
                 dest='conf_file', default='hotdoc.json')
 
         # First pass to get the conf path
-        init_args = self.parser.parse_known_args(args)[0]
-        conf_file = os.path.abspath(init_args.conf_file)
+        # FIXME: subparsers is useless, remove that hack
+        init_args = list(args)
+        split_pos = 0
+        for i, arg in enumerate(init_args):
+            if arg in ['run', 'conf']:
+                split_pos = i
+                break
+
+        init_args = init_args[split_pos:]
+        init_args = self.parser.parse_known_args(init_args)
+        conf_file = os.path.abspath(init_args[0].conf_file)
         conf_path = os.path.dirname(conf_file)
         wizard = HotdocWizard(self.parser, conf_path=conf_path)
         self.wizard = wizard

@@ -23,8 +23,14 @@ def ast_node_is_function_pointer (ast_node):
 
 
 class ClangScanner(Loggable):
-    def __init__(self, doc_tool, full_scan, full_scan_patterns):
+    def __init__(self, doc_tool, full_scan, full_scan_patterns, clang_name=None,
+            clang_path=None):
         Loggable.__init__(self)
+
+        if clang_name:
+            clang.cindex.Config.set_library_file(clang_name)
+        if clang_path:
+            clang.cindex.Config.set_library_path(clang_path)
 
         self.__raw_comment_parser = GtkDocRawCommentParser(doc_tool)
         self.doc_tool = doc_tool
@@ -605,13 +611,16 @@ class CExtension(BaseExtension):
         BaseExtension.__init__(self, doc_tool, config)
         self.flags = flags_from_config(config, doc_tool)
         sources = source_files_from_config(config, doc_tool)
+        self.clang_name = config.get('clang_name')
+        self.clang_path = config.get('clang_path')
         self.doc_tool = doc_tool
         self.sources = [os.path.abspath(filename) for filename in
                 sources]
 
     def setup(self):
         self.scanner = ClangScanner(self.doc_tool, False,
-                ['*.h'])
+                ['*.h'], clang_name=self.clang_name,
+                clang_path=self.clang_path)
         self.scanner.scan(self.stale_source_files, self.flags,
                 self.doc_tool.incremental)
 
@@ -639,3 +648,7 @@ class CExtension(BaseExtension):
         group.add_argument ("--extra-c-flags", action="store", nargs="+",
                 dest="extra_c_flags", help="Extra C flags (-D, -I)",
                 validate_function=QuickStartWizard.validate_list)
+        group.add_argument('--clang-library-name', action="store",
+                dest="clang_name", help="name of the clang binary")
+        group.add_argument('--clang-library-path', action="store",
+                dest="clang_path", help="path to the clang binary")
