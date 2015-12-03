@@ -570,7 +570,6 @@ def translate_section_file(sections_path):
     trans_shscript_path = os.path.join(module_path, '..', 'transition_scripts',
             'translate_sections.sh')
     cmd = [trans_shscript_path, sections_path, 'hotdoc-tmp-sections.txt']
-    print "This is the cmd", cmd
     subprocess.check_call(cmd)
 
 def port_from_gtk_doc(wizard):
@@ -664,7 +663,7 @@ class GIExtension(BaseExtension):
     def __init__(self, doc_tool, config):
         BaseExtension.__init__(self, doc_tool, config)
         self.gir_file = doc_tool.resolve_config_path(config.get('gir_file'))
-        self.gi_index = doc_tool.resolve_config_path(config.get('gi_index'))
+        self.gi_index = config.get('gi_index')
         self.languages = [l.lower() for l in config.get('languages', [])]
         self.language = 'c'
         self.major_version = config.get('major_version')
@@ -1269,6 +1268,7 @@ class GIExtension(BaseExtension):
 
         doc_tree.pages['gen-index'] = gen_index_page
         index_path = os.path.join(doc_tree.prefix, self.gi_index)
+        index_path = self.doc_tool.resolve_config_path(index_path)
         gen_index_page.subpages.add(index_path)
         new_page = doc_tree.build_tree(index_path, 'gi-extension')
         return "gen-index"

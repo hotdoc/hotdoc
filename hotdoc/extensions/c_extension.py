@@ -535,13 +535,22 @@ def source_files_from_config(config, conf_path_resolver):
     sources = [item for item in sources if item not in filters]
     return [os.path.abspath(source) for source in sources]
 
-def flags_from_config(config):
+def flags_from_config(config, path_resolver):
     flags = []
 
     for package in config.get('pkg_config_packages', []):
         flags.extend(pkgconfig.cflags(package).split(' '))
 
-    flags.extend(config.get('extra_c_flags', []))
+    extra_flags = config.get('extra_c_flags', [])
+    for extra_flag in extra_flags:
+        extra_flag = extra_flag.strip()
+        if extra_flag.startswith('-I'):
+            path = extra_flag.split('-I')[1]
+            flags.append('-I%s' % path_resolver.resolve_config_path(path))
+        else:
+            flags.append(extra_flag)
+
+    print "ze flags are", flags
     return flags
 
 def validate_c_extension(wizard):
@@ -550,7 +559,7 @@ def validate_c_extension(wizard):
     if not sources:
         return
 
-    flags = flags_from_config(wizard.config)
+    flags = flags_from_config(wizard.config, wizard)
 
     print "scanning C sources"
     scanner = ClangScanner(wizard, False,
@@ -594,7 +603,7 @@ class CExtension(BaseExtension):
 
     def __init__(self, doc_tool, config):
         BaseExtension.__init__(self, doc_tool, config)
-        self.flags = flags_from_config(config)
+        self.flags = flags_from_config(config, doc_tool)
         sources = source_files_from_config(config, doc_tool)
         self.doc_tool = doc_tool
         self.sources = [os.path.abspath(filename) for filename in
