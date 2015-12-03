@@ -64,6 +64,9 @@ class Formatter(object):
             rv_tag = symbol.comment.tags.get('returns')
             symbol.return_value.comment = comment_from_tag(rv_tag)
 
+    def patch_page(self, page, symbol):
+        raise NotImplementedError
+
     def format_symbol (self, symbol):
         #if isinstance(symbol, FunctionSymbol):
         #    self.__update_children_comments(symbol)

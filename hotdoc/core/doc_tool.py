@@ -316,6 +316,21 @@ class DocTool(Loggable):
 
         return sym.detailed_description
 
+    def patch_page(self, symbol, raw_comment):
+        pages = self.doc_tree.symbol_maps.get(symbol.unique_name)
+        if not pages:
+            return
+
+        pages = pages.values()
+        old_comment = symbol.comment
+        symbol.comment = self.raw_comment_parser.parse_comment(raw_comment,
+                old_comment.filename,
+                old_comment.lineno,
+                old_comment.lineno + raw_comment.count('\n'))
+        for page in pages:
+            formatter = self.get_formatter(page.extension_name)
+            formatter.patch_page(page, symbol)
+
     def get_or_create_symbol(self, type_, **kwargs):
         unique_name = kwargs.get('unique_name')
         if not unique_name:

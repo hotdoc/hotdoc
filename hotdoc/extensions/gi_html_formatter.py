@@ -2,6 +2,7 @@ import os
 from hotdoc.formatters.html.html_formatter import HtmlFormatter
 from hotdoc.core.links import Link
 from hotdoc.core.symbols import *
+import lxml.etree
 
 
 class GIHtmlFormatter(HtmlFormatter):
@@ -14,6 +15,7 @@ class GIHtmlFormatter(HtmlFormatter):
         # FIXME : these links do not belong here
         self.python_fundamentals = self.__create_python_fundamentals()
         self.javascript_fundamentals = self.__create_javascript_fundamentals()
+        self.c_fundamentals = {}
 
     def __create_javascript_fundamentals(self):
         string_link = \
@@ -431,26 +433,52 @@ class GIHtmlFormatter(HtmlFormatter):
         self.__gi_extension.update_links(symbol)
         return HtmlFormatter._format_symbol(self, symbol)
 
-    def format (self, page):
-        c_fundamentals = {}
-        for c_name, link in self.python_fundamentals.iteritems():
+    def set_fundamentals(self, language):
+        if language == 'python':
+            self.fundamentals = self.python_fundamentals
+        elif language == 'javascript':
+            self.fundamentals = self.javascript_fundamentals
+        elif language == 'c':
+            self.fundamentals = self.c_fundamentals
+        else:
+            self.fundamentals = {}
+
+        for c_name, link in self.fundamentals.iteritems():
             link.id_ = c_name
-            elink = self.doc_tool.link_resolver.get_named_link(link.id_)
-            if elink:
-                c_fundamentals[c_name] = Link(elink.ref, elink.title, None)
+            self.doc_tool.link_resolver.upsert_link(link, overwrite_ref=True)
+
+    def patch_page(self, page, symbol):
+        self.doc_tool.update_doc_parser(page.extension_name)
+        for l in self.__gi_extension.languages:
+            self.set_fundamentals(l)
+            self.__gi_extension.setup_language (l)
+            self.format_symbol(symbol)
+
+            parser = lxml.etree.XMLParser(encoding='utf-8', recover=True)
+            page_path = os.path.join(self.doc_tool.output, l, page.link.ref)
+            tree = lxml.etree.parse(page_path, parser)
+            root = tree.getroot()
+            elems = root.findall('.//div[@id="%s"]' % symbol.unique_name)
+            for elem in elems:
+                parent = elem.getparent()
+                new_elem = lxml.etree.fromstring(symbol.detailed_description)
+                parent.replace (elem, new_elem)
+
+            with open(page_path, 'w') as f:
+                tree.write_c14n(f)
+
+        self.set_fundamentals('c')
+
+    def format (self, page):
+        if not self.c_fundamentals:
+            for c_name, link in self.python_fundamentals.iteritems():
+                link.id_ = c_name
+                elink = self.doc_tool.link_resolver.get_named_link(link.id_)
+                if elink:
+                    self.c_fundamentals[c_name] = Link(elink.ref, elink.title, None)
 
         for l in self.__gi_extension.languages:
-            print "doing language", l
-            if l == 'python':
-                self.fundamentals = self.python_fundamentals
-            elif l == 'javascript':
-                self.fundamentals = self.javascript_fundamentals
-            else:
-                self.fundamentals = {}
-
-            for c_name, link in self.fundamentals.iteritems():
-                link.id_ = c_name
-                self.doc_tool.link_resolver.upsert_link(link, overwrite_ref=True)
+            self.set_fundamentals(l)
 
             self.__gi_extension.setup_language (l)
             self._output = os.path.join (self.doc_tool.output, l)
@@ -458,6 +486,4 @@ class GIHtmlFormatter(HtmlFormatter):
                 os.mkdir (self._output)
             HtmlFormatter.format (self, page)
 
-        for c_name, link in c_fundamentals.iteritems():
-            link.id_ = c_name
-            self.doc_tool.link_resolver.upsert_link(link, overwrite_ref=True)
+        self.set_fundamentals('c')
