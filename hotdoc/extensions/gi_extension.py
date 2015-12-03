@@ -17,8 +17,6 @@ from hotdoc.extensions.gtk_doc_parser import GtkDocParser
 from hotdoc.core.doc_tool import HotdocWizard
 from hotdoc.extensions.c_extension import validate_c_extension
 
-from lxml import etree as ET
-
 # FIXME: might conflict with comment_block.Annotation
 class Annotation (object):
     def __init__(self, nick, help_text, value=None):
