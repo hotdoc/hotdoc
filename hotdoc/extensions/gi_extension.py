@@ -719,7 +719,7 @@ class GIExtension(BaseExtension):
     def __gather_gtk_doc_links (self):
         sgml_dir = os.path.join(self.doc_tool.datadir, "gtk-doc", "html")
         if not os.path.exists(sgml_dir):
-            self.error("no gtk doc to gather links from in %s" % sgml_dir)
+            self.warning("no gtk doc to gather links from in %s" % sgml_dir)
             return
 
         for node in os.listdir(sgml_dir):
