@@ -6,7 +6,7 @@ sudo dnf install glib2-devel flex python-devel libxml2-devel libxslt-devel clang
 
 And on ubuntu:
 
-sudo apt-get install python-dev libglib2.0-dev flex libxml2-dev libxslt1-dev libclang-3.5-dev
+sudo apt-get install python-dev libglib2.0-dev flex libxml2-dev libxslt1-dev libclang-3.5-dev libgit2-dev
 
 Adapt to your distribution.
 
