@@ -504,6 +504,8 @@ class DocTool(Loggable):
         self.parser.add_argument ("-", action="store_true", no_prompt=True,
                 help="Separator to allow finishing a list of arguments before a command",
                 dest="whatever")
+        self.parser.add_argument ("--editing-server", action="store",
+                dest="editing_server", help="If provided, an edit button will be added")
 
         loggable_init("DOC_DEBUG")
 
@@ -578,6 +580,7 @@ class DocTool(Loggable):
         self.include_paths = config.get('include_paths')
         self.html_theme_path = config.get('html_theme', default_theme_path)
         self.git_repo_path = self.resolve_config_path(config.get('git_repo'))
+        self.editing_server = config.get('editing_server')
 
         if self.output_format not in ["html"]:
             raise ConfigError ("Unsupported output format : %s" %

@@ -1,4 +1,4 @@
-@require(symbol)
+@require(symbol, editing_server)
 
 @(
 tags = {}
@@ -19,13 +19,15 @@ tags.pop('returns', None)
 		@end
 		@header()
 		</li>
+		@if editing_server:
 		<li class="edit_button">
-			<a href="http://dev.example.com:5055/editor/@symbol.link.id_">
+			<a href="@editing_server/editor/@symbol.link.id_">
 				<p>
 					Edit
 				</p>
 			</a>
 		</li>
+		@end
 	</ul>
 @def content():
 @end

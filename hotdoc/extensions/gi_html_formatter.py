@@ -376,6 +376,7 @@ class GIHtmlFormatter(HtmlFormatter):
 
         template = self.engine.get_template('constant.html')
         out = template.render ({'symbol': constant,
+                                "editing_server": self.editing_server,
                                 'definition': None,
                                 'constant': constant})
         return (out, False)

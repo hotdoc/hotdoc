@@ -85,6 +85,8 @@ class HtmlFormatter (Formatter):
         self.__stylesheets = set()
         self.__scripts = set()
 
+        self.editing_server = doc_tool.editing_server
+
     def __parse_theme(self, searchpath):
         if not self.__theme_path:
             return
@@ -319,6 +321,7 @@ class HtmlFormatter (Formatter):
 
         template = self.engine.get_template ("struct.html")
         out = template.render ({"symbol": struct,
+                                "editing_server": self.editing_server,
                                 "struct": struct,
                                 "raw_code": raw_code,
                                 "members_list": members_list})
@@ -335,6 +338,7 @@ class HtmlFormatter (Formatter):
         members_list = self._format_members_list (enum.members, 'Members')
         template = self.engine.get_template ("enum.html")
         out = template.render ({"symbol": enum,
+                                "editing_server": self.editing_server,
                                 "enum": enum,
                                 "members_list": members_list})
         return (out, False)
@@ -423,6 +427,7 @@ class HtmlFormatter (Formatter):
 
         out = template.render ({'prototype': prototype,
                                 'symbol': callable_,
+                                "editing_server": self.editing_server,
                                 'return_value': return_value_detail,
                                 'parameters': parameters,
                                 'callable_type': callable_type,
@@ -445,6 +450,7 @@ class HtmlFormatter (Formatter):
                                       'property_type': type_link})
         template = self.engine.get_template ('property.html')
         res = template.render ({'symbol': prop,
+                                "editing_server": self.editing_server,
                                 'prototype': prototype,
                                'property': prop,
                                'extra': prop.extension_contents})
@@ -466,6 +472,7 @@ class HtmlFormatter (Formatter):
 
         template = self.engine.get_template ('class.html')
         return (template.render ({'symbol': klass,
+                                  "editing_server": self.editing_server,
                                   'klass': klass,
                                   'hierarchy': hierarchy}),
                 False)
@@ -495,6 +502,7 @@ class HtmlFormatter (Formatter):
 
         out = template.render ({'prototype': prototype,
                                 'symbol': function_macro,
+                                "editing_server": self.editing_server,
                                 'return_value': return_value_detail,
                                 'parameters': parameters,
                                 'callable_type': "function macro",
@@ -508,6 +516,7 @@ class HtmlFormatter (Formatter):
         template = self.engine.get_template('alias.html')
         aliased_type = self._format_linked_symbol (alias.aliased_type)
         return (template.render ({'symbol': alias,
+                                  "editing_server": self.editing_server,
                                   'alias': alias,
                                   'aliased_type': aliased_type}), False)
 
@@ -515,6 +524,7 @@ class HtmlFormatter (Formatter):
         template = self.engine.get_template('constant.html')
         definition = self._format_raw_code (constant.original_text)
         out = template.render ({'symbol': constant,
+                                "editing_server": self.editing_server,
                                 'definition': definition,
                                 'constant': constant})
         return (out, False)
