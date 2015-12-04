@@ -250,6 +250,7 @@ class QualifiedSymbol (MutableObject):
     def __init__(self, type_tokens=[]):
         self.input_tokens = type_tokens
         self.comment = None
+        self.extension_attributes = MutableDict()
         self.constructed()
         MutableObject.__init__(self)
 
@@ -285,7 +286,6 @@ class QualifiedSymbol (MutableObject):
 
     def constructed(self):
         self.extension_contents = {}
-        self.extension_attributes = {}
 
     def __setstate__(self, state):
         MutableObject.__setstate__(self, state)

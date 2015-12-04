@@ -211,6 +211,7 @@ class GIHtmlFormatter(HtmlFormatter):
             return_values.append (retval)
 
         for param in out_parameters:
+            param.resolve_links(self.doc_tool.link_resolver)
             self.format_symbol (param)
             param.formatted_link = self._format_linked_symbol(param)
             return_values.append (param)
@@ -265,6 +266,7 @@ class GIHtmlFormatter(HtmlFormatter):
                     is_pointer, title)
 
         for param in params:
+            param.resolve_links(self.doc_tool.link_resolver)
             param.formatted_link = self._format_linked_symbol(param)
 
         c_name = function._make_name()
