@@ -1058,8 +1058,6 @@ class GIExtension(BaseExtension):
 
         symbol.add_extension_attribute ('gi-extension',
                 'parameters', in_parameters)
-        symbol.add_extension_attribute ('gi-extension',
-                'out_parameters', out_parameters)
 
         retval.add_extension_attribute('gi-extension', 'out_parameters',
                 out_parameters)
