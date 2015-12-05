@@ -104,7 +104,8 @@ class NativeCommentTranslator(nodes.NodeVisitor):
         text = node.astext()
         if text.startswith ('param '):
             param_name = text.split()[1]
-            self.comment = GtkDocParameter(param_name, {}, '')
+            self.comment = Comment(name=param_name,
+                    description='')
             parent_comment = self.parent_comments[-1]
             parent_comment.params[param_name] = self.comment
             raise nodes.SkipNode

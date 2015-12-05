@@ -713,7 +713,7 @@ class GIExtension(BaseExtension):
                 help="Major version of the library")
         group.add_argument ("--gi-index", action="store",
                 dest="gi_index",
-                help="Path to the root markdown file",
+                help="Path to the GI root markdown file",
                 finalize_function=HotdocWizard.finalize_path)
 
     def __gather_gtk_doc_links (self):

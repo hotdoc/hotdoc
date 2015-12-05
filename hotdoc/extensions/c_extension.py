@@ -522,6 +522,7 @@ You can pass wildcards here, for example:
 
 These wildcards will be evaluated each time hotdoc is run.
 """
+
 def validate_pkg_config_packages(wizard, packages):
     if type(packages) != list:
         print "Incorrect type, expected list or None"
