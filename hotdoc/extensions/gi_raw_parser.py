@@ -173,8 +173,15 @@ class GtkDocRawCommentParser (object):
         comment = re.sub ('\n[ \t]*\*', '\n', comment)
         return comment.strip()
 
+    def validate_c_comment(self, comment):
+        return re.match(r'(/\*\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/)$',
+                comment) is not None
+
     def parse_comment (self, comment, filename, lineno, endlineno, stripped=False):
         if not stripped and not comment.lstrip().startswith ('/**'):
+            return None
+
+        if not self.validate_c_comment(comment.strip()):
             return None
 
         raw_comment = comment
