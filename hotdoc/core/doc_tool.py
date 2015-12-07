@@ -313,7 +313,10 @@ class DocTool(Loggable):
         self.update_doc_parser(page.extension_name)
 
         sym.update_children_comments()
-        self.formatter.format_symbol(sym) 
+        old_server = self.formatter.editing_server
+        self.formatter.editing_server = None
+        self.formatter.format_symbol(sym)
+        self.formatter.editing_server = old_server
 
         return sym.detailed_description
 
