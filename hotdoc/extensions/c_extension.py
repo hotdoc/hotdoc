@@ -129,6 +129,9 @@ class ClangScanner(Loggable):
                 if not node:
                     continue
 
+                if not node.location.file in self.filenames:
+                    continue
+
             if node.kind in [clang.cindex.CursorKind.FUNCTION_DECL,
                             clang.cindex.CursorKind.TYPEDEF_DECL,
                             clang.cindex.CursorKind.MACRO_DEFINITION,
