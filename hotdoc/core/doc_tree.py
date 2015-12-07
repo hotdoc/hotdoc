@@ -70,6 +70,7 @@ class Page(object):
         self.formatted_contents = None
         self.formatted_doc = ''
 
+        new_sym_names = []
         for sym_name in self.symbol_names:
             sym = doc_tool.get_symbol(sym_name)
             if sym:
@@ -79,7 +80,10 @@ class Page(object):
                     [])
             for symbol in new_symbols:
                 doc_tool.doc_tree.add_to_symbol_map(self, symbol)
+                new_sym_names.append(symbol.unique_name)
                 self.resolve_symbol (symbol)
+
+        self.symbol_names.extend(new_sym_names)
 
     def resolve_symbol (self, symbol):
         if not '#' in symbol.link.ref:
