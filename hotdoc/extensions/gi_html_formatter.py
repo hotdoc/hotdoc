@@ -471,6 +471,7 @@ class GIHtmlFormatter(HtmlFormatter):
             with open(page_path, 'w') as f:
                 tree.write_c14n(f)
 
+        self.__gi_extension.setup_language('c')
         self.set_fundamentals('c')
 
     def format (self, page):
