@@ -25,7 +25,7 @@ from ..utils.loggable import Loggable, TerminalController
 from ..utils.loggable import init as loggable_init
 from ..utils.utils import get_extension_classes
 from ..formatters.html.html_formatter import HtmlFormatter
-from ..transition_scripts.patcher import GitInterface
+from ..utils.patcher import GitInterface
 
 from hotdoc.core.gi_raw_parser import GtkDocRawCommentParser
 
