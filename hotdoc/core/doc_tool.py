@@ -16,9 +16,9 @@ from .symbols import *
 from .base_extension import BaseExtension
 from .alchemy_integration import Base
 from .doc_tree import DocTree
-from .wizard import QuickStartWizard, QUICKSTART_HELP, Skip, QuickStartArgument
 from .comment_block import Tag, Comment
 
+from ..utils.wizard import QuickStartWizard, QUICKSTART_HELP, Skip, QuickStartArgument
 from ..utils.utils import all_subclasses
 from ..utils.simple_signals import Signal
 from ..utils.loggable import TerminalController
