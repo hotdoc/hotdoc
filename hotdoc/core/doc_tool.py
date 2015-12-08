@@ -21,8 +21,7 @@ from .comment_block import Tag, Comment
 
 from ..utils.utils import all_subclasses
 from ..utils.simple_signals import Signal
-from ..utils.loggable import Loggable, TerminalController
-from ..utils.loggable import init as loggable_init
+from ..utils.loggable import TerminalController
 from ..utils.utils import get_extension_classes
 from ..formatters.html.html_formatter import HtmlFormatter
 from ..utils.patcher import GitInterface
@@ -252,10 +251,8 @@ Exactly one subcommand is required.
 Run hotdoc {subcommand} -h for more info
 """
 
-class DocTool(Loggable):
+class DocTool(object):
     def __init__(self):
-        Loggable.__init__(self)
-
         self.session = None
         self.output = None
         self.index_file = None
@@ -521,8 +518,6 @@ class DocTool(Loggable):
         self.parser.add_argument ("--editing-server", action="store",
                 dest="editing_server", help="If provided, an edit button will be added")
 
-        loggable_init("DOC_DEBUG")
-
         args = self.parser.parse_args(args)
         self.load_config(args, conf_file, wizard)
 
@@ -568,7 +563,7 @@ class DocTool(Loggable):
     def __setup_folder(self, folder):
         if os.path.exists (folder):
             if not os.path.isdir (folder):
-                self.error ("Folder %s exists but is not a directory", folder)
+                print "Folder %s exists but is not a directory" % folder
                 raise ConfigError ()
         else:
             os.mkdir (folder)

@@ -1,4 +1,3 @@
-from ..utils.loggable import Loggable
 from ..formatters.html.html_formatter import HtmlFormatter
 from .gtk_doc_parser import GtkDocParser
 
@@ -7,9 +6,8 @@ class ExtDependency(object):
         self.dependency_name = dependency_name
         self.upstream = upstream
 
-class BaseExtension(Loggable):
+class BaseExtension(object):
     def __init__(self, doc_tool, args):
-        Loggable.__init__(self)
         self.doc_tool = doc_tool
         self._formatters = {"html": HtmlFormatter(doc_tool, [])}
         self._doc_parser = GtkDocParser(doc_tool)
