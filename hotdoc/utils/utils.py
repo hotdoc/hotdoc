@@ -3,6 +3,7 @@ import pkgutil, importlib, sys, os
 import subprocess
 import traceback
 from pkg_resources import iter_entry_points
+from toposort import toposort_flatten
 
 def PkgConfig(args):
     cmd = ['pkg-config'] + shlex.split(args)
@@ -16,6 +17,7 @@ def all_subclasses(cls):
 
 def get_extension_classes():
     all_classes = {}
+    deps_map = {}
 
     for entry_point in iter_entry_points(group='hotdoc.extensions',
             name='get_extension_classes'):
@@ -30,4 +32,24 @@ def get_extension_classes():
         for klass in classes:
             all_classes[klass.EXTENSION_NAME] = klass
 
-    print all_classes
+    for klass in all_classes.values():
+        deps = klass.get_dependencies()
+        satisfied = True
+        topodeps = set()
+        for dep in deps:
+            if dep.dependency_name not in all_classes:
+                print "Missing dependency %s for %s" % (dep.dependency_name,
+                        klass.EXTENSION_NAME)
+                satisfied = False
+                break
+            if dep.upstream == True:
+                topodeps.add(all_classes[dep.dependency_name])
+
+        if not satisfied:
+            continue
+
+        deps_map[klass] = topodeps
+
+
+    sorted_classes = toposort_flatten(deps_map)
+    return sorted_classes

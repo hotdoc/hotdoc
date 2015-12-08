@@ -243,6 +243,7 @@ setup(name='hotdoc',
                           'sqlalchemy==1.0.9',
                           'ipython==4.0.0',
                           'pkgconfig==1.1.0',
-                          'pygit2==0.22.0'],
+                          'pygit2==0.22.0',
+                          'toposort==1.4'],
       setup_requires = ['requests'],
       zip_safe=False)

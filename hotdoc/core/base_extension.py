@@ -2,6 +2,11 @@ from ..utils.loggable import Loggable
 from ..formatters.html.html_formatter import HtmlFormatter
 from .gtk_doc_parser import GtkDocParser
 
+class ExtDependency(object):
+    def __init__(self, dependency_name, upstream=False):
+        self.dependency_name = dependency_name
+        self.upstream = upstream
+
 class BaseExtension(Loggable):
     def __init__(self, doc_tool, args):
         Loggable.__init__(self)
@@ -28,3 +33,7 @@ class BaseExtension(Loggable):
 
     def set_stale_source_files(self, stale):
         self.stale_source_files = stale
+
+    @staticmethod
+    def get_dependencies():
+        return []

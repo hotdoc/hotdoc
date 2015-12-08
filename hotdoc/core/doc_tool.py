@@ -503,8 +503,6 @@ class DocTool(Loggable):
                 name='c_extension') 
 
         extension_classes = get_extension_classes ()
-        print extension_classes
-        sys.exit(0)
 
         for subclass in extension_classes:
             subclass.add_arguments (self.parser)
