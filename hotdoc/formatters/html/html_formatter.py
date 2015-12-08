@@ -436,8 +436,8 @@ class HtmlFormatter (Formatter):
         res = template.render ({'symbol': prop,
                                 "editing_server": self.editing_server,
                                 'prototype': prototype,
-                               'property': prop,
-                               'extra': prop.extension_contents})
+                                'property': prop,
+                                'extra': prop.extension_contents})
         return (res, False)
 
     def _format_class_symbol (self, klass):
@@ -518,29 +518,6 @@ class HtmlFormatter (Formatter):
         if format_function:
             return format_function (symbol)
         return (None, False)
-
-    def _format_api_index (self, columns, rows):
-        pagename = 'API_index.html'
-        template = self.engine.get_template(pagename)
-        rows.sort (key=lambda row: row[0].title)
-
-        formatted_rows = []
-        for row in rows:
-            formatted_row = []
-            for field in row:
-                if isinstance(field, Link):
-                    formatted_row.append (self._format_link(field.get_link(),
-                        field.title))
-                else:
-                    formatted_row.append (field)
-            formatted_rows.append (formatted_row)
-
-        out = template.render ({'columns': columns,
-                                'rows': formatted_rows,
-                                'assets_path': self._get_assets_path(),
-                                })
-
-        return out
 
     def _format_object_hierarchy_symbol (self, symbol):
         dot_graph = self._create_hierarchy_graph (symbol.hierarchy)
