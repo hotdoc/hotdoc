@@ -147,14 +147,10 @@ class HtmlFormatter (Formatter):
     def _format_callable_prototype (self, return_value, function_name,
             parameters, is_pointer):
         template = self.engine.get_template('callable_prototype.html')
-        param_offset = ' ' * (len (function_name) + 2)
-        if is_pointer:
-            param_offset += 3 * ' '
 
         return template.render ({'return_value': return_value,
                                  'name': function_name,
                                  'parameters': parameters,
-                                 'param_offset': param_offset,
                                  'is_pointer': is_pointer,
                                 })
 

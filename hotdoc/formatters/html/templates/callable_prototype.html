@@ -1,4 +1,11 @@
-@require(return_value, name, parameters, param_offset, is_pointer)
+@require(return_value, name, parameters, is_pointer)
+
+@(
+param_offset = ' ' * (len (name) + 2)
+if is_pointer:
+	param_offset += 3 * ' '
+)
+
 <pre class="prototype">
 @if return_value:
 @return_value
