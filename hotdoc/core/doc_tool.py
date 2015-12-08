@@ -260,7 +260,7 @@ class DocTool(Loggable):
         self.output = None
         self.index_file = None
         self.doc_parser = None
-        self.__extension_classes = {}
+        self.extension_classes = {}
         self.extensions = {}
         self.__comments = {}
         self.__symbols = {}
@@ -497,16 +497,11 @@ class DocTool(Loggable):
         wizard = HotdocWizard(self.parser, conf_path=conf_path)
         self.wizard = wizard
 
-        
-        from pkg_resources import iter_entry_points
-        myiter = iter_entry_points(group='hotdoc.extensions',
-                name='c_extension') 
-
         extension_classes = get_extension_classes ()
 
         for subclass in extension_classes:
             subclass.add_arguments (self.parser)
-            self.__extension_classes[subclass.EXTENSION_NAME] = subclass
+            self.extension_classes[subclass.EXTENSION_NAME] = subclass
 
         self.parser.add_argument ("-i", "--index", action="store",
                 dest="index", help="location of the index file",
@@ -579,7 +574,7 @@ class DocTool(Loggable):
             os.mkdir (folder)
 
     def __create_extensions (self, args):
-        for ext_class in self.__extension_classes.values():
+        for ext_class in self.extension_classes.values():
             ext = ext_class(self, args)
             self.extensions[ext.EXTENSION_NAME] = ext
 
