@@ -75,8 +75,6 @@ class HtmlFormatter (Formatter):
             loader=FileLoader(searchpath, encoding='UTF-8'),
             extensions=[CoreExtension(), CodeExtension()]
         )
-        self.__stylesheets = set()
-        self.__scripts = set()
 
         self.editing_server = doc_tool.editing_server
 
@@ -361,13 +359,8 @@ class HtmlFormatter (Formatter):
         template = self.engine.get_template('page.html')
 
         toc = self._format_summary(toc_sections)
-
-        stylesheets = self._get_style_sheets(page.link.ref)
-        scripts = self._get_scripts(page.link.ref)
         out = template.render ({'page': page,
                                 'toc': toc,
-                                'stylesheets': stylesheets,
-                                'scripts': scripts,
                                 'assets_path': self._get_assets_path(),
                                 'symbols_details': symbols_details})
 
@@ -549,8 +542,7 @@ class HtmlFormatter (Formatter):
         out = template.render ({'columns': columns,
                                 'rows': formatted_rows,
                                 'assets_path': self._get_assets_path(),
-                                'scripts': self._get_scripts(pagename),
-                                'stylesheets': self._get_style_sheets(pagename)})
+                                })
 
         return out
 
@@ -566,57 +558,16 @@ class HtmlFormatter (Formatter):
         pagename = 'object_hierarchy.html'
         template = self.engine.get_template(pagename)
         res = template.render({'graph': contents,
-                                'scripts': self._get_scripts(pagename),
                                 'assets_path': self._get_assets_path(),
-                                'stylesheets': self._get_style_sheets(pagename),
                                 })
         return (res, False)
 
     def _get_assets_path(self):
         return 'assets'
 
-    def _get_style_sheets(self, page):
-        stylesheets = [self._get_style_sheet()]
-        stylesheets = []
-        stylesheets.extend(self._get_extra_style_sheets(page))
-        self.__stylesheets = self.__stylesheets.union(set(stylesheets))
-
-        return stylesheets
-
-    def _get_scripts(self, page):
-        scripts = self._do_get_scripts(page)
-
-        self.__scripts = self.__scripts.union(set(scripts))
-
-        return scripts
-
-    def _do_get_scripts(self, page):
-        scripts = ["prism.js", "prism-bash.js"]
-        return [os.path.join ('assets', s) for s in scripts]
-
-    def _get_style_sheet (self):
-        return os.path.join("assets", "style.css")
-
-    def _get_extra_style_sheets(self, page):
-        extra_style_sheets = ["prism.css"]
-        if page == "index.html":
-            extra_style_sheets.append("index.css")
-        extra_style_sheets = [os.path.join ('assets', s) for s in
-                extra_style_sheets]
-        return []
-        return extra_style_sheets
-
     def _get_extra_files (self):
         dir_ = os.path.dirname(__file__)
         res = []
-        for stylesheet in self.__stylesheets:
-            res.append(os.path.join(dir_, stylesheet))
-
-        for script in self.__scripts:
-            res.append(os.path.join(dir_, script))
-
-        res.extend([os.path.join (dir_, 'assets', "API_index.js"),
-                os.path.join (dir_, 'assets', "home.png")])
 
         if self.__theme_path:
             theme_files = os.listdir(self.__theme_path)

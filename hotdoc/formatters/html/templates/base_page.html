@@ -1,4 +1,4 @@
-@require(stylesheets, scripts, assets_path)
+@require(assets_path)
 
 <!DOCTYPE html>
 <html lang="en">
@@ -6,14 +6,6 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 
 	<title>Made with HotDoc</title>
-
-	@for stylesheet in stylesheets:
-	<link rel="stylesheet" href=@stylesheet type="text/css" />
-	@end
-
-	@for script in scripts:
-    	<script src=@script></script>
-	@end
 </head>
 
 <div class="page_container">
