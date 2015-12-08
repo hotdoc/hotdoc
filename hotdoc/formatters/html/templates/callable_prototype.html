@@ -1,19 +1,19 @@
-@require(callable, param_offset, is_pointer)
+@require(return_value, name, param_offset, is_pointer)
 <pre class="prototype">
-@if callable.return_value:
-@callable.return_value
+@if return_value:
+@return_value
 @end
 @if is_pointer:
 (*\
 @end
-@callable.name\
+@name\
 @if is_pointer:
 )\
 @end
  (\
-@if callable.parameters:
+@if parameters:
 \
-@for i, parameter in enumerate (callable.parameters):
+@for i, parameter in enumerate (parameters):
 @if i != 0:
 ,
 @param_offset\
