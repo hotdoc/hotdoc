@@ -39,6 +39,9 @@ class GtkDocRawCommentParser (object):
         if "SECTION" in title:
             return ''.join(title.split(' ')), []
 
+        if not title.strip().endswith(':'):
+            return None, []
+
         split = title.split (': ', 1)
         title = split[0].rstrip(':')
         annotations = []
