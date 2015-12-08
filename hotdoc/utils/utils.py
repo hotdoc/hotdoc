@@ -2,6 +2,7 @@ import shlex
 import pkgutil, importlib, sys, os
 import subprocess
 import traceback
+from pkg_resources import iter_entry_points
 
 def PkgConfig(args):
     cmd = ['pkg-config'] + shlex.split(args)
@@ -13,28 +14,20 @@ def all_subclasses(cls):
         return cls.__subclasses__() + [g for s in cls.__subclasses__()
                                        for g in all_subclasses(s)]
 
-def load_extensions(dirname):
-    package = importlib.import_module(dirname)
-    prefix = package.__name__ + '.'
-    for importer, modname, ispkg in pkgutil.iter_modules(package.__path__,
-            prefix):
-        if modname in sys.modules:
-            continue
+def get_extension_classes():
+    all_classes = {}
+
+    for entry_point in iter_entry_points(group='hotdoc.extensions',
+            name='get_extension_classes'):
+        entry_point.module_name
         try:
-            module = importlib.import_module(modname)
+            activation_function = entry_point.load()
+            classes = activation_function()
         except Exception as e:
-            print "Extension %s disabled : %s" % (modname, e)
-            if os.environ.get('DOC_DEBUG'):
-                traceback.print_exc()
+            print "Failed to load %s" % entry_point.module_name, e
+            continue
 
+        for klass in classes:
+            all_classes[klass.EXTENSION_NAME] = klass
 
-def load_all_extensions():
-    extension_paths = os.environ.get('HOTDOC_EXTENSION_PATH')
-    if extension_paths:
-        extension_paths = extension_paths.split(':')
-    else:
-        extension_paths = []
-
-    extension_paths.append('hotdoc.extensions')
-    for path in extension_paths:
-        load_extensions(path)
+    print all_classes

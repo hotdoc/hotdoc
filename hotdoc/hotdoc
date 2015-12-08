@@ -22,11 +22,8 @@ import sys, os, traceback
 import cPickle as pickle
 
 from hotdoc.core.doc_tool import DocTool
-from hotdoc.utils.utils import load_all_extensions
 
 if __name__=="__main__":
-    load_all_extensions()
-
     doc_tool = DocTool()
 
     try:

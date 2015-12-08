@@ -23,10 +23,11 @@ from ..utils.utils import all_subclasses
 from ..utils.simple_signals import Signal
 from ..utils.loggable import Loggable, TerminalController
 from ..utils.loggable import init as loggable_init
+from ..utils.utils import get_extension_classes
 from ..formatters.html.html_formatter import HtmlFormatter
 from ..transition_scripts.patcher import GitInterface
 
-from hotdoc.extensions.gi_raw_parser import GtkDocRawCommentParser
+from hotdoc.core.gi_raw_parser import GtkDocRawCommentParser
 
 class ConfigError(Exception):
     pass
@@ -496,9 +497,16 @@ class DocTool(Loggable):
         wizard = HotdocWizard(self.parser, conf_path=conf_path)
         self.wizard = wizard
 
-        extension_subclasses = all_subclasses (BaseExtension)
+        
+        from pkg_resources import iter_entry_points
+        myiter = iter_entry_points(group='hotdoc.extensions',
+                name='c_extension') 
 
-        for subclass in extension_subclasses:
+        extension_classes = get_extension_classes ()
+        print extension_classes
+        sys.exit(0)
+
+        for subclass in extension_classes:
             subclass.add_arguments (self.parser)
             self.__extension_classes[subclass.EXTENSION_NAME] = subclass
 

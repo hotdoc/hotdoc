@@ -1,6 +1,6 @@
 from ..utils.loggable import Loggable
 from ..formatters.html.html_formatter import HtmlFormatter
-from ..extensions.gtk_doc_parser import GtkDocParser
+from .gtk_doc_parser import GtkDocParser
 
 class BaseExtension(Loggable):
     def __init__(self, doc_tool, args):
