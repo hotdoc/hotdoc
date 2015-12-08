@@ -3,7 +3,7 @@ from distutils.command.build import build
 from distutils.core import Command
 from setuptools.command.develop import develop
 from setuptools.command.sdist import sdist
-from setuptools.command.install import install
+from setuptools.command.bdist_egg import bdist_egg
 import shutil
 import os
 import tarfile
@@ -58,10 +58,10 @@ class CustomSDist(sdist):
         self.run_command('download_default_template')
         return sdist.run(self)
 
-class CustomInstall(install):
+class CustomBDistEgg(bdist_egg):
     def run(self):
         self.run_command('download_default_template')
-        return install.run(self)
+        return bdist_egg.run(self)
 
 setup(name='hotdoc',
         version='0.6.1',
@@ -76,8 +76,8 @@ setup(name='hotdoc',
         # a default theme and bower is shitty.
         cmdclass = {'build': CustomBuild,
             'sdist': CustomSDist,
-            'install': CustomInstall,
             'develop': CustomDevelop,
+            'bdist_egg': CustomBDistEgg,
             'download_default_template': DownloadDefaultTemplate},
         scripts = ['hotdoc/hotdoc'],
         package_data = {
