@@ -64,7 +64,7 @@ class CustomBDistEgg(bdist_egg):
         return bdist_egg.run(self)
 
 setup(name='hotdoc',
-        version='0.6.1',
+        version='0.6.2',
         description='A documentation tool micro-framework',
         keywords='documentation',
         url='https://github.com/hotdoc/hotdoc',
