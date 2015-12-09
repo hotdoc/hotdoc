@@ -22,7 +22,7 @@ from ..utils.wizard import QuickStartWizard, QUICKSTART_HELP, Skip, QuickStartAr
 from ..utils.utils import all_subclasses
 from ..utils.simple_signals import Signal
 from ..utils.loggable import TerminalController
-from ..utils.utils import get_extension_classes
+from ..utils.utils import get_all_extension_classes
 from ..formatters.html.html_formatter import HtmlFormatter
 from ..utils.patcher import GitInterface
 
@@ -494,7 +494,7 @@ class DocTool(object):
         wizard = HotdocWizard(self.parser, conf_path=conf_path)
         self.wizard = wizard
 
-        extension_classes = get_extension_classes ()
+        extension_classes = get_all_extension_classes (sort=True)
 
         for subclass in extension_classes:
             subclass.add_arguments (self.parser)

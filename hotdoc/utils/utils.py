@@ -15,7 +15,7 @@ def all_subclasses(cls):
         return cls.__subclasses__() + [g for s in cls.__subclasses__()
                                        for g in all_subclasses(s)]
 
-def get_extension_classes():
+def get_all_extension_classes(sort):
     all_classes = {}
     deps_map = {}
 
@@ -31,6 +31,9 @@ def get_extension_classes():
 
         for klass in classes:
             all_classes[klass.EXTENSION_NAME] = klass
+
+    if not sort:
+        return all_classes
 
     for klass in all_classes.values():
         deps = klass.get_dependencies()
