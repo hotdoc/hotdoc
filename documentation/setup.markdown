@@ -2,24 +2,26 @@
 
 To install hotdoc, you will first need to satisfy the dependencies, on fedora 22 this can be done with:
 
-sudo dnf install glib2-devel flex python-devel libxml2-devel libxslt-devel clang-devel
+sudo dnf install libgit2-devel.x86_64
 
 And on ubuntu:
 
-sudo apt-get install python-dev libglib2.0-dev flex libxml2-dev libxslt1-dev libclang-3.5-dev libgit2-dev
+sudo apt-get install libgit2-dev
 
 Adapt to your distribution.
-
-You will also need to manually install the clang bindings adapted to your clang installation, for example if clang 3.5
-is installed, you will need to run:
-
-pip install clang==3.5
 
 You can then install it through pypi with:
 
 pip install hotdoc
 
 It also works in a virtualenv.
+
+Hotdoc is a documentation micro-framework, as such the hotdoc package isn't very useful by itself.
+
+To find extensions you may be interested in, check https://github.com/hotdoc .
+
+For example, if you want to document GObject introspected code, you'll want to install hotdoc_gi_extension,
+which will pull hotdoc_c_extension as it depends on it.
 
 # Configuration
 

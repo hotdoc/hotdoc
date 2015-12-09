@@ -7,29 +7,29 @@ Read [this](documentation/setup.markdown) if you just want to use hotdoc.
 
 ###Overview
 
-HotDoc aims at being a highly modular API documentation tool / library for
-C and C++ libraries (initially).
+Hotdoc is a documentation micro-framework. It provides an interface for
+extensions to plug upon, along with some base objects (formatters, ...)
 
-It is based on clang for the source code parsing, and CommonMark for the
-formatting.
+Hotdoc is also designed as an incremental documentation system. Along with
+its final output, it also produces a database of symbols and a dependency
+graph, which can be reused at the next run, or queried upon externally.
 
-It was previously based on pandoc, and a pandoc backend will be available
-again soon, but the dependency tree with a hard pandoc dependency was just too
-deep.
+For example, [hotdoc_server](https://github.com/hotdoc/hotdoc_server) uses
+hotdoc to provide (for now basic) wiki-like functionalities: users
+can edit and preview the documentation, and the server patches the sources it was
+extracted from.
 
-It features:
+Please check the packages listed at [https://github.com/hotdoc](https://github.com/hotdoc) to
+pick the extensions you are interested in.
 
-+ An incremental build system, that only rebuilds the output depending on the changed
-  resources
-+ A pretty comprehensive extension system, handmade and bound to be subjected to API
-  breakage until the 1.0 version of hotdoc is released
-+ A built-in gobject-introspection extension, which will expose gobject-specific
-  concepts (properties, signals, annotations ...)
-* Themeability (see [this example](https://github.com/MathieuDuponchelle/hotdoc_bootstrap_theme/commits/master)
-* Persisting of the documentation through sqlalchemy, with an API to access it.
-  An example project that uses this API is the hotdoc server, which will soon be made public.
-+ Many more things !
+Hotdoc currently uses CommonMark to parse and render standalone documentation markdown pages,
+and implements some custom parsing of links on top. It would be possible to
+override this default parser in an extension, for example to use pandoc, or modify
+the parsing.
 
-### Additional resources (FIXME: update extensions, outdated)
-
-Check out the [HotDoc extensions](https://github.com/MathieuDuponchelle/hotdoc_extensions)
+Lastly, the hotdoc html formatter also supports theming. Its base output has
+no stylesheets or scripts applied to it whatsoever, this is handled by themes,
+which can additionally override the base templates. By default, hotdoc will use
+a theme based on bootstrap and isotope, see
+[https://github.com/hotdoc/hotdoc_bootstrap_theme](https://github.com/hotdoc/hotdoc_bootstrap_theme)
+for its sources.
