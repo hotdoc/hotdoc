@@ -516,14 +516,16 @@ class DocTool(object):
                 help="Separator to allow finishing a list of arguments before a command",
                 dest="whatever")
         self.parser.add_argument ("--editing-server", action="store",
-                dest="editing_server", help="If provided, an edit button will be added")
+                dest="editing_server", help="If editing-server is provided, an edit button will be added")
 
         args = self.parser.parse_args(args)
         self.load_config(args, conf_file, wizard)
 
         exit_now = False
 
+        save_config = True
         if args.cmd == 'run':
+            save_config = False
             self.parse_config(wizard.config)
         elif args.cmd == 'conf':
             if args.quickstart == True:
@@ -534,8 +536,9 @@ class DocTool(object):
                         self.parse_config(wizard.config)
                         exit_now = False
 
-        with open(conf_file, 'w') as f:
-            f.write(json.dumps(wizard.config, indent=4))
+        if save_config:
+            with open(conf_file, 'w') as f:
+                f.write(json.dumps(wizard.config, indent=4))
 
         if exit_now:
             sys.exit(0)
