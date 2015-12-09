@@ -31,22 +31,22 @@ class GtkDocRawCommentParser (object):
 
         self.tag_validation_regex = re.compile (tag_validation_regex)
 
-    def parse_title (self, title):
+    def parse_title (self, raw_title):
         # Section comments never contain annotations,
         # We also normalize them here to not contain any spaces.
         # FIXME: This code now only lives here for the purpose of gtk-doc conversion
         # Could remove that one day
-        if "SECTION" in title:
-            return ''.join(title.split(' ')), []
+        if "SECTION" in raw_title:
+            return ''.join(raw_title.split(' ')), []
 
-        if not title.strip().endswith(':'):
-            return None, []
-
-        split = title.split (': ', 1)
+        split = raw_title.split (': ', 1)
         title = split[0].rstrip(':')
         annotations = []
         if len (split) > 1:
             annotations = self.parse_annotations (split[1])
+        elif not raw_title.strip().endswith(':'):
+            print "Missing colon in comment name :", raw_title
+            return None, []
         return title, annotations
 
     def parse_key_value_annotation (self, name, string):
@@ -196,6 +196,9 @@ class GtkDocRawCommentParser (object):
 
         split = re.split (r'\n[\W]*\n', comment, maxsplit=1)
         block_name, parameters, annotations = self.parse_title_and_parameters (split[0])
+
+        if not block_name:
+            return None
 
         description = ""
         tags = []
