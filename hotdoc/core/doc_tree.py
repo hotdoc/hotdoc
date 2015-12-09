@@ -311,7 +311,6 @@ class DocTree(object):
                 page = epage
 
         if not page:
-            print "Parsing", source_file
             page = self.page_parser.parse(source_file)
             page.extension_name = extension_name
 
