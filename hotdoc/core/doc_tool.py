@@ -24,7 +24,12 @@ from ..utils.simple_signals import Signal
 from ..utils.loggable import TerminalController
 from ..utils.utils import get_all_extension_classes
 from ..formatters.html.html_formatter import HtmlFormatter
-from ..utils.patcher import GitInterface
+
+try:
+    from ..utils.git_interface import GitInterface
+    HAVE_GIT_INTERFACE = True
+except ImportError:
+    HAVE_GIT_INTERFACE = False
 
 from hotdoc.core.gi_raw_parser import GtkDocRawCommentParser
 
@@ -109,7 +114,10 @@ class HotdocWizard(QuickStartWizard):
             self.comments = {}
             self.symbols = {}
             self.tc = TerminalController()
-            self.git_interface = GitInterface()
+            if HAVE_GIT_INTERFACE:
+                self.git_interface = GitInterface()
+            else:
+                self.git_interface = None
             self.config = {}
             self.conf_path = conf_path
         else:
@@ -197,6 +205,9 @@ class HotdocWizard(QuickStartWizard):
         prompt += '\nPress Enter to start setup '
         if not self.wait_for_continue(prompt):
             return False
+
+        if not HAVE_GIT_INTERFACE:
+            return True
 
         try:
             repo_path = self.prompt_key('git_repo', prompt=">>> Path to the git repo ? ",
