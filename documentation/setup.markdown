@@ -1,18 +1,28 @@
 # Installation guide
 
-To install hotdoc, you will first need to satisfy the dependencies, on fedora 22 this can be done with:
+Hotdoc can optionally use pygit2 to help with porting projects from other documentation systems.
 
+If you wish to enable that feature, you need to install libgit2. On fedora this can be done with:
+
+```
 sudo dnf install libgit2-devel.x86_64
+```
 
 And on ubuntu:
 
+```
 sudo apt-get install libgit2-dev
+```
 
 Adapt to your distribution.
 
-You can then install it through pypi with:
+> If your installed version of libgit 2 is older than 0.22.0, this feature will not be enabled
 
+You can then install hotdoc through pypi with:
+
+```
 pip install hotdoc
+```
 
 It also works in a virtualenv.
 
