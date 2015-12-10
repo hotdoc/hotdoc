@@ -92,6 +92,7 @@ class CustomBDistEgg(bdist_egg):
         return bdist_egg.run(self)
 
 install_requires = [
+    'cffi',
     'wheezy.template==0.1.167',
     'CommonMark==0.5.4',
     'pygraphviz==1.3.1',
@@ -100,11 +101,10 @@ install_requires = [
     'toposort==1.4']
 
 if pygit2_version is not None:
-    install_requires.append('cffi==1.3.0')
     install_requires.append('pygit2==%s' % pygit2_version)
 
 setup(name='hotdoc',
-        version='0.6.3',
+        version='0.6.3.1',
         description='A documentation tool micro-framework',
         keywords='documentation',
         url='https://github.com/hotdoc/hotdoc',
