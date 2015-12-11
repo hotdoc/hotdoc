@@ -155,6 +155,9 @@ class HotdocWizard(QuickStartWizard):
         return symbol
 
     def resolve_config_path(self, path):
+        if path is None:
+            return path
+
         res = os.path.join(self.conf_path, path)
         return os.path.abspath(res)
 
@@ -423,7 +426,7 @@ class DocTool(object):
         n = datetime.now()
         self.__setup(args)
 
-        print "core setup takes", datetime.now() - n
+        print "core setup done in %s" % str(datetime.now() - n)
 
         for extension in self.extensions.values():
             n = datetime.now()
@@ -431,15 +434,16 @@ class DocTool(object):
             extension.setup ()
             self.change_tracker.update_extension_sources_mtimes(extension)
             self.session.flush()
-            print "extension", extension.EXTENSION_NAME, 'takes', datetime.now() - n
+            print "extension %s done in %s" % (extension.EXTENSION_NAME,
+                    str(datetime.now() - n))
 
         n = datetime.now()
         self.doc_tree.resolve_symbols(self)
-        print "symbol resolution takes", datetime.now() - n
+        print "symbol resolution done in %s" % str(datetime.now() - n)
 
         n = datetime.now()
         self.session.flush()
-        print "flushing takes", datetime.now() - n
+        print "Database persisting done in %s" % str(datetime.now() - n)
 
     def format (self):
         from datetime import datetime
@@ -448,7 +452,7 @@ class DocTool(object):
         self.__setup_folder(self.output)
         self.formatter = HtmlFormatter(self, [])
         self.formatter.format(self.doc_tree.root)
-        print "formatting takes", datetime.now() - n
+        print "formatting done in %s" % str(datetime.now() - n)
 
     def add_comment(self, comment):
         self.__comments[comment.name] = comment
@@ -517,7 +521,8 @@ class DocTool(object):
         self.parser.add_argument ("-o", "--output", action="store",
                 dest="output", help="where to output the rendered documentation")
         self.parser.add_argument ("--output-format", action="store",
-                dest="output_format", help="format for the output")
+                dest="output_format", help="format for the output",
+                default="html")
         self.parser.add_argument ("-I", "--include-path", action="append",
                 dest="include_paths", help="markdown include paths")
         self.parser.add_argument ("--html-theme", action="store",
@@ -617,6 +622,9 @@ class DocTool(object):
         #    config.index = "tmp_markdown_files/tmp_index.markdown"
 
         self.index_file = self.resolve_config_path(config.get('index'))
+
+        if self.index_file is None:
+            raise ConfigError("'index' is required")
 
         prefix = os.path.dirname(self.index_file)
         self.doc_tree = DocTree(self, prefix)

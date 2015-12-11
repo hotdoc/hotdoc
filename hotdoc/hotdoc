@@ -21,7 +21,7 @@
 import sys, os, traceback
 import cPickle as pickle
 
-from hotdoc.core.doc_tool import DocTool
+from hotdoc.core.doc_tool import DocTool, ConfigError
 
 if __name__=="__main__":
     doc_tool = DocTool()
@@ -31,10 +31,14 @@ if __name__=="__main__":
         doc_tool.format()
         doc_tool.persist()
         doc_tool.finalize()
+    except ConfigError as e:
+        print "Configuration error:", e
+        sys.exit(1)
     except Exception as e:
-        if os.environ.get ("DOC_DEBUG"):
-            traceback.print_exc ()
-        else:
-            print e.message
+        print ("An unknown error happened while building the documentation"
+               " and hotdoc cannot recover from it. Please report "
+               "a bug with this error message and the steps to "
+               "reproduce it")
+        traceback.print_exc ()
         sys.exit (1)
     sys.exit(0)
