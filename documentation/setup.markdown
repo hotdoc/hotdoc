@@ -5,18 +5,32 @@ Hotdoc can optionally use pygit2 to help with porting projects from other docume
 If you wish to enable that feature, you need to install libgit2. On fedora this can be done with:
 
 ```
-sudo dnf install libgit2-devel.x86_64
+dnf install libgit2-devel.x86_64
 ```
 
 And on ubuntu:
 
 ```
-sudo apt-get install libgit2-dev
+apt-get install libgit2-dev
 ```
 
 Adapt to your distribution.
 
 > If your installed version of libgit 2 is older than 0.22.0, this feature will not be enabled
+
+Hotdoc also needs graphviz to generate object hierarchies, you will thus need to install graphviz-dev
+
+On Fedora this can be done with:
+
+```
+dnf install graphviz-devel
+```
+
+And on ubuntu / debian:
+
+```
+apt-get install libgraphviz-dev
+```
 
 You can then install hotdoc through pypi with:
 
