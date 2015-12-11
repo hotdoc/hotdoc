@@ -19,14 +19,18 @@ try:
     libgit2_version = subprocess.check_output(['pkg-config', '--modversion',
         'libgit2']).strip()
     known_libgit2_versions = VersionList([V('0.22.0'), V('0.23.0')])
-    known_libgit2_version = known_libgit2_versions.find_le(V(libgit2_version))
+    try:
+        known_libgit2_version = known_libgit2_versions.find_le(V(libgit2_version))
 
-    if known_libgit2_version == V('0.22.0'):
-        pygit2_version = '0.22.1'
-    elif known_libgit2_version == V('0.23.0'):
-        pygit2_version = '0.23.2'
-    else:
-        print "WARNING: no compatible pygit version found"
+        if known_libgit2_version == V('0.22.0'):
+            pygit2_version = '0.22.1'
+        elif known_libgit2_version == V('0.23.0'):
+            pygit2_version = '0.23.2'
+        else:
+            print "WARNING: no compatible pygit version found"
+            print "git integration disabled"
+    except ValueError:
+        print "Warning: too old libgit2 version %s" % libgit2_version
         print "git integration disabled"
 except OSError as e:
     print "Error when trying to figure out the libgit2 version"
@@ -104,7 +108,7 @@ if pygit2_version is not None:
     install_requires.append('pygit2==%s' % pygit2_version)
 
 setup(name='hotdoc',
-        version='0.6.3.2',
+        version='0.6.3.3',
         description='A documentation tool micro-framework',
         keywords='documentation',
         url='https://github.com/hotdoc/hotdoc',
