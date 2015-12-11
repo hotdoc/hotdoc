@@ -18,18 +18,19 @@ Adapt to your distribution.
 
 > If your installed version of libgit 2 is older than 0.22.0, this feature will not be enabled
 
-Hotdoc also needs graphviz to generate object hierarchies, you will thus need to install graphviz-dev
+Hotdoc also needs graphviz to generate object hierarchies, you will thus need to install graphviz-dev,
+and some libraries it depends depend on the python headers, so you will need to install them too.
 
 On Fedora this can be done with:
 
 ```
-dnf install graphviz-devel
+dnf install graphviz-devel python-devel
 ```
 
 And on ubuntu / debian:
 
 ```
-apt-get install libgraphviz-dev
+apt-get install libgraphviz-dev python-dev
 ```
 
 You can then install hotdoc through pypi with:
