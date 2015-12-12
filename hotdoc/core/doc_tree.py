@@ -24,6 +24,7 @@ class Page(object):
         self.subpages = set({})
         self.link = Link (pagename, name, name) 
         self.title = None
+        self.first_header = None
         self.short_description = None
         self.source_file = source_file
         self.extension_name = None
@@ -41,6 +42,7 @@ class Page(object):
                 'subpages': self.subpages,
                 'link': self.link,
                 'title': self.title,
+                'first_header': self.first_header,
                 'short_description': self.short_description,
                 'source_file': self.source_file,
                 'extension_name': self.extension_name,
@@ -104,7 +106,7 @@ class Page(object):
         return self.short_description
 
     def get_title (self):
-        return self.title
+        return self.title or self.first_header or self.link.title
 
 class ParsedHeader(object):
     def __init__(self, ast_node, original_destination):
@@ -147,6 +149,9 @@ class PageParser(object):
                 parsed_header = ParsedHeader(parent_node.inline_content, path)
                 page.headers[original_name] = parsed_header
                 node.destination = '%s.html' % os.path.splitext(node.destination)[0]
+
+        elif node.t == "ATXHeader" and not page.first_header:
+            page.first_header = node.strings[0]
 
         for c in node.inline_content:
             self.check_links (page, c, node)
