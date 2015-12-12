@@ -321,11 +321,11 @@ class DocTree(object):
 
         self.pages[source_file] = page
 
+        if self.root is None:
+            self.root = page
 
         for subpage in page.subpages:
             self.build_tree(subpage, extension_name=extension_name)
-
-        self.root = page
 
         return page
 
