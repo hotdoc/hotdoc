@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/env python
 
+import CommonMark
 import sys
 import re
 
@@ -110,6 +111,9 @@ class GtkDocParser (object):
 
         self.doc_tool = doc_tool
 
+        self.__md_parser = CommonMark.DocParser()
+        self.__md_renderer = CommonMark.HTMLRenderer()
+
     def format_other(self, match, props):
         return match
 
@@ -201,7 +205,7 @@ class GtkDocParser (object):
     def format_code_end (self, match, props):
         return "\n```\n"
 
-    def translate (self, text):
+    def translate (self, text, format_='markdown'):
         if not text:
             return ""
         out = u''
@@ -219,7 +223,15 @@ class GtkDocParser (object):
                 out += formatted
             if kind in ["code_start", "format_code_start_with_language"]:
                 in_code = True
-        return out
+
+        if format_ == 'markdown':
+            return out
+        elif format_ == 'html':
+            ast = self.__md_parser.parse (out.encode('utf-8'))
+            rendered_text = self.__md_renderer.render(ast)
+            return rendered_text
+
+        raise Exception("Unrecognized format %s" % format_)
 
 
 if __name__ == "__main__":

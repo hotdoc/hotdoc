@@ -2,7 +2,6 @@
 
 import os
 import shutil
-import CommonMark
 import pygraphviz as pg
 
 from xml.sax.saxutils import unescape
@@ -29,10 +28,6 @@ class Formatter(object):
         qs_subclasses.append(QualifiedSymbol)
         for klass in qs_subclasses:
             self.formatting_symbol_signals[klass] = Signal()
-
-        # FIXME: hardcoded for now
-        self.__cmp = CommonMark.DocParser()
-        self.__cmr = CommonMark.HTMLRenderer()
 
     def _create_hierarchy_graph (self, hierarchy):
         # FIXME: handle multiple inheritance
@@ -156,9 +151,7 @@ class Formatter(object):
 
         out = ""
         docstring = unescape (docstring)
-        docstring = self.doc_tool.doc_parser.translate (docstring)
-        ast = self.__cmp.parse (docstring.encode('utf-8'))
-        rendered_text = self.__cmr.render(ast)
+        rendered_text = self.doc_tool.doc_parser.translate (docstring, 'html')
         return rendered_text
 
     def __format_doc (self, comment):
