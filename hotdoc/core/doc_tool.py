@@ -546,8 +546,8 @@ class DocTool(object):
             save_config = False
             self.parse_config(wizard.config)
         elif args.cmd == 'conf':
+            exit_now = True
             if args.quickstart == True:
-                exit_now = True
                 if wizard.quick_start():
                     print "Setup complete, building the documentation now"
                     if wizard.wait_for_continue("Setup complete, press Enter to build the doc now "):
