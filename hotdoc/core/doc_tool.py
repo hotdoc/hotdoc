@@ -438,7 +438,8 @@ class DocTool(object):
                     str(datetime.now() - n))
 
         n = datetime.now()
-        self.doc_tree.resolve_symbols(self)
+        root = self.doc_tree.pages.get(self.index_file)
+        self.doc_tree.resolve_symbols(self, root)
         print "symbol resolution done in %s" % str(datetime.now() - n)
 
         n = datetime.now()
@@ -451,7 +452,8 @@ class DocTool(object):
         n = datetime.now()
         self.__setup_folder(self.output)
         self.formatter = HtmlFormatter(self, [])
-        self.formatter.format(self.doc_tree.root)
+        root = self.doc_tree.pages.get(self.index_file)
+        self.formatter.format(root)
         print "formatting done in %s" % str(datetime.now() - n)
 
     def add_comment(self, comment):

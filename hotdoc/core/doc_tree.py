@@ -281,7 +281,6 @@ class DocTree(object):
         self.symbol_added_signal = Signal()
         doc_tool.comment_updated_signal.connect(self.__comment_updated)
         doc_tool.symbol_updated_signal.connect(self.__symbol_updated)
-        self.root = None
         self.symbol_maps = {}
 
     def get_page(self, name):
@@ -321,18 +320,12 @@ class DocTree(object):
 
         self.pages[source_file] = page
 
-        if self.root is None:
-            self.root = page
-
         for subpage in page.subpages:
             self.build_tree(subpage, extension_name=extension_name)
 
         return page
 
-    def resolve_symbols(self, doc_tool, page=None):
-        if page is None:
-            page = self.root
-
+    def resolve_symbols(self, doc_tool, page):
         if page.is_stale:
             if page.mtime != -1 and not page.ast:
                 self.page_parser.reparse(page)
