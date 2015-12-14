@@ -23,7 +23,7 @@ class GtkDocRawCommentParser (object):
         self.doc_tool = doc_tool
 
         tag_validation_regex = r'((?:^|\n)[ \t]*('
-        tag_validation_regex += 'returns|Returns|since|Since|stability|Stability|Return value'
+        tag_validation_regex += 'returns|Returns|since|Since|deprecated|Deprecated|stability|Stability|Return value'
         for validator in doc_tool.tag_validators.values():
             tag_validation_regex += '|%s|%s' % (validator.name,
                     validator.name.lower())
@@ -127,6 +127,9 @@ class GtkDocRawCommentParser (object):
     def parse_since_tag (self, name, desc):
         return Tag (name=name, description=desc)
 
+    def parse_deprecated_tag (self, name, desc):
+        return Tag (name=name, description=desc)
+
     def parse_stability_tag (self, name, desc):
         return Tag (name=name, description=desc)
 
@@ -145,6 +148,8 @@ class GtkDocRawCommentParser (object):
             return self.parse_returns_tag ("returns", desc)
         elif name.lower() == "stability":
             return self.parse_stability_tag ("stability", desc)
+        elif name.lower() == "deprecated":
+            return self.parse_deprecated_tag("deprecated", desc)
         else:
             validator = self.doc_tool.tag_validators.get(name)
             if not validator:
