@@ -313,9 +313,13 @@ class ExportedVariableSymbol (MacroSymbol):
     __mapper_args__ = {
             'polymorphic_identity': 'exported_variables',
     }
+    type_qs = Column(PickleType)
 
     def get_type_name (self):
         return "Exported variable"
+
+    def get_children_symbols(self):
+        return [self.type_qs]
 
 class AliasSymbol (Symbol):
     __tablename__ = 'aliases'

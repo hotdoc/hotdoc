@@ -1,8 +1,8 @@
-@require(extern)
+@require(extern, type_link)
 @extends('base_symbol_summary.html')
 
 @def type():
-<span>extern</span>
+<span>@type_link</span>
 @end
 @def name():
 <span>@extern</span>

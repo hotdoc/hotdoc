@@ -206,9 +206,11 @@ class HtmlFormatter (Formatter):
 
     def _format_exported_variable_summary (self, extern):
         template = self.engine.get_template('exported_variable_summary.html')
+        type_link = self._format_linked_symbol(extern.type_qs)
         extern_link = self._format_linked_symbol (extern)
 
         return template.render({'symbol': extern,
+                                'type_link': type_link,
                                 'extern': extern_link})
 
     def _format_alias_summary (self, alias):
