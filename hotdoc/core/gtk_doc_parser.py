@@ -4,7 +4,7 @@
 import CommonMark
 import sys
 import re
-
+from xml.sax.saxutils import unescape
 
 # Lifted from g-ir-doc-tool, muahaha
 class DocScanner(object):
@@ -205,10 +205,12 @@ class GtkDocParser (object):
     def format_code_end (self, match, props):
         return "\n```\n"
 
-    def translate (self, text, format_='markdown'):
-        if not text:
-            return ""
+    def translate(self, text, format_='markdown'):
         out = u''
+
+        if not text:
+            return out
+
         _scanner = DocScanner ()
         tokens = _scanner.scan (text)
         in_code = False
@@ -233,6 +235,9 @@ class GtkDocParser (object):
 
         raise Exception("Unrecognized format %s" % format_)
 
+    def translate_comment (self, comment, format_='markdown'):
+        text = unescape(comment.description)
+        return self.translate (text, format_)
 
 if __name__ == "__main__":
     gdp = GtkDocParser()

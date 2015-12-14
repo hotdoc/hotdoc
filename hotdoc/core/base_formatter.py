@@ -4,10 +4,9 @@ import os
 import shutil
 import pygraphviz as pg
 
-from xml.sax.saxutils import unescape
-
 from .symbols import *
 from ..utils.simple_signals import Signal
+from xml.sax.saxutils import unescape
 
 def all_subclasses(cls):
         return cls.__subclasses__() + [g for s in cls.__subclasses__()
@@ -156,8 +155,8 @@ class Formatter(object):
 
     def __format_doc (self, comment):
         out = ""
-        if comment:
-            out += self._format_doc_string (comment.description)
+        if comment and comment.description:
+            out = self.doc_tool.doc_parser.translate_comment (comment, 'html')
         return out
 
     def _get_extra_files (self):
