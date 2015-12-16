@@ -281,6 +281,7 @@ class DocTool(object):
         self.incremental = False
         self.comment_updated_signal = Signal()
         self.symbol_updated_signal = Signal()
+        self.site_navigation = None
 
     def get_symbol(self, name, prefer_class=False):
         sym = self.__symbols.get(name)
@@ -453,6 +454,10 @@ class DocTool(object):
         self.__setup_folder(self.output)
         self.formatter = HtmlFormatter(self, [])
         root = self.doc_tree.pages.get(self.index_file)
+
+        if not self.site_navigation:
+            self.site_navigation = self.formatter.format_site_navigation(root)
+
         self.formatter.format(root)
         print "formatting done in %s" % str(datetime.now() - n)
 

@@ -366,11 +366,20 @@ class HtmlFormatter (Formatter):
 
         toc = self._format_summary(toc_sections)
         out = template.render ({'page': page,
+                                'site_navigation': self.doc_tool.site_navigation,
                                 'toc': toc,
                                 'assets_path': self._get_assets_path(),
                                 'symbols_details': symbols_details})
 
         return (out, True)
+
+    def format_site_navigation(self, root):
+        template = self.engine.get_template('site_navigation.html')
+        if template:
+            return template.render({'root': root,
+                                    'doc_tree': self.doc_tool.doc_tree,
+                                   })
+        return None
 
     def _format_prototype (self, function, is_pointer, title):
         return_value = self._format_linked_symbol (function.return_value)
