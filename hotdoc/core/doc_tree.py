@@ -6,6 +6,7 @@ import cPickle as pickle
 from xml.sax.saxutils import unescape
 
 from ..utils.simple_signals import Signal
+from ..utils.utils import OrderedSet
 
 from .symbols import *
 from .links import Link
@@ -21,7 +22,7 @@ class Page(object):
         pagename = '%s.html' % name
 
         self.symbol_names = []
-        self.subpages = set({})
+        self.subpages = OrderedSet({})
         self.link = Link (pagename, name, name) 
         self.title = None
         self.first_header = None
