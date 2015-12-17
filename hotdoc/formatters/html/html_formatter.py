@@ -314,7 +314,9 @@ class HtmlFormatter (Formatter):
                                 "editing_server": self.editing_server})
 
     def _format_struct (self, struct):
-        raw_code = self._format_raw_code (struct.raw_text)
+        raw_code = None
+        if struct.raw_text is not None:
+            raw_code = self._format_raw_code (struct.raw_text)
 
         members_list = self._format_members_list (struct.members, 'Fields')
 
