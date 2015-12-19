@@ -122,7 +122,7 @@ class GtkDocParser (object):
         property_name = props['property_name']
 
         if self.doc_tool is None:
-            return u'[](%s:%s)' % (type_name, prop_name)
+            return u'[](%s:%s)' % (type_name, property_name)
 
         linkname = "%s:%s" % (type_name, property_name)
         link = self.doc_tool.link_resolver.get_named_link (linkname)

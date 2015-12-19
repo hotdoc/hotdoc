@@ -26,6 +26,7 @@ class Page(object):
         self.link = Link (pagename, name, name) 
         self.title = None
         self.first_header = None
+        self.first_paragraph = None
         self.short_description = None
         self.source_file = source_file
         self.extension_name = None
@@ -44,6 +45,7 @@ class Page(object):
                 'link': self.link,
                 'title': self.title,
                 'first_header': self.first_header,
+                'first_paragraph': self.first_paragraph,
                 'short_description': self.short_description,
                 'source_file': self.source_file,
                 'extension_name': self.extension_name,
@@ -97,14 +99,14 @@ class Page(object):
         tsl = self.typed_symbols[type(symbol)]
         tsl.symbols.append (symbol)
         self.symbols.append (symbol)
-        if type (symbol) == ClassSymbol and symbol.comment:
+        if type (symbol) in [ClassSymbol, StructSymbol] and symbol.comment:
             if symbol.comment.short_description:
                 self.short_description = symbol.comment.short_description
             if symbol.comment.title:
                 self.title = symbol.comment.title
 
     def get_short_description (self):
-        return self.short_description
+        return self.short_description or self.first_paragraph
 
     def get_title (self):
         return self.title or self.first_header or self.link.title
@@ -155,6 +157,9 @@ class PageParser(object):
 
         elif node.t == "ATXHeader" and not page.first_header:
             page.first_header = node.strings[0]
+
+        elif node.t == "Paragraph" and not page.first_paragraph:
+            page.first_paragraph = node.strings[0]
 
         for c in node.inline_content:
             self.check_links (page, c, node)
