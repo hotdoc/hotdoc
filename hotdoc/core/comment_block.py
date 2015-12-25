@@ -1,4 +1,5 @@
 import os
+import os
 import linecache
 
 class TagValidator(object):

@@ -4,6 +4,7 @@
 import CommonMark
 import sys
 import re
+import cgi
 from xml.sax.saxutils import unescape
 
 # Lifted from g-ir-doc-tool, muahaha
@@ -229,6 +230,7 @@ class GtkDocParser (object):
         if format_ == 'markdown':
             return out
         elif format_ == 'html':
+            out = cgi.escape(out)
             ast = self.__md_parser.parse (out.encode('utf-8'))
             rendered_text = self.__md_renderer.render(ast)
             return rendered_text

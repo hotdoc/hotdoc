@@ -2,6 +2,7 @@
 
 import CommonMark
 import os
+import cgi
 import cPickle as pickle
 from xml.sax.saxutils import unescape
 
@@ -197,7 +198,7 @@ class PageParser(object):
 
         page = Page(source_file)
 
-        ast = self.__cmp.parse(contents)
+        ast = self.__cmp.parse(cgi.escape(contents))
         page.ast = ast
 
         for c in ast.children:
@@ -212,7 +213,7 @@ class PageParser(object):
         with open(page.source_file, 'r') as f:
             contents = f.read()
 
-        ast = self.__cmp.parse(contents)
+        ast = self.__cmp.parse(cgi.escape(contents))
         page.ast = ast
 
         page.symbol_names = []
@@ -223,7 +224,7 @@ class PageParser(object):
         self.check_links(page, ast)
 
     def parse_contents(self, page, contents):
-        page.ast = self.__cmp.parse(contents)
+        page.ast = self.__cmp.parse(cgi.escape(contents))
 
     def _update_links (self, node):
         if node.t == 'Link':
@@ -268,7 +269,7 @@ class PageParser(object):
                 desc = self.doc_tool.doc_parser.translate (desc)
                 docstring = unescape (desc)
                 desc = u' — %s' % desc.encode ('utf-8')
-                sub_ast = self.__cmp.parse (desc)
+                sub_ast = self.__cmp.parse (cgi.escape(desc))
 
                 # I know, very specific naming
                 for thing in sub_ast.children:
