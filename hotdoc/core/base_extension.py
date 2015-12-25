@@ -30,6 +30,9 @@ class BaseExtension(object):
     def setup (self):
         pass
 
+    def finalize (self):
+        pass
+
     def get_source_files(self):
         return []
 
