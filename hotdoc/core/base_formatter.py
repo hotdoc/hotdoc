@@ -17,16 +17,7 @@ class Formatter(object):
         self.doc_tool = doc_tool
         self._output = doc_tool.output
 
-        # FIXME: check if we need this level of detail performance-wise
-        self.formatting_symbol_signals = {}
-        symbol_subclasses = all_subclasses (Symbol)
-        symbol_subclasses.append(Symbol)
-        for klass in symbol_subclasses:
-            self.formatting_symbol_signals[klass] = Signal()
-        qs_subclasses = all_subclasses(QualifiedSymbol)
-        qs_subclasses.append(QualifiedSymbol)
-        for klass in qs_subclasses:
-            self.formatting_symbol_signals[klass] = Signal()
+        self.formatting_symbol_signal = Signal()
 
     def _create_hierarchy_graph (self, hierarchy):
         # FIXME: handle multiple inheritance
@@ -56,16 +47,10 @@ class Formatter(object):
         if isinstance (symbol, QualifiedSymbol):
             symbol.resolve_links(self.doc_tool.link_resolver)
 
-        if type (symbol) in self.formatting_symbol_signals:
-            res = self.formatting_symbol_signals[type(symbol)](symbol)
+        res = self.formatting_symbol_signal(symbol)
 
-            if False in res:
-                return False
-
-            res = self.formatting_symbol_signals[Symbol](symbol)
-
-            if False in res:
-                return False
+        if False in res:
+            return False
 
         symbol.formatted_doc = self.__format_doc (symbol.comment)
         out, standalone = self._format_symbol (symbol)
