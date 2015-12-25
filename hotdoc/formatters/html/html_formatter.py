@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import cgi
 import re
 import tempfile
 
@@ -393,6 +394,7 @@ class HtmlFormatter (Formatter):
                 title, parameters, is_pointer)
 
     def _format_raw_code (self, code):
+        code = cgi.escape(code)
         template = self.engine.get_template('raw_code.html')
         return template.render ({'code': code})
 
