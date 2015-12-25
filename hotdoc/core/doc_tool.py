@@ -447,6 +447,9 @@ class DocTool(object):
         self.session.flush()
         print "Database persisting done in %s" % str(datetime.now() - n)
 
+    def get_assets_path(self):
+        return os.path.join(self.output, 'assets')
+
     def format (self):
         from datetime import datetime
 
@@ -653,4 +656,6 @@ class DocTool(object):
         self.doc_tree.persist()
 
     def finalize (self):
+        for extension in self.extensions.values():
+            extension.finalize()
         self.session.close()

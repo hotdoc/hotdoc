@@ -4,6 +4,7 @@ import os
 import cgi
 import re
 import tempfile
+import shutil
 
 from wheezy.template.engine import Engine
 from wheezy.template.ext.core import CoreExtension
@@ -78,6 +79,8 @@ class HtmlFormatter (Formatter):
         )
 
         self.editing_server = doc_tool.editing_server
+
+        self.all_scripts = set()
 
     def __parse_theme(self, searchpath):
         if not self.__theme_path:
@@ -345,6 +348,10 @@ class HtmlFormatter (Formatter):
                                 "members_list": members_list})
         return (out, False)
 
+    def emit_formatting_page(self, page):
+        page.output_attrs['html']['scripts'] = set()
+        return Formatter.emit_formatting_page(self, page)
+
     def _format_page(self, page):
         page.formatted_contents = self.doc_tool.doc_tree.page_parser.render(page)
 
@@ -368,8 +375,16 @@ class HtmlFormatter (Formatter):
         template = self.engine.get_template('page.html')
 
         toc = self._format_summary(toc_sections)
+
+        scripts = page.output_attrs['html']['scripts']
+        scripts_basenames = [os.path.basename(script)
+                for script in scripts]
+
+        self.all_scripts.update(scripts)
+
         out = template.render ({'page': page,
                                 'site_navigation': self.doc_tool.site_navigation,
+                                'scripts': scripts_basenames,
                                 'toc': toc,
                                 'assets_path': self._get_assets_path(),
                                 'symbols_details': symbols_details})
@@ -574,3 +589,14 @@ class HtmlFormatter (Formatter):
             res.extend(theme_files)
 
         return res
+
+    def _copy_extra_files(self):
+        Formatter._copy_extra_files(self)
+
+        js_path = os.path.join (self.doc_tool.output, 'assets', 'js')
+        if not os.path.exists (js_path):
+            os.mkdir (js_path)
+
+        for script in self.all_scripts:
+            dest = os.path.join(js_path, os.path.basename(script))
+            shutil.copy(script, dest)

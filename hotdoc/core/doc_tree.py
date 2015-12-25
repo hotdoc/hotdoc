@@ -30,6 +30,7 @@ class Page(object):
         self.first_paragraph = None
         self.short_description = None
         self.source_file = source_file
+        self.output_attrs = None
         self.extension_name = None
         try:
             self.mtime = os.path.getmtime(source_file)
@@ -40,6 +41,7 @@ class Page(object):
         self.ast = None
         self.headers = {}
 
+
     def __getstate__(self):
         return {'symbol_names': self.symbol_names,
                 'subpages': self.subpages,
@@ -49,6 +51,7 @@ class Page(object):
                 'first_paragraph': self.first_paragraph,
                 'short_description': self.short_description,
                 'source_file': self.source_file,
+                'output_attrs': None,
                 'extension_name': self.extension_name,
                 'ast': None,
                 'headers': {},

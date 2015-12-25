@@ -4,15 +4,19 @@ import os
 import shutil
 import pygraphviz as pg
 
+from xml.sax.saxutils import unescape
+from collections import defaultdict
+
 from .symbols import *
 from ..utils.simple_signals import Signal
-from xml.sax.saxutils import unescape
 
 def all_subclasses(cls):
         return cls.__subclasses__() + [g for s in cls.__subclasses__()
                                        for g in all_subclasses(s)]
 
 class Formatter(object):
+    formatting_page_signal = Signal()
+
     def __init__ (self, doc_tool):
         self.doc_tool = doc_tool
         self._output = doc_tool.output
@@ -62,9 +66,12 @@ class Formatter(object):
 
         return True
 
+    def emit_formatting_page(self, page):
+        Formatter.formatting_page_signal(self, page)
+
     def format (self, page):
         self.__format_page (page)
-        self.__copy_extra_files ()
+        self._copy_extra_files ()
 
     def __format_symbols(self, symbols):
         for symbol in symbols:
@@ -74,6 +81,8 @@ class Formatter(object):
 
     def __format_page (self, page):
         if page.is_stale:
+            page.output_attrs = defaultdict(lambda: defaultdict(dict))
+            self.emit_formatting_page(page)
             self.doc_tool.update_doc_parser(page.extension_name)
             self.__format_symbols(page.symbols)
             page.detailed_description = self.doc_tool.formatter._format_page (page)[0]
@@ -93,8 +102,8 @@ class Formatter(object):
             self.doc_tool.formatter = self
 
 
-    def __copy_extra_files (self):
-        asset_path = os.path.join (self.doc_tool.output, 'assets')
+    def _copy_extra_files (self):
+        asset_path = self.doc_tool.get_assets_path()
         if not os.path.exists (asset_path):
             os.mkdir (asset_path)
 
