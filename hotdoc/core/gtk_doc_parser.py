@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/env python
 
-import CommonMark
+import cmarkpy
 import sys
 import re
 import cgi
@@ -111,10 +111,6 @@ class GtkDocParser (object):
         }
 
         self.doc_tool = doc_tool
-
-        self.__md_parser = CommonMark.Parser()
-        self.__md_renderer = CommonMark.html.HtmlRenderer()
-
         self.__doc_scanner = DocScanner()
 
     def format_other(self, match, props):
@@ -210,8 +206,7 @@ class GtkDocParser (object):
 
     def md_to_html(self, md):
         out = cgi.escape(md)
-        ast = self.__md_parser.parse (out.encode('utf-8'))
-        rendered_text = self.__md_renderer.render(ast)
+        rendered_text = cmarkpy.markdown_to_html(unicode(out.encode('utf-8')))
         return rendered_text
 
     def legacy_to_md(self, text):

@@ -99,6 +99,7 @@ install_requires = [
     'cffi',
     'wheezy.template==0.1.167',
     'CommonMark==0.6.1',
+    'cmarkpy==0.1.3',
     'pygraphviz==1.3.1',
     'sqlalchemy==1.0.9',
     'ipython==4.0.0',
