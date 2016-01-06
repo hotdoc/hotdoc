@@ -368,7 +368,10 @@ class DocTool(object):
         if filename:
             kwargs['filename'] = os.path.abspath(filename)
 
-        symbol = self.session.query(type_).filter(type_.unique_name == unique_name).first()
+        if self.incremental:
+            symbol = self.session.query(type_).filter(type_.unique_name == unique_name).first()
+        else:
+            symbol = None
 
         if not symbol:
             symbol = type_()
