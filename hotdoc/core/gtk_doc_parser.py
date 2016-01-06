@@ -115,6 +115,8 @@ class GtkDocParser (object):
         self.__md_parser = CommonMark.DocParser()
         self.__md_renderer = CommonMark.HTMLRenderer()
 
+        self.__doc_scanner = DocScanner()
+
     def format_other(self, match, props):
         return match
 
@@ -206,14 +208,16 @@ class GtkDocParser (object):
     def format_code_end (self, match, props):
         return "\n```\n"
 
-    def translate(self, text, format_='markdown'):
+    def md_to_html(self, md):
+        out = cgi.escape(md)
+        ast = self.__md_parser.parse (out.encode('utf-8'))
+        rendered_text = self.__md_renderer.render(ast)
+        return rendered_text
+
+    def legacy_to_md(self, text):
         out = u''
 
-        if not text:
-            return out
-
-        _scanner = DocScanner ()
-        tokens = _scanner.scan (text)
+        tokens = self.__doc_scanner.scan (text)
         in_code = False
         for tok in tokens:
             kind, match, props = tok
@@ -227,13 +231,21 @@ class GtkDocParser (object):
             if kind in ["code_start", "format_code_start_with_language"]:
                 in_code = True
 
+        return out
+
+    def translate(self, text, format_='markdown'):
+        out = u''
+
+        if not text:
+            return out
+
+        out = self.legacy_to_md(text)
+
+
         if format_ == 'markdown':
             return out
         elif format_ == 'html':
-            out = cgi.escape(out)
-            ast = self.__md_parser.parse (out.encode('utf-8'))
-            rendered_text = self.__md_renderer.render(ast)
-            return rendered_text
+            return self.md_to_html(out)
 
         raise Exception("Unrecognized format %s" % format_)
 
