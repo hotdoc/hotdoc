@@ -285,6 +285,10 @@ class DocTool(object):
 
     def get_symbol(self, name, prefer_class=False):
         sym = self.__symbols.get(name)
+
+        if not self.incremental:
+            return sym
+
         if not sym:
             sym = self.session.query(Symbol).filter(Symbol.unique_name ==
                     name).first()
