@@ -112,8 +112,8 @@ class GtkDocParser (object):
 
         self.doc_tool = doc_tool
 
-        self.__md_parser = CommonMark.DocParser()
-        self.__md_renderer = CommonMark.HTMLRenderer()
+        self.__md_parser = CommonMark.Parser()
+        self.__md_renderer = CommonMark.html.HtmlRenderer()
 
         self.__doc_scanner = DocScanner()
 

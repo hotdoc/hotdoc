@@ -98,7 +98,7 @@ class CustomBDistEgg(bdist_egg):
 install_requires = [
     'cffi',
     'wheezy.template==0.1.167',
-    'CommonMark==0.5.4',
+    'CommonMark==0.6.1',
     'pygraphviz==1.3.1',
     'sqlalchemy==1.0.9',
     'ipython==4.0.0',

@@ -4,6 +4,7 @@ import CommonMark
 import os
 import cgi
 import cPickle as pickle
+import linecache
 from xml.sax.saxutils import unescape
 
 from ..utils.simple_signals import Signal
@@ -16,6 +17,34 @@ class TypedSymbolsList (object):
     def __init__ (self, name):
         self.name = name
         self.symbols = []
+
+
+def get_children(node, recursive=False):
+    if not recursive:
+        child = node.first_child
+        while (child):
+            nxt = child.nxt
+            yield child
+            child = nxt
+    else:
+        walker = node.walker()
+        nxt = walker.nxt()
+        while nxt is not None:
+            yield nxt['node']
+            nxt = walker.nxt()
+
+def get_label(link, recursive=False):
+    return ''.join(c.literal or '' for c in get_children(link, recursive))
+
+def set_label(parser, node, text):
+        for c in get_children(node):
+            c.unlink()
+
+        new_label = parser.parse(text)
+
+        # We only want Document -> Paragraph -> children
+        for c in get_children(new_label.first_child):
+            node.append_child(c)
 
 class Page(object):
     def __init__(self, source_file):
@@ -122,8 +151,8 @@ class ParsedHeader(object):
 
 class PageParser(object):
     def __init__(self, doc_tool, doc_tree, prefix):
-        self.__cmp = CommonMark.DocParser()
-        self.__cmr = CommonMark.HTMLRenderer()
+        self.__cmp = CommonMark.Parser()
+        self.__cmr = CommonMark.html.HtmlRenderer()
         self.well_known_names = {}
         self.doc_tree = doc_tree
         self.prefix = prefix
@@ -149,44 +178,45 @@ class PageParser(object):
                 if subfolder:
                     new_dest = subfolder + '/' + new_dest
                 node.destination = '%s.html' % new_dest
-            elif parent_node and parent_node.t == 'ATXHeader' and path:
+            elif parent_node and parent_node.t == 'Heading' and path:
                 if not path in self.doc_tree.seen_pages:
                     page.subpages.add (path)
                     self.doc_tree.seen_pages.add (path)
 
-                original_name = node.label[0].c
-                parsed_header = ParsedHeader(parent_node.inline_content, path)
+                original_name = get_label(node)
+                parsed_header = ParsedHeader(list(get_children(parent_node)), path)
                 page.headers[original_name] = parsed_header
                 node.destination = '%s.html' % os.path.splitext(node.destination)[0]
 
-        elif node.t == "ATXHeader" and not page.first_header:
-            page.first_header = node.strings[0]
+        elif (node.t == "Heading" and not page.first_header):
+            page.first_header = get_label(node)
 
-        elif node.t == "Paragraph" and not page.first_paragraph:
-            page.first_paragraph = node.strings[0]
+        elif (node.t == "Paragraph" and not page.first_paragraph):
+            first_paragraph = ''
+            for i in range (node.sourcepos[0][0], node.sourcepos[1][0] + 1):
+                first_paragraph += linecache.getline(page.source_file, i)
+            page.first_paragraph = first_paragraph
 
-        for c in node.inline_content:
-            self.check_links (page, c, node)
-        for c in node.children:
+        for c in get_children(node):
             self.check_links (page, c, node)
 
     def parse_list (self, page, l):
-        non_symbol_children = list(l.children)
-        for c in l.children:
-            for c2 in c.children:
-                if c2.t == "Paragraph" and len (c2.inline_content) == 1:
+        for c in get_children(l):
+            for c2 in get_children(c):
+                if c2.t == "Paragraph" and len (list(get_children(c2))) == 1:
                     if self.parse_para (page, c2):
-                        non_symbol_children.remove(c)
-        l.children = non_symbol_children
+                        c.unlink()
 
     def parse_para(self, page, paragraph):
-        ic = paragraph.inline_content[0]
+        ic = paragraph.first_child
 
         if ic.t != "Link":
             return False
 
-        if not ic.destination and ic.label:
-            name = paragraph.strings[0].strip('[]() ')
+        label = get_label(ic)
+
+        if not ic.destination and label:
+            name = label.strip('[]() ')
             page.symbol_names.append(name)
             ic.destination = "not_an_actual_link_sorry"
             return True
@@ -204,7 +234,7 @@ class PageParser(object):
         ast = self.__cmp.parse(cgi.escape(contents))
         page.ast = ast
 
-        for c in ast.children:
+        for c in get_children(ast):
             if c.t == "List":
                 self.parse_list(page, c)
 
@@ -220,7 +250,7 @@ class PageParser(object):
         page.ast = ast
 
         page.symbol_names = []
-        for c in ast.children:
+        for c in get_children(ast):
             if c.t == "List":
                 self.parse_list(page, c)
 
@@ -233,21 +263,16 @@ class PageParser(object):
         if node.t == 'Link':
             if not hasattr(node, 'original_dest'):
                 node.original_dest = node.destination
-                node.original_label = node.label
+                node.original_label = get_label(node)
 
             link = self.doc_tool.link_resolver.get_named_link(node.original_dest)
             if link and not node.original_label:
-                node.label = []
-                name_block = CommonMark.CommonMark.Block()
-                name_block.c = link.title
-                name_block.t = 'Str'
-                node.label.append(name_block)
+                set_label(self.__cmp, node, link.title)
+
             if link and link.get_link() is not None:
                 node.destination = link.get_link()
 
-        for c in node.inline_content:
-            self._update_links (c)
-        for c in node.children:
+        for c in get_children(node):
             self._update_links (c)
 
     def render (self, page):
@@ -259,25 +284,25 @@ class PageParser(object):
             ast_node = parsed_header.ast_node
             page = self.doc_tree.get_page(parsed_header.original_destination)
 
-            title = page.get_title()
-
-            if title is not None:
-                ast_node[0].label[0].c = title
+            if page.title is not None:
+                set_label(self.__cmp, ast_node[0], page.title)
             elif original_name in new_names:
-                ast_node[0].label[0].c = new_names[original_name]
+                set_label(self.__cmp, ast_node[0], new_names[original_name])
+            else:
+                set_label (self.__cmp, ast_node[0], original_name)
 
             desc = page.get_short_description()
             if desc:
-                del ast_node[1:]
-                desc = self.doc_tool.doc_parser.translate (desc)
-                docstring = unescape (desc)
-                desc = u' — %s' % desc.encode ('utf-8')
-                sub_ast = self.__cmp.parse (cgi.escape(desc))
+                first = True
+                for c in get_children(ast_node[0].parent):
+                    if not first:
+                        c.unlink()
+                    first = False
 
-                # I know, very specific naming
-                for thing in sub_ast.children:
-                    for other_thing in thing.inline_content:
-                        ast_node.append (other_thing)
+                desc = self.doc_tool.doc_parser.translate (desc)
+                new_desc = self.__cmp.parse(u' — %s' % desc.encode ('utf-8'))
+                for c in get_children(new_desc.first_child):
+                    ast_node[0].parent.append_child(c)
 
 class DocTree(object):
     def __init__(self, doc_tool, prefix):
