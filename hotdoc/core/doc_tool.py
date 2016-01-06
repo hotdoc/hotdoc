@@ -1,8 +1,4 @@
 import os, sys, argparse
-
-reload(sys)  
-sys.setdefaultencoding('utf8')
-
 import cPickle as pickle
 import glob
 import json

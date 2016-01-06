@@ -193,11 +193,9 @@ class GtkDocRawCommentParser (object):
             return None
 
         raw_comment = comment
-        comment = unicode(comment.encode('utf8'))
+        comment = unicode(comment.decode('utf8'))
         if not stripped:
             comment = self.strip_comment (comment)
-
-        comment = unicode(comment.encode('utf8'))
 
         split = re.split (r'\n[\W]*\n', comment, maxsplit=1)
         block_name, parameters, annotations = self.parse_title_and_parameters (split[0])

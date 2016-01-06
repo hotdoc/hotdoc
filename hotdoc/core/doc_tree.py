@@ -5,6 +5,7 @@ import os
 import cgi
 import cPickle as pickle
 import linecache
+import io
 from xml.sax.saxutils import unescape
 
 from ..utils.simple_signals import Signal
@@ -226,7 +227,7 @@ class PageParser(object):
         if not os.path.exists(source_file):
             return None
 
-        with open(source_file, 'r') as f:
+        with io.open(source_file, 'r', encoding='utf-8') as f:
             contents = f.read()
 
         page = Page(source_file)
@@ -243,7 +244,7 @@ class PageParser(object):
         return page
 
     def reparse(self, page):
-        with open(page.source_file, 'r') as f:
+        with io.open(source_file, 'r', encoding='utf-8') as f:
             contents = f.read()
 
         ast = self.__cmp.parse(cgi.escape(contents))

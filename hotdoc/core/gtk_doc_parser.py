@@ -206,7 +206,7 @@ class GtkDocParser (object):
 
     def md_to_html(self, md):
         out = cgi.escape(md)
-        rendered_text = cmarkpy.markdown_to_html(unicode(out.encode('utf-8')))
+        rendered_text = cmarkpy.markdown_to_html(unicode(out))
         return rendered_text
 
     def legacy_to_md(self, text):
