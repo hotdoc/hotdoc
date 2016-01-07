@@ -6,6 +6,8 @@ from pkg_resources import iter_entry_points
 from toposort import toposort_flatten
 import collections
 
+_win32 = (sys.platform == 'win32')
+
 def PkgConfig(args):
     cmd = ['pkg-config'] + shlex.split(args)
     out = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE).stdout
@@ -15,6 +17,19 @@ def PkgConfig(args):
 def all_subclasses(cls):
         return cls.__subclasses__() + [g for s in cls.__subclasses__()
                                        for g in all_subclasses(s)]
+
+def get_mtime(filename):
+    try:
+        stat = os.stat(filename)
+    except OSError:
+        return -1
+
+    # Check the modification time.  We need to adjust on Windows.
+    mtime = stat.st_mtime
+    if _win32:
+        mtime -= stat.st_ctime
+
+    return mtime
 
 def get_all_extension_classes(sort):
     all_classes = {}

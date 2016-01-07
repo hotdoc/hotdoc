@@ -2,6 +2,7 @@ import os, sys, argparse
 import cPickle as pickle
 import glob
 import json
+import shutil
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, mapper
@@ -16,6 +17,7 @@ from .comment_block import Tag, Comment
 
 from ..utils.wizard import QuickStartWizard, QUICKSTART_HELP, Skip, QuickStartArgument
 from ..utils.utils import all_subclasses
+from ..utils.utils import get_mtime
 from ..utils.simple_signals import Signal
 from ..utils.loggable import TerminalController
 from ..utils.utils import get_all_extension_classes
@@ -35,6 +37,7 @@ class ConfigError(Exception):
 class ChangeTracker(object):
     def __init__(self):
         self.exts_mtimes = {}
+        self.hard_deps_mtimes = {}
 
     def update_extension_sources_mtimes(self, extension):
         ext_mtimes = {}
@@ -64,6 +67,39 @@ class ChangeTracker(object):
                     stale.append(source_file)
 
         extension.set_stale_source_files(stale)
+
+    def __track_code_changes(self):
+        modules = [m.__file__ for m in sys.modules.values()
+                        if m and '__file__' in m.__dict__]
+
+        for filename in modules:
+            if filename.endswith('.pyc') or filename.endswith('.pyo'):
+                filename = filename[:-1]
+
+            self.add_hard_dependency(filename)
+
+    def track_core_dependencies(self):
+        self.__track_code_changes()
+
+    def add_hard_dependency(self, filename):
+        mtime = get_mtime(filename)
+
+        if mtime != -1:
+            self.hard_deps_mtimes[filename] = mtime
+
+    def hard_dependencies_are_stale(self):
+        from datetime import datetime
+
+        n = datetime.now()
+        _win32 = (sys.platform == 'win32')
+
+        for filename, last_mtime in self.hard_deps_mtimes.items():
+            mtime = get_mtime(filename)
+
+            if mtime == -1 or mtime != last_mtime:
+                return True
+
+        return False
 
 HOTDOC_ASCII =\
 """/**    __  __   ____     ______   ____     ____     ______
@@ -408,8 +444,14 @@ class DocTool(object):
         try:
             self.change_tracker = pickle.load(open(os.path.join(self.get_private_folder(),
                 'change_tracker.p'), 'rb'))
+            if self.change_tracker.hard_dependencies_are_stale():
+                raise IOError
             self.incremental = True
-        except IOError:
+            print "Building incrementally"
+        except Exception as e:
+            print "Building from scratch"
+            shutil.rmtree(self.get_private_folder(), ignore_errors=True)
+            shutil.rmtree(self.output, ignore_errors=True)
             self.change_tracker = ChangeTracker()
 
     def get_formatter(self, extension_name):
@@ -627,6 +669,8 @@ class DocTool(object):
             raise ConfigError ("Unsupported output format : %s" %
                     self.output_format)
 
+        self.__create_change_tracker()
+
         self.__setup_folder('hotdoc-private')
 
         # FIXME: we might actually want not to be naive
@@ -647,18 +691,16 @@ class DocTool(object):
         self.doc_tree.build_tree(self.index_file)
         self.doc_tree.fill_symbol_maps()
 
-        self.__create_change_tracker()
         self.__setup_database()
 
     def persist(self):
-        self.session.commit()
+        self.doc_tree.persist()
+        self.change_tracker.track_core_dependencies()
         pickle.dump(self.change_tracker, open(os.path.join(self.get_private_folder(),
             'change_tracker.p'), 'wb'))
-        #pickle.dump(self.args, open(os.path.join(self.get_private_folder(),
-        #    'args.p'), 'wb'))
-        self.doc_tree.persist()
 
     def finalize (self):
         for extension in self.extensions.values():
             extension.finalize()
+        self.persist()
         self.session.close()
