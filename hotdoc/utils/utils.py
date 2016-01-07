@@ -5,6 +5,7 @@ import traceback
 from pkg_resources import iter_entry_points
 from toposort import toposort_flatten
 import collections
+import shutil
 
 _win32 = (sys.platform == 'win32')
 
@@ -13,6 +14,23 @@ def PkgConfig(args):
     out = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE).stdout
     line = out.readline()[:-1].split(" ")
     return filter(lambda a: a not in [' ', ''], line)
+
+def recursive_overwrite(src, dest, ignore=None):
+    if os.path.isdir(src):
+        if not os.path.isdir(dest):
+            os.makedirs(dest)
+        files = os.listdir(src)
+        if ignore is not None:
+            ignored = ignore(src, files)
+        else:
+            ignored = set()
+        for f in files:
+            if f not in ignored:
+                recursive_overwrite(os.path.join(src, f), 
+                                    os.path.join(dest, f), 
+                                    ignore)
+    else:
+        shutil.copyfile(src, dest)
 
 def all_subclasses(cls):
         return cls.__subclasses__() + [g for s in cls.__subclasses__()

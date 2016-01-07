@@ -9,6 +9,7 @@ from collections import defaultdict
 
 from .symbols import *
 from ..utils.simple_signals import Signal
+from ..utils.utils import recursive_overwrite
 
 def all_subclasses(cls):
         return cls.__subclasses__() + [g for s in cls.__subclasses__()
@@ -113,8 +114,7 @@ class Formatter(object):
             if os.path.isfile(f):
                 shutil.copy (f, path)
             elif os.path.isdir(f):
-                shutil.rmtree(path, ignore_errors=True)
-                shutil.copytree(f, path)
+                recursive_overwrite(f, path)
 
     def _write_page (self, page):
         path = os.path.join (self._output, page.link.ref)
