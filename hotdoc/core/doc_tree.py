@@ -6,10 +6,11 @@ import cgi
 import cPickle as pickle
 import linecache
 import io
+import shutil
 from xml.sax.saxutils import unescape
 
 from ..utils.simple_signals import Signal
-from ..utils.utils import OrderedSet
+from collections import OrderedDict
 
 from .symbols import *
 from .links import Link
@@ -48,12 +49,12 @@ def set_label(parser, node, text):
             node.append_child(c)
 
 class Page(object):
-    def __init__(self, source_file):
+    def __init__(self, source_file, extension_name):
         name = os.path.splitext(os.path.basename(source_file))[0]
         pagename = '%s.html' % name
 
         self.symbol_names = []
-        self.subpages = OrderedSet({})
+        self.subpages = OrderedDict({})
         self.link = Link (pagename, name, name) 
         self.title = None
         self.first_header = None
@@ -61,7 +62,7 @@ class Page(object):
         self.short_description = None
         self.source_file = source_file
         self.output_attrs = None
-        self.extension_name = None
+        self.extension_name = extension_name
         try:
             self.mtime = os.path.getmtime(source_file)
         except OSError:
@@ -173,15 +174,15 @@ class PageParser(object):
 
             handler = self.well_known_names.get(node.destination)
             if handler:
-                subpage, subfolder = handler(self.doc_tree)
-                page.subpages.add (subpage)
+                subpage, subfolder, extension_name = handler(self.doc_tree)
+                page.subpages[subpage] = extension_name
                 new_dest = os.path.splitext(os.path.basename(subpage))[0]
                 if subfolder:
                     new_dest = subfolder + '/' + new_dest
                 node.destination = '%s.html' % new_dest
             elif parent_node and parent_node.t == 'Heading' and path:
                 if not path in self.doc_tree.seen_pages:
-                    page.subpages.add (path)
+                    page.subpages[path] = page.extension_name
                     self.doc_tree.seen_pages.add (path)
 
                 original_name = get_label(node)
@@ -223,14 +224,14 @@ class PageParser(object):
             return True
         return False
 
-    def parse(self, source_file):
+    def parse(self, source_file, extension_name):
         if not os.path.exists(source_file):
             return None
 
         with io.open(source_file, 'r', encoding='utf-8') as f:
             contents = f.read()
 
-        page = Page(source_file)
+        page = Page(source_file, extension_name)
 
         ast = self.__cmp.parse(cgi.escape(contents))
         page.ast = ast
@@ -344,21 +345,20 @@ class DocTree(object):
 
         if source_file in self.pages:
             epage = self.pages[source_file]
-            extension_name = epage.extension_name
-            try:
-                mtime = os.path.getmtime(source_file)
-                if mtime == epage.mtime:
+            if extension_name == epage.extension_name:
+                try:
+                    mtime = os.path.getmtime(source_file)
+                    if mtime == epage.mtime:
+                        page = epage
+                except OSError:
                     page = epage
-            except OSError:
-                page = epage
 
         if not page:
-            page = self.page_parser.parse(source_file)
-            page.extension_name = extension_name
+            page = self.page_parser.parse(source_file, extension_name)
 
         self.pages[source_file] = page
 
-        for subpage in page.subpages:
+        for subpage, extension_name in page.subpages.items():
             self.build_tree(subpage, extension_name=extension_name)
 
         return page
