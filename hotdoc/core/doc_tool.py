@@ -88,9 +88,6 @@ class ChangeTracker(object):
             self.hard_deps_mtimes[filename] = mtime
 
     def hard_dependencies_are_stale(self):
-        from datetime import datetime
-
-        n = datetime.now()
         _win32 = (sys.platform == 'win32')
 
         for filename, last_mtime in self.hard_deps_mtimes.items():
@@ -467,38 +464,23 @@ class DocTool(object):
             self.doc_parser = ext.get_doc_parser()
 
     def setup(self, args):
-        from datetime import datetime
-
-        n = datetime.now()
         self.__setup(args)
 
-        print "core setup done in %s" % str(datetime.now() - n)
-
         for extension in self.extensions.values():
-            n = datetime.now()
             self.change_tracker.mark_extension_stale_sources(extension)
             extension.setup ()
             self.change_tracker.update_extension_sources_mtimes(extension)
             self.session.flush()
-            print "extension %s done in %s" % (extension.EXTENSION_NAME,
-                    str(datetime.now() - n))
 
-        n = datetime.now()
         root = self.doc_tree.pages.get(self.index_file)
         self.doc_tree.resolve_symbols(self, root)
-        print "symbol resolution done in %s" % str(datetime.now() - n)
 
-        n = datetime.now()
         self.session.flush()
-        print "Database persisting done in %s" % str(datetime.now() - n)
 
     def get_assets_path(self):
         return os.path.join(self.output, 'assets')
 
     def format (self):
-        from datetime import datetime
-
-        n = datetime.now()
         self.__setup_folder(self.output)
         self.formatter = HtmlFormatter(self, [])
         root = self.doc_tree.pages.get(self.index_file)
@@ -507,7 +489,6 @@ class DocTool(object):
             self.site_navigation = self.formatter.format_site_navigation(root)
 
         self.formatter.format(root)
-        print "formatting done in %s" % str(datetime.now() - n)
 
     def add_comment(self, comment):
         self.__comments[comment.name] = comment
@@ -559,8 +540,8 @@ class DocTool(object):
 
         init_args = init_args[split_pos:]
         init_args = self.parser.parse_known_args(init_args)
-        conf_file = os.path.abspath(init_args[0].conf_file)
-        conf_path = os.path.dirname(conf_file)
+        self.conf_file = os.path.abspath(init_args[0].conf_file)
+        conf_path = os.path.dirname(self.conf_file)
         wizard = HotdocWizard(self.parser, conf_path=conf_path)
         self.wizard = wizard
 
@@ -590,7 +571,7 @@ class DocTool(object):
                 dest="editing_server", help="If editing-server is provided, an edit button will be added")
 
         args = self.parser.parse_args(args)
-        self.load_config(args, conf_file, wizard)
+        self.load_config(args, self.conf_file, wizard)
 
         exit_now = False
 
@@ -608,8 +589,10 @@ class DocTool(object):
                         exit_now = False
 
         if save_config:
-            with open(conf_file, 'w') as f:
+            with open(self.conf_file, 'w') as f:
                 f.write(json.dumps(wizard.config, indent=4))
+
+        self.change_tracker.add_hard_dependency(self.conf_file)
 
         if exit_now:
             sys.exit(0)
@@ -672,11 +655,6 @@ class DocTool(object):
         self.__create_change_tracker()
 
         self.__setup_folder('hotdoc-private')
-
-        # FIXME: we might actually want not to be naive
-        #if not config.index:
-        #    nif = NaiveIndexFormatter (self.c_source_scanner.symbols)
-        #    config.index = "tmp_markdown_files/tmp_index.markdown"
 
         self.index_file = self.resolve_config_path(config.get('index'))
 
