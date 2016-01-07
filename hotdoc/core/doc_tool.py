@@ -316,6 +316,8 @@ class DocTool(object):
         sym = self.__symbols.get(name)
 
         if not self.incremental:
+            if sym:
+                sym.resolve_links(self.link_resolver)
             return sym
 
         if not sym:
@@ -673,6 +675,7 @@ class DocTool(object):
 
     def persist(self):
         self.doc_tree.persist()
+        self.session.commit()
         self.change_tracker.track_core_dependencies()
         pickle.dump(self.change_tracker, open(os.path.join(self.get_private_folder(),
             'change_tracker.p'), 'wb'))
