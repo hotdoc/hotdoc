@@ -244,7 +244,7 @@ class PageParser(object):
         return page
 
     def reparse(self, page):
-        with io.open(source_file, 'r', encoding='utf-8') as f:
+        with io.open(page.source_file, 'r', encoding='utf-8') as f:
             contents = f.read()
 
         ast = self.__cmp.parse(cgi.escape(contents))
