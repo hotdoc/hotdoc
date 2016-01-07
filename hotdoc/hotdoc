@@ -18,19 +18,29 @@
 # 02110-1301, USA.
 #
 
+
 import sys, os, traceback
 import cPickle as pickle
+import cProfile
 
 from hotdoc.core.doc_tool import DocTool, ConfigError
 
-if __name__=="__main__":
+def run():
     doc_tool = DocTool()
+    doc_tool.setup(sys.argv[1:])
+    doc_tool.format()
+    doc_tool.persist()
+    doc_tool.finalize()
+
+if __name__=="__main__":
+
+    run_profile = os.environ.get('HOTDOC_PROFILING', False)
 
     try:
-        doc_tool.setup(sys.argv[1:])
-        doc_tool.format()
-        doc_tool.persist()
-        doc_tool.finalize()
+        if run_profile:
+            cProfile.run('run()', 'runstats')
+        else:
+            run()
     except ConfigError as e:
         print "Configuration error:", e
         sys.exit(1)
