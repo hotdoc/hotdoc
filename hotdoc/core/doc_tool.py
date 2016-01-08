@@ -4,6 +4,8 @@ import glob
 import json
 import shutil
 
+from collections import defaultdict
+
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, mapper
 
@@ -11,6 +13,7 @@ from .naive_index import NaiveIndexFormatter
 from .links import LinkResolver
 from .symbols import *
 from .base_extension import BaseExtension
+from .base_formatter import Formatter
 from .alchemy_integration import Base
 from .doc_tree import DocTree
 from .comment_block import Tag, Comment
@@ -439,6 +442,13 @@ class DocTool(object):
         self.session.autoflush = False
         Base.metadata.create_all(self.engine)
 
+    def __load_reference_map(self):
+        try:
+            self.reference_map = pickle.load(open(os.path.join(self.get_private_folder(),
+                'reference_map.p'), 'rb'))
+        except IOError:
+            self.reference_map = defaultdict(set)
+
     def __create_change_tracker(self):
         try:
             self.change_tracker = pickle.load(open(os.path.join(self.get_private_folder(),
@@ -482,6 +492,17 @@ class DocTool(object):
     def get_assets_path(self):
         return os.path.join(self.output, 'assets')
 
+    def __link_referenced_cb(self, link):
+        self.reference_map[link.id_].add(self.formatter.current_page.source_file)
+        self.formatter.current_page.reference_map.add(link.id_)
+        return None
+
+    def __formatting_page_cb(self, formatter, page):
+        for link_id in page.reference_map:
+            self.reference_map.get(link_id, set()).discard(page.source_file)
+        page.reference_map = set()
+        return None
+
     def format (self):
         self.__setup_folder(self.output)
         self.formatter = HtmlFormatter(self, [])
@@ -490,6 +511,8 @@ class DocTool(object):
         if not self.site_navigation:
             self.site_navigation = self.formatter.format_site_navigation(root)
 
+        Formatter.formatting_page_signal.connect(self.__formatting_page_cb)
+        Link.resolving_link_signal.connect(self.__link_referenced_cb)
         self.formatter.format(root)
 
     def add_comment(self, comment):
@@ -654,6 +677,7 @@ class DocTool(object):
             raise ConfigError ("Unsupported output format : %s" %
                     self.output_format)
 
+        self.__load_reference_map()
         self.__create_change_tracker()
 
         self.__setup_folder('hotdoc-private')
@@ -669,7 +693,15 @@ class DocTool(object):
         self.__create_extensions (config)
 
         self.doc_tree.build_tree(self.index_file)
-        self.doc_tree.fill_symbol_maps()
+
+        moved_symbols = self.doc_tree.update_symbol_maps()
+
+        for symbol_id in moved_symbols:
+            referencing_pages = self.reference_map.get(symbol_id, set())
+            for pagename in referencing_pages:
+                page = self.doc_tree.pages[pagename]
+                if page:
+                    page.is_stale = True
 
         self.__setup_database()
 
@@ -679,6 +711,8 @@ class DocTool(object):
         self.change_tracker.track_core_dependencies()
         pickle.dump(self.change_tracker, open(os.path.join(self.get_private_folder(),
             'change_tracker.p'), 'wb'))
+        pickle.dump(self.reference_map, open(os.path.join(self.get_private_folder(),
+            'reference_map.p'), 'wb'))
 
     def finalize (self):
         for extension in self.extensions.values():

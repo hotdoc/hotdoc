@@ -71,7 +71,7 @@ class Page(object):
         self.is_stale = True
         self.ast = None
         self.headers = {}
-
+        self.reference_map = set()
 
     def __getstate__(self):
         return {'symbol_names': self.symbol_names,
@@ -82,6 +82,7 @@ class Page(object):
                 'first_paragraph': self.first_paragraph,
                 'short_description': self.short_description,
                 'source_file': self.source_file,
+                'reference_map': self.reference_map,
                 'output_attrs': None,
                 'extension_name': self.extension_name,
                 'ast': None,
@@ -126,11 +127,10 @@ class Page(object):
         self.symbol_names.extend(new_sym_names)
 
     def resolve_symbol (self, symbol):
-        if not '#' in symbol.link.ref:
-            symbol.link.ref = '%s#%s' % (self.link.ref, symbol.link.ref)
+        symbol.link.ref = "%s#%s" % (self.link.ref, symbol.unique_name)
         for l in symbol.get_extra_links():
-            if not '#' in l.ref:
-                l.ref = '%s#%s' % (self.link.ref, l.ref)
+            l.ref = "%s#%s" % (self.link.ref, l.id_)
+
         tsl = self.typed_symbols[type(symbol)]
         tsl.symbols.append (symbol)
         self.symbols.append (symbol)
@@ -312,14 +312,24 @@ class DocTree(object):
         self.page_parser = PageParser(doc_tool, self, prefix)
 
         self.pages_path = os.path.join(doc_tool.get_private_folder(), 'pages.p')
+        self.symbol_maps_path = os.path.join(doc_tool.get_private_folder(),
+                'symbol_maps.p')
+
         try:
             self.pages = pickle.load(open(self.pages_path, 'rb'))
         except:
             self.pages = {}
+
+        try:
+            self.previous_symbol_maps = pickle.load(open(self.symbol_maps_path, 'rb'))
+        except:
+            self.previous_symbol_maps = {}
+
         self.prefix = prefix
         self.symbol_added_signal = Signal()
         doc_tool.comment_updated_signal.connect(self.__comment_updated)
         doc_tool.symbol_updated_signal.connect(self.__symbol_updated)
+        self.doc_tool = doc_tool
         self.symbol_maps = {}
 
     def get_page(self, name):
@@ -330,15 +340,28 @@ class DocTree(object):
         symbol_map[page.source_file] = page
         self.symbol_maps[sym.unique_name] = symbol_map
 
-    def fill_symbol_maps(self):
+    def symbol_has_moved(self, symbol_map, name):
+        if not self.doc_tool.incremental:
+            return False
+
+        return set(symbol_map.keys()) != set(self.previous_symbol_maps.get(name,
+            {}).keys())
+
+    def update_symbol_maps(self):
+        moved_symbols = set({})
         for page in self.pages.values():
             for name in page.symbol_names:
                 symbol_map = self.symbol_maps.pop(name, {})
                 symbol_map[page.source_file] = page
                 self.symbol_maps[name] = symbol_map
+                if self.symbol_has_moved(symbol_map, name):
+                    moved_symbols.add(name)
+
+        return moved_symbols
 
     def persist(self):
         pickle.dump(self.pages, open(self.pages_path, 'wb'))
+        pickle.dump(self.symbol_maps, open(self.symbol_maps_path, 'wb')) 
 
     def build_tree (self, source_file, extension_name=None):
         page = None

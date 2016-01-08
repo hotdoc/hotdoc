@@ -23,6 +23,7 @@ class Formatter(object):
         self._output = doc_tool.output
 
         self.formatting_symbol_signal = Signal()
+        self.current_page = None
 
     def _create_hierarchy_graph (self, hierarchy):
         # FIXME: handle multiple inheritance
@@ -81,6 +82,8 @@ class Formatter(object):
             symbol.skip = not self.format_symbol(symbol)
 
     def __format_page (self, page):
+        self.current_page = page
+
         if page.is_stale:
             page.output_attrs = defaultdict(lambda: defaultdict(dict))
             self.emit_formatting_page(page)
