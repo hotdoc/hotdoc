@@ -33,6 +33,10 @@ class BaseExtension(object):
     def finalize (self):
         pass
 
+    def get_stale_files(self, all_files):
+        return self.doc_tool.change_tracker.get_stale_files(all_files,
+                self.EXTENSION_NAME)
+
     def get_source_files(self):
         return []
 

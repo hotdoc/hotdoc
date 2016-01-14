@@ -17,10 +17,10 @@ from .base_formatter import Formatter
 from .alchemy_integration import Base
 from .doc_tree import DocTree
 from .comment_block import Tag, Comment
+from .change_tracker import ChangeTracker
 
 from ..utils.wizard import QuickStartWizard, QUICKSTART_HELP, Skip, QuickStartArgument
 from ..utils.utils import all_subclasses
-from ..utils.utils import get_mtime
 from ..utils.simple_signals import Signal
 from ..utils.loggable import TerminalController
 from ..utils.utils import get_all_extension_classes
@@ -37,69 +37,6 @@ from hotdoc.core.gi_raw_parser import GtkDocRawCommentParser
 class ConfigError(Exception):
     pass
 
-class ChangeTracker(object):
-    def __init__(self):
-        self.exts_mtimes = {}
-        self.hard_deps_mtimes = {}
-
-    def update_extension_sources_mtimes(self, extension):
-        ext_mtimes = {}
-        source_files = extension.get_source_files()
-        for source_file in source_files:
-            mtime = os.path.getmtime(source_file)
-            ext_mtimes[source_file] = mtime
-
-        self.exts_mtimes[extension.EXTENSION_NAME] = ext_mtimes
-
-    def mark_extension_stale_sources (self, extension):
-        stale = []
-        source_files = extension.get_source_files()
-
-        if extension.EXTENSION_NAME in self.exts_mtimes:
-            prev_mtimes = self.exts_mtimes[extension.EXTENSION_NAME]
-        else:
-            prev_mtimes = {}
-
-        for source_file in source_files:
-            if not source_file in prev_mtimes:
-                stale.append(source_file)
-            else:
-                prev_mtime = prev_mtimes.get(source_file)
-                mtime = os.path.getmtime(source_file)
-                if prev_mtime != mtime:
-                    stale.append(source_file)
-
-        extension.set_stale_source_files(stale)
-
-    def __track_code_changes(self):
-        modules = [m.__file__ for m in sys.modules.values()
-                        if m and '__file__' in m.__dict__]
-
-        for filename in modules:
-            if filename.endswith('.pyc') or filename.endswith('.pyo'):
-                filename = filename[:-1]
-
-            self.add_hard_dependency(filename)
-
-    def track_core_dependencies(self):
-        self.__track_code_changes()
-
-    def add_hard_dependency(self, filename):
-        mtime = get_mtime(filename)
-
-        if mtime != -1:
-            self.hard_deps_mtimes[filename] = mtime
-
-    def hard_dependencies_are_stale(self):
-        _win32 = (sys.platform == 'win32')
-
-        for filename, last_mtime in self.hard_deps_mtimes.items():
-            mtime = get_mtime(filename)
-
-            if mtime == -1 or mtime != last_mtime:
-                return True
-
-        return False
 
 HOTDOC_ASCII =\
 """/**    __  __   ____     ______   ____     ____     ______
@@ -479,9 +416,7 @@ class DocTool(object):
         self.__setup(args)
 
         for extension in self.extensions.values():
-            self.change_tracker.mark_extension_stale_sources(extension)
             extension.setup ()
-            self.change_tracker.update_extension_sources_mtimes(extension)
             self.session.flush()
 
         root = self.doc_tree.pages.get(self.index_file)
