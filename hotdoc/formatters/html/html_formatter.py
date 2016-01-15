@@ -383,7 +383,6 @@ class HtmlFormatter (Formatter):
         self.all_scripts.update(scripts)
 
         out = template.render ({'page': page,
-                                'site_navigation': self.doc_tool.site_navigation,
                                 'scripts': scripts_basenames,
                                 'toc': toc,
                                 'assets_path': self._get_assets_path(),

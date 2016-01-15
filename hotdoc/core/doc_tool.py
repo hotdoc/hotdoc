@@ -250,7 +250,6 @@ class DocTool(object):
         self.incremental = False
         self.comment_updated_signal = Signal()
         self.symbol_updated_signal = Signal()
-        self.site_navigation = None
 
     def get_symbol(self, name, prefer_class=False):
         sym = self.__symbols.get(name)
@@ -438,17 +437,32 @@ class DocTool(object):
         page.reference_map = set()
         return None
 
+    def __create_navigation_script(self, root):
+        # Wrapping this is in a javascript file to allow
+        # circumventing stupid chrome same origin policy
+        site_navigation = self.formatter.format_site_navigation(root)
+        path = os.path.join(self.output,
+                self.formatter._get_assets_path(),
+                'js',
+                'site_navigation.js')
+        with open(path, 'w') as f:
+            site_navigation = site_navigation.replace('\n', '')
+            site_navigation = site_navigation.replace('"', '\\"')
+            js_wrapper = 'site_navigation_downloaded_cb("'
+            js_wrapper += site_navigation
+            js_wrapper += '");'
+            f.write(js_wrapper.encode('utf-8'))
+
     def format (self):
         self.__setup_folder(self.output)
         self.formatter = HtmlFormatter(self, [])
         root = self.doc_tree.pages.get(self.index_file)
 
-        if not self.site_navigation:
-            self.site_navigation = self.formatter.format_site_navigation(root)
 
         Formatter.formatting_page_signal.connect(self.__formatting_page_cb)
         Link.resolving_link_signal.connect(self.__link_referenced_cb)
         self.formatter.format(root)
+        self.__create_navigation_script(root)
 
     def add_comment(self, comment):
         self.__comments[comment.name] = comment
