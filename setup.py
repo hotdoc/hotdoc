@@ -134,5 +134,6 @@ setup(name='hotdoc',
                 'default_theme/fonts/*'],
             },
         install_requires = install_requires,
-        setup_requires = ['requests'],
+        setup_requires = ['cffi',
+            'requests'],
         )
