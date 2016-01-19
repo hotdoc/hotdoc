@@ -567,8 +567,6 @@ class DocTool(object):
             with open(self.conf_file, 'w') as f:
                 f.write(json.dumps(wizard.config, indent=4))
 
-        self.change_tracker.add_hard_dependency(self.conf_file)
-
         if exit_now:
             sys.exit(0)
 
@@ -652,6 +650,8 @@ class DocTool(object):
                 page = self.doc_tree.pages[pagename]
                 if page:
                     page.is_stale = True
+
+        self.change_tracker.add_hard_dependency(self.conf_file)
 
         self.__setup_database()
 
