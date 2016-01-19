@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+git-pylint-commit-hook
+git_pep8_commit_hook
