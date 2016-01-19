@@ -1,6 +1,7 @@
 from hotdoc.core.alchemy_integration import MutableObject
 from hotdoc.utils.simple_signals import Signal
 
+
 class Link (MutableObject):
     resolving_link_signal = Signal()
     resolving_title_signal = Signal()

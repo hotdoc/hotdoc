@@ -1,8 +1,9 @@
 import os
 
-from hotdoc.formatters.html.html_formatter import HtmlFormatter
-from hotdoc.core.naive_index import NaiveIndexFormatter
 from hotdoc.core.gtk_doc_parser import GtkDocParser
+from hotdoc.core.naive_index import NaiveIndexFormatter
+from hotdoc.formatters.html.html_formatter import HtmlFormatter
+
 
 class ExtDependency(object):
     def __init__(self, dependency_name, upstream=False):

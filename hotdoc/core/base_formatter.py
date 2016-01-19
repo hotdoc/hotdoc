@@ -2,14 +2,14 @@
 
 import os
 import shutil
-import pygraphviz as pg
-
-from xml.sax.saxutils import unescape
 from collections import defaultdict
+from xml.sax.saxutils import unescape
 
+import pygraphviz as pg
 from hotdoc.core.symbols import *
 from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.utils import recursive_overwrite
+
 
 def all_subclasses(cls):
         return cls.__subclasses__() + [g for s in cls.__subclasses__()

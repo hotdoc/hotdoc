@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/env python
 
-import cmarkpy
-import sys
-import re
 import cgi
+import re
+import sys
 from xml.sax.saxutils import unescape
+
+import cmarkpy
+
 
 # Lifted from g-ir-doc-tool, muahaha
 class DocScanner(object):

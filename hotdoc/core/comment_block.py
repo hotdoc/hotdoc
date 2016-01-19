@@ -1,6 +1,6 @@
-import os
-import os
 import linecache
+import os
+
 
 class TagValidator(object):
     def __init__(self, name):

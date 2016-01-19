@@ -1,6 +1,9 @@
-import sys, re
+import re
+import sys
 from itertools import izip_longest
+
 from hotdoc.core.comment_block import *
+
 
 #http://stackoverflow.com/questions/434287/what-is-the-most-pythonic-way-to-iterate-over-a-list-in-chunks
 def grouper(iterable, n, fillvalue=None):

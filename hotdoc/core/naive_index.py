@@ -1,6 +1,7 @@
 import os
 import shutil
 
+
 # FIXME: be less naive :)
 class NaiveIndexFormatter(object):
     def __init__(self, symbols, directory='tmp_markdown_files',

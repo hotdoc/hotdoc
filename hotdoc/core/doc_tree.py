@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 
-import CommonMark
-import os
 import cPickle as pickle
-import linecache
 import io
+import linecache
+import os
 import shutil
+from collections import OrderedDict
 from xml.sax.saxutils import unescape
 
-from hotdoc.utils.simple_signals import Signal
-from collections import OrderedDict
-
-from hotdoc.core.symbols import *
+import CommonMark
 from hotdoc.core.links import Link
+from hotdoc.core.symbols import *
+from hotdoc.utils.simple_signals import Signal
+
 
 class TypedSymbolsList (object):
     def __init__ (self, name):

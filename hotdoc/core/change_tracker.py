@@ -1,8 +1,9 @@
-import os, sys
-
+import os
+import sys
 from collections import defaultdict
 
-from hotdoc.utils.utils import get_mtime, OrderedSet
+from hotdoc.utils.utils import OrderedSet, get_mtime
+
 
 class ChangeTracker(object):
     def __init__(self):

@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from sqlalchemy import (Column, String, Integer, Boolean,
-        ForeignKey, PickleType)
-
-from hotdoc.core.links import Link
 from hotdoc.core.alchemy_integration import *
 from hotdoc.core.comment_block import comment_from_tag
+from hotdoc.core.links import Link
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, PickleType, String
 
 
 class Symbol (Base):

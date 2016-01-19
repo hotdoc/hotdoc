@@ -1,30 +1,30 @@
-import os, sys, argparse
+import argparse
 import cPickle as pickle
 import glob
 import json
+import os
 import shutil
-
+import sys
 from collections import defaultdict
 
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker, mapper
-
-from hotdoc.core.naive_index import NaiveIndexFormatter
-from hotdoc.core.links import LinkResolver
-from hotdoc.core.symbols import *
+from hotdoc.core.alchemy_integration import Base
 from hotdoc.core.base_extension import BaseExtension
 from hotdoc.core.base_formatter import Formatter
-from hotdoc.core.alchemy_integration import Base
-from hotdoc.core.doc_tree import DocTree
-from hotdoc.core.comment_block import Tag, Comment
 from hotdoc.core.change_tracker import ChangeTracker
-
-from hotdoc.utils.wizard import QuickStartWizard, QUICKSTART_HELP, Skip, QuickStartArgument
-from hotdoc.utils.utils import all_subclasses
-from hotdoc.utils.simple_signals import Signal
-from hotdoc.utils.loggable import TerminalController
-from hotdoc.utils.utils import get_all_extension_classes
+from hotdoc.core.comment_block import Comment, Tag
+from hotdoc.core.doc_tree import DocTree
+from hotdoc.core.gi_raw_parser import GtkDocRawCommentParser
+from hotdoc.core.links import LinkResolver
+from hotdoc.core.naive_index import NaiveIndexFormatter
+from hotdoc.core.symbols import *
 from hotdoc.formatters.html.html_formatter import HtmlFormatter
+from hotdoc.utils.loggable import TerminalController
+from hotdoc.utils.simple_signals import Signal
+from hotdoc.utils.utils import all_subclasses, get_all_extension_classes
+from hotdoc.utils.wizard import (QUICKSTART_HELP, QuickStartArgument,
+                                 QuickStartWizard, Skip)
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import mapper, sessionmaker
 
 try:
     from hotdoc.utils.git_interface import GitInterface
@@ -32,7 +32,6 @@ try:
 except ImportError:
     HAVE_GIT_INTERFACE = False
 
-from hotdoc.core.gi_raw_parser import GtkDocRawCommentParser
 
 class ConfigError(Exception):
     pass
