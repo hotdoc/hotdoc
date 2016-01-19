@@ -2,7 +2,6 @@
 
 import CommonMark
 import os
-import cgi
 import cPickle as pickle
 import linecache
 import io
@@ -233,7 +232,7 @@ class PageParser(object):
 
         page = Page(source_file, extension_name)
 
-        ast = self.__cmp.parse(cgi.escape(contents))
+        ast = self.__cmp.parse(contents)
         page.ast = ast
 
         for c in get_children(ast):
@@ -248,7 +247,7 @@ class PageParser(object):
         with io.open(page.source_file, 'r', encoding='utf-8') as f:
             contents = f.read()
 
-        ast = self.__cmp.parse(cgi.escape(contents))
+        ast = self.__cmp.parse(contents)
         page.ast = ast
 
         page.symbol_names = []
@@ -259,7 +258,7 @@ class PageParser(object):
         self.check_links(page, ast)
 
     def parse_contents(self, page, contents):
-        page.ast = self.__cmp.parse(cgi.escape(contents))
+        page.ast = self.__cmp.parse(contents)
 
     def _update_links (self, node):
         if node.t == 'Link':
