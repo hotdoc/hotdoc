@@ -9,25 +9,25 @@ from collections import defaultdict
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, mapper
 
-from .naive_index import NaiveIndexFormatter
-from .links import LinkResolver
-from .symbols import *
-from .base_extension import BaseExtension
-from .base_formatter import Formatter
-from .alchemy_integration import Base
-from .doc_tree import DocTree
-from .comment_block import Tag, Comment
-from .change_tracker import ChangeTracker
+from hotdoc.core.naive_index import NaiveIndexFormatter
+from hotdoc.core.links import LinkResolver
+from hotdoc.core.symbols import *
+from hotdoc.core.base_extension import BaseExtension
+from hotdoc.core.base_formatter import Formatter
+from hotdoc.core.alchemy_integration import Base
+from hotdoc.core.doc_tree import DocTree
+from hotdoc.core.comment_block import Tag, Comment
+from hotdoc.core.change_tracker import ChangeTracker
 
-from ..utils.wizard import QuickStartWizard, QUICKSTART_HELP, Skip, QuickStartArgument
-from ..utils.utils import all_subclasses
-from ..utils.simple_signals import Signal
-from ..utils.loggable import TerminalController
-from ..utils.utils import get_all_extension_classes
-from ..formatters.html.html_formatter import HtmlFormatter
+from hotdoc.utils.wizard import QuickStartWizard, QUICKSTART_HELP, Skip, QuickStartArgument
+from hotdoc.utils.utils import all_subclasses
+from hotdoc.utils.simple_signals import Signal
+from hotdoc.utils.loggable import TerminalController
+from hotdoc.utils.utils import get_all_extension_classes
+from hotdoc.formatters.html.html_formatter import HtmlFormatter
 
 try:
-    from ..utils.git_interface import GitInterface
+    from hotdoc.utils.git_interface import GitInterface
     HAVE_GIT_INTERFACE = True
 except ImportError:
     HAVE_GIT_INTERFACE = False

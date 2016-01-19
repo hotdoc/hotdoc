@@ -8,11 +8,11 @@ import io
 import shutil
 from xml.sax.saxutils import unescape
 
-from ..utils.simple_signals import Signal
+from hotdoc.utils.simple_signals import Signal
 from collections import OrderedDict
 
-from .symbols import *
-from .links import Link
+from hotdoc.core.symbols import *
+from hotdoc.core.links import Link
 
 class TypedSymbolsList (object):
     def __init__ (self, name):
