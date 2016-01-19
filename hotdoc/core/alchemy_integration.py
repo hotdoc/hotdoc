@@ -1,9 +1,19 @@
+"""
+Simple interface with sqlalchemy, implements some useful
+data structures.
+"""
+
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.mutable import Mutable
 
+# pylint: disable=invalid-name
 Base = declarative_base()
 
+
 class MutableDict(Mutable, dict):
+    """
+    A mutable dictionary
+    """
     @classmethod
     def coerce(cls, key, value):
         if not isinstance(value, MutableDict):
@@ -27,7 +37,11 @@ class MutableDict(Mutable, dict):
     def __setstate__(self, state):
         self.update(self)
 
+
 class MutableList(Mutable, list):
+    """
+    A mutable list
+    """
     @classmethod
     def coerce(cls, key, value):
         if not isinstance(value, MutableList):
@@ -39,10 +53,13 @@ class MutableList(Mutable, list):
 
     def __setitem__(self, key, value):
         old_value = list.__getitem__(self, key)
+        # pylint: disable=no-member
         for obj, key in self._parents.items():
+            # pylint: disable=protected-access
             old_value._parents.pop(obj, None)
 
         list.__setitem__(self, key, value)
+        # pylint: disable=protected-access
         for obj, key in self._parents.items():
             value._parents[obj] = key
 
@@ -73,15 +90,17 @@ class MutableList(Mutable, list):
         self.changed()
         return item
 
-    def sort(self, cmp=None, key=None, reverse=False):
-        list.sort(self, cmp, key, reverse)
+    def sort(self, cmp_=None, key=None, reverse=False):
+        list.sort(self, cmp_, key, reverse)
         self.changed()
 
     def __getstate__(self):
         for item in self:
-            if not isinstance (item, Mutable):
+            if not isinstance(item, Mutable):
                 continue
+            # pylint: disable=no-member
             for obj, key in self._parents.items():
+                # pylint: disable=protected-access
                 item._parents[obj] = key
         return list(self)
 
@@ -90,16 +109,20 @@ class MutableList(Mutable, list):
 
 
 class MutableObject(Mutable, object):
+    """
+    A mutable object
+    """
     @classmethod
     def coerce(cls, key, value):
         return value
 
-    def __getstate__(self): 
+    def __getstate__(self):
         d = self.__dict__.copy()
         d.pop('_parents', None)
         return d
 
     def __setstate__(self, state):
+        # pylint: disable=attribute-defined-outside-init
         self.__dict__ = state
 
     def __setattr__(self, name, value):
