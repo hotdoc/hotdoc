@@ -6,6 +6,7 @@ from hotdoc.utils.utils import OrderedSet, get_mtime
 
 
 class ChangeTracker(object):
+
     def __init__(self):
         self.exts_mtimes = {}
         self.hard_deps_mtimes = {}
@@ -31,7 +32,7 @@ class ChangeTracker(object):
 
     def __track_code_changes(self):
         modules = [m.__file__ for m in sys.modules.values()
-                        if m and '__file__' in m.__dict__]
+                   if m and '__file__' in m.__dict__]
 
         for filename in modules:
             if filename.endswith('.pyc') or filename.endswith('.pyo'):
@@ -59,36 +60,37 @@ class ChangeTracker(object):
 
         return False
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     ct = ChangeTracker()
 
     # Initial build
     os.system('touch a b c d')
-    print ("Should be ([a, b, c, d], [])")
-    print (ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing'))
+    print "Should be ([a, b, c, d], [])"
+    print ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
 
     # Build where nothing changed
-    print ("Should be ([], [])")
-    print (ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing'))
+    print "Should be ([], [])"
+    print ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
 
     # Build with two files changed
     os.system('touch b d')
-    print ("Should be ([b, d], [])")
-    print (ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing'))
+    print "Should be ([b, d], [])"
+    print ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
 
     # Build where one file was removed
     os.system('rm -f b')
-    print ("Should be ([b], [])")
-    print (ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing'))
-    print ("Should be ([], [])")
-    print (ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing'))
+    print "Should be ([b], [])"
+    print ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
+    print "Should be ([], [])"
+    print ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
 
     # Build where one file was unlisted
-    print ("Should be ([], [a])")
-    print (ct.get_stale_files(['b', 'c', 'd'], 'testing'))
+    print "Should be ([], [a])"
+    print ct.get_stale_files(['b', 'c', 'd'], 'testing')
 
     # Build with file listed again
-    print ("Should be ([a], [])")
-    print (ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing'))
+    print "Should be ([a], [])"
+    print ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
 
     os.system('rm -f a b c d')
