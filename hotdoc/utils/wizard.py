@@ -90,6 +90,12 @@ class QuickStartShell(InteractiveShellEmbed):
                 res = False
         return res
 
+    def propose_edit(self, prompt='e to edit, Enter to skip '):
+        """
+        Banana banana
+        """
+        return self.raw_input(prompt) == 'e'
+
     def wait_for_continue(self, prompt='Press Enter to continue '):
         """
         Banana banana
@@ -333,7 +339,7 @@ class QuickStartWizard(object):
         if key in self.config:
             print 'Current value for %s : %s' % (title,
                                                  self.config[key])
-            if not self.qsshell.ask_confirmation('Update [y,n]? '):
+            if not self.qsshell.propose_edit():
                 return self.config[key]
 
         if extra_prompt:
