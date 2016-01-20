@@ -1,21 +1,21 @@
-import shlex
-import pkgutil, importlib, sys, os
-import subprocess
-import traceback
+"""
+Banana banana
+"""
+import collections
+import os
+import shutil
+import sys
+
 from pkg_resources import iter_entry_points
 from toposort import toposort_flatten
-import collections
-import shutil
 
-_win32 = (sys.platform == 'win32')
+WIN32 = (sys.platform == 'win32')
 
-def PkgConfig(args):
-    cmd = ['pkg-config'] + shlex.split(args)
-    out = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE).stdout
-    line = out.readline()[:-1].split(" ")
-    return filter(lambda a: a not in [' ', ''], line)
 
 def recursive_overwrite(src, dest, ignore=None):
+    """
+    Banana banana
+    """
     if os.path.isdir(src):
         if not os.path.isdir(dest):
             os.makedirs(dest)
@@ -24,19 +24,27 @@ def recursive_overwrite(src, dest, ignore=None):
             ignored = ignore(src, files)
         else:
             ignored = set()
-        for f in files:
-            if f not in ignored:
-                recursive_overwrite(os.path.join(src, f), 
-                                    os.path.join(dest, f), 
+        for _ in files:
+            if _ not in ignored:
+                recursive_overwrite(os.path.join(src, _),
+                                    os.path.join(dest, _),
                                     ignore)
     else:
         shutil.copyfile(src, dest)
 
+
 def all_subclasses(cls):
-        return cls.__subclasses__() + [g for s in cls.__subclasses__()
-                                       for g in all_subclasses(s)]
+    """
+    Banana banana
+    """
+    return cls.__subclasses__() + [g for s in cls.__subclasses__()
+                                   for g in all_subclasses(s)]
+
 
 def get_mtime(filename):
+    """
+    Banana banana
+    """
     try:
         stat = os.stat(filename)
     except OSError:
@@ -44,23 +52,27 @@ def get_mtime(filename):
 
     # Check the modification time.  We need to adjust on Windows.
     mtime = stat.st_mtime
-    if _win32:
+    if WIN32:
         mtime -= stat.st_ctime
 
     return mtime
 
+
 def get_all_extension_classes(sort):
+    """
+    Banana banana
+    """
     all_classes = {}
     deps_map = {}
 
     for entry_point in iter_entry_points(group='hotdoc.extensions',
-            name='get_extension_classes'):
-        entry_point.module_name
+                                         name='get_extension_classes'):
         try:
             activation_function = entry_point.load()
             classes = activation_function()
-        except Exception as e:
-            print "Failed to load %s" % entry_point.module_name, e
+        # pylint: disable=broad-except
+        except Exception as _:
+            print "Failed to load %s" % entry_point.module_name, _
             continue
 
         for klass in classes:
@@ -76,10 +88,10 @@ def get_all_extension_classes(sort):
         for dep in deps:
             if dep.dependency_name not in all_classes:
                 print "Missing dependency %s for %s" % (dep.dependency_name,
-                        klass.EXTENSION_NAME)
+                                                        klass.EXTENSION_NAME)
                 satisfied = False
                 break
-            if dep.upstream == True:
+            if dep.upstream:
                 topodeps.add(all_classes[dep.dependency_name])
 
         if not satisfied:
@@ -87,15 +99,18 @@ def get_all_extension_classes(sort):
 
         deps_map[klass] = topodeps
 
-
     sorted_classes = toposort_flatten(deps_map)
     return sorted_classes
 
 # Recipe from http://code.activestate.com/recipes/576694/
-class OrderedSet(collections.MutableSet):
 
+
+class OrderedSet(collections.MutableSet):
+    """
+    Banana banana
+    """
     def __init__(self, iterable=None):
-        self.end = end = [] 
+        self.end = end = []
         end += [None, end, end]         # sentinel node for doubly linked list
         self.map = {}                   # key --> [key, prev, next]
         if iterable is not None:
@@ -114,10 +129,10 @@ class OrderedSet(collections.MutableSet):
             curr[2] = end[1] = self.map[key] = [key, curr, end]
 
     def discard(self, key):
-        if key in self.map:        
-            key, prev, next = self.map.pop(key)
-            prev[2] = next
-            next[1] = prev
+        if key in self.map:
+            key, prev, nxt = self.map.pop(key)
+            prev[2] = nxt
+            nxt[1] = prev
 
     def __iter__(self):
         end = self.end
@@ -133,6 +148,7 @@ class OrderedSet(collections.MutableSet):
             yield curr[0]
             curr = curr[1]
 
+    # pylint: disable=arguments-differ
     def pop(self, last=True):
         if not self:
             raise KeyError('set is empty')
