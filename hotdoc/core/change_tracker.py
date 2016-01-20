@@ -1,3 +1,7 @@
+"""
+Defines and tests ChangeTracker
+"""
+
 import os
 import sys
 from collections import defaultdict
@@ -6,13 +10,22 @@ from hotdoc.utils.utils import OrderedSet, get_mtime
 
 
 class ChangeTracker(object):
+    """
+    This class should only be instantiated and used through
+    the main DocTool instance.
 
+    It provides with modification time tracking and some
+    other utilities.
+    """
     def __init__(self):
         self.exts_mtimes = {}
         self.hard_deps_mtimes = {}
         self.mtimes = defaultdict(defaultdict)
 
     def get_stale_files(self, all_files, fileset_name):
+        """
+        Banana banana
+        """
         stale = OrderedSet()
 
         previous_mtimes = self.mtimes[fileset_name]
@@ -41,17 +54,24 @@ class ChangeTracker(object):
             self.add_hard_dependency(filename)
 
     def track_core_dependencies(self):
+        """
+        Banana banana
+        """
         self.__track_code_changes()
 
     def add_hard_dependency(self, filename):
+        """
+        Banana banana
+        """
         mtime = get_mtime(filename)
 
         if mtime != -1:
             self.hard_deps_mtimes[filename] = mtime
 
     def hard_dependencies_are_stale(self):
-        _win32 = (sys.platform == 'win32')
-
+        """
+        Banana banana
+        """
         for filename, last_mtime in self.hard_deps_mtimes.items():
             mtime = get_mtime(filename)
 
@@ -60,37 +80,36 @@ class ChangeTracker(object):
 
         return False
 
-
 if __name__ == '__main__':
-    ct = ChangeTracker()
+    CTRACKER = ChangeTracker()
 
     # Initial build
     os.system('touch a b c d')
     print "Should be ([a, b, c, d], [])"
-    print ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
+    print CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
 
     # Build where nothing changed
     print "Should be ([], [])"
-    print ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
+    print CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
 
     # Build with two files changed
     os.system('touch b d')
     print "Should be ([b, d], [])"
-    print ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
+    print CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
 
     # Build where one file was removed
     os.system('rm -f b')
     print "Should be ([b], [])"
-    print ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
+    print CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
     print "Should be ([], [])"
-    print ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
+    print CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
 
     # Build where one file was unlisted
     print "Should be ([], [a])"
-    print ct.get_stale_files(['b', 'c', 'd'], 'testing')
+    print CTRACKER.get_stale_files(['b', 'c', 'd'], 'testing')
 
     # Build with file listed again
     print "Should be ([a], [])"
-    print ct.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
+    print CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
 
     os.system('rm -f a b c d')
