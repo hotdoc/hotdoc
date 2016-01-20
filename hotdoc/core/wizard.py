@@ -206,17 +206,14 @@ class HotdocWizard(QuickStartWizard):
         if not HAVE_GIT_INTERFACE:
             return True
 
-        try:
-            repo_path = self.prompt_key(
-                'git_repo', prompt=">>> Path to the git repo ? ",
-                title="the path to the root of the git repository",
-                extra_prompt=PROMPT_GIT_REPO,
-                validate_function=validate_git_repo,
-                finalize_function=HotdocWizard.finalize_path)
-            self.git_interface.set_repo_path(
-                self.resolve_config_path(repo_path))
-        except Skip:
-            pass
+        repo_path = self.prompt_key(
+            'git_repo', prompt=">>> Path to the git repo ? ",
+            title="the path to the root of the git repository",
+            extra_prompt=PROMPT_GIT_REPO,
+            validate_function=validate_git_repo,
+            finalize_function=HotdocWizard.finalize_path)
+
+        self.git_interface.set_repo_path(self.resolve_config_path(repo_path))
 
         return True
 

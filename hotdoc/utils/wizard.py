@@ -46,7 +46,6 @@ class QuickStartShell(InteractiveShellEmbed):
     """
     def __init__(self):
         cfg = Config()
-        self.skip = False
         self.result = None
         prompt_config = cfg.PromptManager
         prompt_config.out_template = 'Answer: '
@@ -54,15 +53,15 @@ class QuickStartShell(InteractiveShellEmbed):
 
     def run_cell(self, raw_cell, **kwargs):
         if raw_cell.strip() == 'None':
-            self.skip = True
+            self.result = 'None'
             self.exit_now = True
             return None
 
         res = InteractiveShellEmbed.run_cell(self, raw_cell, **kwargs)
 
         if res.result:
-            self.result = res.result
             self.exit_now = True
+            self.result = res.result
 
         return res
 
@@ -83,43 +82,59 @@ class QuickStartShell(InteractiveShellEmbed):
         """
         res = None
         while res is None:
-            user_res = self.raw_input(prompt)
+            try:
+                user_res = self.raw_input(prompt)
+            except EOFError:
+                if self.raw_input(
+                        '\nDo you really want to exit ([y]/n)? ') == 'y':
+                    raise EOFError
+
             if user_res == 'y':
                 res = True
             elif user_res == 'n':
                 res = False
+
         return res
 
-    def propose_edit(self, prompt='e to edit, Enter to skip '):
+    def propose_edit(self, prompt='e to edit, Enter to keep '):
         """
         Banana banana
         """
-        return self.raw_input(prompt) == 'e'
+        try:
+            return self.raw_input(prompt) == 'e'
+        except EOFError:
+            if self.raw_input(
+                    '\nDo you really want to exit ([y]/n)? ') == 'y':
+                raise EOFError
+            return self.propose_edit(prompt)
 
     def wait_for_continue(self, prompt='Press Enter to continue '):
         """
         Banana banana
         """
-        self.raw_input(prompt)
+        try:
+            self.raw_input(prompt)
+        except EOFError:
+            if self.raw_input(
+                    '\nDo you really want to exit ([y]/n)? ') == 'y':
+                raise EOFError
+            return self.wait_for_continue(prompt)
         return True
 
     def ask(self, question, confirm=False):
         """
         Banana banana
         """
-        self.skip = False
         self.result = None
 
         confirmed = False
 
         while not confirmed:
             self(header=question)
-
-            if self.skip:
-                raise Skip
-
             if self.result is None:
                 raise EOFError
+            elif self.result == 'None':
+                self.result = None
 
             confirmed = not confirm or self.ask_confirmation()
 
@@ -316,14 +331,7 @@ class QuickStartWizard(object):
         """
         Banana banana
         """
-        res = None
-        while res is None:
-            user_res = self.qsshell.raw_input(prompt)
-            if user_res == 'y':
-                res = True
-            elif user_res == 'n':
-                res = False
-        return res
+        return self.qsshell.ask_confirmation(prompt)
 
     # pylint: disable=too-many-arguments
     def prompt_key(self, key, prompt=None, extra_prompt=None, title=None,
@@ -337,8 +345,8 @@ class QuickStartWizard(object):
             title = key
 
         if key in self.config:
-            print 'Current value for %s : %s' % (title,
-                                                 self.config[key])
+            print '%s (currently: %s)' % (title,
+                                          self.config[key])
             if not self.qsshell.propose_edit():
                 return self.config[key]
 
@@ -370,10 +378,7 @@ class QuickStartWizard(object):
         Banana banana
         """
         self.before_prompt()
-        res = self.qsshell.raw_input(prompt)
-        if res.lower() == "you're a wizard harry":
-            print "Indeed"
-        return True
+        return self.qsshell.wait_for_continue(prompt)
 
     def prompt_executable(self, executable, prompt=None):
         """
@@ -391,6 +396,10 @@ class QuickStartWizard(object):
         Banana banana
         """
         res = True
+
+        if path is None:
+            return True
+
         if not os.path.exists(path):
             os.mkdir(path)
             res = True
@@ -405,6 +414,9 @@ class QuickStartWizard(object):
         """
         Banana banana
         """
+        if thing is None:
+            return True
+
         res = type(thing) == list
         if not res:
             print "%s is not a list" % thing
@@ -431,6 +443,9 @@ class QuickStartWizard(object):
         """
         Banana banana
         """
+        if thing is None:
+            return True
+
         if not wizard.validate_list(wizard, thing):
             return False
 

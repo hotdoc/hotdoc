@@ -408,19 +408,17 @@ class DocTool(object):
         parser.add_argument("--output-format", action="store",
                             dest="output_format", help="format for the output",
                             default="html")
-        parser.add_argument("-I", "--include-path", action="append",
-                            dest="include_paths",
-                            help="markdown include paths")
         parser.add_argument("--html-theme", action="store",
                             dest="html_theme", help="html theme to use",
+                            default='default',
                             finalize_function=HotdocWizard.finalize_path)
         parser.add_argument("-", action="store_true", no_prompt=True,
                             help="Separator to allow finishing a list"
                             " of arguments before a command",
                             dest="whatever")
         parser.add_argument("--editing-server", action="store",
-                            dest="editing_server", help="If editing-server"
-                            " is provided, an edit button will be added")
+                            dest="editing_server", help="Editing server url,"
+                            " if provided, an edit button will be added")
 
         args = parser.parse_args(args)
         self.load_config(args, self.conf_file, wizard)
@@ -436,11 +434,14 @@ class DocTool(object):
             if args.quickstart:
                 if wizard.quick_start():
                     print "Setup complete, building the documentation now"
-                    if wizard.wait_for_continue(
+                    try:
+                        wizard.wait_for_continue(
                             "Setup complete,"
-                            " press Enter to build the doc now "):
+                            " press Enter to build the doc now ")
                         self.parse_config(wizard.config)
                         exit_now = False
+                    except EOFError:
+                        exit_now = True
 
         if save_config:
             with open(self.conf_file, 'w') as _:
@@ -503,15 +504,19 @@ class DocTool(object):
         Banana banana
         """
         module_path = os.path.dirname(__file__)
-        default_theme_path = os.path.join(module_path, '..', 'default_theme')
-        default_theme_path = os.path.abspath(default_theme_path)
 
         self.output = config.get('output')
         self.output_format = config.get('output_format')
         self.include_paths = config.get('include_paths')
-        self.html_theme_path = config.get('html_theme', default_theme_path)
+        self.html_theme_path = config.get('html_theme')
         self.git_repo_path = self.resolve_config_path(config.get('git_repo'))
         self.editing_server = config.get('editing_server')
+
+        if self.html_theme_path == 'default':
+            default_theme_path = os.path.join(module_path, '..',
+                                              'default_theme')
+            default_theme_path = os.path.abspath(default_theme_path)
+            self.html_theme_path = default_theme_path
 
         if self.output_format not in ["html"]:
             raise ConfigError("Unsupported output format : %s" %

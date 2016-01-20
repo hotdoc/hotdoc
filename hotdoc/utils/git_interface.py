@@ -23,6 +23,9 @@ class GitInterface(object):
         """
         Banana banana
         """
+        if repo_path is None:
+            return
+
         self.repo_path = os.path.abspath(repo_path)
         self.repo = git.Repository(self.repo_path)
         self.index = self.repo.index
