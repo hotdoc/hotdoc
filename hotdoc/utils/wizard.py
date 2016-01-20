@@ -1,13 +1,19 @@
+"""
+Banana banana
+"""
+
 import argparse
-import json
 import glob
 import os
-from IPython.terminal.embed import InteractiveShellEmbed
-from traitlets.config.loader import Config
+# pylint: disable=no-name-in-module
+# pylint: disable=import-error
 from distutils.spawn import find_executable
 
+from IPython.terminal.embed import InteractiveShellEmbed
+from traitlets.config.loader import Config
+
 QUICKSTART_HELP = \
-"""
+    """
 | Answer the prompts by returning a value.
 |
 | Example:
@@ -26,12 +32,22 @@ QUICKSTART_HELP = \
 | >>> None
 """
 
+
 class Skip(Exception):
+    """
+    Banana banana
+    """
     pass
 
+
 class QuickStartShell(InteractiveShellEmbed):
+    """
+    Banana banana
+    """
     def __init__(self):
         cfg = Config()
+        self.skip = False
+        self.result = None
         prompt_config = cfg.PromptManager
         prompt_config.out_template = 'Answer: '
         InteractiveShellEmbed.__init__(self, banner1='', config=cfg)
@@ -50,6 +66,7 @@ class QuickStartShell(InteractiveShellEmbed):
 
         return res
 
+    # pylint: disable=signature-differs
     def raw_input(self, prompt):
         res = None
         while res is None:
@@ -61,6 +78,9 @@ class QuickStartShell(InteractiveShellEmbed):
         return res
 
     def ask_confirmation(self, prompt='Confirm [y,n]? '):
+        """
+        Banana banana
+        """
         res = None
         while res is None:
             user_res = self.raw_input(prompt)
@@ -71,10 +91,16 @@ class QuickStartShell(InteractiveShellEmbed):
         return res
 
     def wait_for_continue(self, prompt='Press Enter to continue '):
+        """
+        Banana banana
+        """
         self.raw_input(prompt)
         return True
 
     def ask(self, question, confirm=False):
+        """
+        Banana banana
+        """
         self.skip = False
         self.result = None
 
@@ -94,9 +120,14 @@ class QuickStartShell(InteractiveShellEmbed):
         return self.result
 
 
+# pylint: disable=too-few-public-methods
 class QuickStartArgument(object):
+    """
+    Banana banana
+    """
+    # pylint: disable=too-many-arguments
     def __init__(self, wizard, argument, extra_prompt,
-            validate_function, finalize_function):
+                 validate_function, finalize_function):
         self.argument = argument
         self.wizard = wizard
         self.extra_prompt = extra_prompt
@@ -104,23 +135,31 @@ class QuickStartArgument(object):
         self.finalize_function = finalize_function
 
     def do_quick_start(self):
+        """
+        Banana banana
+        """
         return self.wizard.prompt_key(self.argument.dest,
-                prompt='>>> %s ?' % self.argument.help,
-                extra_prompt=self.extra_prompt,
-                title=self.argument.help,
-                validate_function=self.validate_function,
-                finalize_function=self.finalize_function)
+                                      prompt='>>> %s ?' % self.argument.help,
+                                      extra_prompt=self.extra_prompt,
+                                      title=self.argument.help,
+                                      validate_function=self.validate_function,
+                                      finalize_function=self.finalize_function)
 
-PROMPT_EXECUTABLE=\
-"""
+PROMPT_EXECUTABLE =\
+    """
 %s is needed for the setup to continue.
 
 Press Enter once it is installed """
 
+
+# pylint: disable=too-many-instance-attributes
 class QuickStartWizard(object):
+    """
+    Banana banana
+    """
     def __init__(self, group,
-            parent=None,
-            validate_function=None):
+                 parent=None,
+                 validate_function=None):
         self.group = group
         self._add_argument = group.add_argument
         group.add_argument = self._add_argument_override
@@ -138,7 +177,11 @@ class QuickStartWizard(object):
 
         self.validate_function = validate_function
 
+    # pylint: disable=unidiomatic-typecheck
     def group_prompt(self):
+        """
+        Banana banana
+        """
         self.before_prompt()
 
         if type(self.group) == argparse.ArgumentParser:
@@ -161,12 +204,21 @@ class QuickStartWizard(object):
         return self.ask_confirmation(question)
 
     def main_prompt(self):
+        """
+        Banana banana
+        """
         return self.group_prompt()
 
     def before_prompt(self):
+        """
+        Banana banana
+        """
         pass
 
     def quick_start(self):
+        """
+        Banana banana
+        """
         try:
             if not self.do_quick_start():
                 return False
@@ -176,10 +228,18 @@ class QuickStartWizard(object):
 
         return True
 
+    # pylint: disable=unused-argument
+    # pylint: disable=no-self-use
     def before_quick_start(self, obj):
+        """
+        Banana banana
+        """
         return
 
     def do_quick_start(self):
+        """
+        Banana banana
+        """
         if self == self.parent:
             prompt = self.main_prompt
         else:
@@ -202,6 +262,9 @@ class QuickStartWizard(object):
         return True
 
     def propose_choice(self, choices, skippable=True, extra_prompt=None):
+        """
+        Banana banana
+        """
         self.before_prompt()
 
         if extra_prompt:
@@ -231,6 +294,7 @@ class QuickStartWizard(object):
             res = self.qsshell.raw_input(prompt)
             try:
                 valid_choice = int(res) in range(len(choices))
+            # pylint: disable=bare-except
             except:
                 valid_choice = False
 
@@ -243,6 +307,9 @@ class QuickStartWizard(object):
         return int(res)
 
     def ask_confirmation(self, prompt='Confirm [y,n]? '):
+        """
+        Banana banana
+        """
         res = None
         while res is None:
             user_res = self.qsshell.raw_input(prompt)
@@ -252,8 +319,12 @@ class QuickStartWizard(object):
                 res = False
         return res
 
+    # pylint: disable=too-many-arguments
     def prompt_key(self, key, prompt=None, extra_prompt=None, title=None,
-            store=True, validate_function=None, finalize_function=None):
+                   store=True, validate_function=None, finalize_function=None):
+        """
+        Banana banana
+        """
         self.before_prompt()
 
         if title is None:
@@ -261,7 +332,7 @@ class QuickStartWizard(object):
 
         if key in self.config:
             print 'Current value for %s : %s' % (title,
-                    self.config[key])
+                                                 self.config[key])
             if not self.qsshell.ask_confirmation('Update [y,n]? '):
                 return self.config[key]
 
@@ -289,6 +360,9 @@ class QuickStartWizard(object):
         return res
 
     def wait_for_continue(self, prompt='Press Enter to continue '):
+        """
+        Banana banana
+        """
         self.before_prompt()
         res = self.qsshell.raw_input(prompt)
         if res.lower() == "you're a wizard harry":
@@ -296,6 +370,9 @@ class QuickStartWizard(object):
         return True
 
     def prompt_executable(self, executable, prompt=None):
+        """
+        Banana banana
+        """
         if prompt is None:
             prompt = PROMPT_EXECUTABLE % executable
 
@@ -304,6 +381,9 @@ class QuickStartWizard(object):
 
     @staticmethod
     def validate_folder(wizard, path):
+        """
+        Banana banana
+        """
         res = True
         if not os.path.exists(path):
             os.mkdir(path)
@@ -316,6 +396,9 @@ class QuickStartWizard(object):
 
     @staticmethod
     def validate_list(wizard, thing):
+        """
+        Banana banana
+        """
         res = type(thing) == list
         if not res:
             print "%s is not a list" % thing
@@ -323,6 +406,9 @@ class QuickStartWizard(object):
 
     @staticmethod
     def check_path_is_file(wizard, path):
+        """
+        Banana banana
+        """
         res = True
 
         if not os.path.exists(path):
@@ -336,12 +422,15 @@ class QuickStartWizard(object):
 
     @staticmethod
     def validate_globs_list(wizard, thing):
+        """
+        Banana banana
+        """
         if not wizard.validate_list(wizard, thing):
             return False
 
         resolved = []
         for item in thing:
-            resolved.extend (glob.glob(item))
+            resolved.extend(glob.glob(item))
 
         print "The expression(s) currently resolve(s) to:"
         print resolved
@@ -349,16 +438,22 @@ class QuickStartWizard(object):
         return wizard.ask_confirmation()
 
     def _add_argument_group_override(self, parser, *args, **kwargs):
+        """
+        Banana banana
+        """
         validate_function = kwargs.pop('validate_function', None)
         wizard_class = kwargs.pop('wizard_class', type(self.parent))
         res = self._add_argument_group(parser, *args, **kwargs)
         wizard = wizard_class(res,
-                parent=self.parent,
-                validate_function=validate_function)
+                              parent=self.parent,
+                              validate_function=validate_function)
         self._qs_objects.append(wizard)
         return res
 
     def _add_argument_override(self, group, *args, **kwargs):
+        """
+        Banana banana
+        """
         validate_function = kwargs.pop('validate_function', None)
         finalize_function = kwargs.pop('finalize_function', None)
         extra_prompt = kwargs.pop('extra_prompt', None)
@@ -367,6 +462,8 @@ class QuickStartWizard(object):
 
         if not no_prompt:
             self._qs_objects.append(QuickStartArgument(self, arg,
-                extra_prompt, validate_function, finalize_function))
+                                                       extra_prompt,
+                                                       validate_function,
+                                                       finalize_function))
 
         return arg
