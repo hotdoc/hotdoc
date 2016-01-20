@@ -1,15 +1,28 @@
 # -*- coding: utf-8 -*-
+"""
+Defines the base symbols recognized by hotdoc.
 
-from hotdoc.core.alchemy_integration import *
-from hotdoc.core.comment_block import comment_from_tag
-from hotdoc.core.links import Link
+Code-parsing extensions should only create symbols defined
+here for the while, subclassing will be formalized in the
+future.
+"""
+
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, PickleType, String
 
+from hotdoc.core.alchemy_integration import (Base, MutableDict, MutableList,
+                                             MutableObject)
+from hotdoc.core.comment_block import comment_from_tag
+from hotdoc.core.links import Link
 
-class Symbol (Base):
+
+class Symbol(Base):
+    """
+    The base class for all symbols, there should be no reason for
+    instantiating it directly.
+    """
     __tablename__ = 'symbols'
 
-    id = Column(Integer, primary_key=True)
+    id_ = Column(Integer, primary_key=True)
     comment = Column(PickleType)
     unique_name = Column(String)
     display_name = Column(String)
@@ -23,8 +36,8 @@ class Symbol (Base):
     skip = Column(Boolean)
 
     __mapper_args__ = {
-            'polymorphic_identity': 'symbol',
-            'polymorphic_on': _type_,
+        'polymorphic_identity': 'symbol',
+        'polymorphic_on': _type_,
     }
 
     def __init__(self, **kwargs):
@@ -35,21 +48,36 @@ class Symbol (Base):
         Base.__init__(self, **kwargs)
 
     # FIXME: this is a bit awkward to use.
-    def add_extension_attribute (self, ext_name, key, value):
-        attributes = self.extension_attributes.pop (ext_name, {})
+    def add_extension_attribute(self, ext_name, key, value):
+        """
+        Banana banana
+        """
+        attributes = self.extension_attributes.pop(ext_name, {})
         attributes[key] = value
         self.extension_attributes[ext_name] = attributes
 
-    def get_extension_attribute (self, ext_name, key):
-        attributes = self.extension_attributes.get (ext_name)
+    def get_extension_attribute(self, ext_name, key):
+        """
+        Banana banana
+        """
+        attributes = self.extension_attributes.get(ext_name)
         if not attributes:
             return None
-        return attributes.get (key)
+        return attributes.get(key)
 
-    def get_children_symbols (self):
+    # pylint: disable=no-self-use
+    def get_children_symbols(self):
+        """
+        Banana banana
+        """
         return []
 
+    # pylint: disable=unidiomatic-typecheck
+    # pylint: disable=no-member
     def update_children_comments(self):
+        """
+        Banana banana
+        """
         for sym in self.get_children_symbols():
             if type(sym) == ParameterSymbol:
                 sym.comment = self.comment.params.get(sym.argname)
@@ -61,47 +89,77 @@ class Symbol (Base):
             elif type(sym) == Symbol:
                 sym.comment = self.comment.params.get(sym.display_name)
 
-    def _make_name (self):
+    def _make_name(self):
         return self.display_name
 
-    def get_extra_links (self):
+    def get_extra_links(self):
+        """
+        Banana banana
+        """
         return []
 
-    def get_type_name (self):
+    def get_type_name(self):
+        """
+        Banana banana
+        """
         return ''
 
     def resolve_links(self, link_resolver):
+        """
+        Banana banana
+        """
         if self.link is None:
             self.link = Link(self.unique_name, self._make_name(),
-                        self.unique_name)
+                             self.unique_name)
         self.link = link_resolver.upsert_link(self.link, overwrite_ref=True)
 
-class QualifiedSymbol (MutableObject):
-    def __init__(self, type_tokens=[]):
-        self.input_tokens = type_tokens
+
+class QualifiedSymbol(MutableObject):
+    """
+    Banana banana
+    """
+    def __init__(self, type_tokens=None):
+        self.input_tokens = type_tokens or []
         self.comment = None
         self.extension_attributes = MutableDict()
-        self.constructed()
+        self.__constructed()
         MutableObject.__init__(self)
 
-    def add_extension_attribute (self, ext_name, key, value):
-        attributes = self.extension_attributes.pop (ext_name, {})
+    def add_extension_attribute(self, ext_name, key, value):
+        """
+        Banana banana
+        """
+        attributes = self.extension_attributes.pop(ext_name, {})
         attributes[key] = value
         self.extension_attributes[ext_name] = attributes
 
-    def get_extension_attribute (self, ext_name, key):
-        attributes = self.extension_attributes.get (ext_name)
+    def get_extension_attribute(self, ext_name, key):
+        """
+        Banana banana
+        """
+        attributes = self.extension_attributes.get(ext_name)
         if not attributes:
             return None
-        return attributes.get (key)
+        return attributes.get(key)
 
+    # pylint: disable=no-self-use
     def get_children_symbols(self):
+        """
+        Banana banana
+        """
         return []
 
-    def get_type_link (self):
+    def get_type_link(self):
+        """
+        Banana banana
+        """
         return self.type_link
 
+    # pylint: disable=attribute-defined-outside-init
     def resolve_links(self, link_resolver):
+        """
+        Banana banana
+        """
         self.type_link = None
         self.type_tokens = []
 
@@ -110,23 +168,31 @@ class QualifiedSymbol (MutableObject):
                 self.type_link = link_resolver.get_named_link(tok.id_)
                 if not self.type_link:
                     self.type_link = link_resolver.upsert_link(tok)
-                self.type_tokens.append (self.type_link)
+                self.type_tokens.append(self.type_link)
             else:
-                self.type_tokens.append (tok)
+                self.type_tokens.append(tok)
 
-    def constructed(self):
+    def __constructed(self):
         self.extension_contents = {}
 
     def __setstate__(self, state):
         MutableObject.__setstate__(self, state)
-        self.constructed()
+        self.__constructed()
 
-class ReturnValueSymbol (QualifiedSymbol):
+
+class ReturnValueSymbol(QualifiedSymbol):
+    """
+    Banana banana
+    """
     def __init__(self, comment=None, **kwargs):
         QualifiedSymbol.__init__(self, **kwargs)
         self.comment = comment
 
-class ParameterSymbol (QualifiedSymbol):
+
+class ParameterSymbol(QualifiedSymbol):
+    """
+    Banana banana
+    """
     def __init__(self, argname='', comment=None, **kwargs):
         QualifiedSymbol.__init__(self, **kwargs)
         # FIXME: gir specific
@@ -134,29 +200,41 @@ class ParameterSymbol (QualifiedSymbol):
         self.argname = argname
         self.comment = comment
 
-class FieldSymbol (QualifiedSymbol):
+
+class FieldSymbol(QualifiedSymbol):
+    """
+    Banana banana
+    """
     def __init__(self, member_name='', is_function_pointer=False,
-            comment=None, **kwargs):
+                 comment=None, **kwargs):
         QualifiedSymbol.__init__(self, **kwargs)
         self.member_name = member_name
         self.is_function_pointer = is_function_pointer
         self.comment = comment
 
-    def _make_name (self):
+    def _make_name(self):
         return self.member_name
 
-    def get_type_name (self):
+    # pylint: disable=no-self-use
+    def get_type_name(self):
+        """
+        Banana banana
+        """
         return "Attribute"
 
-class FunctionSymbol (Symbol):
+
+class FunctionSymbol(Symbol):
+    """
+    Banana banana
+    """
     __tablename__ = 'functions'
-    id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
+    id_ = Column(Integer, ForeignKey('symbols.id_'), primary_key=True)
     parameters = Column(MutableList.as_mutable(PickleType))
     return_value = Column(ReturnValueSymbol.as_mutable(PickleType))
     is_method = Column(Boolean)
     throws = Column(Boolean)
     __mapper_args__ = {
-            'polymorphic_identity': 'functions',
+        'polymorphic_identity': 'functions',
     }
 
     def __init__(self, **kwargs):
@@ -168,16 +246,20 @@ class FunctionSymbol (Symbol):
     def get_children_symbols(self):
         return self.parameters + [self.return_value]
 
-    def get_type_name (self):
+    def get_type_name(self):
         if self.is_method:
             return 'Method'
         return 'Function'
 
-class SignalSymbol (FunctionSymbol):
+
+class SignalSymbol(FunctionSymbol):
+    """
+    Banana banana
+    """
     __tablename__ = 'signals'
-    id = Column(Integer, ForeignKey('functions.id'), primary_key=True)
+    id_ = Column(Integer, ForeignKey('functions.id_'), primary_key=True)
     __mapper_args__ = {
-            'polymorphic_identity': 'signals',
+        'polymorphic_identity': 'signals',
     }
     flags = Column(PickleType)
 
@@ -186,14 +268,18 @@ class SignalSymbol (FunctionSymbol):
         self.flags = []
         FunctionSymbol.__init__(self, **kwargs)
 
-    def get_type_name (self):
+    def get_type_name(self):
         return "Signal"
 
-class VFunctionSymbol (FunctionSymbol):
+
+class VFunctionSymbol(FunctionSymbol):
+    """
+    Banana banana
+    """
     __tablename__ = 'vfunctions'
-    id = Column(Integer, ForeignKey('functions.id'), primary_key=True)
+    id_ = Column(Integer, ForeignKey('functions.id_'), primary_key=True)
     __mapper_args__ = {
-            'polymorphic_identity': 'vfunctions',
+        'polymorphic_identity': 'vfunctions',
     }
     flags = Column(PickleType)
 
@@ -201,35 +287,47 @@ class VFunctionSymbol (FunctionSymbol):
         self.flags = []
         FunctionSymbol.__init__(self, **kwargs)
 
-    def get_type_name (self):
+    def get_type_name(self):
         return "Virtual Method"
 
-class PropertySymbol (Symbol):
+
+class PropertySymbol(Symbol):
+    """
+    Banana banana
+    """
     __tablename__ = 'properties'
-    id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
+    id_ = Column(Integer, ForeignKey('symbols.id_'), primary_key=True)
     __mapper_args__ = {
-            'polymorphic_identity': 'properties',
+        'polymorphic_identity': 'properties',
     }
     prop_type = Column(PickleType)
 
     def get_children_symbols(self):
         return [self.prop_type]
 
-class CallbackSymbol (FunctionSymbol):
+
+class CallbackSymbol(FunctionSymbol):
+    """
+    Banana banana
+    """
     __tablename__ = 'callbacks'
-    id = Column(Integer, ForeignKey('functions.id'), primary_key=True)
+    id_ = Column(Integer, ForeignKey('functions.id_'), primary_key=True)
     __mapper_args__ = {
-            'polymorphic_identity': 'callbacks',
+        'polymorphic_identity': 'callbacks',
     }
 
-    def get_type_name (self):
+    def get_type_name(self):
         return "Callback"
 
-class EnumSymbol (Symbol):
+
+class EnumSymbol(Symbol):
+    """
+    Banana banana
+    """
     __tablename__ = 'enums'
-    id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
+    id_ = Column(Integer, ForeignKey('symbols.id_'), primary_key=True)
     __mapper_args__ = {
-            'polymorphic_identity': 'enums',
+        'polymorphic_identity': 'enums',
     }
     members = Column(PickleType)
 
@@ -240,17 +338,21 @@ class EnumSymbol (Symbol):
     def get_children_symbols(self):
         return self.members
 
-    def get_extra_links (self):
+    def get_extra_links(self):
         return [m.link for m in self.members]
 
-    def get_type_name (self):
+    def get_type_name(self):
         return "Enumeration"
 
-class StructSymbol (Symbol):
+
+class StructSymbol(Symbol):
+    """
+    Banana banana
+    """
     __tablename__ = 'structs'
-    id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
+    id_ = Column(Integer, ForeignKey('symbols.id_'), primary_key=True)
     __mapper_args__ = {
-            'polymorphic_identity': 'structs',
+        'polymorphic_identity': 'structs',
     }
     members = Column(PickleType)
     raw_text = Column(String)
@@ -262,23 +364,32 @@ class StructSymbol (Symbol):
     def get_children_symbols(self):
         return self.members
 
-    def get_type_name (self):
+    def get_type_name(self):
         return "Structure"
 
 # FIXME: and this is C-specific
-class MacroSymbol (Symbol):
+
+
+class MacroSymbol(Symbol):
+    """
+    Banana banana
+    """
     __tablename__ = 'macros'
-    id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
+    id_ = Column(Integer, ForeignKey('symbols.id_'), primary_key=True)
     __mapper_args__ = {
-            'polymorphic_identity': 'macros',
+        'polymorphic_identity': 'macros',
     }
     original_text = Column(String)
 
-class FunctionMacroSymbol (MacroSymbol):
+
+class FunctionMacroSymbol(MacroSymbol):
+    """
+    Banana banana
+    """
     __tablename__ = 'function_macros'
-    id = Column(Integer, ForeignKey('macros.id'), primary_key=True)
+    id_ = Column(Integer, ForeignKey('macros.id_'), primary_key=True)
     __mapper_args__ = {
-            'polymorphic_identity': 'function_macros',
+        'polymorphic_identity': 'function_macros',
     }
 
     parameters = Column(MutableList.as_mutable(PickleType))
@@ -291,53 +402,68 @@ class FunctionMacroSymbol (MacroSymbol):
     def get_children_symbols(self):
         return self.parameters + [self.return_value]
 
-    def get_type_name (self):
+    def get_type_name(self):
         return "Function macro"
 
-class ConstantSymbol (MacroSymbol):
+
+class ConstantSymbol(MacroSymbol):
+    """
+    Banana banana
+    """
     __tablename__ = 'constants'
-    id = Column(Integer, ForeignKey('macros.id'), primary_key=True)
+    id_ = Column(Integer, ForeignKey('macros.id_'), primary_key=True)
     __mapper_args__ = {
-            'polymorphic_identity': 'constants',
+        'polymorphic_identity': 'constants',
     }
 
-    def get_type_name (self):
+    def get_type_name(self):
         return "Constant"
 
 
-class ExportedVariableSymbol (MacroSymbol):
+class ExportedVariableSymbol(MacroSymbol):
+    """
+    Banana banana
+    """
     __tablename__ = 'exported_variables'
-    id = Column(Integer, ForeignKey('macros.id'), primary_key=True)
+    id_ = Column(Integer, ForeignKey('macros.id_'), primary_key=True)
     __mapper_args__ = {
-            'polymorphic_identity': 'exported_variables',
+        'polymorphic_identity': 'exported_variables',
     }
     type_qs = Column(PickleType)
 
-    def get_type_name (self):
+    def get_type_name(self):
         return "Exported variable"
 
     def get_children_symbols(self):
         return [self.type_qs]
 
-class AliasSymbol (Symbol):
+
+class AliasSymbol(Symbol):
+    """
+    Banana banana
+    """
     __tablename__ = 'aliases'
-    id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
+    id_ = Column(Integer, ForeignKey('symbols.id_'), primary_key=True)
     __mapper_args__ = {
-            'polymorphic_identity': 'aliases',
+        'polymorphic_identity': 'aliases',
     }
     aliased_type = Column(PickleType)
 
-    def get_type_name (self):
+    def get_type_name(self):
         return "Alias"
 
     def get_children_symbols(self):
         return [self.aliased_type]
 
-class ClassSymbol (Symbol):
+
+class ClassSymbol(Symbol):
+    """
+    Banana banana
+    """
     __tablename__ = 'classes'
-    id = Column(Integer, ForeignKey('symbols.id'), primary_key=True)
+    id_ = Column(Integer, ForeignKey('symbols.id_'), primary_key=True)
     __mapper_args__ = {
-            'polymorphic_identity': 'classes',
+        'polymorphic_identity': 'classes',
     }
     # FIXME: multiple inheritance
     hierarchy = Column(PickleType)
@@ -348,7 +474,7 @@ class ClassSymbol (Symbol):
         self.children = {}
         Symbol.__init__(self, **kwargs)
 
-    def get_type_name (self):
+    def get_type_name(self):
         return "Class"
 
     def get_children_symbols(self):
