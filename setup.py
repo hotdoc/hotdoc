@@ -1,3 +1,7 @@
+"""
+Setup file for hotdoc.
+"""
+
 import os
 import shutil
 import subprocess
@@ -5,73 +9,81 @@ import tarfile
 from distutils.command.build import build
 from distutils.core import Command
 
-from hotdoc.utils.setup_utils import VersionList
 from pkg_resources import parse_version as V
 from setuptools import find_packages, setup
 from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.develop import develop
 from setuptools.command.sdist import sdist
 
-pygit2_version = None
-try:
-    libgit2_version = subprocess.check_output(['pkg-config', '--modversion',
-                                               'libgit2']).strip()
-    known_libgit2_versions = VersionList([V('0.22.0'), V('0.23.0')])
-    try:
-        known_libgit2_version = known_libgit2_versions.find_le(
-            V(libgit2_version))
+from hotdoc.utils.setup_utils import VersionList
 
-        if known_libgit2_version == V('0.22.0'):
-            pygit2_version = '0.22.1'
-        elif known_libgit2_version == V('0.23.0'):
-            pygit2_version = '0.23.2'
+PYGIT2_VERSION = None
+try:
+    LIBGIT2_VERSION = subprocess.check_output(['pkg-config', '--modversion',
+                                               'libgit2']).strip()
+    KNOWN_LIBGIT2_VERSIONS = VersionList([V('0.22.0'), V('0.23.0')])
+    try:
+        KNOWN_LIBGIT2_VERSION = KNOWN_LIBGIT2_VERSIONS.find_le(
+            V(LIBGIT2_VERSION))
+
+        if KNOWN_LIBGIT2_VERSION == V('0.22.0'):
+            PYGIT2_VERSION = '0.22.1'
+        elif KNOWN_LIBGIT2_VERSION == V('0.23.0'):
+            PYGIT2_VERSION = '0.23.2'
         else:
             print "WARNING: no compatible pygit version found"
             print "git integration disabled"
     except ValueError:
-        print "Warning: too old libgit2 version %s" % libgit2_version
+        print "Warning: too old libgit2 version %s" % LIBGIT2_VERSION
         print "git integration disabled"
-except OSError as e:
+except OSError:
     print "Error when trying to figure out the libgit2 version"
     print "pkg-config is probably not installed\n"
     print "git integration disabled"
-except subprocess.CalledProcessError as e:
+except subprocess.CalledProcessError:
     print "\nError when trying to figure out the libgit2 version\n"
     print "git integration disabled"
 
-source_dir = os.path.abspath('./')
+SOURCE_DIR = os.path.abspath('./')
 
 
 DEFAULT_THEME =\
-        'https://people.collabora.com/~meh/hotdoc_bootstrap_theme/dist.tgz'
+    'https://people.collabora.com/~meh/hotdoc_bootstrap_theme/dist.tgz'
 
 
 class DownloadDefaultTemplate(Command):
+    """
+    This will download the default theme (bootstrap)
+    """
     user_options = []
     description = "Download default html template"
 
+    # pylint: disable=missing-docstring
     def initialize_options(self):
         pass
 
+    # pylint: disable=missing-docstring
     def finalize_options(self):
         pass
 
+    # pylint: disable=missing-docstring
+    # pylint: disable=no-self-use
     def run(self):
         import requests
         response = \
             requests.get(DEFAULT_THEME)
 
-        with open('default_theme.tgz', 'wb') as f:
-            f.write(response.content)
+        with open('default_theme.tgz', 'wb') as _:
+            _.write(response.content)
 
         tar = tarfile.open('default_theme.tgz')
-        extract_path = os.path.join(source_dir, 'hotdoc')
+        extract_path = os.path.join(SOURCE_DIR, 'hotdoc')
         tar.extractall(extract_path)
         tar.close()
 
         extract_path = os.path.join(extract_path, 'dist')
 
-        theme_path = os.path.join(source_dir, 'hotdoc', 'default_theme')
+        theme_path = os.path.join(SOURCE_DIR, 'hotdoc', 'default_theme')
 
         shutil.rmtree(theme_path, ignore_errors=True)
 
@@ -81,7 +93,9 @@ class DownloadDefaultTemplate(Command):
 
 
 def symlink(source, link_name):
-    import os
+    """
+    Method to allow creating symlinks on Windows
+    """
     os_symlink = getattr(os, "symlink", None)
     if callable(os_symlink):
         os_symlink(source, link_name)
@@ -96,20 +110,33 @@ def symlink(source, link_name):
 
 
 class LinkPreCommitHook(Command):
+    """
+    This will create links to the pre-commit hook.
+    Only called in develop mode.
+    """
     user_options = []
     description = "Create links for the style checking pre-commit hooks"
 
+    # pylint: disable=missing-docstring
     def initialize_options(self):
         pass
 
+    # pylint: disable=missing-docstring
     def finalize_options(self):
         pass
 
+    # pylint: disable=missing-docstring
+    # pylint: disable=no-self-use
     def run(self):
-        symlink(os.path.join(source_dir, 'pre-commit'),
-                os.path.join(source_dir, '.git', 'hooks', 'pre-commit'))
+        try:
+            symlink(os.path.join(SOURCE_DIR, 'pre-commit'),
+                    os.path.join(SOURCE_DIR, '.git', 'hooks', 'pre-commit'))
+        except OSError:
+            pass
 
 
+# pylint: disable=missing-docstring
+# pylint: disable=too-few-public-methods
 class CustomDevelop(develop):
 
     def run(self):
@@ -118,6 +145,7 @@ class CustomDevelop(develop):
         return develop.run(self)
 
 
+# pylint: disable=missing-docstring
 class CustomBuild(build):
 
     def run(self):
@@ -125,6 +153,7 @@ class CustomBuild(build):
         return build.run(self)
 
 
+# pylint: disable=missing-docstring
 class CustomSDist(sdist):
 
     def run(self):
@@ -132,13 +161,14 @@ class CustomSDist(sdist):
         return sdist.run(self)
 
 
+# pylint: disable=missing-docstring
 class CustomBDistEgg(bdist_egg):
 
     def run(self):
         self.run_command('download_default_template')
         return bdist_egg.run(self)
 
-install_requires = [
+INSTALL_REQUIRES = [
     'cffi',
     'git-pylint-commit-hook',
     'git-pep8-commit-hook',
@@ -150,8 +180,8 @@ install_requires = [
     'ipython==4.0.0',
     'toposort==1.4']
 
-if pygit2_version is not None:
-    install_requires.append('pygit2==%s' % pygit2_version)
+if PYGIT2_VERSION is not None:
+    INSTALL_REQUIRES.append('pygit2==%s' % PYGIT2_VERSION)
 
 setup(name='hotdoc',
       version='0.6.6',
@@ -166,8 +196,8 @@ setup(name='hotdoc',
       # Only fancy thing in there now, we want to download a
       # a default theme and bower is shitty.
       cmdclass={'build': CustomBuild,
-                   'sdist': CustomSDist,
-                  'develop': CustomDevelop,
+                'sdist': CustomSDist,
+                'develop': CustomDevelop,
                 'bdist_egg': CustomBDistEgg,
                 'link_pre_commit_hook': LinkPreCommitHook,
                 'download_default_template': DownloadDefaultTemplate},
@@ -179,7 +209,6 @@ setup(name='hotdoc',
                      'default_theme/css/*',
                      'default_theme/fonts/*'],
       },
-      install_requires=install_requires,
+      install_requires=INSTALL_REQUIRES,
       setup_requires=['cffi',
-                      'requests'],
-      )
+                      'requests'])
