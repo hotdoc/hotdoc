@@ -1,6 +1,15 @@
+"""
+Banana banana
+"""
 from bisect import bisect_left, bisect_right
 
+
+# pylint: disable=no-self-argument
+# pylint: disable=invalid-name
 class VersionList(list):
+    """
+    Banana banana
+    """
     def index(a, x):
         'Locate the leftmost value exactly equal to x'
         i = bisect_left(a, x)
@@ -12,14 +21,14 @@ class VersionList(list):
         'Find rightmost value less than x'
         i = bisect_left(a, x)
         if i:
-            return a[i-1]
+            return a[i - 1]
         raise ValueError
 
     def find_le(a, x):
         'Find rightmost value less than or equal to x'
         i = bisect_right(a, x)
         if i:
-            return a[i-1]
+            return a[i - 1]
         raise ValueError
 
     def find_gt(a, x):
