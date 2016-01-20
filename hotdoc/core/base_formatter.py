@@ -49,7 +49,17 @@ class Formatter(object):
         self.formatting_symbol_signal = Signal()
         self.current_page = None
 
-    def __format_symbol(self, symbol):
+    # pylint: disable=no-self-use
+    def get_assets_path(self):
+        """
+        Banana banana
+        """
+        return ''
+
+    def format_symbol(self, symbol):
+        """
+        Banana banana
+        """
         self.__format_symbols(symbol.get_children_symbols())
 
         # We only need to resolve qualified symbols now because
@@ -86,7 +96,7 @@ class Formatter(object):
         for symbol in symbols:
             if symbol is None:
                 continue
-            symbol.skip = not self.__format_symbol(symbol)
+            symbol.skip = not self.format_symbol(symbol)
 
     def __format_page(self, page):
         self.current_page = page
