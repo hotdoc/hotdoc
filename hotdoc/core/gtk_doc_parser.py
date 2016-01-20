@@ -1,5 +1,9 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+This module implements a parsing utilities for the legacy
+gtk-doc comment format.
+"""
 
 import cgi
 import re
@@ -9,8 +13,58 @@ from xml.sax.saxutils import unescape
 import cmarkpy
 
 
+def _unmangle_specs(specs):
+    mangled = re.compile('<<([a-zA-Z_:]+)>>')
+    specdict = dict((name.lstrip('!'), spec) for name, spec in specs)
+
+    def _unmangle(spec, name=None):
+        def _replace_func(match):
+            child_spec_name = match.group(1)
+
+            if ':' in child_spec_name:
+                pattern_name, child_spec_name = child_spec_name.split(
+                    ':', 1)
+            else:
+                pattern_name = None
+
+            child_spec = specdict[child_spec_name]
+            # Force all child specs of this one to be unnamed
+            unmangled = _unmangle(child_spec, None)
+            if pattern_name and name:
+                return '(?P<%s_%s>%s)' % (name, pattern_name, unmangled)
+            else:
+                return unmangled
+
+        return mangled.sub(_replace_func, spec)
+
+    return [(name, _unmangle(spec, name)) for name, spec in specs]
+
+
+def _make_regex(specs):
+    regex = '|'.join('(?P<%s>%s)' % (name, spec) for name, spec in specs
+                     if not name.startswith('!'))
+    return re.compile(regex)
+
+
+def _get_properties(name, match):
+    groupdict = match.groupdict()
+    properties = {name: groupdict.pop(name)}
+    name = name + "_"
+    for group, value in groupdict.iteritems():
+        if group.startswith(name):
+            key = group[len(name):]
+            properties[key] = value
+    return properties
+
 # Lifted from g-ir-doc-tool, muahaha
+# pylint: disable=too-few-public-methods
+
+
 class DocScanner(object):
+    """
+    Banana banana
+    """
+
     def __init__(self):
         specs = [
             ('!alpha', r'[a-zA-Z0-9_]+'),
@@ -20,10 +74,12 @@ class DocScanner(object):
             ('new_paragraph', r'\n\n'),
             ('new_line', r'\n'),
             ('code_start_with_language',
-                r'\|\[\<!\-\-\s*language\s*\=\s*\"<<language_name:alpha>>\"\s*\-\-\>'),
+             r'\|\[\<!\-\-\s*language\s*\=\s*\"<<language_name:alpha>>\"'
+             r'\s*\-\-\>'),
             ('code_start', r'\|\['),
             ('code_end', r'\]\|'),
-            ('property', r'#<<type_name:alpha>>:(<<property_name:alpha_dash>>)'),
+            ('property',
+             r'#<<type_name:alpha>>:(<<property_name:alpha_dash>>)'),
             ('signal', r'#<<type_name:alpha>>::(<<signal_name:alpha_dash>>)'),
             ('type_name', r'#(<<type_name:alpha>>)'),
             ('enum_value', r'%(<<member_name:alpha>>)'),
@@ -31,50 +87,14 @@ class DocScanner(object):
             ('function_call', r'<<symbol_name:alpha>>\s*\(\)'),
             ('include', r'{{\s*<<include_name:anything>>\s*}}'),
         ]
-        self.specs = self.unmangle_specs(specs)
-        self.regex = self.make_regex(self.specs)
-
-    def unmangle_specs(self, specs):
-        mangled = re.compile('<<([a-zA-Z_:]+)>>')
-        specdict = dict((name.lstrip('!'), spec) for name, spec in specs)
-
-        def unmangle(spec, name=None):
-            def replace_func(match):
-                child_spec_name = match.group(1)
-
-                if ':' in child_spec_name:
-                    pattern_name, child_spec_name = child_spec_name.split(':', 1)
-                else:
-                    pattern_name = None
-
-                child_spec = specdict[child_spec_name]
-                # Force all child specs of this one to be unnamed
-                unmangled = unmangle(child_spec, None)
-                if pattern_name and name:
-                    return '(?P<%s_%s>%s)' % (name, pattern_name, unmangled)
-                else:
-                    return unmangled
-
-            return mangled.sub(replace_func, spec)
-
-        return [(name, unmangle(spec, name)) for name, spec in specs]
-
-    def make_regex(self, specs):
-        regex = '|'.join('(?P<%s>%s)' % (name, spec) for name, spec in specs
-                         if not name.startswith('!'))
-        return re.compile(regex)
-
-    def get_properties(self, name, match):
-        groupdict = match.groupdict()
-        properties = {name: groupdict.pop(name)}
-        name = name + "_"
-        for group, value in groupdict.iteritems():
-            if group.startswith(name):
-                key = group[len(name):]
-                properties[key] = value
-        return properties
+        self.specs = _unmangle_specs(specs)
+        self.regex = _make_regex(self.specs)
 
     def scan(self, text):
+        """
+        Generates tuples made of:
+        (token type name, token, token properties)
+        """
         pos = 0
         while True:
             match = self.regex.search(text, pos)
@@ -87,38 +107,44 @@ class DocScanner(object):
 
             pos = match.end()
             name = match.lastgroup
-            yield (name, match.group(0), self.get_properties(name, match))
+            yield (name, match.group(0), _get_properties(name, match))
 
         if pos < len(text):
             yield ('other', text[pos:], None)
 
 
-class GtkDocParser (object):
+class GtkDocParser(object):
+    """
+    A parser for the legacy gtk-doc format.
+    """
+
     def __init__(self, doc_tool=None):
         self.funcs = {
-            'other': self.format_other,
-            'new_line': self.format_other,
-            'new_paragraph': self.format_other,
-            'note': self.format_other,
-            'include': self.format_other,
-            'property': self.format_property,
-            'signal': self.format_signal,
-            'type_name': self.format_type_name,
-            'enum_value': self.format_enum_value,
-            'parameter': self.format_parameter,
-            'function_call': self.format_function_call,
-            'code_start': self.format_code_start,
-            'code_start_with_language': self.format_code_start_with_language,
-            'code_end': self.format_code_end,
+            'other': self.__format_other,
+            'new_line': self.__format_other,
+            'new_paragraph': self.__format_other,
+            'note': self.__format_other,
+            'include': self.__format_other,
+            'property': self.__format_property,
+            'signal': self.__format_signal,
+            'type_name': self.__format_type_name,
+            'enum_value': self.__format_enum_value,
+            'parameter': self.__format_parameter,
+            'function_call': self.__format_function_call,
+            'code_start': self.__format_code_start,
+            'code_start_with_language': self.__format_code_start_with_language,
+            'code_end': self.__format_code_end,
         }
 
         self.doc_tool = doc_tool
         self.__doc_scanner = DocScanner()
 
-    def format_other(self, match, props):
+    # pylint: disable=unused-argument
+    # pylint: disable=no-self-use
+    def __format_other(self, match, props):
         return match
 
-    def format_property (self, match, props):
+    def __format_property(self, match, props):
         type_name = props['type_name']
         property_name = props['property_name']
 
@@ -126,28 +152,28 @@ class GtkDocParser (object):
             return u'[](%s:%s)' % (type_name, property_name)
 
         linkname = "%s:%s" % (type_name, property_name)
-        link = self.doc_tool.link_resolver.get_named_link (linkname)
+        link = self.doc_tool.link_resolver.get_named_link(linkname)
 
         if link:
             return u"[“%s”](%s)" % (link.title, link.get_link())
         else:
             return u"the %s's “%s” property" % (type_name, property_name)
 
-    def format_signal (self, match, props):
+    def __format_signal(self, match, props):
         type_name = props['type_name']
         signal_name = props['signal_name']
         if self.doc_tool is None:
             return u'[](%s::%s)' % (type_name, signal_name)
 
         linkname = "%s::%s" % (type_name, signal_name)
-        link = self.doc_tool.link_resolver.get_named_link (linkname)
+        link = self.doc_tool.link_resolver.get_named_link(linkname)
 
         if link:
             return u"[“%s”](%s)" % (link.title, link.get_link())
         else:
             return u"the %s's “%s” signal" % (type_name, signal_name)
 
-    def format_type_name (self, match, props):
+    def __format_type_name(self, match, props):
         type_name = props['type_name']
 
         # It is assumed that when there is a name collision
@@ -158,63 +184,64 @@ class GtkDocParser (object):
             return u'[](%s)' % (type_name)
 
         class_name = '%s::%s' % (type_name, type_name)
-        link = self.doc_tool.link_resolver.get_named_link (class_name)
+        link = self.doc_tool.link_resolver.get_named_link(class_name)
 
         if link is None:
-            link = self.doc_tool.link_resolver.get_named_link (type_name)
+            link = self.doc_tool.link_resolver.get_named_link(type_name)
 
         if link:
             return "[%s](%s)" % (link.title, link.get_link())
         else:
             return match
 
-    def format_enum_value (self, match, props):
+    def __format_enum_value(self, match, props):
         member_name = props['member_name']
 
         if self.doc_tool is None:
             return '[](%s)' % member_name
 
-        link = self.doc_tool.link_resolver.get_named_link (member_name)
+        link = self.doc_tool.link_resolver.get_named_link(member_name)
 
         if link:
-            return "[%s](%s)" % (link.title, link.get_link ())
+            return "[%s](%s)" % (link.title, link.get_link())
         else:
             return match
 
-    def format_parameter (self, match, props):
+    def __format_parameter(self, match, props):
         param_name = props['param_name']
         return '_%s_' % param_name
 
-    def format_function_call (self, match, props):
+    def __format_function_call(self, match, props):
         func_name = props['symbol_name']
         if self.doc_tool is None:
             return '[](%s)' % func_name
 
-        link = self.doc_tool.link_resolver.get_named_link (func_name)
+        link = self.doc_tool.link_resolver.get_named_link(func_name)
 
         if link:
-            return "[%s()](%s)" % (link.title, link.get_link ())
+            return "[%s()](%s)" % (link.title, link.get_link())
         else:
             return match
 
-    def format_code_start (self, match, props):
+    def __format_code_start(self, match, props):
         return "\n```\n"
 
-    def format_code_start_with_language (self, match, props):
-        return "\n```%s\n" % props["language_name"] 
+    # pylint: disable=invalid-name
+    def __format_code_start_with_language(self, match, props):
+        return "\n```%s\n" % props["language_name"]
 
-    def format_code_end (self, match, props):
+    def __format_code_end(self, match, props):
         return "\n```\n"
 
-    def md_to_html(self, md):
+    def __md_to_html(self, md):
         out = cgi.escape(md)
         rendered_text = cmarkpy.markdown_to_html(unicode(out))
         return rendered_text
 
-    def legacy_to_md(self, text):
+    def __legacy_to_md(self, text):
         out = u''
 
-        tokens = self.__doc_scanner.scan (text)
+        tokens = self.__doc_scanner.scan(text)
         in_code = False
         for tok in tokens:
             kind, match, props = tok
@@ -225,36 +252,42 @@ class GtkDocParser (object):
                 out += match
             else:
                 out += formatted
-            if kind in ["code_start", "format_code_start_with_language"]:
+            if kind in ["code_start", "code_start_with_language"]:
                 in_code = True
 
         return out
 
     def translate(self, text, format_='markdown'):
+        """
+        Given a gtk-doc comment string, returns the comment translated
+        to the desired format.
+        """
         out = u''
 
         if not text:
             return out
 
-        out = self.legacy_to_md(text)
-
+        out = self.__legacy_to_md(text)
 
         if format_ == 'markdown':
             return out
         elif format_ == 'html':
-            return self.md_to_html(out)
+            return self.__md_to_html(out)
 
         raise Exception("Unrecognized format %s" % format_)
 
-    def translate_comment (self, comment, format_='markdown'):
+    def translate_comment(self, comment, format_='markdown'):
+        """
+        Given a gtk-doc Comment, returns the comment translated
+        to the desired format.
+        """
         text = unescape(comment.description)
-        return self.translate (text, format_)
+        return self.translate(text, format_)
 
 if __name__ == "__main__":
-    gdp = GtkDocParser()
-    with open (sys.argv[1], 'r') as f:
-        contents = f.read ()
-        out = gdp.translate (contents)
-        print out
+    PARSER = GtkDocParser()
+    with open(sys.argv[1], 'r') as f:
+        CONTENTS = f.read()
+        print PARSER.translate(CONTENTS)
 
-    sys.exit (0)
+    sys.exit(0)
