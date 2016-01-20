@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-git-pylint-commit-hook --pylint-params="--disable=locally-disabled --disable=fixme --extension-pkg-whitelist=cmarkpy" --limit=10.0 && git_pep8_commit_hook
+git-pylint-commit-hook --pylint-params="--disable=locally-disabled --disable=fixme --extension-pkg-whitelist=cmarkpy,_pygit2" --limit=10.0 && git_pep8_commit_hook
