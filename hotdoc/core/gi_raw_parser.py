@@ -220,8 +220,8 @@ class GtkDocRawCommentParser(object):
         if not self.__validate_c_comment(comment.strip()):
             return None
 
-        raw_comment = comment
         comment = unicode(comment.decode('utf8'))
+        raw_comment = comment
         if not stripped:
             comment = self.__strip_comment(comment)
 

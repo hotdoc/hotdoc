@@ -22,5 +22,5 @@ class Patcher(object):
 
         res = lines[0:begin] + [new_comment + '\n'] + lines[end:]
         res = ''.join(res)
-        with open(filename, 'w') as _:
+        with codecs.open(filename, 'w', file_encoding) as _:
             _.write(res)
