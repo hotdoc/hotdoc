@@ -4,8 +4,10 @@ Utilities and baseclasses for extensions
 
 import os
 
+from collections import defaultdict
+
 from hotdoc.core.gtk_doc_parser import GtkDocParser
-from hotdoc.core.naive_index import NaiveIndexFormatter
+from hotdoc.core.doc_tree import DocTree
 from hotdoc.formatters.html.html_formatter import HtmlFormatter
 
 
@@ -32,7 +34,8 @@ class BaseExtension(object):
         self._formatters = {"html": HtmlFormatter(doc_tool, [])}
         self._doc_parser = GtkDocParser(doc_tool)
         self.stale_source_files = []
-        self.created_symbols = {}
+        self.created_symbols = defaultdict(set)
+        self.__naive_path = None
 
     @staticmethod
     def add_arguments(parser):
@@ -88,17 +91,43 @@ class BaseExtension(object):
         sym = self.doc_tool.get_or_create_symbol(*args, **kwargs)
 
         if sym:
-            self.created_symbols[sym.unique_name] = sym
+            self.created_symbols[sym.filename].add(sym)
 
         return sym
 
-    def create_naive_index(self):
+    def create_naive_index(self, all_source_files):
         """
         Banana banana
         """
-        directory = self.EXTENSION_NAME + "_gen_markdown_files"
         index_name = self.EXTENSION_NAME + "-index.markdown"
-        NaiveIndexFormatter(self.created_symbols,
-                            directory=directory,
-                            index_name=index_name)
-        return os.path.join(directory, index_name)
+        index_path = os.path.join(self.doc_tool.doc_tree.prefix, index_name)
+
+        with open(index_path, 'w') as _:
+            for source_file in all_source_files:
+                stripped = os.path.splitext(source_file)[0]
+                stripped = os.path.basename(stripped)
+                markdown_name = stripped + '.markdown'
+                _.write('#### [%s](%s)\n' % (stripped, markdown_name))
+
+        self.__naive_path = index_path
+        return index_path, '', self.EXTENSION_NAME
+
+    def update_naive_index(self):
+        """
+        Banana banana
+        """
+        subtree = DocTree(self.doc_tool, self.doc_tool.doc_tree.prefix)
+        for source_file, symbols in self.created_symbols.items():
+            stripped = os.path.splitext(source_file)[0]
+            stripped = os.path.basename(stripped)
+            markdown_path = stripped + '.markdown'
+            markdown_path = os.path.join(self.doc_tool.doc_tree.prefix,
+                                         markdown_path)
+            with open(markdown_path, 'w') as _:
+                _.write('## %s\n\n' % stripped)
+                for symbol in symbols:
+                    _.write('* [%s]()\n' % symbol.unique_name)
+
+        subtree.build_tree(self.__naive_path,
+                           extension_name=self.EXTENSION_NAME)
+        self.doc_tool.doc_tree.pages.update(subtree.pages)
