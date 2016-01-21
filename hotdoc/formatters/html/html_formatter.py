@@ -517,7 +517,7 @@ class HtmlFormatter(Formatter):
                                'extra': prop.extension_contents})
         return (res, False)
 
-    def _format_class_symbol(self, klass):
+    def _format_hierarchy(self, klass):
         hierarchy = []
         children = []
         for p in klass.hierarchy:
@@ -530,7 +530,10 @@ class HtmlFormatter(Formatter):
             hierarchy = template.render({'hierarchy': hierarchy,
                                          'children': children,
                                          'klass': klass})
+        return hierarchy
 
+    def _format_class_symbol(self, klass):
+        hierarchy = self._format_hierarchy(klass)
         template = self.engine.get_template('class.html')
         return (template.render({'symbol': klass,
                                  "editing_link":

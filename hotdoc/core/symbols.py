@@ -232,6 +232,7 @@ class FunctionSymbol(Symbol):
     parameters = Column(MutableList.as_mutable(PickleType))
     return_value = Column(ReturnValueSymbol.as_mutable(PickleType))
     is_method = Column(Boolean)
+    is_ctor_for = Column(String)
     throws = Column(Boolean)
     __mapper_args__ = {
         'polymorphic_identity': 'functions',

@@ -9,6 +9,7 @@ from collections import defaultdict
 from hotdoc.core.gtk_doc_parser import GtkDocParser
 from hotdoc.core.doc_tree import DocTree
 from hotdoc.formatters.html.html_formatter import HtmlFormatter
+from hotdoc.utils.utils import OrderedSet
 
 
 # pylint: disable=too-few-public-methods
@@ -34,7 +35,7 @@ class BaseExtension(object):
         self._formatters = {"html": HtmlFormatter(doc_tool, [])}
         self._doc_parser = GtkDocParser(doc_tool)
         self.stale_source_files = []
-        self.created_symbols = defaultdict(set)
+        self.created_symbols = defaultdict(OrderedSet)
         self.__naive_path = None
 
     @staticmethod

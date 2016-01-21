@@ -60,7 +60,7 @@ class Formatter(object):
         """
         Banana banana
         """
-        self.__format_symbols(symbol.get_children_symbols())
+        self._format_symbols(symbol.get_children_symbols())
 
         # We only need to resolve qualified symbols now because
         # they're referring to an actual type, not referred to.
@@ -72,7 +72,7 @@ class Formatter(object):
         if False in res:
             return False
 
-        symbol.formatted_doc = self.__format_doc(symbol.comment)
+        symbol.formatted_doc = self._format_doc(symbol.comment)
         out, standalone = self._format_symbol(symbol)
         symbol.detailed_description = out
 
@@ -92,7 +92,7 @@ class Formatter(object):
         self.__format_page(page)
         self._copy_extra_files()
 
-    def __format_symbols(self, symbols):
+    def _format_symbols(self, symbols):
         for symbol in symbols:
             if symbol is None:
                 continue
@@ -105,7 +105,7 @@ class Formatter(object):
             page.output_attrs = defaultdict(lambda: defaultdict(dict))
             self._emit_formatting_page(page)
             self.doc_tool.update_doc_parser(page.extension_name)
-            self.__format_symbols(page.symbols)
+            self._format_symbols(page.symbols)
             page.detailed_description =\
                 self.doc_tool.formatter.format_page(page)[0]
             self.doc_tool.formatter.write_page(page)
@@ -172,7 +172,7 @@ class Formatter(object):
         """
         raise NotImplementedError
 
-    def __format_doc(self, comment):
+    def _format_doc(self, comment):
         out = ""
         if comment and comment.description:
             out = self.doc_tool.doc_parser.translate_comment(comment, 'html')
