@@ -9,7 +9,7 @@ from hotdoc.core.comment_block import Comment, Annotation, Tag
 
 
 # http://stackoverflow.com/questions/434287/what-is-the-most-pythonic-way-to-iterate-over-a-list-in-chunks
-def grouper(iterable, n_args, fillvalue=None):
+def _grouper(iterable, n_args, fillvalue=None):
     """
     Banana banana
     """
@@ -136,7 +136,7 @@ class GtkDocRawCommentParser(object):
         tps = re.split(r'(\n[ \t]*@[\S]+[ \t]*:)', title_and_params)
         title, annotations = self.__parse_title(tps[0])
         parameters = []
-        for name, desc in grouper(tps[1:], 2):
+        for name, desc in _grouper(tps[1:], 2):
             parameters.append(self.__parse_parameter(name, desc))
         return title, parameters, annotations
 
@@ -190,7 +190,7 @@ class GtkDocRawCommentParser(object):
             return desc, tags
 
         # pylint: disable=unused-variable
-        for raw, name, tag_desc in grouper(dts[1:], 3):
+        for raw, name, tag_desc in _grouper(dts[1:], 3):
             tag = self.__parse_tag(name.strip(), tag_desc.strip())
             if tag:
                 tags.append(tag)

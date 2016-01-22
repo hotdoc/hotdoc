@@ -20,10 +20,7 @@ from hotdoc.core.symbols import\
 from hotdoc.utils.simple_signals import Signal
 
 
-def get_children(node, recursive=False):
-    """
-    Banana banana
-    """
+def _get_children(node, recursive=False):
     if not recursive:
         child = node.first_child
         while child:
@@ -38,24 +35,18 @@ def get_children(node, recursive=False):
             nxt = walker.nxt()
 
 
-def get_label(link, recursive=False):
-    """
-    Banana banana
-    """
-    return ''.join(_.literal or '' for _ in get_children(link, recursive))
+def _get_label(link, recursive=False):
+    return ''.join(_.literal or '' for _ in _get_children(link, recursive))
 
 
-def set_label(parser, node, text):
-    """
-    Banana banana
-    """
-    for _ in get_children(node):
+def _set_label(parser, node, text):
+    for _ in _get_children(node):
         _.unlink()
 
     new_label = parser.parse(text)
 
     # We only want Document -> Paragraph -> children
-    for _ in get_children(new_label.first_child):
+    for _ in _get_children(new_label.first_child):
         node.append_child(_)
 
 
@@ -237,15 +228,15 @@ class PageParser(object):
                     page.subpages[path] = page.extension_name
                     self.doc_tree.seen_pages.add(path)
 
-                original_name = get_label(node)
+                original_name = _get_label(node)
                 parsed_header = self.__parsed_header_class(
-                    list(get_children(parent_node)), path)
+                    list(_get_children(parent_node)), path)
                 page.headers[original_name] = parsed_header
                 node.destination = '%s.html' %\
                     os.path.splitext(node.destination)[0]
 
         elif node.t == "Heading" and not page.first_header:
-            page.first_header = get_label(node)
+            page.first_header = _get_label(node)
 
         elif node.t == "Paragraph" and not page.first_paragraph:
             first_paragraph = ''
@@ -253,14 +244,14 @@ class PageParser(object):
                 first_paragraph += linecache.getline(page.source_file, i)
             page.first_paragraph = first_paragraph
 
-        for _ in get_children(node):
+        for _ in _get_children(node):
             self.__check_links(page, _, node)
 
     def __parse_list_node(self, page, list_node):
-        for child in get_children(list_node):
-            for grandchild in get_children(child):
+        for child in _get_children(list_node):
+            for grandchild in _get_children(child):
                 if grandchild.t == "Paragraph" and\
-                        len(list(get_children(grandchild))) == 1:
+                        len(list(_get_children(grandchild))) == 1:
                     if self.__parse_para(page, grandchild):
                         child.unlink()
 
@@ -272,7 +263,7 @@ class PageParser(object):
 
         link_node = paragraph.first_child
 
-        label = get_label(link_node)
+        label = _get_label(link_node)
 
         if not link_node.destination and label:
             name = label.strip('[]() ')
@@ -299,7 +290,7 @@ class PageParser(object):
         ast = self.__cmp.parse(contents)
         page.ast = ast
 
-        for _ in get_children(ast):
+        for _ in _get_children(ast):
             if _.t == "List":
                 self.__parse_list_node(page, _)
 
@@ -318,7 +309,7 @@ class PageParser(object):
         page.ast = ast
 
         page.symbol_names = []
-        for _ in get_children(ast):
+        for _ in _get_children(ast):
             if _.t == "List":
                 self.__parse_list_node(page, _)
 
@@ -328,17 +319,17 @@ class PageParser(object):
         if node.t == 'Link':
             if not hasattr(node, 'original_dest'):
                 node.original_dest = node.destination
-                node.original_label = get_label(node)
+                node.original_label = _get_label(node)
 
             link = self.doc_tool.link_resolver.get_named_link(
                 node.original_dest)
             if link and not node.original_label:
-                set_label(self.__cmp, node, link.title)
+                _set_label(self.__cmp, node, link.title)
 
             if link and link.get_link() is not None:
                 node.destination = link.get_link()
 
-        for _ in get_children(node):
+        for _ in _get_children(node):
             self._update_links(_)
 
     def render(self, page):
@@ -358,23 +349,23 @@ class PageParser(object):
             page = self.doc_tree.get_page(parsed_header.original_destination)
 
             if page.title is not None:
-                set_label(self.__cmp, ast_node[0], page.title)
+                _set_label(self.__cmp, ast_node[0], page.title)
             elif original_name in new_names:
-                set_label(self.__cmp, ast_node[0], new_names[original_name])
+                _set_label(self.__cmp, ast_node[0], new_names[original_name])
             else:
-                set_label(self.__cmp, ast_node[0], original_name)
+                _set_label(self.__cmp, ast_node[0], original_name)
 
             desc = page.get_short_description()
             if desc:
                 first = True
-                for _ in get_children(ast_node[0].parent):
+                for _ in _get_children(ast_node[0].parent):
                     if not first:
                         _.unlink()
                     first = False
 
                 desc = self.doc_tool.doc_parser.translate(desc)
                 new_desc = self.__cmp.parse(u' — %s' % desc.encode('utf-8'))
-                for _ in get_children(new_desc.first_child):
+                for _ in _get_children(new_desc.first_child):
                     ast_node[0].parent.append_child(_)
 
 
