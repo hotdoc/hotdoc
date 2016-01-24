@@ -316,6 +316,7 @@ class PageParser(object):
 
         ast = self.__cmp.parse(contents)
         page.ast = ast
+        page.symbol_names = []
 
         for _ in _get_children(ast):
             if _.t == "List":
