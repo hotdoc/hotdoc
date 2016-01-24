@@ -68,6 +68,7 @@ class DocTool(object):
         self.extensions = {}
         self.__comments = {}
         self.__symbols = {}
+        self.__root_page = None
         self.reference_map = defaultdict(set)
         self.tag_validators = {}
         self.raw_comment_parser = GtkDocRawCommentParser(self)
@@ -279,8 +280,7 @@ class DocTool(object):
             extension.setup()
             self.session.flush()
 
-        root = self.doc_tree.pages.get(self.index_file)
-        self.doc_tree.resolve_symbols(self, root)
+        self.doc_tree.resolve_symbols(self, self.__root_page)
 
         self.session.flush()
 
@@ -324,12 +324,11 @@ class DocTool(object):
         """
         self.__setup_folder(self.output)
         self.formatter = HtmlFormatter(self, [])
-        root = self.doc_tree.pages.get(self.index_file)
 
         Formatter.formatting_page_signal.connect(self.__formatting_page_cb)
         Link.resolving_link_signal.connect(self.__link_referenced_cb)
-        self.formatter.format(root)
-        self.__create_navigation_script(root)
+        self.formatter.format(self.__root_page)
+        self.__create_navigation_script(self.__root_page)
 
     def add_comment(self, comment):
         """
@@ -537,9 +536,8 @@ class DocTool(object):
 
         self.__create_extensions(config)
 
-        self.doc_tree.build_tree(self.index_file)
-
-        moved_symbols = self.doc_tree.update_symbol_maps()
+        self.__root_page, moved_symbols = \
+            self.doc_tree.build_tree(self.index_file)
 
         for symbol_id in moved_symbols:
             referencing_pages = self.reference_map.get(symbol_id, set())

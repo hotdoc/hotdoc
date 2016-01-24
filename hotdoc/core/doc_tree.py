@@ -19,6 +19,7 @@ from hotdoc.core.symbols import\
      StructSymbol, EnumSymbol, AliasSymbol, SignalSymbol, PropertySymbol,
      VFunctionSymbol, ClassSymbol)
 from hotdoc.utils.simple_signals import Signal
+from hotdoc.utils.utils import OrderedSet
 
 
 def _get_children(node, recursive=False):
@@ -57,11 +58,14 @@ class Page(object):
     """
     # pylint: disable=too-many-instance-attributes
 
+    resolving_symbol_signal = Signal()
+    adding_symbol_signal = Signal()
+
     def __init__(self, source_file, extension_name):
         name = os.path.splitext(os.path.basename(source_file))[0]
         pagename = '%s.html' % name
 
-        self.symbol_names = []
+        self.symbol_names = OrderedSet()
         self.subpages = OrderedDict({})
         self.link = Link(pagename, name, name)
         self.title = None
@@ -106,6 +110,18 @@ class Page(object):
                 'is_stale': False,  # At pickle time, assume non-staleness
                 'mtime': self.mtime}
 
+    def add_symbol(self, unique_name):
+        """Adds a symbol name to the ordered set of symbol names contained
+        in this page.
+
+        Args:
+            unique_name: str, the symbol name to add, if already present
+            it will not be duplicated, and will keep the same position
+            in the set of symbol names.
+        """
+        self.adding_symbol_signal(self, unique_name)
+        self.symbol_names.add(unique_name)
+
     def resolve_symbols(self, doc_tool):
         """
         When this method is called, the page's symbol names are queried
@@ -138,20 +154,19 @@ class Page(object):
             "Virtual Methods", [])
         self.typed_symbols[ClassSymbol] = typed_symbols_list("Classes", [])
 
-        new_sym_names = []
         for sym_name in self.symbol_names:
             sym = doc_tool.get_symbol(sym_name)
-            if sym:
-                self.__resolve_symbol(sym)
+            self.__query_extra_symbols(sym)
 
-            new_symbols = sum(doc_tool.doc_tree.symbol_added_signal(self, sym),
+    def __query_extra_symbols(self, sym):
+        if sym:
+            self.__resolve_symbol(sym)
+            new_symbols = sum(Page.resolving_symbol_signal(self, sym),
                               [])
-            for symbol in new_symbols:
-                doc_tool.doc_tree.add_to_symbol_map(self, symbol.unique_name)
-                new_sym_names.append(symbol.unique_name)
-                self.__resolve_symbol(symbol)
 
-        self.symbol_names.extend(new_sym_names)
+            for symbol in new_symbols:
+                self.add_symbol(symbol.unique_name)
+                self.__query_extra_symbols(symbol)
 
     def __resolve_symbol(self, symbol):
         symbol.link.ref = "%s#%s" % (self.link.ref, symbol.unique_name)
@@ -286,12 +301,12 @@ class PageParser(object):
 
         if not link_node.destination and label:
             name = label.strip('[]() ')
-            page.symbol_names.append(name)
+            page.add_symbol(name)
             link_node.destination = "not_an_actual_link_sorry"
             return True
         return False
 
-    def parse(self, source_file, extension_name, page=None):
+    def parse(self, source_file, extension_name):
         """
         Given a source file and a possible extension name,
         returns a parsed Page object. This function does not
@@ -302,8 +317,6 @@ class PageParser(object):
             extension_name: str, name of the extension responsible
                 for this page. If None, the responsible entity is
                 the DocTool itself.
-            page: hotdoc.core.doc_tree.Page, An existing page can be
-                passed here to update it instead of creating a new one.
         """
         if not os.path.exists(source_file):
             return None
@@ -311,12 +324,10 @@ class PageParser(object):
         with io.open(source_file, 'r', encoding='utf-8') as _:
             contents = _.read()
 
-        if page is None:
-            page = Page(source_file, extension_name)
+        page = Page(source_file, extension_name)
 
         ast = self.__cmp.parse(contents)
         page.ast = ast
-        page.symbol_names = []
 
         for _ in _get_children(ast):
             if _.t == "List":
@@ -435,7 +446,6 @@ class DocTree(object):
         self.symbol_maps = defaultdict(defaultdict)
 
         self.prefix = prefix
-        self.symbol_added_signal = Signal()
         doc_tool.comment_updated_signal.connect(self.__comment_updated)
         doc_tool.symbol_updated_signal.connect(self.__symbol_updated)
         self.doc_tool = doc_tool
@@ -452,10 +462,7 @@ class DocTree(object):
         """
         return self.symbol_maps[unique_name]
 
-    def add_to_symbol_map(self, page, unique_name):
-        """
-        Banana banana
-        """
+    def __add_to_symbol_map(self, page, unique_name):
         self.symbol_maps[unique_name][page.source_file] = page
 
     def __symbol_has_moved(self, unique_name):
@@ -465,16 +472,21 @@ class DocTree(object):
         return set(self.symbol_maps[unique_name].keys()) !=\
             set(self.previous_symbol_maps[unique_name].keys())
 
-    def update_symbol_maps(self):
+    def __symbol_added_to_page(self, page, unique_name):
+        self.__add_to_symbol_map(page, unique_name)
+
+    def __update_symbol_maps(self):
         """
         Banana banana
         """
         moved_symbols = set({})
         for page in self.pages.values():
             for name in page.symbol_names:
-                self.add_to_symbol_map(page, name)
+                self.__add_to_symbol_map(page, name)
                 if self.__symbol_has_moved(name):
                     moved_symbols.add(name)
+
+        Page.adding_symbol_signal.connect(self.__symbol_added_to_page)
 
         return moved_symbols
 
@@ -485,15 +497,7 @@ class DocTree(object):
         pickle.dump(self.pages, open(self.pages_path, 'wb'))
         pickle.dump(self.symbol_maps, open(self.symbol_maps_path, 'wb'))
 
-    def build_tree(self, source_file, extension_name=None):
-        """
-        Banana banana.
-        Args:
-          source_file: str, The source file to start building the tree
-            from, will recurse in potential subpages.
-          extension_name: str, The extension in charge of handling this
-            page and its subpages.
-        """
+    def __do_build_tree(self, source_file, extension_name):
         page = None
 
         if source_file in self.pages:
@@ -512,9 +516,20 @@ class DocTree(object):
         self.pages[source_file] = page
 
         for subpage, extension_name in page.subpages.items():
-            self.build_tree(subpage, extension_name=extension_name)
+            self.__do_build_tree(subpage, extension_name=extension_name)
 
-        return page
+    def build_tree(self, source_file, extension_name=None):
+        """
+        Banana banana.
+        Args:
+          source_file: str, The source file to start building the tree
+            from, will recurse in potential subpages.
+          extension_name: str, The extension in charge of handling this
+            page and its subpages.
+        """
+        self.__do_build_tree(source_file, extension_name)
+        moved_symbols = self.__update_symbol_maps()
+        return self.pages[source_file], moved_symbols
 
     def resolve_symbols(self, doc_tool, page):
         """Will call resolve_symbols on all the stale subpages of the tree.
@@ -525,8 +540,9 @@ class DocTree(object):
         """
         if page.is_stale:
             if page.mtime != -1 and not page.ast:
-                self.page_parser.parse(page.source_file, page.extension_name,
-                                       page)
+                new_page = self.page_parser.parse(page.source_file,
+                                                  page.extension_name)
+                self.pages[page.source_file] = new_page
 
             page.resolve_symbols(doc_tool)
         for pagename in page.subpages:
