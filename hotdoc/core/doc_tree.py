@@ -178,8 +178,10 @@ class Page(object):
 
     def get_title(self):
         """
-        Returns the preferred name to use when referring to that page
+        Returns the preferred title to use when referring to that page
         from another page.
+        Returns:
+            str: the preferred title
         """
         return self.title or self.first_header or self.link.title
 
@@ -209,6 +211,16 @@ class PageParser(object):
         Allows extensions to register hooks to declare that a given page
         and its potential subpages are handled by this extension (this
         allows defining custom formatters for example).
+        Args:
+            wkn: str, the well-known-name to register
+                (for example "python-api")
+            callback: callable, a callable to execute when `wkn` is
+                encountered.
+                It is expected to accept the instance of the current DocTree,
+                and to return a three-tuple made of:
+                name of the subpage,
+                possible subfolder,
+                name of the handling extension
         """
         self.well_known_names[wkn] = callback
 
@@ -278,12 +290,19 @@ class PageParser(object):
             return True
         return False
 
-    def parse(self, source_file, extension_name):
+    def parse(self, source_file, extension_name, page=None):
         """
         Given a source file and a possible extension name,
         returns a parsed Page object. This function does not
         parse subpages, they are instead listed in the subpages
         attribute of the returned page.
+        Args:
+            source_file: str, path to the source file to parse
+            extension_name: str, name of the extension responsible
+                for this page. If None, the responsible entity is
+                the DocTool itself.
+            page: hotdoc.core.doc_tree.Page, An existing page can be
+                passed here to update it instead of creating a new one.
         """
         if not os.path.exists(source_file):
             return None
@@ -291,7 +310,8 @@ class PageParser(object):
         with io.open(source_file, 'r', encoding='utf-8') as _:
             contents = _.read()
 
-        page = Page(source_file, extension_name)
+        if page is None:
+            page = Page(source_file, extension_name)
 
         ast = self.__cmp.parse(contents)
         page.ast = ast
@@ -304,24 +324,7 @@ class PageParser(object):
 
         return page
 
-    def reparse(self, page):
-        """
-        Banana banana
-        """
-        with io.open(page.source_file, 'r', encoding='utf-8') as _:
-            contents = _.read()
-
-        ast = self.__cmp.parse(contents)
-        page.ast = ast
-
-        page.symbol_names = []
-        for _ in _get_children(ast):
-            if _.t == "List":
-                self.__parse_list_node(page, _)
-
-        self.__check_links(page, ast)
-
-    def _update_links(self, node):
+    def __update_links(self, node):
         if node.t == 'Link':
             if not hasattr(node, 'original_dest'):
                 node.original_dest = node.destination
@@ -336,19 +339,37 @@ class PageParser(object):
                 node.destination = link.get_link()
 
         for _ in _get_children(node):
-            self._update_links(_)
+            self.__update_links(_)
 
     def render(self, page):
+        """Returns the formatted page contents.
+
+        Can only format to html for now.
+        Args:
+            page: hodoc.core.doc_tree.Page, the page which contents
+                have to be formatted.
         """
-        Returns the page contents formatted according
-        to the desired output format.
-        """
-        self._update_links(page.ast)
+        self.__update_links(page.ast)
         return self.__cmr.render(page.ast)
 
     def rename_page_links(self, page):
-        """
-        Banana banana
+        """Prettifies the intra-documentation page links.
+
+        For example a link to a valid markdown page such as:
+
+        ``[my_other_page](my_other_page.markdown)``
+
+        will be updated to:
+
+        ``[My Other Page](my_other_page.markdown) - my potential short
+        description``
+
+        if my_other_page.markdown correctly exposes a custom title and
+        a short description.
+
+        Args:
+            page: hotdoc.core.doc_tree.Page, the page to rename navigational
+                links in.
         """
         for original_name, parsed_header in page.headers.items():
             ast_node = parsed_header.ast_node
@@ -499,7 +520,8 @@ class DocTree(object):
         """
         if page.is_stale:
             if page.mtime != -1 and not page.ast:
-                self.page_parser.reparse(page)
+                self.page_parser.parse(page.source_file, page.extension_name,
+                                       page)
 
             page.resolve_symbols(doc_tool)
         for pagename in page.subpages:

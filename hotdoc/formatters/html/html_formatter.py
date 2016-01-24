@@ -480,6 +480,8 @@ class HtmlFormatter(Formatter):
 
     def _format_return_value_symbol(self, return_value):
         template = self.engine.get_template('multi_return_value.html')
+        if return_value[0] is None:
+            return_value = return_value[1:]
         return template.render({'return_items': return_value})
 
     def _format_callable(self, callable_, callable_type, title,
