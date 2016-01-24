@@ -96,6 +96,15 @@ class BaseExtension(object):
 
         return sym
 
+    # pylint: disable=no-self-use
+    def _get_naive_link_title(self, source_file):
+        stripped = os.path.splitext(source_file)[0]
+        title = os.path.basename(stripped)
+        return title
+
+    def _get_naive_page_description(self, link_title):
+        return '## %s\n\n' % link_title
+
     def create_naive_index(self, all_source_files):
         """
         Banana banana
@@ -106,10 +115,9 @@ class BaseExtension(object):
         with open(index_path, 'w') as _:
             _.write('## API reference\n\n')
             for source_file in all_source_files:
-                stripped = os.path.splitext(source_file)[0]
-                stripped = os.path.basename(stripped)
-                markdown_name = stripped + '.markdown'
-                _.write('#### [%s](%s)\n' % (stripped, markdown_name))
+                link_title = self._get_naive_link_title(source_file)
+                markdown_name = link_title + '.markdown'
+                _.write('#### [%s](%s)\n' % (link_title, markdown_name))
 
         self.__naive_path = index_path
         return index_path, '', self.EXTENSION_NAME
@@ -120,13 +128,12 @@ class BaseExtension(object):
         """
         subtree = DocTree(self.doc_tool, self.doc_tool.doc_tree.prefix)
         for source_file, symbols in self.created_symbols.items():
-            stripped = os.path.splitext(source_file)[0]
-            stripped = os.path.basename(stripped)
-            markdown_path = stripped + '.markdown'
+            link_title = self._get_naive_link_title(source_file)
+            markdown_path = link_title + '.markdown'
             markdown_path = os.path.join(self.doc_tool.doc_tree.prefix,
                                          markdown_path)
             with open(markdown_path, 'w') as _:
-                _.write('## %s\n\n' % stripped)
+                _.write(self._get_naive_page_description(link_title))
                 for symbol in symbols:
                     _.write('* [%s]()\n' % symbol.unique_name)
 
