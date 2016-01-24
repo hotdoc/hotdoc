@@ -9,6 +9,7 @@ import linecache
 import os
 from collections import OrderedDict
 from collections import namedtuple
+from collections import defaultdict
 
 import CommonMark
 from hotdoc.core.links import Link
@@ -146,7 +147,7 @@ class Page(object):
             new_symbols = sum(doc_tool.doc_tree.symbol_added_signal(self, sym),
                               [])
             for symbol in new_symbols:
-                doc_tool.doc_tree.add_to_symbol_map(self, symbol)
+                doc_tool.doc_tree.add_to_symbol_map(self, symbol.unique_name)
                 new_sym_names.append(symbol.unique_name)
                 self.__resolve_symbol(symbol)
 
@@ -428,14 +429,15 @@ class DocTree(object):
             self.previous_symbol_maps = pickle.load(
                 open(self.symbol_maps_path, 'rb'))
         except IOError:
-            self.previous_symbol_maps = {}
+            self.previous_symbol_maps = defaultdict(defaultdict)
+
+        self.symbol_maps = defaultdict(defaultdict)
 
         self.prefix = prefix
         self.symbol_added_signal = Signal()
         doc_tool.comment_updated_signal.connect(self.__comment_updated)
         doc_tool.symbol_updated_signal.connect(self.__symbol_updated)
         self.doc_tool = doc_tool
-        self.symbol_maps = {}
 
     def get_page(self, name):
         """
@@ -443,20 +445,24 @@ class DocTree(object):
         """
         return self.pages.get(name)
 
-    def add_to_symbol_map(self, page, sym):
+    def get_pages_for_symbol(self, unique_name):
         """
         Banana banana
         """
-        symbol_map = self.symbol_maps.pop(sym.unique_name, {})
-        symbol_map[page.source_file] = page
-        self.symbol_maps[sym.unique_name] = symbol_map
+        return self.symbol_maps[unique_name]
 
-    def __symbol_has_moved(self, symbol_map, name):
+    def add_to_symbol_map(self, page, unique_name):
+        """
+        Banana banana
+        """
+        self.symbol_maps[unique_name][page.source_file] = page
+
+    def __symbol_has_moved(self, unique_name):
         if not self.doc_tool.incremental:
             return False
 
-        return set(symbol_map.keys()) !=\
-            set(self.previous_symbol_maps.get(name, {}).keys())
+        return set(self.symbol_maps[unique_name].keys()) !=\
+            set(self.previous_symbol_maps[unique_name].keys())
 
     def update_symbol_maps(self):
         """
@@ -465,10 +471,8 @@ class DocTree(object):
         moved_symbols = set({})
         for page in self.pages.values():
             for name in page.symbol_names:
-                symbol_map = self.symbol_maps.pop(name, {})
-                symbol_map[page.source_file] = page
-                self.symbol_maps[name] = symbol_map
-                if self.__symbol_has_moved(symbol_map, name):
+                self.add_to_symbol_map(page, name)
+                if self.__symbol_has_moved(name):
                     moved_symbols.add(name)
 
         return moved_symbols

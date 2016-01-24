@@ -124,7 +124,7 @@ class DocTool(object):
         Banana banana
         """
         # FIXME this will be API, raise meaningful errors
-        pages = self.doc_tree.symbol_maps.get(symbol_name)
+        pages = self.doc_tree.get_pages_for_symbol(symbol_name)
         if not pages:
             return None
 
@@ -153,7 +153,7 @@ class DocTool(object):
         """
         Banana banana
         """
-        pages = self.doc_tree.symbol_maps.get(symbol.unique_name)
+        pages = self.doc_tree.get_pages_for_symbol(symbol.unique_name)
         if not pages:
             return False
 

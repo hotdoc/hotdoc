@@ -241,7 +241,7 @@ class FunctionSymbol(Symbol):
 
     def __init__(self, **kwargs):
         self.parameters = []
-        self.return_value = []
+        self.return_value = [None]
         self.throws = False
         self.is_method = False
         Symbol.__init__(self, **kwargs)
@@ -400,7 +400,7 @@ class FunctionMacroSymbol(MacroSymbol):
 
     def __init__(self, **kwargs):
         self.parameters = []
-        self.return_value = []
+        self.return_value = [None]
         MacroSymbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
