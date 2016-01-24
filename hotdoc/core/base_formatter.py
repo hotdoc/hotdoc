@@ -106,6 +106,7 @@ class Formatter(object):
             self._emit_formatting_page(page)
             self.doc_tool.update_doc_parser(page.extension_name)
             self._format_symbols(page.symbols)
+            self.doc_tool.doc_tree.page_parser.rename_page_links(page)
             page.detailed_description =\
                 self.doc_tool.formatter.format_page(page)[0]
             self.doc_tool.formatter.write_page(page)

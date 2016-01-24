@@ -180,6 +180,7 @@ class Page(object):
         return self.title or self.first_header or self.link.title
 
 
+# pylint: disable=too-many-instance-attributes
 class PageParser(object):
     """
     Parses individual pages, detecting empty links to potential subpages.
@@ -194,6 +195,7 @@ class PageParser(object):
         self.doc_tree = doc_tree
         self.prefix = prefix
         self.doc_tool = doc_tool
+        self.renaming_page_link_signal = Signal()
         self.__parsed_header_class = namedtuple('ParsedHeader',
                                                 ['ast_node',
                                                  'original_destination'])
@@ -340,7 +342,7 @@ class PageParser(object):
         self._update_links(page.ast)
         return self.__cmr.render(page.ast)
 
-    def rename_headers(self, page, new_names):
+    def rename_page_links(self, page):
         """
         Banana banana
         """
@@ -350,10 +352,14 @@ class PageParser(object):
 
             if page.title is not None:
                 _set_label(self.__cmp, ast_node[0], page.title)
-            elif original_name in new_names:
-                _set_label(self.__cmp, ast_node[0], new_names[original_name])
             else:
-                _set_label(self.__cmp, ast_node[0], original_name)
+                replacements = self.renaming_page_link_signal(self,
+                                                              original_name)
+                try:
+                    rep = next(rep for rep in replacements if rep is not None)
+                    _set_label(self.__cmp, ast_node[0], rep)
+                except StopIteration:
+                    _set_label(self.__cmp, ast_node[0], original_name)
 
             desc = page.get_short_description()
             if desc:
@@ -374,6 +380,8 @@ class DocTree(object):
     Responsible for parsing the
     standalone markdown files that will form the sructure of
     the output documentation.
+    Attributes:
+      prefix: str, The prefix in which markdown files are looked up
     """
     # pylint: disable=too-many-instance-attributes
 
@@ -450,6 +458,11 @@ class DocTree(object):
     def build_tree(self, source_file, extension_name=None):
         """
         Banana banana.
+        Args:
+          source_file: str, The source file to start building the tree
+            from, will recurse in potential subpages.
+          extension_name: str, The extension in charge of handling this
+            page and its subpages.
         """
         page = None
 
@@ -474,8 +487,11 @@ class DocTree(object):
         return page
 
     def resolve_symbols(self, doc_tool, page):
-        """
-        Will call resolve_symbols on all the stale subpages of the tree.
+        """Will call resolve_symbols on all the stale subpages of the tree.
+        Args:
+          doc_tool: hotdoc.core.doc_tool.DocTool, the main doc_tool instance
+          page: hotdoc.core.doc_tree.Page, The page to resolve symbols in,
+          will recurse on potential subpages.
         """
         if page.is_stale:
             if page.mtime != -1 and not page.ast:
