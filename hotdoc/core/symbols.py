@@ -83,7 +83,7 @@ class Symbol(Base):
                 sym.comment = self.comment.params.get(sym.argname)
             elif type(sym) == FieldSymbol:
                 sym.comment = self.comment.params.get(sym.member_name)
-            elif type(sym) == ReturnValueSymbol:
+            elif type(sym) == ReturnItemSymbol:
                 tag = self.comment.tags.get('returns')
                 sym.comment = comment_from_tag(tag)
             elif type(sym) == Symbol:
@@ -180,13 +180,14 @@ class QualifiedSymbol(MutableObject):
         self.__constructed()
 
 
-class ReturnValueSymbol(QualifiedSymbol):
+class ReturnItemSymbol(QualifiedSymbol):
     """
     Banana banana
     """
-    def __init__(self, comment=None, **kwargs):
+    def __init__(self, comment=None, name=None, **kwargs):
         QualifiedSymbol.__init__(self, **kwargs)
         self.comment = comment
+        self.name = name
 
 
 class ParameterSymbol(QualifiedSymbol):
@@ -230,7 +231,7 @@ class FunctionSymbol(Symbol):
     __tablename__ = 'functions'
     id_ = Column(Integer, ForeignKey('symbols.id_'), primary_key=True)
     parameters = Column(MutableList.as_mutable(PickleType))
-    return_value = Column(ReturnValueSymbol.as_mutable(PickleType))
+    return_value = Column(MutableList.as_mutable(PickleType))
     is_method = Column(Boolean)
     is_ctor_for = Column(String)
     throws = Column(Boolean)
@@ -240,12 +241,13 @@ class FunctionSymbol(Symbol):
 
     def __init__(self, **kwargs):
         self.parameters = []
+        self.return_value = []
         self.throws = False
         self.is_method = False
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
-        return self.parameters + [self.return_value]
+        return self.parameters + self.return_value
 
     def get_type_name(self):
         if self.is_method:
@@ -394,14 +396,15 @@ class FunctionMacroSymbol(MacroSymbol):
     }
 
     parameters = Column(MutableList.as_mutable(PickleType))
-    return_value = Column(PickleType)
+    return_value = Column(MutableList.as_mutable(PickleType))
 
     def __init__(self, **kwargs):
         self.parameters = []
+        self.return_value = []
         MacroSymbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
-        return self.parameters + [self.return_value]
+        return self.parameters + self.return_value
 
     def get_type_name(self):
         return "Function macro"

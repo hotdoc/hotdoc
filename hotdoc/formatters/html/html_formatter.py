@@ -16,7 +16,7 @@ from wheezy.template.loader import FileLoader
 
 from hotdoc.core.symbols import\
     (FunctionSymbol, CallbackSymbol, ParameterSymbol,
-     ReturnValueSymbol, FieldSymbol, QualifiedSymbol,
+     ReturnItemSymbol, FieldSymbol, QualifiedSymbol,
      FunctionMacroSymbol, ConstantSymbol, ExportedVariableSymbol,
      StructSymbol, EnumSymbol, AliasSymbol, SignalSymbol, PropertySymbol,
      VFunctionSymbol, ClassSymbol)
@@ -66,7 +66,7 @@ class HtmlFormatter(Formatter):
             StructSymbol: self._format_struct,
             EnumSymbol: self._format_enum,
             ParameterSymbol: self._format_parameter_symbol,
-            ReturnValueSymbol: self._format_return_value_symbol,
+            ReturnItemSymbol: self._format_return_item_symbol,
             FieldSymbol: self._format_field_symbol,
             SignalSymbol: self._format_signal_symbol,
             VFunctionSymbol: self._format_vfunction_symbol,
@@ -206,17 +206,27 @@ class HtmlFormatter(Formatter):
                                 'is_pointer': is_pointer})
 
     def _format_function_summary(self, func):
+        if func.return_value:
+            return_value = self._format_linked_symbol(func.return_value[0])
+        else:
+            return_value = None
+
         return self._format_callable_summary(
             func,
-            self._format_linked_symbol(func.return_value),
+            return_value,
             self._format_linked_symbol(func),
             True,
             False)
 
     def _format_callback_summary(self, callback):
+        if callback.return_value:
+            return_value = self._format_linked_symbol(callback.return_value[0])
+        else:
+            return_value = None
+
         return self._format_callable_summary(
             callback,
-            self._format_linked_symbol(callback.return_value),
+            return_value,
             self._format_linked_symbol(callback),
             True,
             True)
@@ -434,7 +444,11 @@ class HtmlFormatter(Formatter):
         return None
 
     def _format_prototype(self, function, is_pointer, title):
-        return_value = self._format_linked_symbol(function.return_value)
+        if function.return_value:
+            return_value = self._format_linked_symbol(function.return_value[0])
+        else:
+            return_value = None
+
         parameters = []
         for param in function.parameters:
             parameters.append(self._format_linked_symbol(param))
@@ -459,11 +473,14 @@ class HtmlFormatter(Formatter):
         return (self.__format_parameter_detail(field_id,
                                                field.formatted_doc), False)
 
+    def _format_return_item_symbol(self, return_item):
+        template = self.engine.get_template('return_item.html')
+        return_item.formatted_link = self._format_linked_symbol(return_item)
+        return (template.render({'return_item': return_item}), False)
+
     def _format_return_value_symbol(self, return_value):
-        if not return_value or not return_value.formatted_doc:
-            return ('', False)
-        template = self.engine.get_template('return_value.html')
-        return (template.render({'return_value': return_value}), False)
+        template = self.engine.get_template('multi_return_value.html')
+        return template.render({'return_items': return_value})
 
     def _format_callable(self, callable_, callable_type, title,
                          is_pointer=False):
@@ -474,9 +491,8 @@ class HtmlFormatter(Formatter):
 
         prototype = self._format_prototype(callable_, is_pointer, title)
 
-        return_value_detail = None
-        if callable_.return_value:
-            return_value_detail = callable_.return_value.detailed_description
+        return_value_detail = self._format_return_value_symbol(
+            callable_.return_value)
 
         tags = {}
         if callable_.comment:
@@ -561,10 +577,8 @@ class HtmlFormatter(Formatter):
         parameters = [p.detailed_description for p in function_macro.parameters
                       if p.detailed_description is not None]
 
-        return_value_detail = None
-        if function_macro.return_value:
-            return_value_detail =\
-                    function_macro.return_value.detailed_description
+        return_value_detail = self._format_return_value_symbol(
+            function_macro.return_value)
 
         out = template.render({'prototype': prototype,
                                'symbol': function_macro,

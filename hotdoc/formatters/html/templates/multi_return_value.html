@@ -1,6 +1,7 @@
-@require(return_values)
+@require(return_items)
+@if return_items:
 <div class="multi_return_value_container">
-	@if len (return_values) == 1:
+	@if len (return_items) == 1:
 		<h4>Returns:</h4>
 	@else:
 		<h4>Returns a tuple made of</h4>
@@ -12,23 +13,10 @@
 			<col/>
 		</colgroup>
 		<tbody>
-			@for value in return_values:
-			<tr>
-				<td>
-					<p>
-					@if hasattr(value, "argname"):
-					<i>@value.argname:</i>
-					@end
-					</p>
-				</td>
-				<td>
-					@value.formatted_doc
-				</td>
-				<td>
-					@value.formatted_link
-				</td>
-			</tr>
+			@for item in return_items:
+			@item.detailed_description
 			@end
 		</tbody>
 	</table>
 </div>
+@end
