@@ -108,8 +108,10 @@ class Page(object):
     def resolve_symbols(self, doc_tool):
         """
         When this method is called, the page's symbol names are queried
-        from doc_tool, and added to lists of actual symbols, sorted
-        by type.
+        from `doc_tool`, and added to lists of actual symbols, sorted
+        by symbol class.
+        Args:
+            doc_tool: hotdoc.core.doc_tool.DocTool, the main doc_tool instance
         """
         typed_symbols_list = namedtuple(
             'TypedSymbolsList', ['name', 'symbols'])
@@ -169,6 +171,8 @@ class Page(object):
         """
         Returns a string suitable for displaying as a summary, for example
         in a different page.
+        Returns:
+            str: the short description.
         """
         return self.short_description or self.first_paragraph
 
@@ -490,7 +494,7 @@ class DocTree(object):
         """Will call resolve_symbols on all the stale subpages of the tree.
         Args:
           doc_tool: hotdoc.core.doc_tool.DocTool, the main doc_tool instance
-          page: hotdoc.core.doc_tree.Page, The page to resolve symbols in,
+          page: hotdoc.core.doc_tree.Page, the page to resolve symbols in,
           will recurse on potential subpages.
         """
         if page.is_stale:
