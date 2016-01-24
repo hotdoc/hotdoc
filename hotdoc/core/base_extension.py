@@ -104,6 +104,7 @@ class BaseExtension(object):
         index_path = os.path.join(self.doc_tool.doc_tree.prefix, index_name)
 
         with open(index_path, 'w') as _:
+            _.write('## API reference\n\n')
             for source_file in all_source_files:
                 stripped = os.path.splitext(source_file)[0]
                 stripped = os.path.basename(stripped)
