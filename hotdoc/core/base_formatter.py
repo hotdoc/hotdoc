@@ -71,7 +71,7 @@ class Formatter(object):
         if False in res:
             return False
 
-        symbol.formatted_doc = self._format_doc(symbol.comment)
+        symbol.formatted_doc = self.format_comment(symbol.comment)
         out, standalone = self._format_symbol(symbol)
         symbol.detailed_description = out
 
@@ -147,12 +147,27 @@ class Formatter(object):
             out = page.detailed_description
             _.write(out.encode('utf-8'))
 
-    def _format_doc_string(self, docstring):
+    def format_docstring(self, docstring, format_='html'):
+        """Formats a doc string with the currently set DocTool.doc_parser.
+
+        You don't need to unescape the docstring.
+
+        See `DocTool.update_doc_parser` for more information.
+
+        Args:
+            docstring: str, the code documentation string to format.
+                Can be None, in which case the empty string will be returned.
+            format_: str, the format to format to, currently only
+                html is supported.
+
+        Returns:
+            str: The docstring formatted to the chosen format.
+        """
         if not docstring:
             return ""
 
         docstring = unescape(docstring)
-        rendered_text = self.doc_tool.doc_parser.translate(docstring, 'html')
+        rendered_text = self.doc_tool.doc_parser.translate(docstring, format_)
         return rendered_text
 
     def patch_page(self, page, symbol):
@@ -174,11 +189,23 @@ class Formatter(object):
         """
         raise NotImplementedError
 
-    def _format_doc(self, comment):
-        out = ""
-        if comment and comment.description:
-            out = self.doc_tool.doc_parser.translate_comment(comment, 'html')
-        return out
+    def format_comment(self, comment, format_='html'):
+        """Convenience function wrapping `format_docstring`.
+
+        Args:
+            comment: hotdoc.core.comment_block.Comment, the code comment
+            to format.
+                Can be None, in which case the empty string will be returned.
+            format_: str, the format to format to, currently only
+                html is supported.
+
+        Returns:
+            str: The comment formatted to the chosen format.
+        """
+        if comment:
+            return self.format_docstring(comment.description, format_)
+
+        return ''
 
     # pylint: disable=no-self-use
     def _get_extra_files(self):

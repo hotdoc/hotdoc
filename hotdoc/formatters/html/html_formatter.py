@@ -306,7 +306,7 @@ class HtmlFormatter(Formatter):
         if not klass.comment:
             return ''
 
-        short_desc = self._format_doc_string(klass.comment.short_description)
+        short_desc = self.format_docstring(klass.comment.short_description)
         template = self.engine.get_template('class_summary.html')
         return template.render({'symbol': klass,
                                 'klass': klass,

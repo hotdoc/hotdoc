@@ -267,6 +267,8 @@ class GtkDocParser(object):
         if not text:
             return out
 
+        text = unescape(text)
+
         out = self.__legacy_to_md(text)
 
         if format_ == 'markdown':
@@ -275,14 +277,6 @@ class GtkDocParser(object):
             return self.__md_to_html(out)
 
         raise Exception("Unrecognized format %s" % format_)
-
-    def translate_comment(self, comment, format_='markdown'):
-        """
-        Given a gtk-doc Comment, returns the comment translated
-        to the desired format.
-        """
-        text = unescape(comment.description)
-        return self.translate(text, format_)
 
 if __name__ == "__main__":
     PARSER = GtkDocParser()
