@@ -181,6 +181,16 @@ class Page(object):
                 'is_stale': False,  # At pickle time, assume non-staleness
                 'mtime': self.mtime}
 
+    def reset_output_attributes(self):
+        """Reset output_attrs to its original state
+
+        After this call, page.output_attrs is an empty defaultdict of
+        defaultdict.
+
+        See the documentation of `output_attrs` for more information.
+        """
+        self.output_attrs = defaultdict(lambda: defaultdict(dict))
+
     def get_short_description(self):
         """
         Returns a string suitable for displaying as a summary, for example

@@ -6,7 +6,6 @@ This module defines a base Formatter class
 
 import os
 import shutil
-from collections import defaultdict
 from xml.sax.saxutils import unescape
 
 import pygraphviz as pg
@@ -82,9 +81,6 @@ class Formatter(object):
 
         return True
 
-    def _emit_formatting_page(self, page):
-        Formatter.formatting_page_signal(self, page)
-
     def format(self, page):
         """
         Formats a given page and its subpages
@@ -102,8 +98,9 @@ class Formatter(object):
         self.current_page = page
 
         if page.is_stale:
-            page.output_attrs = defaultdict(lambda: defaultdict(dict))
-            self._emit_formatting_page(page)
+            page.reset_output_attributes()
+            self._prepare_page_attributes(page)
+            Formatter.formatting_page_signal(self, page)
             self.doc_tool.update_doc_parser(page.extension_name)
             self._format_symbols(page.symbols)
             self.doc_tool.doc_tree.page_parser.rename_page_links(page)
@@ -186,3 +183,7 @@ class Formatter(object):
     # pylint: disable=no-self-use
     def _get_extra_files(self):
         return []
+
+    # pylint: disable=no-self-use
+    def _prepare_page_attributes(self, page):
+        pass
