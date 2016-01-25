@@ -90,7 +90,7 @@ class Formatter(object):
         Formats a given page and its subpages
         """
         self.__format_page(page)
-        self._copy_extra_files()
+        self.__copy_extra_files()
 
     def _format_symbols(self, symbols):
         for symbol in symbols:
@@ -124,18 +124,22 @@ class Formatter(object):
                 self.__format_page(cpage)
             self.doc_tool.formatter = self
 
-    def _copy_extra_files(self):
+    def __copy_extra_files(self):
         asset_path = self.doc_tool.get_assets_path()
         if not os.path.exists(asset_path):
             os.mkdir(asset_path)
 
-        for _ in self._get_extra_files():
-            basename = os.path.basename(_)
-            path = os.path.join(asset_path, basename)
-            if os.path.isfile(_):
-                shutil.copy(_, path)
-            elif os.path.isdir(_):
-                recursive_overwrite(_, path)
+        for src, dest in self._get_extra_files():
+            dest = os.path.join(asset_path, dest)
+
+            destdir = os.path.dirname(dest)
+            if not os.path.exists(destdir):
+                os.makedirs(destdir)
+
+            if os.path.isfile(src):
+                shutil.copy(src, dest)
+            elif os.path.isdir(src):
+                recursive_overwrite(src, dest)
 
     def write_page(self, page):
         """

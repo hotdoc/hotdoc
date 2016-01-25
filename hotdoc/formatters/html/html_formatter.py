@@ -7,7 +7,6 @@ import os
 import cgi
 import re
 import tempfile
-import shutil
 
 from wheezy.template.engine import Engine
 from wheezy.template.ext.core import CoreExtension
@@ -639,26 +638,18 @@ class HtmlFormatter(Formatter):
         return 'assets'
 
     def _get_extra_files(self):
-        dir_ = os.path.dirname(__file__)
         res = []
 
         if self.__theme_path:
             theme_files = os.listdir(self.__theme_path)
             theme_files.remove('templates')
-            theme_files = [os.path.join(self.__theme_path, dir_) for dir_ in
-                           theme_files]
+            for file_ in theme_files:
+                src = os.path.join(self.__theme_path, file_)
+                dest = os.path.basename(src)
+                res.append((src, dest))
 
-            res.extend(theme_files)
+        for script_path in self.all_scripts:
+            dest = os.path.join('js', os.path.basename(script_path))
+            res.append((script_path, dest))
 
         return res
-
-    def _copy_extra_files(self):
-        Formatter._copy_extra_files(self)
-
-        js_path = os.path.join(self.doc_tool.output, 'assets', 'js')
-        if not os.path.exists(js_path):
-            os.mkdir(js_path)
-
-        for script in self.all_scripts:
-            dest = os.path.join(js_path, os.path.basename(script))
-            shutil.copy(script, dest)
