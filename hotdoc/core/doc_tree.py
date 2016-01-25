@@ -181,6 +181,24 @@ class Page(object):
                 'is_stale': False,  # At pickle time, assume non-staleness
                 'mtime': self.mtime}
 
+    def get_short_description(self):
+        """
+        Returns a string suitable for displaying as a summary, for example
+        in a different page.
+        Returns:
+            str: the short description.
+        """
+        return self.short_description or self.first_paragraph
+
+    def get_title(self):
+        """
+        Returns the preferred title to use when referring to that page
+        from another page.
+        Returns:
+            str: the preferred title
+        """
+        return self.title or self.first_header or self.link.title
+
     def add_symbol(self, unique_name):
         """Adds a symbol name to the ordered set of symbol names contained
         in this page.
@@ -254,24 +272,6 @@ class Page(object):
             if symbol.comment.title:
                 self.title = symbol.comment.title
 
-    def get_short_description(self):
-        """
-        Returns a string suitable for displaying as a summary, for example
-        in a different page.
-        Returns:
-            str: the short description.
-        """
-        return self.short_description or self.first_paragraph
-
-    def get_title(self):
-        """
-        Returns the preferred title to use when referring to that page
-        from another page.
-        Returns:
-            str: the preferred title
-        """
-        return self.title or self.first_header or self.link.title
-
 
 # pylint: disable=too-many-instance-attributes
 class PageParser(object):
@@ -286,18 +286,47 @@ class PageParser(object):
     """
 
     def __init__(self, doc_tool, doc_tree, prefix):
-        self.__prefix = prefix
         self.renaming_page_link_signal = Signal()
 
+        self.__prefix = prefix
         self.__cmp = CommonMark.Parser()
         self.__cmr = CommonMark.html.HtmlRenderer()
         self.__well_known_names = {}
         self.__doc_tree = doc_tree
         self.__doc_tool = doc_tool
+        self.__seen_pages = set({})
         self.__parsed_header_class = namedtuple('ParsedHeader',
                                                 ['ast_node',
                                                  'original_destination'])
-        self.__seen_pages = set({})
+
+    def parse(self, source_file, extension_name):
+        """
+        Given a source file and a possible extension name,
+        returns a parsed Page object. This function does not
+        parse subpages, they are instead listed in the subpages
+        attribute of the returned page.
+        Args:
+            source_file: str, path to the source file to parse
+            extension_name: str, name of the extension responsible
+                for this page. If None, the responsible entity is
+                the DocTool itself.
+        """
+        if not os.path.exists(source_file):
+            return None
+
+        with io.open(source_file, 'r', encoding='utf-8') as _:
+            contents = _.read()
+
+        ast = self.__cmp.parse(contents)
+        page = Page(source_file, ast, extension_name)
+
+        for _ in _get_children(ast):
+            if _.t == "List":
+                self.__parse_list_node(page, _)
+
+        self.__check_links(page, ast)
+
+        return page
 
     def register_well_known_name(self, wkn, callback):
         """
@@ -316,6 +345,65 @@ class PageParser(object):
                 name of the handling extension
         """
         self.__well_known_names[wkn] = callback
+
+    def render(self, page):
+        """Returns the formatted page contents.
+
+        Can only format to html for now.
+
+        Args:
+            page: hodoc.core.doc_tree.Page, the page which contents
+                have to be formatted.
+        """
+        self.__update_links(page.ast)
+        return self.__cmr.render(page.ast)
+
+    def rename_page_links(self, page):
+        """Prettifies the intra-documentation page links.
+
+        For example a link to a valid markdown page such as:
+
+        ``[my_other_page](my_other_page.markdown)``
+
+        will be updated to:
+
+        ``[My Other Page](my_other_page.markdown) - my potential short
+        description``
+
+        if my_other_page.markdown correctly exposes a custom title and
+        a short description.
+
+        Args:
+            page: hotdoc.core.doc_tree.Page, the page to rename navigational
+                links in.
+        """
+        for original_name, parsed_header in page.headers.items():
+            ast_node = parsed_header.ast_node
+            page = self.__doc_tree.get_page(parsed_header.original_destination)
+
+            if page.title is not None:
+                _set_label(self.__cmp, ast_node[0], page.title)
+            else:
+                replacements = self.renaming_page_link_signal(self,
+                                                              original_name)
+                try:
+                    rep = next(rep for rep in replacements if rep is not None)
+                    _set_label(self.__cmp, ast_node[0], rep)
+                except StopIteration:
+                    _set_label(self.__cmp, ast_node[0], original_name)
+
+            desc = page.get_short_description()
+            if desc:
+                first = True
+                for _ in _get_children(ast_node[0].parent):
+                    if not first:
+                        _.unlink()
+                    first = False
+
+                desc = self.__doc_tool.doc_parser.translate(desc)
+                new_desc = self.__cmp.parse(u' — %s' % desc.encode('utf-8'))
+                for _ in _get_children(new_desc.first_child):
+                    ast_node[0].parent.append_child(_)
 
     def __check_links(self, page, node, parent_node=None):
         if node.t == 'Link':
@@ -383,35 +471,6 @@ class PageParser(object):
             return True
         return False
 
-    def parse(self, source_file, extension_name):
-        """
-        Given a source file and a possible extension name,
-        returns a parsed Page object. This function does not
-        parse subpages, they are instead listed in the subpages
-        attribute of the returned page.
-        Args:
-            source_file: str, path to the source file to parse
-            extension_name: str, name of the extension responsible
-                for this page. If None, the responsible entity is
-                the DocTool itself.
-        """
-        if not os.path.exists(source_file):
-            return None
-
-        with io.open(source_file, 'r', encoding='utf-8') as _:
-            contents = _.read()
-
-        ast = self.__cmp.parse(contents)
-        page = Page(source_file, ast, extension_name)
-
-        for _ in _get_children(ast):
-            if _.t == "List":
-                self.__parse_list_node(page, _)
-
-        self.__check_links(page, ast)
-
-        return page
-
     def __update_links(self, node):
         if node.t == 'Link':
             if not hasattr(node, 'original_dest'):
@@ -428,64 +487,6 @@ class PageParser(object):
 
         for _ in _get_children(node):
             self.__update_links(_)
-
-    def render(self, page):
-        """Returns the formatted page contents.
-
-        Can only format to html for now.
-        Args:
-            page: hodoc.core.doc_tree.Page, the page which contents
-                have to be formatted.
-        """
-        self.__update_links(page.ast)
-        return self.__cmr.render(page.ast)
-
-    def rename_page_links(self, page):
-        """Prettifies the intra-documentation page links.
-
-        For example a link to a valid markdown page such as:
-
-        ``[my_other_page](my_other_page.markdown)``
-
-        will be updated to:
-
-        ``[My Other Page](my_other_page.markdown) - my potential short
-        description``
-
-        if my_other_page.markdown correctly exposes a custom title and
-        a short description.
-
-        Args:
-            page: hotdoc.core.doc_tree.Page, the page to rename navigational
-                links in.
-        """
-        for original_name, parsed_header in page.headers.items():
-            ast_node = parsed_header.ast_node
-            page = self.__doc_tree.get_page(parsed_header.original_destination)
-
-            if page.title is not None:
-                _set_label(self.__cmp, ast_node[0], page.title)
-            else:
-                replacements = self.renaming_page_link_signal(self,
-                                                              original_name)
-                try:
-                    rep = next(rep for rep in replacements if rep is not None)
-                    _set_label(self.__cmp, ast_node[0], rep)
-                except StopIteration:
-                    _set_label(self.__cmp, ast_node[0], original_name)
-
-            desc = page.get_short_description()
-            if desc:
-                first = True
-                for _ in _get_children(ast_node[0].parent):
-                    if not first:
-                        _.unlink()
-                    first = False
-
-                desc = self.__doc_tool.doc_parser.translate(desc)
-                new_desc = self.__cmp.parse(u' — %s' % desc.encode('utf-8'))
-                for _ in _get_children(new_desc.first_child):
-                    ast_node[0].parent.append_child(_)
 
 
 class DocTree(object):
@@ -534,84 +535,6 @@ class DocTree(object):
         doc_tool.symbol_updated_signal.connect(self.__symbol_updated)
         self.__doc_tool = doc_tool
 
-    def get_page(self, name):
-        """Getter to access DocTree's pages.
-
-        Args:
-            name: str, the full path to the source markdown file.
-
-        Returns:
-            hotdoc.core.doc_tree.Page: the page or None.
-        """
-        return self.pages.get(name)
-
-    def get_pages_for_symbol(self, unique_name):
-        """Getter to access all the pages where a symbol is contained.
-
-        Listing symbols in multiple pages is not very well tested yet,
-        and as such not recommended.
-
-        Args:
-            unique_name: str, the name of the symbol to lookup pages for.
-
-        Returns:
-            list of hotdoc.core.doc_tree.Page, that contain the symbol.
-        """
-        return self.__symbol_maps[unique_name]
-
-    def __add_to_symbol_map(self, page, unique_name):
-        self.__symbol_maps[unique_name][page.source_file] = page
-
-    def __symbol_has_moved(self, unique_name):
-        if not self.__doc_tool.incremental:
-            return False
-
-        return set(self.__symbol_maps[unique_name].keys()) !=\
-            set(self.__previous_symbol_maps[unique_name].keys())
-
-    def __symbol_added_to_page(self, page, unique_name):
-        self.__add_to_symbol_map(page, unique_name)
-
-    def __update_symbol_maps(self):
-        moved_symbols = set({})
-        for page in self.pages.values():
-            for name in page.symbol_names:
-                self.__add_to_symbol_map(page, name)
-                if self.__symbol_has_moved(name):
-                    moved_symbols.add(name)
-
-        Page.adding_symbol_signal.connect(self.__symbol_added_to_page)
-
-        return moved_symbols
-
-    def persist(self):
-        """
-        Persist the doc_tree to the doc_tool's private folder
-        """
-        pickle.dump(self.pages, open(self.__pages_path, 'wb'))
-        pickle.dump(self.__symbol_maps, open(self.__symbol_maps_path, 'wb'))
-
-    def __do_build_tree(self, source_file, extension_name):
-        page = None
-
-        if source_file in self.pages:
-            epage = self.pages[source_file]
-            if extension_name == epage.extension_name:
-                try:
-                    mtime = os.path.getmtime(source_file)
-                    if mtime == epage.mtime:
-                        page = epage
-                except OSError:
-                    page = epage
-
-        if not page:
-            page = self.page_parser.parse(source_file, extension_name)
-
-        self.pages[source_file] = page
-
-        for subpage, extension_name in page.subpages.items():
-            self.__do_build_tree(subpage, extension_name=extension_name)
-
     def build_tree(self, source_file, extension_name=None):
         """
         The main entry point, given a root source_file, this method
@@ -645,6 +568,84 @@ class DocTree(object):
         for pagename in page.subpages:
             cpage = self.pages[pagename]
             self.resolve_symbols(doc_tool, page=cpage)
+
+    def get_page(self, name):
+        """Getter to access DocTree's pages.
+
+        Args:
+            name: str, the full path to the source markdown file.
+
+        Returns:
+            hotdoc.core.doc_tree.Page: the page or None.
+        """
+        return self.pages.get(name)
+
+    def get_pages_for_symbol(self, unique_name):
+        """Getter to access all the pages where a symbol is contained.
+
+        Listing symbols in multiple pages is not very well tested yet,
+        and as such not recommended.
+
+        Args:
+            unique_name: str, the name of the symbol to lookup pages for.
+
+        Returns:
+            list of hotdoc.core.doc_tree.Page, that contain the symbol.
+        """
+        return self.__symbol_maps[unique_name]
+
+    def persist(self):
+        """
+        Persist the doc_tree to the doc_tool's private folder
+        """
+        pickle.dump(self.pages, open(self.__pages_path, 'wb'))
+        pickle.dump(self.__symbol_maps, open(self.__symbol_maps_path, 'wb'))
+
+    def __add_to_symbol_map(self, page, unique_name):
+        self.__symbol_maps[unique_name][page.source_file] = page
+
+    def __symbol_has_moved(self, unique_name):
+        if not self.__doc_tool.incremental:
+            return False
+
+        return set(self.__symbol_maps[unique_name].keys()) !=\
+            set(self.__previous_symbol_maps[unique_name].keys())
+
+    def __symbol_added_to_page(self, page, unique_name):
+        self.__add_to_symbol_map(page, unique_name)
+
+    def __update_symbol_maps(self):
+        moved_symbols = set({})
+        for page in self.pages.values():
+            for name in page.symbol_names:
+                self.__add_to_symbol_map(page, name)
+                if self.__symbol_has_moved(name):
+                    moved_symbols.add(name)
+
+        Page.adding_symbol_signal.connect(self.__symbol_added_to_page)
+
+        return moved_symbols
+
+    def __do_build_tree(self, source_file, extension_name):
+        page = None
+
+        if source_file in self.pages:
+            epage = self.pages[source_file]
+            if extension_name == epage.extension_name:
+                try:
+                    mtime = os.path.getmtime(source_file)
+                    if mtime == epage.mtime:
+                        page = epage
+                except OSError:
+                    page = epage
+
+        if not page:
+            page = self.page_parser.parse(source_file, extension_name)
+
+        self.pages[source_file] = page
+
+        for subpage, extension_name in page.subpages.items():
+            self.__do_build_tree(subpage, extension_name=extension_name)
 
     def __stale_symbol_pages(self, symbol_name):
         pages = self.__symbol_maps.get(symbol_name, {})
