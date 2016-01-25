@@ -243,19 +243,23 @@ class Page(object):
             "Virtual Methods", [])
         self.typed_symbols[ClassSymbol] = typed_symbols_list("Classes", [])
 
+        new_syms = []
         for sym_name in self.symbol_names:
             sym = doc_tool.get_symbol(sym_name)
-            self.__query_extra_symbols(sym)
+            self.__query_extra_symbols(sym, new_syms)
 
-    def __query_extra_symbols(self, sym):
+        for sym in new_syms:
+            self.add_symbol(sym)
+
+    def __query_extra_symbols(self, sym, new_syms):
         if sym:
             self.__resolve_symbol(sym)
             new_symbols = sum(Page.resolving_symbol_signal(self, sym),
                               [])
 
             for symbol in new_symbols:
-                self.add_symbol(symbol.unique_name)
-                self.__query_extra_symbols(symbol)
+                new_syms.append(symbol)
+                self.__query_extra_symbols(symbol, new_syms)
 
     def __resolve_symbol(self, symbol):
         symbol.link.ref = "%s#%s" % (self.link.ref, symbol.unique_name)
@@ -393,7 +397,7 @@ class PageParser(object):
                     _set_label(self.__cmp, ast_node[0], original_name)
 
             desc = page.get_short_description()
-            if desc:
+            if desc and self.__doc_tool.doc_parser:
                 first = True
                 for _ in _get_children(ast_node[0].parent):
                     if not first:
@@ -538,7 +542,7 @@ class DocTree(object):
     def build_tree(self, source_file, extension_name=None):
         """
         The main entry point, given a root source_file, this method
-        will construct (or updated) the complete doc_tree, including
+        will construct (or update) the complete doc_tree, including
         subtrees that may be provided by extensions.
 
         Args:
@@ -563,6 +567,7 @@ class DocTree(object):
                 new_page = self.page_parser.parse(page.source_file,
                                                   page.extension_name)
                 self.pages[page.source_file] = new_page
+                page = new_page
 
             page.resolve_symbols(doc_tool)
         for pagename in page.subpages:
