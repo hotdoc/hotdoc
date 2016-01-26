@@ -572,6 +572,7 @@ class DocTree(object):
         doc_tool.comment_updated_signal.connect(self.__comment_updated)
         doc_tool.symbol_updated_signal.connect(self.__symbol_updated)
         self.__doc_tool = doc_tool
+        self.__root = None
 
     def build_tree(self, source_file, extension_name=None):
         """
@@ -587,7 +588,8 @@ class DocTree(object):
         """
         self.__do_build_tree(source_file, extension_name)
         moved_symbols = self.__update_symbol_maps()
-        return self.pages[source_file], moved_symbols
+        self.__root = self.pages[source_file]
+        return self.__root, moved_symbols
 
     def resolve_symbols(self, doc_tool, page):
         """Will call resolve_symbols on all the stale subpages of the tree.
@@ -632,6 +634,26 @@ class DocTree(object):
             list of hotdoc.core.doc_tree.Page, that contain the symbol.
         """
         return self.__symbol_maps[unique_name]
+
+    def walk(self, parent=None):
+        """Generator that yields pages in infix order
+
+        Args:
+            parent: hotdoc.core.doc_tree.Page, optional, the page to start
+                traversal from. If None, defaults to the root of the doc_tree.
+
+        Yields:
+            hotdoc.core.doc_tree.Page: the next page
+        """
+        if parent is None:
+            yield self.__root
+            parent = self.__root
+
+        for cpage_name in parent.subpages:
+            cpage = self.pages[cpage_name]
+            yield cpage
+            for page in self.walk(parent=cpage):
+                yield page
 
     def persist(self):
         """
