@@ -57,9 +57,12 @@ class Formatter(object):
 
     def format_symbol(self, symbol):
         """
-        Banana banana
+        Format a symbols.Symbol
         """
-        self._format_symbols(symbol.get_children_symbols())
+        if not symbol:
+            return ''
+
+        self.__format_symbols(symbol.get_children_symbols())
 
         # We only need to resolve qualified symbols now because
         # they're referring to an actual type, not referred to.
@@ -79,7 +82,7 @@ class Formatter(object):
         if standalone:
             self.write_page(symbol)
 
-        return True
+        return symbol.detailed_description
 
     def format(self, page):
         """
@@ -88,7 +91,7 @@ class Formatter(object):
         self.__format_page(page)
         self.__copy_extra_files()
 
-    def _format_symbols(self, symbols):
+    def __format_symbols(self, symbols):
         for symbol in symbols:
             if symbol is None:
                 continue
@@ -102,7 +105,7 @@ class Formatter(object):
             self._prepare_page_attributes(page)
             Formatter.formatting_page_signal(self, page)
             self.doc_tool.update_doc_parser(page.extension_name)
-            self._format_symbols(page.symbols)
+            self.__format_symbols(page.symbols)
             self.doc_tool.doc_tree.page_parser.rename_page_links(page)
             page.detailed_description =\
                 self.doc_tool.formatter.format_page(page)[0]
