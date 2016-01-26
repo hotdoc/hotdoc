@@ -386,9 +386,12 @@ class HtmlFormatter(Formatter):
                                "members_list": members_list})
         return (out, False)
 
-    def _prepare_page_attributes(self, page):
+    def prepare_page_attributes(self, page):
+        """
+        Banana banana
+        """
         page.output_attrs['html']['scripts'] = set()
-        Formatter._prepare_page_attributes(self, page)
+        Formatter.prepare_page_attributes(self, page)
 
     def patch_page(self, page, symbol):
         raise NotImplementedError

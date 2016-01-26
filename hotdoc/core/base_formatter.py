@@ -62,7 +62,8 @@ class Formatter(object):
         if not symbol:
             return ''
 
-        self.__format_symbols(symbol.get_children_symbols())
+        for csym in symbol.get_children_symbols():
+            self.format_symbol(csym)
 
         # We only need to resolve qualified symbols now because
         # they're referring to an actual type, not referred to.
@@ -100,16 +101,7 @@ class Formatter(object):
     def __format_page(self, page):
         self.current_page = page
 
-        if page.is_stale:
-            page.reset_output_attributes()
-            self._prepare_page_attributes(page)
-            Formatter.formatting_page_signal(self, page)
-            self.doc_tool.update_doc_parser(page.extension_name)
-            self.__format_symbols(page.symbols)
-            self.doc_tool.doc_tree.page_parser.rename_page_links(page)
-            page.detailed_description =\
-                self.doc_tool.formatter.format_page(page)[0]
-            self.doc_tool.formatter.write_page(page)
+        page.format(self, self.doc_tool)
 
         for pagename in page.subpages:
             cpage = self.doc_tool.doc_tree.get_page(pagename)
@@ -215,5 +207,8 @@ class Formatter(object):
         return []
 
     # pylint: disable=no-self-use
-    def _prepare_page_attributes(self, page):
+    def prepare_page_attributes(self, page):
+        """
+        Banana banana
+        """
         pass

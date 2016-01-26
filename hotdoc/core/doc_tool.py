@@ -14,10 +14,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from hotdoc.core.alchemy_integration import Base
-from hotdoc.core.base_formatter import Formatter
 from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.comment_block import Comment, Tag
-from hotdoc.core.doc_tree import DocTree
+from hotdoc.core.doc_tree import DocTree, Page
 from hotdoc.core.gi_raw_parser import GtkDocRawCommentParser
 from hotdoc.core.links import LinkResolver, Link
 from hotdoc.core.symbols import Symbol
@@ -296,7 +295,7 @@ class DocTool(object):
         self.formatter.current_page.reference_map.add(link.id_)
         return None
 
-    def __formatting_page_cb(self, formatter, page):
+    def __formatting_page_cb(self, page, formatter):
         for link_id in page.reference_map:
             self.reference_map.get(link_id, set()).discard(page.source_file)
         page.reference_map = set()
@@ -325,7 +324,7 @@ class DocTool(object):
         self.__setup_folder(self.output)
         self.formatter = HtmlFormatter(self, [])
 
-        Formatter.formatting_page_signal.connect(self.__formatting_page_cb)
+        Page.formatting_signal.connect(self.__formatting_page_cb)
         Link.resolving_link_signal.connect(self.__link_referenced_cb)
         self.formatter.format(self.__root_page)
         self.__create_navigation_script(self.__root_page)

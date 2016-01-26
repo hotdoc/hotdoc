@@ -133,6 +133,7 @@ class Page(object):
 
     resolving_symbol_signal = Signal()
     adding_symbol_signal = Signal()
+    formatting_signal = Signal()
 
     def __init__(self, source_file, ast, extension_name):
         name = os.path.splitext(os.path.basename(source_file))[0]
@@ -155,6 +156,7 @@ class Page(object):
         self.typed_symbols = {}
         self.symbols = []
         self.formatted_contents = None
+        self.detailed_description = None
 
         try:
             self.mtime = os.path.getmtime(source_file)
@@ -174,6 +176,7 @@ class Page(object):
                 'output_attrs': None,
                 'extension_name': self.extension_name,
                 'ast': None,
+                'detailed_description': None,
                 'headers': {},
                 'typed_symbols': {},
                 'symbols': [],
@@ -260,6 +263,27 @@ class Page(object):
 
         for sym in new_syms:
             self.add_symbol(sym)
+
+    def format(self, formatter, doc_tool):
+        """
+        Banana banana
+        """
+        if self.is_stale:
+            self.reset_output_attributes()
+            formatter.prepare_page_attributes(self)
+            Page.formatting_signal(self, formatter)
+            doc_tool.update_doc_parser(self.extension_name)
+            self.__format_symbols(formatter)
+            doc_tool.doc_tree.page_parser.rename_page_links(self)
+            self.detailed_description =\
+                formatter.format_page(self)[0]
+            formatter.write_page(self)
+
+    def __format_symbols(self, formatter):
+        for symbol in self.symbols:
+            if symbol is None:
+                continue
+            symbol.skip = not formatter.format_symbol(symbol)
 
     def __query_extra_symbols(self, sym, new_syms):
         if sym:
