@@ -118,7 +118,7 @@ class GtkDocParser(object):
     A parser for the legacy gtk-doc format.
     """
 
-    def __init__(self, output_format, doc_tool=None):
+    def __init__(self, output_format):
         self.funcs = {
             'other': self.__format_other,
             'new_line': self.__format_other,
@@ -136,102 +136,101 @@ class GtkDocParser(object):
             'code_end': self.__format_code_end,
         }
 
-        self.doc_tool = doc_tool
         self.__output_format = output_format
         self.__doc_scanner = DocScanner()
 
     # pylint: disable=unused-argument
     # pylint: disable=no-self-use
-    def __format_other(self, match, props):
+    def __format_other(self, match, props, link_resolver):
         return match
 
-    def __format_property(self, match, props):
+    def __format_property(self, match, props, link_resolver):
         type_name = props['type_name']
         property_name = props['property_name']
 
-        if self.doc_tool is None:
+        if link_resolver is None:
             return u'[](%s:%s)' % (type_name, property_name)
 
         linkname = "%s:%s" % (type_name, property_name)
-        link = self.doc_tool.link_resolver.get_named_link(linkname)
+        link = link_resolver.get_named_link(linkname)
 
         if link:
             return u"[“%s”](%s)" % (link.title, link.get_link())
         else:
             return u"the %s's “%s” property" % (type_name, property_name)
 
-    def __format_signal(self, match, props):
+    def __format_signal(self, match, props, link_resolver):
         type_name = props['type_name']
         signal_name = props['signal_name']
-        if self.doc_tool is None:
+        if link_resolver is None:
             return u'[](%s::%s)' % (type_name, signal_name)
 
         linkname = "%s::%s" % (type_name, signal_name)
-        link = self.doc_tool.link_resolver.get_named_link(linkname)
+        link = link_resolver.get_named_link(linkname)
 
         if link:
             return u"[“%s”](%s)" % (link.title, link.get_link())
         else:
             return u"the %s's “%s” signal" % (type_name, signal_name)
 
-    def __format_type_name(self, match, props):
+    def __format_type_name(self, match, props, link_resolver):
         type_name = props['type_name']
 
         # It is assumed that when there is a name collision
         # between a struct and a class name, the link is to be made
         # to the class
 
-        if self.doc_tool is None:
+        if link_resolver is None:
             return u'[](%s)' % (type_name)
 
         class_name = '%s::%s' % (type_name, type_name)
-        link = self.doc_tool.link_resolver.get_named_link(class_name)
+        link = link_resolver.get_named_link(class_name)
 
         if link is None:
-            link = self.doc_tool.link_resolver.get_named_link(type_name)
+            link = link_resolver.get_named_link(type_name)
 
         if link:
             return "[%s](%s)" % (link.title, link.get_link())
         else:
             return match
 
-    def __format_enum_value(self, match, props):
+    def __format_enum_value(self, match, props, link_resolver):
         member_name = props['member_name']
 
-        if self.doc_tool is None:
+        if link_resolver is None:
             return '[](%s)' % member_name
 
-        link = self.doc_tool.link_resolver.get_named_link(member_name)
+        link = link_resolver.get_named_link(member_name)
 
         if link:
             return "[%s](%s)" % (link.title, link.get_link())
         else:
             return match
 
-    def __format_parameter(self, match, props):
+    def __format_parameter(self, match, props, link_resolver):
         param_name = props['param_name']
         return '_%s_' % param_name
 
-    def __format_function_call(self, match, props):
+    def __format_function_call(self, match, props, link_resolver):
         func_name = props['symbol_name']
-        if self.doc_tool is None:
+        if link_resolver is None:
             return '[](%s)' % func_name
 
-        link = self.doc_tool.link_resolver.get_named_link(func_name)
+        link = link_resolver.get_named_link(func_name)
 
         if link:
             return "[%s()](%s)" % (link.title, link.get_link())
         else:
             return match
 
-    def __format_code_start(self, match, props):
+    def __format_code_start(self, match, props, link_resolver):
         return "\n```\n"
 
     # pylint: disable=invalid-name
-    def __format_code_start_with_language(self, match, props):
+    def __format_code_start_with_language(self, match, props, link_resolver):
         return "\n```%s\n" % props["language_name"]
 
-    def __format_code_end(self, match, props):
+    def __format_code_end(self, match, props, link_resolver):
         return "\n```\n"
 
     def __md_to_html(self, md):
@@ -239,14 +238,14 @@ class GtkDocParser(object):
         rendered_text = cmarkpy.markdown_to_html(unicode(out))
         return rendered_text
 
-    def __legacy_to_md(self, text):
+    def __legacy_to_md(self, text, link_resolver):
         out = u''
 
         tokens = self.__doc_scanner.scan(text)
         in_code = False
         for tok in tokens:
             kind, match, props = tok
-            formatted = self.funcs[kind](match, props)
+            formatted = self.funcs[kind](match, props, link_resolver)
             if kind == "code_end":
                 in_code = False
             if in_code:
@@ -258,7 +257,7 @@ class GtkDocParser(object):
 
         return out
 
-    def translate(self, text):
+    def translate(self, text, link_resolver):
         """
         Given a gtk-doc comment string, returns the comment translated
         to the desired format.
@@ -270,7 +269,7 @@ class GtkDocParser(object):
 
         text = unescape(text)
 
-        out = self.__legacy_to_md(text)
+        out = self.__legacy_to_md(text, link_resolver)
 
         if self.__output_format == 'markdown':
             return out
@@ -283,6 +282,4 @@ if __name__ == "__main__":
     PARSER = GtkDocParser('html')
     with open(sys.argv[1], 'r') as f:
         CONTENTS = f.read()
-        print PARSER.translate(CONTENTS)
-
-    sys.exit(0)
+        print PARSER.translate(CONTENTS, None)

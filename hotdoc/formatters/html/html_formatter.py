@@ -110,8 +110,8 @@ class HtmlFormatter(Formatter):
         self.editing_server = doc_tool.editing_server
 
         self.all_scripts = set()
-        self._docstring_formatter = GtkDocParser('html', doc_tool)
-        self._standalone_doc_formatter = GtkDocParser('markdown', doc_tool)
+        self._docstring_formatter = GtkDocParser('html')
+        self._standalone_doc_formatter = GtkDocParser('markdown')
 
     def __parse_theme(self, searchpath):
         if not self.__theme_path:
@@ -310,11 +310,9 @@ class HtmlFormatter(Formatter):
         if not klass.comment:
             return ''
 
-        short_desc = self.format_docstring(klass.comment.short_description)
         template = self.engine.get_template('class_summary.html')
         return template.render({'symbol': klass,
-                                'klass': klass,
-                                'short_description': short_desc})
+                                'klass': klass})
 
     def _format_summary(self, toc_sections):
         template = self.engine.get_template('summary.html')
@@ -401,9 +399,6 @@ class HtmlFormatter(Formatter):
         raise NotImplementedError
 
     def format_page(self, page):
-        page.formatted_contents = self.doc_tool.doc_tree.page_parser.render(
-            page)
-
         toc_sections = []
         symbols_details = []
 

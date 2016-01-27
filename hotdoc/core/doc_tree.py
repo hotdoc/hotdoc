@@ -264,23 +264,23 @@ class Page(object):
         for sym in new_syms:
             self.add_symbol(sym)
 
-    def format(self, formatter):
+    def format(self, formatter, link_resolver):
         """
         Banana banana
         """
         self.reset_output_attributes()
         formatter.prepare_page_attributes(self)
         Page.formatting_signal(self, formatter)
-        self.__format_symbols(formatter)
+        self.__format_symbols(formatter, link_resolver)
         self.detailed_description =\
             formatter.format_page(self)[0]
         formatter.write_page(self)
 
-    def __format_symbols(self, formatter):
+    def __format_symbols(self, formatter, link_resolver):
         for symbol in self.symbols:
             if symbol is None:
                 continue
-            symbol.skip = not formatter.format_symbol(symbol)
+            symbol.skip = not formatter.format_symbol(symbol, link_resolver)
 
     def __query_extra_symbols(self, sym, new_syms):
         if sym:
@@ -320,7 +320,7 @@ class PageParser(object):
             listeners provide their own pretty title and summary.
     """
 
-    def __init__(self, doc_tool, doc_tree, prefix):
+    def __init__(self, doc_tree, prefix):
         self.renaming_page_link_signal = Signal()
 
         self.__prefix = prefix
@@ -328,7 +328,6 @@ class PageParser(object):
         self.__cmr = CommonMark.html.HtmlRenderer()
         self.__well_known_names = {}
         self.__doc_tree = doc_tree
-        self.__doc_tool = doc_tool
         self.__seen_pages = set({})
         self.__parsed_header_class = namedtuple('ParsedHeader',
                                                 ['ast_node',
@@ -381,7 +380,7 @@ class PageParser(object):
         """
         self.__well_known_names[wkn] = callback
 
-    def render(self, page):
+    def render(self, page, link_resolver):
         """Returns the formatted page contents.
 
         Can only format to html for now.
@@ -390,10 +389,10 @@ class PageParser(object):
             page: hodoc.core.doc_tree.Page, the page which contents
                 have to be formatted.
         """
-        self.__update_links(page.ast)
+        self.__update_links(page.ast, link_resolver)
         return self.__cmr.render(page.ast)
 
-    def rename_page_links(self, page, formatter):
+    def rename_page_links(self, page, formatter, link_resolver):
         """Prettifies the intra-documentation page links.
 
         For example a link to a valid markdown page such as:
@@ -435,7 +434,7 @@ class PageParser(object):
                         _.unlink()
                     first = False
 
-                desc = formatter.docstring_to_native(desc)
+                desc = formatter.docstring_to_native(desc, link_resolver)
                 if desc:
                     new_desc = self.__cmp.parse(u' — %s' %
                                                 desc.encode('utf-8'))
@@ -508,13 +507,13 @@ class PageParser(object):
             return True
         return False
 
-    def __update_links(self, node):
+    def __update_links(self, node, link_resolver):
         if node.t == 'Link':
             if not hasattr(node, 'original_dest'):
                 node.original_dest = node.destination
                 node.original_label = _get_label(node)
 
-            link = self.__doc_tool.link_resolver.get_named_link(
+            link = link_resolver.get_named_link(
                 node.original_dest)
             if link and not node.original_label:
                 _set_label(self.__cmp, node, link.title)
@@ -523,7 +522,7 @@ class PageParser(object):
                 node.destination = link.get_link()
 
         for _ in _get_children(node):
-            self.__update_links(_)
+            self.__update_links(_, link_resolver)
 
 
 class DocTree(object):
@@ -547,7 +546,7 @@ class DocTree(object):
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self, doc_tool, prefix):
-        self.page_parser = PageParser(doc_tool, self, prefix)
+        self.page_parser = PageParser(self, prefix)
 
         self.__pages_path = os.path.join(
             doc_tool.get_private_folder(), 'pages.p')

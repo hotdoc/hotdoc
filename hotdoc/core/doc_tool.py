@@ -329,7 +329,10 @@ class DocTool(object):
         for page in self.doc_tree.walk():
             self.__current_page = page
             extension = self.extensions[page.extension_name]
-            extension.format_page(page)
+            if page.is_stale:
+                page.formatted_contents = self.doc_tree.page_parser.render(
+                    page, self.link_resolver)
+            extension.format_page(page, self.link_resolver)
 
             if prev_extension and prev_extension != extension:
                 prev_extension.get_formatter('html').copy_extra_files()

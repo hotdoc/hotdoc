@@ -58,7 +58,7 @@ class Formatter(object):
         """
         return ''
 
-    def format_symbol(self, symbol):
+    def format_symbol(self, symbol, link_resolver):
         """
         Format a symbols.Symbol
         """
@@ -66,19 +66,20 @@ class Formatter(object):
             return ''
 
         for csym in symbol.get_children_symbols():
-            self.format_symbol(csym)
+            self.format_symbol(csym, link_resolver)
 
         # We only need to resolve qualified symbols now because
         # they're referring to an actual type, not referred to.
         if isinstance(symbol, QualifiedSymbol):
-            symbol.resolve_links(self.doc_tool.link_resolver)
+            symbol.resolve_links(link_resolver)
 
         res = self.formatting_symbol_signal(self, symbol)
 
         if False in res:
             return False
 
-        symbol.formatted_doc = self.format_comment(symbol.comment)
+        symbol.formatted_doc = self.format_comment(symbol.comment,
+                                                   link_resolver)
         out, standalone = self._format_symbol(symbol)
         symbol.detailed_description = out
 
@@ -117,7 +118,7 @@ class Formatter(object):
             out = page.detailed_description
             _.write(out.encode('utf-8'))
 
-    def format_docstring(self, docstring):
+    def format_docstring(self, docstring, link_resolver):
         """Formats a doc string.
 
         You don't need to unescape the docstring.
@@ -136,10 +137,11 @@ class Formatter(object):
             return ""
 
         docstring = unescape(docstring)
-        rendered_text = self._docstring_formatter.translate(docstring)
+        rendered_text = self._docstring_formatter.translate(docstring,
+                                                            link_resolver)
         return rendered_text
 
-    def docstring_to_native(self, docstring):
+    def docstring_to_native(self, docstring, link_resolver):
         """formats a doc string with the currently set doctool.doc_parser.
         """
         if not docstring:
@@ -149,7 +151,8 @@ class Formatter(object):
             return ""
 
         docstring = unescape(docstring)
-        rendered_text = self._standalone_doc_formatter.translate(docstring)
+        rendered_text = self._standalone_doc_formatter.translate(
+            docstring, link_resolver)
         return rendered_text
 
     def patch_page(self, page, symbol):
@@ -171,7 +174,7 @@ class Formatter(object):
         """
         raise NotImplementedError
 
-    def format_comment(self, comment):
+    def format_comment(self, comment, link_resolver):
         """Convenience function wrapping `format_docstring`.
 
         Args:
@@ -182,7 +185,8 @@ class Formatter(object):
             str: The comment formatted to the chosen format.
         """
         if comment:
-            return self.format_docstring(comment.description)
+            return self.format_docstring(comment.description,
+                                         link_resolver)
 
         return ''
 
