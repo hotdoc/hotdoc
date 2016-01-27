@@ -76,6 +76,7 @@ class DocTool(object):
         self.__comments = {}
         self.__symbols = {}
         self.__root_page = None
+        self.__current_page = None
         self.reference_map = defaultdict(set)
         self.tag_validators = {}
         self.raw_comment_parser = GtkDocRawCommentParser(self)
@@ -288,8 +289,8 @@ class DocTool(object):
 
     def __link_referenced_cb(self, link):
         self.reference_map[link.id_].add(
-            self.formatter.current_page.source_file)
-        self.formatter.current_page.reference_map.add(link.id_)
+            self.__current_page.source_file)
+        self.__current_page.reference_map.add(link.id_)
         return None
 
     def __formatting_page_cb(self, page, formatter):
@@ -301,9 +302,10 @@ class DocTool(object):
     def __create_navigation_script(self, root):
         # Wrapping this is in a javascript file to allow
         # circumventing stupid chrome same origin policy
-        site_navigation = self.formatter.format_site_navigation(root)
+        formatter = self.extensions['core'].get_formatter('html')
+        site_navigation = formatter.format_site_navigation(root)
         path = os.path.join(self.output,
-                            self.formatter.get_assets_path(),
+                            formatter.get_assets_path(),
                             'js',
                             'site_navigation.js')
         site_navigation = site_navigation.replace('\n', '')
@@ -319,11 +321,24 @@ class DocTool(object):
         Banana banana
         """
         self.__setup_folder(self.output)
-        self.formatter = HtmlFormatter(self, [])
 
         Page.formatting_signal.connect(self.__formatting_page_cb)
         Link.resolving_link_signal.connect(self.__link_referenced_cb)
-        self.formatter.format(self.__root_page)
+
+        prev_extension = None
+        for page in self.doc_tree.walk():
+            self.__current_page = page
+            extension = self.extensions[page.extension_name]
+            extension.format_page(page)
+
+            if prev_extension and prev_extension != extension:
+                prev_extension.get_formatter('html').copy_extra_files()
+
+            prev_extension = extension
+
+        if prev_extension:
+            prev_extension.get_formatter('html').copy_extra_files()
+
         self.__create_navigation_script(self.__root_page)
 
     def add_comment(self, comment):
@@ -533,7 +548,7 @@ class DocTool(object):
         self.__create_extensions(config)
 
         self.__root_page, moved_symbols = \
-            self.doc_tree.build_tree(self.index_file)
+            self.doc_tree.build_tree(self.index_file, 'core')
 
         for symbol_id in moved_symbols:
             referencing_pages = self.reference_map.get(symbol_id, set())

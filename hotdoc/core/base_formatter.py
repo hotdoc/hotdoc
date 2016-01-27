@@ -73,7 +73,7 @@ class Formatter(object):
         if isinstance(symbol, QualifiedSymbol):
             symbol.resolve_links(self.doc_tool.link_resolver)
 
-        res = self.formatting_symbol_signal(symbol)
+        res = self.formatting_symbol_signal(self, symbol)
 
         if False in res:
             return False
@@ -88,40 +88,10 @@ class Formatter(object):
 
         return symbol.detailed_description
 
-    def format(self, page):
+    def copy_extra_files(self):
         """
-        Formats a given page and its subpages
+        Banana banana
         """
-        self.__format_page(page)
-        self.__copy_extra_files()
-
-    def __format_symbols(self, symbols):
-        for symbol in symbols:
-            if symbol is None:
-                continue
-            symbol.skip = not self.format_symbol(symbol)
-
-    def __format_page(self, page):
-        self.current_page = page
-
-        if page.is_stale:
-            self.doc_tool.doc_tree.page_parser.rename_page_links(page, self)
-            page.format(self)
-
-        for pagename in page.subpages:
-            cpage = self.doc_tool.doc_tree.get_page(pagename)
-            formatter = self.doc_tool.get_formatter(cpage.extension_name)
-
-            # This is a bit funky, might be better to not have
-            # other code use doc_tool.formatter, but a provided one.
-            if formatter and formatter != self.doc_tool.formatter:
-                self.doc_tool.formatter = formatter
-                self.doc_tool.formatter.format(cpage)
-            else:
-                self.__format_page(cpage)
-            self.doc_tool.formatter = self
-
-    def __copy_extra_files(self):
         asset_path = self.doc_tool.get_assets_path()
         if not os.path.exists(asset_path):
             os.mkdir(asset_path)

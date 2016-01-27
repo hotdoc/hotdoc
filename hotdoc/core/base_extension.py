@@ -132,3 +132,13 @@ class BaseExtension(object):
         subtree.build_tree(self.__naive_path,
                            extension_name=self.EXTENSION_NAME)
         self.doc_tool.doc_tree.pages.update(subtree.pages)
+
+    def format_page(self, page):
+        """
+        Banana banana
+        """
+        formatter = self.get_formatter('html')
+        if page.is_stale:
+            self.doc_tool.doc_tree.page_parser.rename_page_links(page,
+                                                                 formatter)
+            page.format(formatter)
