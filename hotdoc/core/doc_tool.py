@@ -14,6 +14,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from hotdoc.core.alchemy_integration import Base
+from hotdoc.core.base_extension import BaseExtension
 from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.comment_block import Comment, Tag
 from hotdoc.core.doc_tree import DocTree, Page
@@ -41,6 +42,13 @@ Run hotdoc {subcommand} -h for more info
 """
 
 
+class CoreExtension(BaseExtension):
+    """
+    Banana banana
+    """
+    EXTENSION_NAME = 'core'
+
+
 class DocTool(object):
     """
     Banana banana
@@ -51,7 +59,6 @@ class DocTool(object):
         self.session = None
         self.output = None
         self.index_file = None
-        self.doc_parser = None
         self.engine = None
         self.wizard = None
         self.doc_tree = None
@@ -63,8 +70,9 @@ class DocTool(object):
         self.include_paths = None
         self.html_theme_path = None
         self.editing_server = None
-        self.extension_classes = {}
-        self.extensions = {}
+        self.extension_classes = {CoreExtension.EXTENSION_NAME: CoreExtension}
+        self.extensions = {CoreExtension.EXTENSION_NAME: CoreExtension(self,
+                                                                       [])}
         self.__comments = {}
         self.__symbols = {}
         self.__root_page = None
@@ -138,8 +146,6 @@ class DocTool(object):
         sym = self.get_symbol(symbol_name)
         if not sym:
             return None
-
-        self.update_doc_parser(page.extension_name)
 
         sym.update_children_comments()
         old_server = self.formatter.editing_server
@@ -259,15 +265,6 @@ class DocTool(object):
         if ext:
             return ext.get_formatter(self.output_format)
         return None
-
-    def update_doc_parser(self, extension_name):
-        """
-        Banana banana
-        """
-        ext = self.extensions.get(extension_name)
-        self.doc_parser = None
-        if ext:
-            self.doc_parser = ext.get_doc_parser()
 
     def setup(self, args):
         """

@@ -272,9 +272,8 @@ class Page(object):
             self.reset_output_attributes()
             formatter.prepare_page_attributes(self)
             Page.formatting_signal(self, formatter)
-            doc_tool.update_doc_parser(self.extension_name)
             self.__format_symbols(formatter)
-            doc_tool.doc_tree.page_parser.rename_page_links(self)
+            doc_tool.doc_tree.page_parser.rename_page_links(self, formatter)
             self.detailed_description =\
                 formatter.format_page(self)[0]
             formatter.write_page(self)
@@ -396,7 +395,7 @@ class PageParser(object):
         self.__update_links(page.ast)
         return self.__cmr.render(page.ast)
 
-    def rename_page_links(self, page):
+    def rename_page_links(self, page, formatter):
         """Prettifies the intra-documentation page links.
 
         For example a link to a valid markdown page such as:
@@ -431,17 +430,19 @@ class PageParser(object):
                     _set_label(self.__cmp, ast_node[0], original_name)
 
             desc = page.get_short_description()
-            if desc and self.__doc_tool.doc_parser:
+            if desc:
                 first = True
                 for _ in _get_children(ast_node[0].parent):
                     if not first:
                         _.unlink()
                     first = False
 
-                desc = self.__doc_tool.doc_parser.translate(desc)
-                new_desc = self.__cmp.parse(u' — %s' % desc.encode('utf-8'))
-                for _ in _get_children(new_desc.first_child):
-                    ast_node[0].parent.append_child(_)
+                desc = formatter.docstring_to_native(desc)
+                if desc:
+                    new_desc = self.__cmp.parse(u' — %s' %
+                                                desc.encode('utf-8'))
+                    for _ in _get_children(new_desc.first_child):
+                        ast_node[0].parent.append_child(_)
 
     def __check_links(self, page, node, parent_node=None):
         if node.t == 'Link':

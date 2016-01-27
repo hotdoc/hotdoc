@@ -21,6 +21,7 @@ from hotdoc.core.symbols import\
      VFunctionSymbol, ClassSymbol)
 
 from hotdoc.core.base_formatter import Formatter, _create_hierarchy_graph
+from hotdoc.core.gtk_doc_parser import GtkDocParser
 from hotdoc.core.links import Link
 
 
@@ -47,6 +48,7 @@ class SymbolDescriptions(object):
         self.name = name
 
 
+# pylint: disable=too-many-instance-attributes
 class HtmlFormatter(Formatter):
     """
     Banana banana
@@ -108,6 +110,8 @@ class HtmlFormatter(Formatter):
         self.editing_server = doc_tool.editing_server
 
         self.all_scripts = set()
+        self._docstring_formatter = GtkDocParser('html', doc_tool)
+        self._standalone_doc_formatter = GtkDocParser('markdown', doc_tool)
 
     def __parse_theme(self, searchpath):
         if not self.__theme_path:

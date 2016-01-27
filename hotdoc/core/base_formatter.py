@@ -48,6 +48,9 @@ class Formatter(object):
         self.formatting_symbol_signal = Signal()
         self.current_page = None
 
+        self._docstring_formatter = None
+        self._standalone_doc_formatter = None
+
     # pylint: disable=no-self-use
     def get_assets_path(self):
         """
@@ -142,27 +145,39 @@ class Formatter(object):
             out = page.detailed_description
             _.write(out.encode('utf-8'))
 
-    def format_docstring(self, docstring, format_='html'):
-        """Formats a doc string with the currently set DocTool.doc_parser.
+    def format_docstring(self, docstring):
+        """Formats a doc string.
 
         You don't need to unescape the docstring.
 
-        See `DocTool.update_doc_parser` for more information.
-
         Args:
             docstring: str, the code documentation string to format.
-                Can be None, in which case the empty string will be returned.
-            format_: str, the format to format to, currently only
-                html is supported.
+                Can be none, in which case the empty string will be returned.
 
         Returns:
-            str: The docstring formatted to the chosen format.
+            str: the formatted docstring.
         """
         if not docstring:
             return ""
 
+        if not self._docstring_formatter:
+            return ""
+
         docstring = unescape(docstring)
-        rendered_text = self.doc_tool.doc_parser.translate(docstring, format_)
+        rendered_text = self._docstring_formatter.translate(docstring)
+        return rendered_text
+
+    def docstring_to_native(self, docstring):
+        """formats a doc string with the currently set doctool.doc_parser.
+        """
+        if not docstring:
+            return ""
+
+        if not self._standalone_doc_formatter:
+            return ""
+
+        docstring = unescape(docstring)
+        rendered_text = self._standalone_doc_formatter.translate(docstring)
         return rendered_text
 
     def patch_page(self, page, symbol):
@@ -184,21 +199,18 @@ class Formatter(object):
         """
         raise NotImplementedError
 
-    def format_comment(self, comment, format_='html'):
+    def format_comment(self, comment):
         """Convenience function wrapping `format_docstring`.
 
         Args:
             comment: hotdoc.core.comment_block.Comment, the code comment
             to format.
                 Can be None, in which case the empty string will be returned.
-            format_: str, the format to format to, currently only
-                html is supported.
-
         Returns:
             str: The comment formatted to the chosen format.
         """
         if comment:
-            return self.format_docstring(comment.description, format_)
+            return self.format_docstring(comment.description)
 
         return ''
 

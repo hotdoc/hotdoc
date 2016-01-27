@@ -6,7 +6,6 @@ import os
 
 from collections import defaultdict
 
-from hotdoc.core.gtk_doc_parser import GtkDocParser
 from hotdoc.core.doc_tree import DocTree
 from hotdoc.formatters.html.html_formatter import HtmlFormatter
 from hotdoc.utils.utils import OrderedSet
@@ -33,7 +32,6 @@ class BaseExtension(object):
     def __init__(self, doc_tool, args):
         self.doc_tool = doc_tool
         self._formatters = {"html": HtmlFormatter(doc_tool, [])}
-        self._doc_parser = GtkDocParser(doc_tool)
         self.stale_source_files = []
         self.created_symbols = defaultdict(OrderedSet)
         self.__naive_path = None
@@ -45,12 +43,6 @@ class BaseExtension(object):
         arguments from the command line.
         """
         pass
-
-    def get_doc_parser(self):
-        """
-        Banana banana
-        """
-        return self._doc_parser
 
     def get_formatter(self, output_format):
         """
