@@ -264,19 +264,17 @@ class Page(object):
         for sym in new_syms:
             self.add_symbol(sym)
 
-    def format(self, formatter, doc_tool):
+    def format(self, formatter):
         """
         Banana banana
         """
-        if self.is_stale:
-            self.reset_output_attributes()
-            formatter.prepare_page_attributes(self)
-            Page.formatting_signal(self, formatter)
-            self.__format_symbols(formatter)
-            doc_tool.doc_tree.page_parser.rename_page_links(self, formatter)
-            self.detailed_description =\
-                formatter.format_page(self)[0]
-            formatter.write_page(self)
+        self.reset_output_attributes()
+        formatter.prepare_page_attributes(self)
+        Page.formatting_signal(self, formatter)
+        self.__format_symbols(formatter)
+        self.detailed_description =\
+            formatter.format_page(self)[0]
+        formatter.write_page(self)
 
     def __format_symbols(self, formatter):
         for symbol in self.symbols:

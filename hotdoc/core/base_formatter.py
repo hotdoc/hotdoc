@@ -104,7 +104,9 @@ class Formatter(object):
     def __format_page(self, page):
         self.current_page = page
 
-        page.format(self, self.doc_tool)
+        if page.is_stale:
+            self.doc_tool.doc_tree.page_parser.rename_page_links(page, self)
+            page.format(self)
 
         for pagename in page.subpages:
             cpage = self.doc_tool.doc_tree.get_page(pagename)
