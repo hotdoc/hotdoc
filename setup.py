@@ -1,4 +1,5 @@
 import os
+import errno
 import shutil
 import subprocess
 import tarfile
@@ -106,8 +107,12 @@ class LinkPreCommitHook(Command):
         pass
 
     def run(self):
-        symlink(os.path.join(source_dir, 'pre-commit'),
-                os.path.join(source_dir, '.git', 'hooks', 'pre-commit'))
+        try:
+            symlink(os.path.join(source_dir, 'pre-commit'),
+                    os.path.join(source_dir, '.git', 'hooks', 'pre-commit'))
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
 
 
 class CustomDevelop(develop):
