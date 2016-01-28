@@ -3,6 +3,7 @@ Setup file for hotdoc.
 """
 
 import os
+import errno
 import shutil
 import subprocess
 import tarfile
@@ -131,8 +132,9 @@ class LinkPreCommitHook(Command):
         try:
             symlink(os.path.join(SOURCE_DIR, 'pre-commit'),
                     os.path.join(SOURCE_DIR, '.git', 'hooks', 'pre-commit'))
-        except OSError:
-            pass
+        except OSError as error:
+            if error.errno != errno.EEXIST:
+                raise
 
 
 # pylint: disable=missing-docstring
