@@ -12,6 +12,7 @@ from collections import namedtuple
 from collections import defaultdict
 
 import CommonMark
+from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.links import Link
 from hotdoc.core.symbols import\
     (Symbol, FunctionSymbol, CallbackSymbol,
@@ -567,8 +568,8 @@ class DocTree(object):
         self.__symbol_maps = defaultdict(defaultdict)
 
         self.prefix = prefix
-        doc_tool.comment_updated_signal.connect(self.__comment_updated)
-        doc_tool.symbol_updated_signal.connect(self.__symbol_updated)
+        DocDatabase.comment_updated_signal.connect(self.__comment_updated)
+        DocDatabase.symbol_updated_signal.connect(self.__symbol_updated)
         self.__doc_tool = doc_tool
         self.__root = None
 
@@ -711,8 +712,10 @@ class DocTree(object):
         for page in pages.values():
             page.is_stale = True
 
-    def __comment_updated(self, comment):
+    # pylint: disable=unused-argument
+    def __comment_updated(self, doc_db, comment):
         self.__stale_symbol_pages(comment.name)
 
-    def __symbol_updated(self, symbol):
+    # pylint: disable=unused-argument
+    def __symbol_updated(self, doc_db, symbol):
         self.__stale_symbol_pages(symbol.unique_name)

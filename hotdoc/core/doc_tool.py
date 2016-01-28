@@ -10,20 +10,14 @@ import shutil
 import sys
 from collections import defaultdict
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from hotdoc.core.alchemy_integration import Base
 from hotdoc.core.base_extension import BaseExtension
 from hotdoc.core.change_tracker import ChangeTracker
-from hotdoc.core.comment_block import Comment, Tag
+from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.doc_tree import DocTree, Page
 from hotdoc.core.gi_raw_parser import GtkDocRawCommentParser
 from hotdoc.core.links import LinkResolver, Link
-from hotdoc.core.symbols import Symbol
 from hotdoc.core.wizard import HotdocWizard
 from hotdoc.formatters.html.html_formatter import HtmlFormatter
-from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.utils import get_all_extension_classes
 
 
@@ -56,10 +50,8 @@ class DocTool(object):
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self):
-        self.session = None
         self.output = None
         self.index_file = None
-        self.engine = None
         self.wizard = None
         self.doc_tree = None
         self.conf_file = None
@@ -73,8 +65,6 @@ class DocTool(object):
         self.extension_classes = {CoreExtension.EXTENSION_NAME: CoreExtension}
         self.extensions = {CoreExtension.EXTENSION_NAME: CoreExtension(self,
                                                                        [])}
-        self.__comments = {}
-        self.__symbols = {}
         self.__root_page = None
         self.__current_page = None
         self.reference_map = defaultdict(set)
@@ -82,8 +72,7 @@ class DocTool(object):
         self.raw_comment_parser = GtkDocRawCommentParser(self)
         self.link_resolver = LinkResolver(self)
         self.incremental = False
-        self.comment_updated_signal = Signal()
-        self.symbol_updated_signal = Signal()
+        self.doc_database = None
 
         if os.name == 'nt':
             self.datadir = os.path.join(
@@ -96,31 +85,7 @@ class DocTool(object):
         """
         Banana banana
         """
-        sym = self.__symbols.get(name)
-
-        if not self.incremental:
-            if sym:
-                sym.resolve_links(self.link_resolver)
-            return sym
-
-        if not sym:
-            sym = self.session.query(Symbol).filter(Symbol.unique_name ==
-                                                    name).first()
-
-        if sym:
-            # Faster look up next time around
-            self.__symbols[name] = sym
-            sym.resolve_links(self.link_resolver)
-        return sym
-
-    def __update_symbol_comment(self, comment):
-        self.session.query(Symbol).filter(
-            Symbol.unique_name ==
-            comment.name).update({'comment': comment})
-        esym = self.__symbols.get(comment.name)
-        if esym:
-            esym.comment = comment
-        self.comment_updated_signal(comment)
+        return self.doc_database.get_symbol(name, prefer_class)
 
     def register_tag_validator(self, validator):
         """
@@ -151,7 +116,7 @@ class DocTool(object):
         sym.update_children_comments()
         old_server = self.formatter.editing_server
         self.formatter.editing_server = None
-        self.formatter.format_symbol(sym)
+        self.formatter.format_symbol(sym, self.link_resolver)
         self.formatter.editing_server = old_server
 
         return sym.detailed_description
@@ -189,50 +154,11 @@ class DocTool(object):
         """
         Banana banana
         """
-        unique_name = kwargs.get('unique_name')
-        if not unique_name:
-            unique_name = kwargs.get('display_name')
-            kwargs['unique_name'] = unique_name
-
-        filename = kwargs.get('filename')
-        if filename:
-            kwargs['filename'] = os.path.abspath(filename)
-
-        if self.incremental:
-            symbol = self.session.query(type_).filter(
-                type_.unique_name == unique_name).first()
-        else:
-            symbol = None
-
-        if not symbol:
-            symbol = type_()
-            self.session.add(symbol)
-
-        for key, value in kwargs.items():
-            setattr(symbol, key, value)
-
-        if not symbol.comment:
-            symbol.comment = Comment(symbol.unique_name)
-            self.add_comment(symbol.comment)
-
-        symbol.resolve_links(self.link_resolver)
-
-        if self.incremental:
-            self.symbol_updated_signal(symbol)
-
-        self.__symbols[unique_name] = symbol
-
-        return symbol
+        return self.doc_database.get_or_create_symbol(type_, **kwargs)
 
     def __setup_database(self):
-        if self.session is not None:
-            return
-
-        db_path = os.path.join(self.get_private_folder(), 'hotdoc.db')
-        self.engine = create_engine('sqlite:///%s' % db_path)
-        self.session = sessionmaker(bind=self.engine)()
-        self.session.autoflush = False
-        Base.metadata.create_all(self.engine)
+        self.doc_database = DocDatabase(self.link_resolver)
+        self.doc_database.setup(self.get_private_folder())
 
     def __load_reference_map(self):
         try:
@@ -275,11 +201,11 @@ class DocTool(object):
 
         for extension in self.extensions.values():
             extension.setup()
-            self.session.flush()
+            self.doc_database.flush()
 
         self.doc_tree.resolve_symbols(self, self.__root_page)
 
-        self.session.flush()
+        self.doc_database.flush()
 
     def get_assets_path(self):
         """
@@ -348,25 +274,13 @@ class DocTool(object):
         """
         Banana banana
         """
-        self.__comments[comment.name] = comment
-        for validator in self.tag_validators.values():
-            if validator.default and validator.name not in comment.tags:
-                comment.tags[validator.name] = \
-                    Tag(name=validator.name,
-                        description=validator.default)
-        if self.incremental:
-            self.__update_symbol_comment(comment)
+        return self.doc_database.add_comment(comment)
 
     def get_comment(self, name):
         """
         Banana banana
         """
-        comment = self.__comments.get(name)
-        if not comment:
-            esym = self.get_symbol(name)
-            if esym:
-                comment = esym.comment
-        return comment
+        return self.doc_database.get_comment(name)
 
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-statements
@@ -537,9 +451,8 @@ class DocTool(object):
 
         self.__load_reference_map()
         self.__create_change_tracker()
-
         self.__setup_folder('hotdoc-private')
-
+        self.__setup_database()
         self.index_file = self.resolve_config_path(config.get('index'))
 
         if self.index_file is None:
@@ -562,14 +475,12 @@ class DocTool(object):
 
         self.change_tracker.add_hard_dependency(self.conf_file)
 
-        self.__setup_database()
-
     def persist(self):
         """
         Banana banana
         """
         self.doc_tree.persist()
-        self.session.commit()
+        self.doc_database.commit()
         self.change_tracker.track_core_dependencies()
         pickle.dump(self.change_tracker,
                     open(os.path.join(self.get_private_folder(),
@@ -585,4 +496,4 @@ class DocTool(object):
         for extension in self.extensions.values():
             extension.finalize()
         self.persist()
-        self.session.close()
+        self.doc_database.close()
