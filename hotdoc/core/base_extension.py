@@ -81,7 +81,7 @@ class BaseExtension(object):
         """
         Banana banana
         """
-        sym = self.doc_tool.get_or_create_symbol(*args, **kwargs)
+        sym = self.doc_tool.doc_database.get_or_create_symbol(*args, **kwargs)
 
         if sym:
             self.created_symbols[sym.filename].add(sym)
