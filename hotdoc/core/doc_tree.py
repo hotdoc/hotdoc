@@ -21,6 +21,7 @@ from hotdoc.core.symbols import\
      VFunctionSymbol, ClassSymbol)
 from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.utils import OrderedSet
+from hotdoc.core.file_includer import add_md_includes
 
 
 def _get_children(node, recursive=False):
@@ -321,7 +322,7 @@ class PageParser(object):
             listeners provide their own pretty title and summary.
     """
 
-    def __init__(self, doc_tree, prefix):
+    def __init__(self, doc_tree, prefix, include_paths):
         self.renaming_page_link_signal = Signal()
 
         self.__prefix = prefix
@@ -330,6 +331,7 @@ class PageParser(object):
         self.__well_known_names = {}
         self.__doc_tree = doc_tree
         self.__seen_pages = set({})
+        self.__include_paths = include_paths
         self.__parsed_header_class = namedtuple('ParsedHeader',
                                                 ['ast_node',
                                                  'original_destination'])
@@ -350,7 +352,8 @@ class PageParser(object):
             return None
 
         with io.open(source_file, 'r', encoding='utf-8') as _:
-            contents = _.read()
+            contents = add_md_includes(_.read(), source_file,
+                                       self.__include_paths, 0)
 
         ast = self.__cmp.parse(contents)
         page = Page(source_file, ast, extension_name)
@@ -547,7 +550,7 @@ class DocTree(object):
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self, doc_tool, prefix):
-        self.page_parser = PageParser(self, prefix)
+        self.page_parser = PageParser(self, prefix, doc_tool.include_paths)
 
         self.__pages_path = os.path.join(
             doc_tool.get_private_folder(), 'pages.p')

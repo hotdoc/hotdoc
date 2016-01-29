@@ -6,6 +6,7 @@ import re
 from itertools import izip_longest
 
 from hotdoc.core.comment_block import Comment, Annotation, Tag
+from hotdoc.core.file_includer import add_md_includes
 
 
 # http://stackoverflow.com/questions/434287/what-is-the-most-pythonic-way-to-iterate-over-a-list-in-chunks
@@ -210,7 +211,7 @@ class GtkDocRawCommentParser(object):
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
     def parse_comment(self, comment, filename, lineno, endlineno,
-                      stripped=False):
+                      include_paths, stripped=False):
         """
         Returns a Comment given a string
         """
@@ -220,10 +221,12 @@ class GtkDocRawCommentParser(object):
         if not self.__validate_c_comment(comment.strip()):
             return None
 
-        comment = unicode(comment.decode('utf8'))
         raw_comment = comment
         if not stripped:
             comment = self.__strip_comment(comment)
+
+        comment = add_md_includes(unicode(comment.decode('utf8')),
+                                  filename, include_paths, lineno)
 
         split = re.split(r'\n[\W]*\n', comment, maxsplit=1)
         block_name, parameters, annotations = \
