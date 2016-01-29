@@ -8,8 +8,10 @@ import json
 import os
 import shutil
 import sys
+import io
 from collections import defaultdict
 
+from hotdoc.core import file_includer
 from hotdoc.core.base_extension import BaseExtension
 from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.doc_database import DocDatabase
@@ -41,6 +43,14 @@ class CoreExtension(BaseExtension):
     Banana banana
     """
     EXTENSION_NAME = 'core'
+
+    def __init__(self, doc_tool, args):
+        super(CoreExtension, self).__init__(doc_tool, args)
+        file_includer.include_signal.connect(self.__include_file_cb)
+
+    # pylint: disable=no-self-use
+    def __include_file_cb(self, include_path):
+        return io.open(include_path, 'r', encoding='utf-8').read()
 
 
 class DocTool(object):
@@ -134,7 +144,8 @@ class DocTool(object):
             raw_comment,
             old_comment.filename,
             old_comment.lineno,
-            old_comment.lineno + raw_comment.count('\n'))
+            old_comment.lineno + raw_comment.count('\n'),
+            self.include_paths)
 
         if new_comment is None:
             return False
@@ -434,7 +445,8 @@ class DocTool(object):
 
         self.output = config.get('output')
         self.output_format = config.get('output_format')
-        self.include_paths = config.get('include_paths')
+        self.include_paths = [self.resolve_config_path(path) for path in
+                              config.get('include_paths')]
         self.html_theme_path = config.get('html_theme')
         self.git_repo_path = self.resolve_config_path(config.get('git_repo'))
         self.editing_server = config.get('editing_server')
