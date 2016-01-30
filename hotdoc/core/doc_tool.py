@@ -50,7 +50,8 @@ class CoreExtension(BaseExtension):
 
     # pylint: disable=no-self-use
     def __include_file_cb(self, include_path):
-        return io.open(include_path, 'r', encoding='utf-8').read()
+        with io.open(include_path, 'r', encoding='utf-8') as _:
+            return _.read()
 
 
 class DocTool(object):
