@@ -46,10 +46,10 @@ class CoreExtension(BaseExtension):
 
     def __init__(self, doc_tool, args):
         super(CoreExtension, self).__init__(doc_tool, args)
-        file_includer.include_signal.connect(self.__include_file_cb)
+        file_includer.include_signal.connect_after(self.__include_file_cb)
 
     # pylint: disable=no-self-use
-    def __include_file_cb(self, include_path):
+    def __include_file_cb(self, include_path, line_ranges, symbol):
         with io.open(include_path, 'r', encoding='utf-8') as _:
             return _.read()
 

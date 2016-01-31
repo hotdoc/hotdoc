@@ -22,6 +22,24 @@ def __find_included_file(filename, include_paths):
     return filename
 
 
+def __parse_include(include):
+    include = include.strip()
+    line_ranges_str = re.findall(r'\[(.+?):(.+?)\]', include)
+    line_ranges = []
+    for s, e in line_ranges_str:
+        line_ranges.append((int(s), int(e)))
+
+    include = re.sub(r'\[(.+?):(.+?)\]', "", include)
+    try:
+        symbol = re.findall(r'#(.+?)$', include)[0]
+    except IndexError:
+        symbol = None
+
+    include_filename = re.sub(r'#.*$', "", include)
+
+    return (include_filename, line_ranges, symbol)
+
+
 def add_md_includes(contents, source_file, include_paths, lineno=0):
     """
     Add includes from the @contents markdown and return the new patched content
@@ -34,10 +52,14 @@ def add_md_includes(contents, source_file, include_paths, lineno=0):
     """
     inclusions = set(re.findall('{{(.+?)}}', contents))
     for inclusion in inclusions:
-        include_filename = inclusion.strip()
+        include_filename, line_ranges, symbol = __parse_include(inclusion)
         include_path = __find_included_file(include_filename, include_paths)
         try:
-            included_content = include_signal(include_path.strip())[0]
+            for c in include_signal(include_path.strip(), line_ranges, symbol):
+                if c is not None:
+                    included_content = c
+                    break
+
             nincluded_content = included_content
             including = True
             while including:
