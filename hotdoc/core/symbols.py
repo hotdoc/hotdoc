@@ -28,6 +28,8 @@ class Symbol(Base):
     display_name = Column(String)
     filename = Column(String)
     lineno = Column(Integer)
+    extent_start = Column(Integer)
+    extent_end = Column(Integer)
     location = Column(PickleType)
     _type_ = Column(String)
     extension_contents = Column(MutableDict.as_mutable(PickleType))
