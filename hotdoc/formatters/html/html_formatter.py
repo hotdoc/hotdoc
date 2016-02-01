@@ -434,14 +434,14 @@ class HtmlFormatter(Formatter):
 
         return (out, True)
 
-    def format_site_navigation(self, root):
+    def format_site_navigation(self, root, doc_tree):
         """
         Banana banana
         """
         template = self.engine.get_template('site_navigation.html')
         if template:
             return template.render({'root': root,
-                                    'doc_tree': self.doc_tool.doc_tree})
+                                    'doc_tree': doc_tree})
         return None
 
     def _format_prototype(self, function, is_pointer, title):

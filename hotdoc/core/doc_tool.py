@@ -228,7 +228,7 @@ class DocTool(object):
         # Wrapping this is in a javascript file to allow
         # circumventing stupid chrome same origin policy
         formatter = self.extensions['core'].get_formatter('html')
-        site_navigation = formatter.format_site_navigation(root)
+        site_navigation = formatter.format_site_navigation(root, self.doc_tree)
         path = os.path.join(self.output,
                             formatter.get_assets_path(),
                             'js',
