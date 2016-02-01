@@ -211,7 +211,7 @@ class GtkDocRawCommentParser(object):
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
     def parse_comment(self, comment, filename, lineno, endlineno,
-                      include_paths, stripped=False):
+                      include_paths=None, stripped=False):
         """
         Returns a Comment given a string
         """

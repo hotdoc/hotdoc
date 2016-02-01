@@ -447,7 +447,7 @@ class DocTool(object):
         self.output = config.get('output')
         self.output_format = config.get('output_format')
         self.include_paths = [self.resolve_config_path(path) for path in
-                              config.get('include_paths')]
+                              config.get('include_paths', [])]
         self.html_theme_path = config.get('html_theme')
         self.git_repo_path = self.resolve_config_path(config.get('git_repo'))
         self.editing_server = config.get('editing_server')

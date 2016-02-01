@@ -40,7 +40,7 @@ def __parse_include(include):
     return (include_filename, line_ranges, symbol)
 
 
-def add_md_includes(contents, source_file, include_paths, lineno=0):
+def add_md_includes(contents, source_file, include_paths=None, lineno=0):
     """
     Add includes from the @contents markdown and return the new patched content
     Args:
@@ -50,6 +50,10 @@ def add_md_includes(contents, source_file, include_paths, lineno=0):
         lineo: int, The line number from which the content comes from in
             source_file
     """
+
+    if include_paths is None:
+        return contents
+
     inclusions = set(re.findall('{{(.+?)}}', contents))
     for inclusion in inclusions:
         include_filename, line_ranges, symbol = __parse_include(inclusion)
