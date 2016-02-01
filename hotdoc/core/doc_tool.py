@@ -91,13 +91,6 @@ class DocTool(object):
         else:
             self.datadir = "/usr/share"
 
-    # pylint: disable=unused-argument
-    def get_symbol(self, name, prefer_class=False):
-        """
-        Banana banana
-        """
-        return self.doc_database.get_symbol(name, prefer_class)
-
     def register_tag_validator(self, validator):
         """
         Banana banana
@@ -120,7 +113,7 @@ class DocTool(object):
         else:
             self.formatter = self.get_formatter(page.extension_name)
 
-        sym = self.get_symbol(symbol_name)
+        sym = self.doc_database.get_symbol(symbol_name)
         if not sym:
             return None
 
@@ -161,12 +154,6 @@ class DocTool(object):
             formatter.patch_page(page, symbol)
 
         return True
-
-    def get_or_create_symbol(self, type_, **kwargs):
-        """
-        Banana banana
-        """
-        return self.doc_database.get_or_create_symbol(type_, **kwargs)
 
     def __setup_database(self):
         self.doc_database = DocDatabase(self.link_resolver)
@@ -281,18 +268,6 @@ class DocTool(object):
             prev_extension.get_formatter('html').copy_extra_files()
 
         self.__create_navigation_script(self.__root_page)
-
-    def add_comment(self, comment):
-        """
-        Banana banana
-        """
-        return self.doc_database.add_comment(comment)
-
-    def get_comment(self, name):
-        """
-        Banana banana
-        """
-        return self.doc_database.get_comment(name)
 
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-statements

@@ -260,7 +260,7 @@ class Page(object):
 
         new_syms = []
         for sym_name in self.symbol_names:
-            sym = doc_tool.get_symbol(sym_name)
+            sym = doc_tool.doc_database.get_symbol(sym_name)
             self.__query_extra_symbols(sym, new_syms)
 
         for sym in new_syms:

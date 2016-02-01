@@ -65,11 +65,12 @@ class HotdocWizard(QuickStartWizard):
     Banana banana
     """
     # pylint: disable=no-member
-
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, *args, **kwargs):
         conf_path = kwargs.pop('conf_path', '')
         QuickStartWizard.__init__(self, *args, **kwargs)
         if self.parent == self:
+            self.doc_database = self
             self.comments = {}
             self.symbols = {}
             self.term_controller = TerminalController()
@@ -82,6 +83,7 @@ class HotdocWizard(QuickStartWizard):
         else:
             self.comments = self.parent.comments
             self.symbols = self.parent.symbols
+            self.doc_database = self.parent.doc_database
             self.term_controller = self.parent.term_controller
             self.git_interface = self.parent.git_interface
             self.conf_path = self.parent.conf_path
