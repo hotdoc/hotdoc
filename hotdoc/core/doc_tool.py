@@ -257,7 +257,7 @@ class DocTool(object):
             if page.is_stale:
                 page.formatted_contents = self.doc_tree.page_parser.render(
                     page, self.link_resolver)
-            extension.format_page(page, self.link_resolver)
+            extension.format_page(page, self.link_resolver, self.output)
 
             if prev_extension and prev_extension != extension:
                 prev_extension.get_formatter('html').copy_extra_files()

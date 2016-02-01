@@ -43,7 +43,6 @@ class Formatter(object):
 
     def __init__(self, doc_tool):
         self.doc_tool = doc_tool
-        self._output = doc_tool.output
 
         self.formatting_symbol_signal = Signal()
         self.current_page = None
@@ -80,12 +79,9 @@ class Formatter(object):
 
         symbol.formatted_doc = self.format_comment(symbol.comment,
                                                    link_resolver)
+        # pylint: disable=unused-variable
         out, standalone = self._format_symbol(symbol)
         symbol.detailed_description = out
-
-        # FIXME: figure out whether this approach is desirable
-        if standalone:
-            self.write_page(symbol)
 
         return symbol.detailed_description
 
@@ -109,11 +105,11 @@ class Formatter(object):
             elif os.path.isdir(src):
                 recursive_overwrite(src, dest)
 
-    def write_page(self, page):
+    def write_page(self, page, output):
         """
         Banana banana
         """
-        path = os.path.join(self._output, page.link.ref)
+        path = os.path.join(output, page.link.ref)
         with open(path, 'w') as _:
             out = page.detailed_description
             _.write(out.encode('utf-8'))

@@ -133,7 +133,7 @@ class BaseExtension(object):
                            extension_name=self.EXTENSION_NAME)
         self.doc_tool.doc_tree.pages.update(subtree.pages)
 
-    def format_page(self, page, link_resolver):
+    def format_page(self, page, link_resolver, output):
         """
         Banana banana
         """
@@ -142,4 +142,4 @@ class BaseExtension(object):
             self.doc_tool.doc_tree.page_parser.rename_page_links(page,
                                                                  formatter,
                                                                  link_resolver)
-            page.format(formatter, link_resolver)
+            page.format(formatter, link_resolver, output)

@@ -266,7 +266,7 @@ class Page(object):
         for sym in new_syms:
             self.add_symbol(sym)
 
-    def format(self, formatter, link_resolver):
+    def format(self, formatter, link_resolver, output):
         """
         Banana banana
         """
@@ -276,7 +276,7 @@ class Page(object):
         self.__format_symbols(formatter, link_resolver)
         self.detailed_description =\
             formatter.format_page(self)[0]
-        formatter.write_page(self)
+        formatter.write_page(self, output)
 
     def __format_symbols(self, formatter, link_resolver):
         for symbol in self.symbols:
