@@ -85,16 +85,15 @@ class Formatter(object):
 
         return symbol.detailed_description
 
-    def copy_extra_files(self):
+    def copy_extra_files(self, assets_path):
         """
         Banana banana
         """
-        asset_path = self.doc_tool.get_assets_path()
-        if not os.path.exists(asset_path):
-            os.mkdir(asset_path)
+        if not os.path.exists(assets_path):
+            os.mkdir(assets_path)
 
         for src, dest in self._get_extra_files():
-            dest = os.path.join(asset_path, dest)
+            dest = os.path.join(assets_path, dest)
 
             destdir = os.path.dirname(dest)
             if not os.path.exists(destdir):

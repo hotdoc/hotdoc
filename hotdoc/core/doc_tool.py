@@ -260,12 +260,14 @@ class DocTool(object):
             extension.format_page(page, self.link_resolver, self.output)
 
             if prev_extension and prev_extension != extension:
-                prev_extension.get_formatter('html').copy_extra_files()
+                prev_extension.get_formatter('html').copy_extra_files(
+                    self.get_assets_path())
 
             prev_extension = extension
 
         if prev_extension:
-            prev_extension.get_formatter('html').copy_extra_files()
+            prev_extension.get_formatter('html').copy_extra_files(
+                self.get_assets_path())
 
         self.__create_navigation_script(self.__root_page)
 
