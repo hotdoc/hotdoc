@@ -17,7 +17,6 @@ from hotdoc.core.base_formatter import Formatter
 from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.doc_tree import DocTree, Page
-from hotdoc.core.gi_raw_parser import GtkDocRawCommentParser
 from hotdoc.core.links import LinkResolver, Link
 from hotdoc.core.wizard import HotdocWizard
 from hotdoc.utils.utils import get_all_extension_classes, all_subclasses
@@ -77,7 +76,6 @@ class DocTool(object):
         self.__current_page = None
         self.reference_map = defaultdict(set)
         self.tag_validators = {}
-        self.raw_comment_parser = GtkDocRawCommentParser(self)
         self.link_resolver = None
         self.incremental = False
         self.doc_database = None
@@ -128,6 +126,7 @@ class DocTool(object):
             return False
 
         old_comment = symbol.comment
+        # pylint: disable=no-member
         new_comment = self.raw_comment_parser.parse_comment(
             raw_comment,
             old_comment.filename,
