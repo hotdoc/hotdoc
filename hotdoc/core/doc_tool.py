@@ -20,7 +20,6 @@ from hotdoc.core.doc_tree import DocTree, Page
 from hotdoc.core.gi_raw_parser import GtkDocRawCommentParser
 from hotdoc.core.links import LinkResolver, Link
 from hotdoc.core.wizard import HotdocWizard
-from hotdoc.formatters.html.html_formatter import HtmlFormatter
 from hotdoc.utils.utils import get_all_extension_classes, all_subclasses
 
 
@@ -106,10 +105,7 @@ class DocTool(object):
 
         page = pages.values()[0]
 
-        if page.extension_name is None:
-            self.formatter = HtmlFormatter(self, [])
-        else:
-            self.formatter = self.get_formatter(page.extension_name)
+        formatter = page.get_formatter(page.extension_name)
 
         sym = self.doc_database.get_symbol(symbol_name)
         if not sym:
@@ -118,7 +114,7 @@ class DocTool(object):
         sym.update_children_comments()
         old_server = Formatter.editing_server
         Formatter.editing_server = None
-        self.formatter.format_symbol(sym, self.link_resolver)
+        formatter.format_symbol(sym, self.link_resolver)
         Formatter.editing_server = old_server
 
         return sym.detailed_description
@@ -149,7 +145,7 @@ class DocTool(object):
         symbol.comment = new_comment
         for page in pages:
             formatter = self.get_formatter(page.extension_name)
-            formatter.patch_page(page, symbol)
+            formatter.patch_page(page, symbol, self.output)
 
         return True
 

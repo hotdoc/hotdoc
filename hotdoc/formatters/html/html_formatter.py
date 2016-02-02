@@ -57,8 +57,8 @@ class HtmlFormatter(Formatter):
 
     theme_path = None
 
-    def __init__(self, doc_tool, searchpath):
-        Formatter.__init__(self, doc_tool)
+    def __init__(self, searchpath):
+        Formatter.__init__(self)
 
         self._symbol_formatters = {
             FunctionSymbol: self._format_function,

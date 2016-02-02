@@ -31,7 +31,7 @@ class BaseExtension(object):
 
     def __init__(self, doc_tool, config):
         self.doc_tool = doc_tool
-        self._formatters = {"html": HtmlFormatter(doc_tool, [])}
+        self._formatters = {"html": HtmlFormatter([])}
         self.stale_source_files = []
         self.created_symbols = defaultdict(OrderedSet)
         self.__naive_path = None

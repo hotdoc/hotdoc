@@ -42,9 +42,7 @@ class Formatter(object):
     formatting_page_signal = Signal()
     editing_server = None
 
-    def __init__(self, doc_tool):
-        self.doc_tool = doc_tool
-
+    def __init__(self):
         self.formatting_symbol_signal = Signal()
         self.current_page = None
 
