@@ -29,7 +29,7 @@ class BaseExtension(object):
     # pylint: disable=unused-argument
     EXTENSION_NAME = "base-extension"
 
-    def __init__(self, doc_tool, args):
+    def __init__(self, doc_tool, config):
         self.doc_tool = doc_tool
         self._formatters = {"html": HtmlFormatter(doc_tool, [])}
         self.stale_source_files = []

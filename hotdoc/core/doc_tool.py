@@ -13,6 +13,7 @@ from collections import defaultdict
 
 from hotdoc.core import file_includer
 from hotdoc.core.base_extension import BaseExtension
+from hotdoc.core.base_formatter import Formatter
 from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.doc_tree import DocTree, Page
@@ -20,7 +21,7 @@ from hotdoc.core.gi_raw_parser import GtkDocRawCommentParser
 from hotdoc.core.links import LinkResolver, Link
 from hotdoc.core.wizard import HotdocWizard
 from hotdoc.formatters.html.html_formatter import HtmlFormatter
-from hotdoc.utils.utils import get_all_extension_classes
+from hotdoc.utils.utils import get_all_extension_classes, all_subclasses
 
 
 class ConfigError(Exception):
@@ -71,11 +72,8 @@ class DocTool(object):
         self.change_tracker = None
         self.output_format = None
         self.include_paths = None
-        self.html_theme_path = None
-        self.editing_server = None
         self.extension_classes = {CoreExtension.EXTENSION_NAME: CoreExtension}
-        self.extensions = {CoreExtension.EXTENSION_NAME: CoreExtension(self,
-                                                                       [])}
+        self.extensions = {}
         self.__root_page = None
         self.__current_page = None
         self.reference_map = defaultdict(set)
@@ -118,10 +116,10 @@ class DocTool(object):
             return None
 
         sym.update_children_comments()
-        old_server = self.formatter.editing_server
-        self.formatter.editing_server = None
+        old_server = Formatter.editing_server
+        Formatter.editing_server = None
         self.formatter.format_symbol(sym, self.link_resolver)
-        self.formatter.editing_server = old_server
+        Formatter.editing_server = old_server
 
         return sym.detailed_description
 
@@ -310,6 +308,10 @@ class DocTool(object):
         self.wizard = wizard
 
         extension_classes = get_all_extension_classes(sort=True)
+        formatter_classes = all_subclasses(Formatter) + [Formatter]
+
+        for subclass in formatter_classes:
+            subclass.add_arguments(parser)
 
         for subclass in extension_classes:
             subclass.add_arguments(parser)
@@ -324,23 +326,18 @@ class DocTool(object):
         parser.add_argument("--output-format", action="store",
                             dest="output_format", help="format for the output",
                             default="html")
-        parser.add_argument("--html-theme", action="store",
-                            dest="html_theme", help="html theme to use",
-                            default='default',
-                            finalize_function=HotdocWizard.finalize_path)
         parser.add_argument("-", action="store_true", no_prompt=True,
                             help="Separator to allow finishing a list"
                             " of arguments before a command",
                             dest="whatever")
-        parser.add_argument("--editing-server", action="store",
-                            dest="editing_server", help="Editing server url,"
-                            " if provided, an edit button will be added")
 
         args = parser.parse_args(args)
         self.load_config(args, self.conf_file, wizard)
 
-        exit_now = False
+        for subclass in formatter_classes:
+            subclass.parse_config(wizard)
 
+        exit_now = False
         save_config = True
         if args.cmd == 'run':
             save_config = False
@@ -419,21 +416,11 @@ class DocTool(object):
         """
         Banana banana
         """
-        module_path = os.path.dirname(__file__)
-
         self.output = config.get('output')
         self.output_format = config.get('output_format')
         self.include_paths = [self.resolve_config_path(path) for path in
                               config.get('include_paths', [])]
-        self.html_theme_path = config.get('html_theme')
         self.git_repo_path = self.resolve_config_path(config.get('git_repo'))
-        self.editing_server = config.get('editing_server')
-
-        if self.html_theme_path == 'default':
-            default_theme_path = os.path.join(module_path, '..',
-                                              'default_theme')
-            default_theme_path = os.path.abspath(default_theme_path)
-            self.html_theme_path = default_theme_path
 
         if self.output_format not in ["html"]:
             raise ConfigError("Unsupported output format : %s" %

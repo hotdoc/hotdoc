@@ -23,6 +23,7 @@ from hotdoc.core.symbols import\
 from hotdoc.core.base_formatter import Formatter, _create_hierarchy_graph
 from hotdoc.core.gtk_doc_parser import GtkDocParser
 from hotdoc.core.links import Link
+from hotdoc.core.wizard import HotdocWizard
 
 
 # pylint: disable=too-few-public-methods
@@ -53,6 +54,8 @@ class HtmlFormatter(Formatter):
     """
     Banana banana
     """
+
+    theme_path = None
 
     def __init__(self, doc_tool, searchpath):
         Formatter.__init__(self, doc_tool)
@@ -98,8 +101,8 @@ class HtmlFormatter(Formatter):
 
         module_path = os.path.dirname(__file__)
 
-        self.__theme_path = doc_tool.html_theme_path
-        self.__parse_theme(searchpath)
+        searchpath.insert(0, str(os.path.join(HtmlFormatter.theme_path,
+                                              'templates')))
 
         searchpath.append(os.path.join(module_path, "templates"))
         self.engine = Engine(
@@ -107,16 +110,9 @@ class HtmlFormatter(Formatter):
             extensions=[CoreExtension(), CodeExtension()]
         )
 
-        self.editing_server = doc_tool.editing_server
-
         self.all_scripts = set()
         self._docstring_formatter = GtkDocParser('html')
         self._standalone_doc_formatter = GtkDocParser('markdown')
-
-    def __parse_theme(self, searchpath):
-        if not self.__theme_path:
-            return
-        searchpath.insert(0, os.path.join(self.__theme_path, 'templates'))
 
     # pylint: disable=no-self-use
     def _get_extension(self):
@@ -349,12 +345,12 @@ class HtmlFormatter(Formatter):
         return (toc_section, symbol_descriptions)
 
     def _format_editing_link(self, symbol):
-        if not self.editing_server:
+        if not Formatter.editing_server:
             return None
 
         template = self.engine.get_template("editing_link.html")
         return template.render({"symbol": symbol,
-                                "editing_server": self.editing_server})
+                                "editing_server": Formatter.editing_server})
 
     def _format_struct(self, struct):
         raw_code = None
@@ -642,11 +638,11 @@ class HtmlFormatter(Formatter):
     def _get_extra_files(self):
         res = []
 
-        if self.__theme_path:
-            theme_files = os.listdir(self.__theme_path)
+        if HtmlFormatter.theme_path:
+            theme_files = os.listdir(HtmlFormatter.theme_path)
             theme_files.remove('templates')
             for file_ in theme_files:
-                src = os.path.join(self.__theme_path, file_)
+                src = os.path.join(HtmlFormatter.theme_path, file_)
                 dest = os.path.basename(src)
                 res.append((src, dest))
 
@@ -655,3 +651,35 @@ class HtmlFormatter(Formatter):
             res.append((script_path, dest))
 
         return res
+
+    @classmethod
+    def add_arguments(cls, parser):
+        """Banana banana
+        """
+        if cls != HtmlFormatter:
+            return
+
+        group = parser.add_argument_group(
+            'Html formatter', 'html formatter options')
+        group.add_argument("--html-theme", action="store",
+                           dest="html_theme", help="html theme to use",
+                           default='default',
+                           finalize_function=HotdocWizard.finalize_path)
+
+    @classmethod
+    def parse_config(cls, wizard):
+        """Banana banana
+        """
+        if cls != HtmlFormatter:
+            return
+
+        module_path = os.path.dirname(__file__)
+        html_theme = wizard.config.get('html_theme')
+        if html_theme == 'default':
+            default_theme = os.path.join(module_path, '..', '..',
+                                         'default_theme')
+            html_theme = os.path.abspath(default_theme)
+        else:
+            html_theme = wizard.resolve_config_path(html_theme)
+
+        HtmlFormatter.theme_path = html_theme

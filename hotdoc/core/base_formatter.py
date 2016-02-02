@@ -40,6 +40,7 @@ class Formatter(object):
     The base Formatter class
     """
     formatting_page_signal = Signal()
+    editing_server = None
 
     def __init__(self, doc_tool):
         self.doc_tool = doc_tool
@@ -195,3 +196,25 @@ class Formatter(object):
         Banana banana
         """
         pass
+
+    @classmethod
+    def add_arguments(cls, parser):
+        """Banana banana
+        """
+        if cls != Formatter:
+            return
+
+        group = parser.add_argument_group(
+            'Base formatter', 'base formatter options')
+        group.add_argument("--editing-server", action="store",
+                           dest="editing_server", help="Editing server url,"
+                           " if provided, an edit button will be added")
+
+    @classmethod
+    def parse_config(cls, wizard):
+        """Banana banana
+        """
+        if cls != Formatter:
+            return
+
+        Formatter.editing_server = wizard.config.get('editing_server')
