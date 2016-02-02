@@ -1,7 +1,7 @@
 """
 Banana banana
 """
-from hotdoc.core.alchemy_integration import MutableObject
+from hotdoc.utils.alchemy_integration import MutableObject
 from hotdoc.utils.simple_signals import Signal
 
 

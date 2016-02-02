@@ -9,10 +9,11 @@ future.
 
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, PickleType, String
 
-from hotdoc.core.alchemy_integration import (Base, MutableDict, MutableList,
-                                             MutableObject)
 from hotdoc.core.comment_block import comment_from_tag
 from hotdoc.core.links import Link
+
+from hotdoc.utils.alchemy_integration import (Base, MutableDict, MutableList,
+                                              MutableObject)
 
 
 class Symbol(Base):

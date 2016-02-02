@@ -6,10 +6,10 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from hotdoc.core.alchemy_integration import Base
 from hotdoc.core.comment_block import Comment
 from hotdoc.core.symbols import Symbol
 
+from hotdoc.utils.alchemy_integration import Base
 from hotdoc.utils.simple_signals import Signal
 
 
