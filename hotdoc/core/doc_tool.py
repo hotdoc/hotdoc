@@ -225,7 +225,7 @@ class DocTool(object):
         formatter = self.extensions['core'].get_formatter('html')
         site_navigation = formatter.format_site_navigation(root, self.doc_tree)
         path = os.path.join(self.output,
-                            formatter.get_assets_path(),
+                            'assets',
                             'js',
                             'site_navigation.js')
         site_navigation = site_navigation.replace('\n', '')
@@ -245,7 +245,6 @@ class DocTool(object):
         Page.formatting_signal.connect(self.__formatting_page_cb)
         Link.resolving_link_signal.connect(self.__link_referenced_cb)
 
-        prev_extension = None
         for page in self.doc_tree.walk():
             self.__current_page = page
             extension = self.extensions[page.extension_name]
@@ -253,16 +252,6 @@ class DocTool(object):
                 page.formatted_contents = self.doc_tree.page_parser.render(
                     page, self.link_resolver)
             extension.format_page(page, self.link_resolver, self.output)
-
-            if prev_extension and prev_extension != extension:
-                prev_extension.get_formatter('html').copy_extra_files(
-                    self.get_assets_path())
-
-            prev_extension = extension
-
-        if prev_extension:
-            prev_extension.get_formatter('html').copy_extra_files(
-                self.get_assets_path())
 
         self.__create_navigation_script(self.__root_page)
 

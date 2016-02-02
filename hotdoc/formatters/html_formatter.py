@@ -402,7 +402,7 @@ class HtmlFormatter(Formatter):
     def patch_page(self, page, symbol):
         raise NotImplementedError
 
-    def format_page(self, page):
+    def _format_page(self, page):
         toc_sections = []
         symbols_details = []
 
@@ -433,7 +433,7 @@ class HtmlFormatter(Formatter):
         out = template.render({'page': page,
                                'scripts': scripts_basenames,
                                'toc': toc,
-                               'assets_path': self.get_assets_path(),
+                               'assets_path': self._get_assets_path(),
                                'symbols_details': symbols_details})
 
         return (out, True)
@@ -637,11 +637,8 @@ class HtmlFormatter(Formatter):
         pagename = 'object_hierarchy.html'
         template = self.engine.get_template(pagename)
         res = template.render({'graph': contents,
-                               'assets_path': self.get_assets_path()})
+                               'assets_path': self._get_assets_path()})
         return (res, False)
-
-    def get_assets_path(self):
-        return 'assets'
 
     def _get_extra_files(self):
         res = []

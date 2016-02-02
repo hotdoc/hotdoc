@@ -40,15 +40,12 @@ class Formatter(object):
     formatting_symbol_signal = Signal()
     editing_server = None
 
-    def __init__(self):
-        self.current_page = None
-
     # pylint: disable=no-self-use
-    def get_assets_path(self):
+    def _get_assets_path(self):
         """
         Banana banana
         """
-        return ''
+        return 'assets'
 
     def format_symbol(self, symbol, link_resolver):
         """
@@ -73,10 +70,7 @@ class Formatter(object):
 
         return symbol.detailed_description
 
-    def copy_extra_files(self, assets_path):
-        """
-        Banana banana
-        """
+    def __copy_extra_files(self, assets_path):
         if not os.path.exists(assets_path):
             os.mkdir(assets_path)
 
@@ -100,6 +94,7 @@ class Formatter(object):
         with open(path, 'w') as _:
             out = page.detailed_description
             _.write(out.encode('utf-8'))
+        self.__copy_extra_files(os.path.join(output, 'assets'))
 
     def format_docstring(self, docstring, link_resolver, to_native=False):
         """Formats a doc string.
@@ -130,6 +125,12 @@ class Formatter(object):
         raise NotImplementedError
 
     def format_page(self, page):
+        """
+        Banana banana
+        """
+        return self._format_page(page)
+
+    def _format_page(self, page):
         """
         Banana banana
         """
