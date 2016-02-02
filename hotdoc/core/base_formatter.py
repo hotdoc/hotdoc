@@ -14,9 +14,6 @@ from hotdoc.utils.utils import recursive_overwrite
 
 
 def _create_hierarchy_graph(hierarchy):
-    """
-    Utility function
-    """
     # FIXME: handle multiple inheritance
     graph = pg.AGraph(directed=True, strict=True)
 
@@ -35,14 +32,15 @@ def _create_hierarchy_graph(hierarchy):
 
 
 class Formatter(object):
-    """
-    The base Formatter class
+    """Formats and writes `doc_tree.Page` s and `symbols.Symbol` s
+
+    Subclasses should implement the protected methods.
     """
     formatting_page_signal = Signal()
+    formatting_symbol_signal = Signal()
     editing_server = None
 
     def __init__(self):
-        self.formatting_symbol_signal = Signal()
         self.current_page = None
 
         self._docstring_formatter = None
@@ -65,7 +63,7 @@ class Formatter(object):
         for csym in symbol.get_children_symbols():
             self.format_symbol(csym, link_resolver)
 
-        res = self.formatting_symbol_signal(self, symbol)
+        res = Formatter.formatting_symbol_signal(self, symbol)
 
         if False in res:
             return False
