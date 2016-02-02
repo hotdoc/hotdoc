@@ -19,9 +19,7 @@ class DocDatabase(object):
     comment_updated_signal = Signal()
     symbol_updated_signal = Signal()
 
-    def __init__(self, link_resolver):
-        self.link_resolver = link_resolver
-
+    def __init__(self):
         self.__comments = {}
         self.__symbols = {}
         self.__incremental = False

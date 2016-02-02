@@ -49,10 +49,10 @@ class LinkResolver(object):
     """
     Banana banana
     """
-    def __init__(self, doc_tool):
+    def __init__(self, doc_database):
         self.__links = {}
         self.__external_links = {}
-        self.doc_tool = doc_tool
+        self.__doc_db = doc_database
 
     def get_named_link(self, name):
         """
@@ -61,7 +61,7 @@ class LinkResolver(object):
         if name in self.__links:
             return self.__links[name]
 
-        sym = self.doc_tool.doc_database.get_symbol(name)
+        sym = self.__doc_db.get_symbol(name)
         if sym and sym.link:
             self.__links[name] = sym.link
             return sym.link

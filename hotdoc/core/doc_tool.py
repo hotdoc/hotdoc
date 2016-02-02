@@ -78,7 +78,7 @@ class DocTool(object):
         self.reference_map = defaultdict(set)
         self.tag_validators = {}
         self.raw_comment_parser = GtkDocRawCommentParser(self)
-        self.link_resolver = LinkResolver(self)
+        self.link_resolver = None
         self.incremental = False
         self.doc_database = None
 
@@ -150,8 +150,9 @@ class DocTool(object):
         return True
 
     def __setup_database(self):
-        self.doc_database = DocDatabase(self.link_resolver)
+        self.doc_database = DocDatabase()
         self.doc_database.setup(self.get_private_folder())
+        self.link_resolver = LinkResolver(self.doc_database)
 
     def __load_reference_map(self):
         try:
