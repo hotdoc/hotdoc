@@ -104,19 +104,26 @@ class HtmlFormatter(Formatter):
         searchpath.insert(0, str(os.path.join(HtmlFormatter.theme_path,
                                               'templates')))
 
-        searchpath.append(os.path.join(module_path, "templates"))
+        searchpath.append(os.path.join(module_path, "html_templates"))
         self.engine = Engine(
             loader=FileLoader(searchpath, encoding='UTF-8'),
             extensions=[CoreExtension(), CodeExtension()]
         )
 
         self.all_scripts = set()
-        self._docstring_formatter = GtkDocParser('html')
-        self._standalone_doc_formatter = GtkDocParser('markdown')
+        self.__docstring_formatter = GtkDocParser()
 
     # pylint: disable=no-self-use
     def _get_extension(self):
         return "html"
+
+    def _format_docstring(self, docstring, link_resolver, to_native):
+        if to_native:
+            format_ = 'markdown'
+        else:
+            format_ = 'html'
+        return self.__docstring_formatter.translate(
+            docstring, link_resolver, format_)
 
     def _format_link(self, link, title):
         out = ''
@@ -676,7 +683,7 @@ class HtmlFormatter(Formatter):
         module_path = os.path.dirname(__file__)
         html_theme = wizard.config.get('html_theme')
         if html_theme == 'default':
-            default_theme = os.path.join(module_path, '..', '..',
+            default_theme = os.path.join(module_path, '..',
                                          'default_theme')
             html_theme = os.path.abspath(default_theme)
         else:

@@ -118,7 +118,7 @@ class GtkDocParser(object):
     A parser for the legacy gtk-doc format.
     """
 
-    def __init__(self, output_format):
+    def __init__(self):
         self.funcs = {
             'other': self.__format_other,
             'new_line': self.__format_other,
@@ -136,7 +136,6 @@ class GtkDocParser(object):
             'code_end': self.__format_code_end,
         }
 
-        self.__output_format = output_format
         self.__doc_scanner = DocScanner()
 
     # pylint: disable=unused-argument
@@ -257,7 +256,7 @@ class GtkDocParser(object):
 
         return out
 
-    def translate(self, text, link_resolver):
+    def translate(self, text, link_resolver, output_format):
         """
         Given a gtk-doc comment string, returns the comment translated
         to the desired format.
@@ -271,15 +270,15 @@ class GtkDocParser(object):
 
         out = self.__legacy_to_md(text, link_resolver)
 
-        if self.__output_format == 'markdown':
+        if output_format == 'markdown':
             return out
-        elif self.__output_format == 'html':
+        elif output_format == 'html':
             return self.__md_to_html(out)
 
-        raise Exception("Unrecognized format %s" % self.__output_format)
+        raise Exception("Unrecognized format %s" % output_format)
 
 if __name__ == "__main__":
-    PARSER = GtkDocParser('html')
+    PARSER = GtkDocParser()
     with open(sys.argv[1], 'r') as f:
         CONTENTS = f.read()
-        print PARSER.translate(CONTENTS, None)
+        print PARSER.translate(CONTENTS, None, 'html')

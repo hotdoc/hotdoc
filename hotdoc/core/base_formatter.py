@@ -43,9 +43,6 @@ class Formatter(object):
     def __init__(self):
         self.current_page = None
 
-        self._docstring_formatter = None
-        self._standalone_doc_formatter = None
-
     # pylint: disable=no-self-use
     def get_assets_path(self):
         """
@@ -104,7 +101,7 @@ class Formatter(object):
             out = page.detailed_description
             _.write(out.encode('utf-8'))
 
-    def format_docstring(self, docstring, link_resolver):
+    def format_docstring(self, docstring, link_resolver, to_native=False):
         """Formats a doc string.
 
         You don't need to unescape the docstring.
@@ -119,27 +116,11 @@ class Formatter(object):
         if not docstring:
             return ""
 
-        if not self._docstring_formatter:
-            return ""
-
         docstring = unescape(docstring)
-        rendered_text = self._docstring_formatter.translate(docstring,
-                                                            link_resolver)
-        return rendered_text
+        return self._format_docstring(docstring, link_resolver, to_native)
 
-    def docstring_to_native(self, docstring, link_resolver):
-        """formats a doc string with the currently set doctool.doc_parser.
-        """
-        if not docstring:
-            return ""
-
-        if not self._standalone_doc_formatter:
-            return ""
-
-        docstring = unescape(docstring)
-        rendered_text = self._standalone_doc_formatter.translate(
-            docstring, link_resolver)
-        return rendered_text
+    def _format_docstring(self, docstring, link_resolver, to_native):
+        raise NotImplementedError
 
     def patch_page(self, page, symbol):
         """

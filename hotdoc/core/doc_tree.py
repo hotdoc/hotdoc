@@ -439,7 +439,8 @@ class PageParser(object):
                         _.unlink()
                     first = False
 
-                desc = formatter.docstring_to_native(desc, link_resolver)
+                desc = formatter.format_docstring(desc, link_resolver,
+                                                  to_native=True)
                 if desc:
                     new_desc = self.__cmp.parse(u' — %s' %
                                                 desc.encode('utf-8'))

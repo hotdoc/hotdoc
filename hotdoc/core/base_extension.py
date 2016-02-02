@@ -7,7 +7,7 @@ import os
 from collections import defaultdict
 
 from hotdoc.core.doc_tree import DocTree
-from hotdoc.formatters.html.html_formatter import HtmlFormatter
+from hotdoc.formatters.html_formatter import HtmlFormatter
 from hotdoc.utils.utils import OrderedSet
 
 

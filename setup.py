@@ -205,7 +205,7 @@ setup(name='hotdoc',
                 'download_default_template': DownloadDefaultTemplate},
       scripts=['hotdoc/hotdoc'],
       package_data={
-          'hotdoc.formatters.html': ['templates/*', 'assets/*'],
+          'hotdoc.formatters': ['html_templates/*', 'html_assets/*'],
           'hotdoc': ['default_theme/templates/*',
                      'default_theme/js/*',
                      'default_theme/css/*',
