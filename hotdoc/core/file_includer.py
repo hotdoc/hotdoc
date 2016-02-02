@@ -10,16 +10,22 @@ from hotdoc.utils.simple_signals import Signal
 include_signal = Signal()
 
 
-def __find_included_file(filename, include_paths):
+def find_md_file(filename, include_paths):
+    """Banana banana
+    """
     if os.path.isabs(filename):
-        return filename
+        if os.path.exists(filename):
+            return filename
+        return None
 
     for include_path in include_paths:
         fpath = os.path.join(include_path, filename)
         if os.path.exists(fpath):
             return fpath
 
-    return filename
+    if os.path.exists(filename):
+        return filename
+    return None
 
 
 def __parse_include(include):
@@ -40,6 +46,7 @@ def __parse_include(include):
     return (include_filename, line_ranges, symbol)
 
 
+# pylint: disable=unused-argument
 def add_md_includes(contents, source_file, include_paths=None, lineno=0):
     """
     Add includes from the @contents markdown and return the new patched content
@@ -57,25 +64,24 @@ def add_md_includes(contents, source_file, include_paths=None, lineno=0):
     inclusions = set(re.findall('{{(.+?)}}', contents))
     for inclusion in inclusions:
         include_filename, line_ranges, symbol = __parse_include(inclusion)
-        include_path = __find_included_file(include_filename, include_paths)
-        try:
-            for c in include_signal(include_path.strip(), line_ranges, symbol):
-                if c is not None:
-                    included_content = c
-                    break
+        include_path = find_md_file(include_filename, include_paths)
 
-            nincluded_content = included_content
-            including = True
-            while including:
-                # Recurse in the included content
-                nincluded_content = add_md_includes(
-                    nincluded_content, include_path, include_paths, lineno)
-                including = (nincluded_content != included_content)
-                included_content = nincluded_content
-        except IOError as e:
-            raise type(e)("Could not include '%s' in %s - include line: '%s'"
-                          " (%s)" % (include_path, source_file,
-                                     lineno, e.message))
+        if include_path is None:
+            continue
+
+        for c in include_signal(include_path.strip(), line_ranges, symbol):
+            if c is not None:
+                included_content = c
+                break
+
+        nincluded_content = included_content
+        including = True
+        while including:
+            # Recurse in the included content
+            nincluded_content = add_md_includes(
+                nincluded_content, include_path, include_paths, lineno)
+            including = (nincluded_content != included_content)
+            included_content = nincluded_content
 
         contents = contents.replace('{{' + inclusion + '}}', included_content)
 
