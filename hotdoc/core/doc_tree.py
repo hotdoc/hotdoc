@@ -226,13 +226,11 @@ class Page(object):
         self.adding_symbol_signal(self, unique_name)
         self.symbol_names.add(unique_name)
 
-    def resolve_symbols(self, doc_tool):
+    def resolve_symbols(self, doc_database, link_resolver):
         """
         When this method is called, the page's symbol names are queried
-        from `doc_tool`, and added to lists of actual symbols, sorted
+        from `doc_database`, and added to lists of actual symbols, sorted
         by symbol class.
-        Args:
-            doc_tool: hotdoc.core.doc_tool.DocTool, the main doc_tool instance
         """
         typed_symbols_list = namedtuple(
             'TypedSymbolsList', ['name', 'symbols'])
@@ -260,8 +258,8 @@ class Page(object):
 
         new_syms = []
         for sym_name in self.symbol_names:
-            sym = doc_tool.doc_database.get_symbol(sym_name)
-            self.__query_extra_symbols(sym, new_syms, doc_tool.link_resolver)
+            sym = doc_database.get_symbol(sym_name)
+            self.__query_extra_symbols(sym, new_syms, link_resolver)
 
         for sym in new_syms:
             self.add_symbol(sym)
@@ -597,10 +595,9 @@ class DocTree(object):
         self.__root = self.pages[source_file]
         return self.__root, moved_symbols
 
-    def resolve_symbols(self, doc_tool, page):
+    def resolve_symbols(self, doc_database, link_resolver, page):
         """Will call resolve_symbols on all the stale subpages of the tree.
         Args:
-          doc_tool: hotdoc.core.doc_tool.DocTool, the main doc_tool instance
           page: hotdoc.core.doc_tree.Page, the page to resolve symbols in,
           will recurse on potential subpages.
         """
@@ -611,10 +608,10 @@ class DocTree(object):
                 self.pages[page.source_file] = new_page
                 page = new_page
 
-            page.resolve_symbols(doc_tool)
+            page.resolve_symbols(doc_database, link_resolver)
         for pagename in page.subpages:
             cpage = self.pages[pagename]
-            self.resolve_symbols(doc_tool, page=cpage)
+            self.resolve_symbols(doc_database, link_resolver, page=cpage)
 
     def get_page(self, name):
         """Getter to access DocTree's pages.
