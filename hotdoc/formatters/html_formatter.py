@@ -21,9 +21,10 @@ from hotdoc.core.symbols import\
      VFunctionSymbol, ClassSymbol)
 
 from hotdoc.core.base_formatter import Formatter, _create_hierarchy_graph
-from hotdoc.core.gtk_doc_parser import GtkDocParser
 from hotdoc.core.links import Link
 from hotdoc.core.wizard import HotdocWizard
+
+from hotdoc.parsers.gtk_doc_parser import GtkDocParser
 
 
 # pylint: disable=too-few-public-methods
