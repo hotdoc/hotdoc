@@ -435,7 +435,7 @@ class DocTool(object):
 
         self.include_paths.insert(0,
                                   os.path.dirname(self.index_file))
-        self.doc_tree = DocTree(self)
+        self.doc_tree = DocTree(self.include_paths, self.get_private_folder())
 
         self.__create_extensions(config)
 

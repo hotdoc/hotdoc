@@ -547,30 +547,26 @@ class DocTree(object):
     """
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, doc_tool):
-        self.page_parser = PageParser(self, doc_tool.include_paths)
+    def __init__(self, include_paths, private_folder):
+        self.page_parser = PageParser(self, include_paths)
 
-        self.__pages_path = os.path.join(
-            doc_tool.get_private_folder(), 'pages.p')
-        self.__symbol_maps_path = os.path.join(doc_tool.get_private_folder(),
+        self.__pages_path = os.path.join(private_folder, 'pages.p')
+        self.__symbol_maps_path = os.path.join(private_folder,
                                                'symbol_maps.p')
+
+        self.__incremental = True
 
         try:
             self.pages = pickle.load(open(self.__pages_path, 'rb'))
-        except IOError:
-            self.pages = {}
-
-        try:
             self.__previous_symbol_maps = pickle.load(
                 open(self.__symbol_maps_path, 'rb'))
         except IOError:
-            self.__previous_symbol_maps = defaultdict(defaultdict)
-
-        self.__symbol_maps = defaultdict(defaultdict)
+            self.__symbol_maps = defaultdict(defaultdict)
+            self.pages = {}
+            self.__incremental = False
 
         DocDatabase.comment_updated_signal.connect(self.__comment_updated)
         DocDatabase.symbol_updated_signal.connect(self.__symbol_updated)
-        self.__doc_tool = doc_tool
         self.__root = None
 
     def build_tree(self, source_file, extension_name=None):
@@ -655,7 +651,7 @@ class DocTree(object):
 
     def persist(self):
         """
-        Persist the doc_tree to the doc_tool's private folder
+        Persist the doc_tree to hotdoc's private folder
         """
         pickle.dump(self.pages, open(self.__pages_path, 'wb'))
         pickle.dump(self.__symbol_maps, open(self.__symbol_maps_path, 'wb'))
@@ -664,7 +660,7 @@ class DocTree(object):
         self.__symbol_maps[unique_name][page.source_file] = page
 
     def __symbol_has_moved(self, unique_name):
-        if not self.__doc_tool.incremental:
+        if not self.__incremental:
             return False
 
         return set(self.__symbol_maps[unique_name].keys()) !=\
