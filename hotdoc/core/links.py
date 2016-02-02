@@ -62,7 +62,7 @@ class LinkResolver(object):
             return self.__links[name]
 
         sym = self.doc_tool.doc_database.get_symbol(name)
-        if sym:
+        if sym and sym.link:
             self.__links[name] = sym.link
             return sym.link
 
@@ -70,7 +70,6 @@ class LinkResolver(object):
             self.__links[name] = self.__external_links[name]
             return self.__links[name]
 
-        self.__links[name] = None
         return None
 
     def add_link(self, link):
@@ -99,5 +98,6 @@ class LinkResolver(object):
             if link.title is not None:
                 elink.title = link.title
             return elink
+
         self.add_link(link)
         return link

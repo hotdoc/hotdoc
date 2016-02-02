@@ -261,7 +261,7 @@ class Page(object):
         new_syms = []
         for sym_name in self.symbol_names:
             sym = doc_tool.doc_database.get_symbol(sym_name)
-            self.__query_extra_symbols(sym, new_syms)
+            self.__query_extra_symbols(sym, new_syms, doc_tool.link_resolver)
 
         for sym in new_syms:
             self.add_symbol(sym)
@@ -284,20 +284,24 @@ class Page(object):
                 continue
             symbol.skip = not formatter.format_symbol(symbol, link_resolver)
 
-    def __query_extra_symbols(self, sym, new_syms):
+    def __query_extra_symbols(self, sym, new_syms, link_resolver):
         if sym:
-            self.__resolve_symbol(sym)
             new_symbols = sum(Page.resolving_symbol_signal(self, sym),
                               [])
 
+            self.__resolve_symbol(sym, link_resolver)
+
             for symbol in new_symbols:
                 new_syms.append(symbol)
-                self.__query_extra_symbols(symbol, new_syms)
+                self.__query_extra_symbols(symbol, new_syms, link_resolver)
 
-    def __resolve_symbol(self, symbol):
+    def __resolve_symbol(self, symbol, link_resolver):
+        symbol.resolve_links(link_resolver)
+
         symbol.link.ref = "%s#%s" % (self.link.ref, symbol.unique_name)
-        for _ in symbol.get_extra_links():
-            _.ref = "%s#%s" % (self.link.ref, _.id_)
+
+        for link in symbol.get_extra_links():
+            link.ref = "%s#%s" % (self.link.ref, link.id_)
 
         tsl = self.typed_symbols[type(symbol)]
         tsl.symbols.append(symbol)

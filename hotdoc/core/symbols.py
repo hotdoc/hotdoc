@@ -115,6 +115,10 @@ class Symbol(Base):
                              self.unique_name)
         self.link = link_resolver.upsert_link(self.link, overwrite_ref=True)
 
+        for sym in self.get_children_symbols():
+            if sym:
+                sym.resolve_links(link_resolver)
+
 
 class QualifiedSymbol(MutableObject):
     """
@@ -168,8 +172,10 @@ class QualifiedSymbol(MutableObject):
         for tok in self.input_tokens:
             if isinstance(tok, Link):
                 self.type_link = link_resolver.get_named_link(tok.id_)
+
                 if not self.type_link:
                     self.type_link = link_resolver.upsert_link(tok)
+
                 self.type_tokens.append(self.type_link)
             else:
                 self.type_tokens.append(tok)

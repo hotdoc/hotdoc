@@ -1,16 +1,21 @@
+"""Banana banana
+"""
+
 import os
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from hotdoc.core.alchemy_integration import Base
-from hotdoc.core.comment_block import Comment, Tag
+from hotdoc.core.comment_block import Comment
 from hotdoc.core.symbols import Symbol
 
 from hotdoc.utils.simple_signals import Signal
 
 
 class DocDatabase(object):
+    """Banana banana
+    """
     comment_updated_signal = Signal()
     symbol_updated_signal = Signal()
 
@@ -28,13 +33,11 @@ class DocDatabase(object):
         Banana banana
         """
         self.__comments[comment.name] = comment
-        """
-        for validator in self.tag_validators.values():
-            if validator.default and validator.name not in comment.tags:
-                comment.tags[validator.name] = \
-                    Tag(name=validator.name,
-                        description=validator.default)
-        """
+        # for validator in self.tag_validators.values():
+        #    if validator.default and validator.name not in comment.tags:
+        #        comment.tags[validator.name] = \
+        #            Tag(name=validator.name,
+        #                description=validator.default)
         if self.__incremental:
             self.__update_symbol_comment(comment)
 
@@ -79,8 +82,6 @@ class DocDatabase(object):
             symbol.comment = Comment(symbol.unique_name)
             self.add_comment(symbol.comment)
 
-        symbol.resolve_links(self.link_resolver)
-
         if self.__incremental:
             self.symbol_updated_signal(self, symbol)
 
@@ -96,18 +97,15 @@ class DocDatabase(object):
         sym = self.__symbols.get(name)
 
         if not self.__incremental:
-            if sym:
-                sym.resolve_links(self.link_resolver)
             return sym
 
         if not sym:
             sym = self.__session.query(Symbol).filter(Symbol.unique_name ==
-                                                    name).first()
+                                                      name).first()
 
         if sym:
             # Faster look up next time around
             self.__symbols[name] = sym
-            sym.resolve_links(self.link_resolver)
         return sym
 
     def setup(self, db_folder):
@@ -142,6 +140,11 @@ class DocDatabase(object):
         """
         return self.__session
 
+    def close(self):
+        """Banana banana
+        """
+        self.__session.close()
+
     def __update_symbol_comment(self, comment):
         self.__session.query(Symbol).filter(
             Symbol.unique_name ==
@@ -150,6 +153,3 @@ class DocDatabase(object):
         if esym:
             esym.comment = comment
         self.comment_updated_signal(self, comment)
-
-    def close(self):
-        self.__session.close()

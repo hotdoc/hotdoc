@@ -9,7 +9,6 @@ import shutil
 from xml.sax.saxutils import unescape
 
 import pygraphviz as pg
-from hotdoc.core.symbols import QualifiedSymbol
 from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.utils import recursive_overwrite
 
@@ -65,11 +64,6 @@ class Formatter(object):
 
         for csym in symbol.get_children_symbols():
             self.format_symbol(csym, link_resolver)
-
-        # We only need to resolve qualified symbols now because
-        # they're referring to an actual type, not referred to.
-        if isinstance(symbol, QualifiedSymbol):
-            symbol.resolve_links(link_resolver)
 
         res = self.formatting_symbol_signal(self, symbol)
 
