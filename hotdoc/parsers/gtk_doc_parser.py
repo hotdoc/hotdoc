@@ -113,7 +113,7 @@ class DocScanner(object):
             yield ('other', text[pos:], None)
 
 
-class GtkDocParser(object):
+class GtkDocStringFormatter(object):
     """
     A parser for the legacy gtk-doc format.
     """
@@ -278,7 +278,7 @@ class GtkDocParser(object):
         raise Exception("Unrecognized format %s" % output_format)
 
 if __name__ == "__main__":
-    PARSER = GtkDocParser()
+    PARSER = GtkDocStringFormatter()
     with open(sys.argv[1], 'r') as f:
         CONTENTS = f.read()
         print PARSER.translate(CONTENTS, None, 'html')

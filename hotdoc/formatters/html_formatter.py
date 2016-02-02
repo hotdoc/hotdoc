@@ -24,7 +24,7 @@ from hotdoc.core.base_formatter import Formatter, _create_hierarchy_graph
 from hotdoc.core.links import Link
 from hotdoc.core.wizard import HotdocWizard
 
-from hotdoc.parsers.gtk_doc_parser import GtkDocParser
+from hotdoc.parsers.gtk_doc_parser import GtkDocStringFormatter
 
 
 # pylint: disable=too-few-public-methods
@@ -112,7 +112,7 @@ class HtmlFormatter(Formatter):
         )
 
         self.all_scripts = set()
-        self.__docstring_formatter = GtkDocParser()
+        self.__docstring_formatter = GtkDocStringFormatter()
 
     # pylint: disable=no-self-use
     def _get_extension(self):
