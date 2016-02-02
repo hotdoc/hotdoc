@@ -433,8 +433,9 @@ class DocTool(object):
         if self.index_file is None:
             raise ConfigError("'index' is required")
 
-        prefix = os.path.dirname(self.index_file)
-        self.doc_tree = DocTree(self, prefix)
+        self.include_paths.insert(0,
+                                  os.path.dirname(self.index_file))
+        self.doc_tree = DocTree(self)
 
         self.__create_extensions(config)
 

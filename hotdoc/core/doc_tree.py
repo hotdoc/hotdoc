@@ -21,7 +21,7 @@ from hotdoc.core.symbols import\
      VFunctionSymbol, ClassSymbol)
 from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.utils import OrderedSet
-from hotdoc.core.file_includer import add_md_includes
+from hotdoc.core.file_includer import add_md_includes, find_md_file
 
 
 def _get_children(node, recursive=False):
@@ -324,10 +324,9 @@ class PageParser(object):
             listeners provide their own pretty title and summary.
     """
 
-    def __init__(self, doc_tree, prefix, include_paths):
+    def __init__(self, doc_tree, include_paths):
         self.renaming_page_link_signal = Signal()
 
-        self.__prefix = prefix
         self.__cmp = CommonMark.Parser()
         self.__cmr = CommonMark.html.HtmlRenderer()
         self.__well_known_names = {}
@@ -450,9 +449,8 @@ class PageParser(object):
     def __check_links(self, page, node, parent_node=None):
         if node.t == 'Link':
             if node.destination:
-                path = os.path.join(self.__prefix, node.destination)
-                if not os.path.exists(path):
-                    path = None
+                path = find_md_file(node.destination,
+                                    self.__include_paths)
             else:
                 path = None
 
@@ -537,8 +535,6 @@ class DocTree(object):
     standalone markdown files that will form the sructure of
     the output documentation.
     Attributes:
-        prefix: str, the location where markdown source files are looked up
-            in. Will be deprecated soon, in favor of a more flexible approach.
         page_parser: hotdoc.core.doc_tree.PageParser, the parser used to
             interpret and translate documentation source files. Currently
             the only implementation is a CommonMark-py parser, but the
@@ -551,8 +547,8 @@ class DocTree(object):
     """
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, doc_tool, prefix):
-        self.page_parser = PageParser(self, prefix, doc_tool.include_paths)
+    def __init__(self, doc_tool):
+        self.page_parser = PageParser(self, doc_tool.include_paths)
 
         self.__pages_path = os.path.join(
             doc_tool.get_private_folder(), 'pages.p')
@@ -572,7 +568,6 @@ class DocTree(object):
 
         self.__symbol_maps = defaultdict(defaultdict)
 
-        self.prefix = prefix
         DocDatabase.comment_updated_signal.connect(self.__comment_updated)
         DocDatabase.symbol_updated_signal.connect(self.__symbol_updated)
         self.__doc_tool = doc_tool

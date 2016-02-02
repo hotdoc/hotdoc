@@ -54,7 +54,7 @@ def add_md_includes(contents, source_file, include_paths=None, lineno=0):
         contents: str, a markdown string
         source_file: str, the file from which @contents comes from
         include_paths: list, The list of include paths from the configuration
-        lineo: int, The line number from which the content comes from in
+        lineno: int, The line number from which the content comes from in
             source_file
     """
 
