@@ -60,19 +60,13 @@ class DocTool(object):
 
     def __init__(self):
         self.output = None
-        self.index_file = None
         self.wizard = None
         self.doc_tree = None
-        self.conf_file = None
-        self.formatter = None
         self.git_repo_path = None
         self.change_tracker = None
         self.output_format = None
         self.include_paths = None
-        self.extension_classes = {CoreExtension.EXTENSION_NAME: CoreExtension}
         self.extensions = {}
-        self.__root_page = None
-        self.__current_page = None
         self.tag_validators = {}
         self.link_resolver = None
         self.incremental = False
@@ -83,6 +77,12 @@ class DocTool(object):
                 os.path.dirname(__file__), '..', 'share')
         else:
             self.datadir = "/usr/share"
+
+        self.__conf_file = None
+        self.__extension_classes = {
+            CoreExtension.EXTENSION_NAME: CoreExtension}
+        self.__index_file = None
+        self.__root_page = None
 
     def register_tag_validator(self, validator):
         """
@@ -101,7 +101,7 @@ class DocTool(object):
 
         page = pages.values()[0]
 
-        formatter = page.get_formatter(page.extension_name)
+        formatter = self.__get_formatter(page.extension_name)
 
         sym = self.doc_database.get_symbol(symbol_name)
         if not sym:
@@ -141,7 +141,7 @@ class DocTool(object):
         pages = pages.values()
         symbol.comment = new_comment
         for page in pages:
-            formatter = self.get_formatter(page.extension_name)
+            formatter = self.__get_formatter(page.extension_name)
             formatter.patch_page(page, symbol, self.output)
 
         return True
@@ -167,7 +167,7 @@ class DocTool(object):
             shutil.rmtree(self.output, ignore_errors=True)
             self.change_tracker = ChangeTracker()
 
-    def get_formatter(self, extension_name):
+    def __get_formatter(self, extension_name):
         """
         Banana banana
         """
@@ -190,12 +190,6 @@ class DocTool(object):
                                       self.__root_page)
 
         self.doc_database.flush()
-
-    def get_assets_path(self):
-        """
-        Banana banana
-        """
-        return os.path.join(self.output, 'assets')
 
     def format(self):
         """
@@ -236,8 +230,8 @@ class DocTool(object):
 
         init_args = init_args[split_pos:]
         init_args = list(parser.parse_known_args(init_args))
-        self.conf_file = os.path.abspath(init_args[0].conf_file)
-        conf_path = os.path.dirname(self.conf_file)
+        self.__conf_file = os.path.abspath(init_args[0].conf_file)
+        conf_path = os.path.dirname(self.__conf_file)
         wizard = HotdocWizard(parser, conf_path=conf_path)
         self.wizard = wizard
 
@@ -249,7 +243,7 @@ class DocTool(object):
 
         for subclass in extension_classes:
             subclass.add_arguments(parser)
-            self.extension_classes[subclass.EXTENSION_NAME] = subclass
+            self.__extension_classes[subclass.EXTENSION_NAME] = subclass
 
         parser.add_argument("-i", "--index", action="store",
                             dest="index", help="location of the index file",
@@ -266,7 +260,7 @@ class DocTool(object):
                             dest="whatever")
 
         args = parser.parse_args(args)
-        self.load_config(args, self.conf_file, wizard)
+        self.__load_config(args, self.__conf_file, wizard)
 
         for subclass in formatter_classes:
             subclass.parse_config(wizard)
@@ -275,7 +269,7 @@ class DocTool(object):
         save_config = True
         if args.cmd == 'run':
             save_config = False
-            self.parse_config(wizard.config)
+            self.__parse_config(wizard.config)
         elif args.cmd == 'conf':
             exit_now = True
             if args.quickstart:
@@ -285,20 +279,20 @@ class DocTool(object):
                         wizard.wait_for_continue(
                             "Setup complete,"
                             " press Enter to build the doc now ")
-                        self.parse_config(wizard.config)
+                        self.__parse_config(wizard.config)
                         exit_now = False
                     except EOFError:
                         exit_now = True
 
         if save_config:
-            with open(self.conf_file, 'w') as _:
+            with open(self.__conf_file, 'w') as _:
                 _.write(json.dumps(wizard.config, indent=4))
 
         if exit_now:
             sys.exit(0)
 
     # pylint: disable=no-self-use
-    def load_config(self, args, conf_file, wizard):
+    def __load_config(self, args, conf_file, wizard):
         """
         Banana banana
         """
@@ -330,7 +324,7 @@ class DocTool(object):
             os.mkdir(folder)
 
     def __create_extensions(self, args):
-        for ext_class in self.extension_classes.values():
+        for ext_class in self.__extension_classes.values():
             ext = ext_class(self, args)
             self.extensions[ext.EXTENSION_NAME] = ext
 
@@ -346,7 +340,7 @@ class DocTool(object):
         """
         return self.wizard.resolve_config_path(path)
 
-    def parse_config(self, config):
+    def __parse_config(self, config):
         """
         Banana banana
         """
@@ -362,27 +356,27 @@ class DocTool(object):
         self.__create_change_tracker()
         self.__setup_folder('hotdoc-private')
         self.__setup_database()
-        self.index_file = self.resolve_config_path(config.get('index'))
+        self.__index_file = self.resolve_config_path(config.get('index'))
 
-        if self.index_file is None:
+        if self.__index_file is None:
             raise ConfigError("'index' is required")
 
         self.include_paths.insert(0,
-                                  os.path.dirname(self.index_file))
+                                  os.path.dirname(self.__index_file))
         self.doc_tree = DocTree(self.include_paths, self.get_private_folder())
 
         self.__create_extensions(config)
 
-        self.__root_page = self.doc_tree.build_tree(self.index_file, 'core')
+        self.__root_page = self.doc_tree.build_tree(self.__index_file, 'core')
 
-        self.change_tracker.add_hard_dependency(self.conf_file)
+        self.change_tracker.add_hard_dependency(self.__conf_file)
 
     def persist(self):
         """
         Banana banana
         """
         self.doc_tree.persist()
-        self.doc_database.commit()
+        self.doc_database.persist()
         self.change_tracker.track_core_dependencies()
         pickle.dump(self.change_tracker,
                     open(os.path.join(self.get_private_folder(),
@@ -394,5 +388,4 @@ class DocTool(object):
         """
         for extension in self.extensions.values():
             extension.finalize()
-        self.persist()
-        self.doc_database.close()
+        self.doc_database.finalize()

@@ -126,7 +126,7 @@ class DocDatabase(object):
         """
         self.__session.flush()
 
-    def commit(self):
+    def persist(self):
         """
         Banana banana
         """
@@ -138,7 +138,7 @@ class DocDatabase(object):
         """
         return self.__session
 
-    def close(self):
+    def finalize(self):
         """Banana banana
         """
         self.__session.close()

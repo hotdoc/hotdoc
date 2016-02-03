@@ -18,36 +18,47 @@
 # 02110-1301, USA.
 #
 
+"""The main hotdoc application
+"""
 
-import sys, os, traceback
-import cPickle as pickle
 import cProfile
+import os
+import sys
+import traceback
 
-from hotdoc.core.doc_tool import DocTool, ConfigError
+# WTF
+# pylint: disable=no-name-in-module
+from hotdoc.core.doc_tool import ConfigError, DocTool
 
-def run():
+
+def _run():
     doc_tool = DocTool()
     doc_tool.setup(sys.argv[1:])
     doc_tool.format()
+    doc_tool.persist()
     doc_tool.finalize()
 
-if __name__=="__main__":
 
+def _main():
     run_profile = os.environ.get('HOTDOC_PROFILING', False)
 
+    # pylint: disable=bare-except
     try:
         if run_profile:
-            cProfile.run('run()', 'runstats')
+            cProfile.run('_run()', 'runstats')
         else:
-            run()
-    except ConfigError as e:
-        print "Configuration error:", e
-        sys.exit(1)
-    except Exception as e:
+            _run()
+    except ConfigError as exception:
+        print "Configuration error:", exception
+        return 1
+    except:
         print ("An unknown error happened while building the documentation"
                " and hotdoc cannot recover from it. Please report "
                "a bug with this error message and the steps to "
                "reproduce it")
-        traceback.print_exc ()
-        sys.exit (1)
-    sys.exit(0)
+        traceback.print_exc()
+        return 1
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(_main())
