@@ -223,10 +223,7 @@ class GtkDocParser(object):
         """
         Returns a Comment given a string
         """
-        if not stripped and not comment.lstrip().startswith('/**'):
-            return None
-
-        if not self.__validate_c_comment(comment.strip()):
+        if not stripped and not self.__validate_c_comment(comment.strip()):
             return None
 
         raw_comment = comment
