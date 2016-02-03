@@ -56,8 +56,8 @@ class DocTool(object):
     """
     Banana banana
     """
-    # pylint: disable=too-many-instance-attributes
 
+    # pylint: disable=too-many-instance-attributes
     def __init__(self):
         self.output = None
         self.wizard = None
@@ -146,6 +146,58 @@ class DocTool(object):
 
         return True
 
+    def persist(self):
+        """
+        Banana banana
+        """
+        self.doc_tree.persist()
+        self.doc_database.persist()
+        self.change_tracker.track_core_dependencies()
+        pickle.dump(self.change_tracker,
+                    open(os.path.join(self.get_private_folder(),
+                                      'change_tracker.p'), 'wb'))
+
+    def finalize(self):
+        """
+        Banana banana
+        """
+        for extension in self.extensions.values():
+            extension.finalize()
+        self.doc_database.finalize()
+
+    # pylint: disable=no-self-use
+    def get_private_folder(self):
+        """
+        Banana banana
+        """
+        return os.path.abspath('hotdoc-private')
+
+    def resolve_config_path(self, path):
+        """
+        Banana banana
+        """
+        return self.wizard.resolve_config_path(path)
+
+    def setup(self, args):
+        """
+        Banana banana
+        """
+        self.__setup(args)
+
+        for extension in self.extensions.values():
+            extension.setup()
+            self.doc_database.flush()
+
+        self.doc_tree.resolve_symbols(self.doc_database, self.link_resolver,
+                                      self.__root_page)
+        self.doc_database.flush()
+
+    def format(self):
+        """
+        Banana banana
+        """
+        self.doc_tree.format(self.link_resolver, self.output, self.extensions)
+
     def __setup_database(self):
         self.doc_database = DocDatabase()
         self.doc_database.setup(self.get_private_folder())
@@ -175,27 +227,6 @@ class DocTool(object):
         if ext:
             return ext.get_formatter(self.output_format)
         return None
-
-    def setup(self, args):
-        """
-        Banana banana
-        """
-        self.__setup(args)
-
-        for extension in self.extensions.values():
-            extension.setup()
-            self.doc_database.flush()
-
-        self.doc_tree.resolve_symbols(self.doc_database, self.link_resolver,
-                                      self.__root_page)
-
-        self.doc_database.flush()
-
-    def format(self):
-        """
-        Banana banana
-        """
-        self.doc_tree.format(self.link_resolver, self.output, self.extensions)
 
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-statements
@@ -267,6 +298,7 @@ class DocTool(object):
 
         exit_now = False
         save_config = True
+
         if args.cmd == 'run':
             save_config = False
             self.__parse_config(wizard.config)
@@ -328,18 +360,6 @@ class DocTool(object):
             ext = ext_class(self, args)
             self.extensions[ext.EXTENSION_NAME] = ext
 
-    def get_private_folder(self):
-        """
-        Banana banana
-        """
-        return os.path.abspath('hotdoc-private')
-
-    def resolve_config_path(self, path):
-        """
-        Banana banana
-        """
-        return self.wizard.resolve_config_path(path)
-
     def __parse_config(self, config):
         """
         Banana banana
@@ -370,22 +390,3 @@ class DocTool(object):
         self.__root_page = self.doc_tree.build_tree(self.__index_file, 'core')
 
         self.change_tracker.add_hard_dependency(self.__conf_file)
-
-    def persist(self):
-        """
-        Banana banana
-        """
-        self.doc_tree.persist()
-        self.doc_database.persist()
-        self.change_tracker.track_core_dependencies()
-        pickle.dump(self.change_tracker,
-                    open(os.path.join(self.get_private_folder(),
-                                      'change_tracker.p'), 'wb'))
-
-    def finalize(self):
-        """
-        Banana banana
-        """
-        for extension in self.extensions.values():
-            extension.finalize()
-        self.doc_database.finalize()
