@@ -91,7 +91,7 @@ def get_all_extension_classes(sort):
                                                         klass.EXTENSION_NAME)
                 satisfied = False
                 break
-            if dep.upstream:
+            if dep.is_upstream:
                 topodeps.add(all_classes[dep.dependency_name])
 
         if not satisfied:

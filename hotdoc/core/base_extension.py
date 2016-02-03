@@ -17,9 +17,9 @@ class ExtDependency(object):
     Banana banana
     """
 
-    def __init__(self, dependency_name, upstream=False):
+    def __init__(self, dependency_name, is_upstream=False):
         self.dependency_name = dependency_name
-        self.upstream = upstream
+        self.is_upstream = is_upstream
 
 
 class BaseExtension(object):
@@ -31,9 +31,8 @@ class BaseExtension(object):
 
     def __init__(self, doc_tool, config):
         self.doc_tool = doc_tool
-        self._formatters = {"html": HtmlFormatter([])}
-        self.stale_source_files = []
-        self.created_symbols = defaultdict(OrderedSet)
+        self.formatters = {"html": HtmlFormatter([])}
+        self.__created_symbols = defaultdict(OrderedSet)
         self.__naive_path = None
 
     @staticmethod
@@ -48,7 +47,7 @@ class BaseExtension(object):
         """
         Banana banana
         """
-        return self._formatters.get(output_format)
+        return self.formatters.get(output_format)
 
     def setup(self):
         """
@@ -84,7 +83,7 @@ class BaseExtension(object):
         sym = self.doc_tool.doc_database.get_or_create_symbol(*args, **kwargs)
 
         if sym:
-            self.created_symbols[sym.filename].add(sym)
+            self.__created_symbols[sym.filename].add(sym)
 
         return sym
 
@@ -120,7 +119,7 @@ class BaseExtension(object):
         """
         subtree = DocTree(self.doc_tool.include_paths,
                           self.doc_tool.get_private_folder())
-        for source_file, symbols in self.created_symbols.items():
+        for source_file, symbols in self.__created_symbols.items():
             link_title = self._get_naive_link_title(source_file)
             markdown_path = link_title + '.markdown'
             markdown_path = os.path.join(self.doc_tool.include_paths[0],
