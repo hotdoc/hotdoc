@@ -32,7 +32,7 @@ class GtkDocParser(object):
     Banana banana
     """
 
-    def __init__(self, doc_tool):
+    def __init__(self, doc_repo):
         """
         Lifted from
         http://stackoverflow.com/questions/5323703/regex-how-to-match-sequence-of-key-value-pairs-at-end-of-string
@@ -44,12 +44,12 @@ class GtkDocParser(object):
                                    (?!\S+=)\S+
                                    )+
                                    ''', re.VERBOSE)
-        self.doc_tool = doc_tool
+        self.doc_repo = doc_repo
 
         tag_validation_regex = r'((?:^|\n)[ \t]*('
         tag_validation_regex += 'returns|Returns|since|Since|deprecated'\
             '|Deprecated|stability|Stability|Return value'
-        for validator in doc_tool.tag_validators.values():
+        for validator in doc_repo.tag_validators.values():
             tag_validation_regex += '|%s|%s' % (validator.name,
                                                 validator.name.lower())
         tag_validation_regex += '):)'
@@ -181,7 +181,7 @@ class GtkDocParser(object):
         elif name.lower() == "deprecated":
             return self.__parse_deprecated_tag("deprecated", desc)
         else:
-            validator = self.doc_tool.tag_validators.get(name)
+            validator = self.doc_repo.tag_validators.get(name)
             if not validator:
                 print "FIXME no tag validator"
                 return None

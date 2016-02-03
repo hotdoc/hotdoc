@@ -96,7 +96,7 @@ class Page(object):
 
         extension_name: str, the name of the "parent extension" for
             that page, can be None, in which case the parent is the
-            current DocTool.
+            current DocRepo.
         is_stale: bool, whether that page will be reparsed and reformatted.
             this can be set to true for three reasons:
 
@@ -125,7 +125,7 @@ class Page(object):
         symbols: list, empty until resolve_symbols has been called. Symbol
             querying in the database is costly, and as such executed
             "just-in-time"
-        formatted_contents: str, empty until DocTool.format_page has been
+        formatted_contents: str, empty until DocRepo.format_page has been
             called, it then contains the html rendering of the ast, including
             the modifications made by PageParser, provided the page was stale.
         mtime: int, the modification time of the source file last time it was
@@ -348,7 +348,7 @@ class PageParser(object):
             source_file: str, path to the source file to parse
             extension_name: str, name of the extension responsible
                 for this page. If None, the responsible entity is
-                the DocTool itself.
+                the `DocRepo` itself.
         """
         if not os.path.exists(source_file):
             return None

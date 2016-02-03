@@ -28,15 +28,15 @@ import traceback
 
 # WTF
 # pylint: disable=no-name-in-module
-from hotdoc.core.doc_tool import ConfigError, DocTool
+from hotdoc.core.doc_repo import ConfigError, DocRepo
 
 
 def _run():
-    doc_tool = DocTool()
-    doc_tool.setup(sys.argv[1:])
-    doc_tool.format()
-    doc_tool.persist()
-    doc_tool.finalize()
+    doc_repo = DocRepo()
+    doc_repo.setup(sys.argv[1:])
+    doc_repo.format()
+    doc_repo.persist()
+    doc_repo.finalize()
 
 
 def _main():

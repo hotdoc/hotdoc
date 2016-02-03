@@ -42,8 +42,8 @@ class CoreExtension(BaseExtension):
     """
     EXTENSION_NAME = 'core'
 
-    def __init__(self, doc_tool, args):
-        super(CoreExtension, self).__init__(doc_tool, args)
+    def __init__(self, doc_repo, args):
+        super(CoreExtension, self).__init__(doc_repo, args)
         file_includer.include_signal.connect_after(self.__include_file_cb)
 
     # pylint: disable=no-self-use
@@ -52,7 +52,7 @@ class CoreExtension(BaseExtension):
             return _.read()
 
 
-class DocTool(object):
+class DocRepo(object):
     """
     Banana banana
     """

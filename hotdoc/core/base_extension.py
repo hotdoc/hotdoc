@@ -29,8 +29,8 @@ class BaseExtension(object):
     # pylint: disable=unused-argument
     EXTENSION_NAME = "base-extension"
 
-    def __init__(self, doc_tool, config):
-        self.doc_tool = doc_tool
+    def __init__(self, doc_repo, config):
+        self.doc_repo = doc_repo
         self.formatters = {"html": HtmlFormatter([])}
         self.__created_symbols = defaultdict(OrderedSet)
         self.__naive_path = None
@@ -65,7 +65,7 @@ class BaseExtension(object):
         """
         Banana banana
         """
-        return self.doc_tool.change_tracker.get_stale_files(
+        return self.doc_repo.change_tracker.get_stale_files(
             all_files,
             self.EXTENSION_NAME)
 
@@ -80,7 +80,7 @@ class BaseExtension(object):
         """
         Banana banana
         """
-        sym = self.doc_tool.doc_database.get_or_create_symbol(*args, **kwargs)
+        sym = self.doc_repo.doc_database.get_or_create_symbol(*args, **kwargs)
 
         if sym:
             self.__created_symbols[sym.filename].add(sym)
@@ -101,7 +101,7 @@ class BaseExtension(object):
         Banana banana
         """
         index_name = self.EXTENSION_NAME + "-index.markdown"
-        index_path = os.path.join(self.doc_tool.include_paths[0], index_name)
+        index_path = os.path.join(self.doc_repo.include_paths[0], index_name)
 
         with open(index_path, 'w') as _:
             _.write('## API reference\n\n')
@@ -117,12 +117,12 @@ class BaseExtension(object):
         """
         Banana banana
         """
-        subtree = DocTree(self.doc_tool.include_paths,
-                          self.doc_tool.get_private_folder())
+        subtree = DocTree(self.doc_repo.include_paths,
+                          self.doc_repo.get_private_folder())
         for source_file, symbols in self.__created_symbols.items():
             link_title = self._get_naive_link_title(source_file)
             markdown_path = link_title + '.markdown'
-            markdown_path = os.path.join(self.doc_tool.include_paths[0],
+            markdown_path = os.path.join(self.doc_repo.include_paths[0],
                                          markdown_path)
             with open(markdown_path, 'w') as _:
                 _.write(self._get_naive_page_description(link_title))
@@ -131,7 +131,7 @@ class BaseExtension(object):
 
         subtree.build_tree(self.__naive_path,
                            extension_name=self.EXTENSION_NAME)
-        self.doc_tool.doc_tree.pages.update(subtree.pages)
+        self.doc_repo.doc_tree.pages.update(subtree.pages)
 
     def format_page(self, page, link_resolver, output):
         """
@@ -139,7 +139,7 @@ class BaseExtension(object):
         """
         formatter = self.get_formatter('html')
         if page.is_stale:
-            self.doc_tool.doc_tree.page_parser.rename_page_links(page,
+            self.doc_repo.doc_tree.page_parser.rename_page_links(page,
                                                                  formatter,
                                                                  link_resolver)
             page.format(formatter, link_resolver, output)
