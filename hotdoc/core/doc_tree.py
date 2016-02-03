@@ -271,6 +271,7 @@ class Page(object):
         self.reset_output_attributes()
         formatter.prepare_page_attributes(self)
         Page.formatting_signal(self, formatter)
+        self.reference_map = set()
         self.__format_symbols(formatter, link_resolver)
         self.detailed_description =\
             formatter.format_page(self)[0]
@@ -544,26 +545,33 @@ class DocTree(object):
         pages: dict of hotdoc.core.doc_tree.Page, which the doc_tree is
             made of. Navigation is currently achieved by querying this
             dictionary for the names listed in each Page.subpages.
-
+        reference_map: dict, link ids -> referencing pages
     """
     # pylint: disable=too-many-instance-attributes
-
     def __init__(self, include_paths, private_folder):
         self.page_parser = PageParser(self, include_paths)
 
-        self.__pages_path = os.path.join(private_folder, 'pages.p')
-        self.__symbol_maps_path = os.path.join(private_folder,
-                                               'symbol_maps.p')
+        self.__pages_path = os.path.join(
+            private_folder, 'pages.p')
+        self.__symbol_maps_path = os.path.join(
+            private_folder, 'symbol_maps.p')
+        self.__reference_map_path = os.path.join(
+            private_folder, 'reference_map.p')
 
         self.__incremental = True
+        self.__current_page = None
+        self.__symbol_maps = defaultdict(defaultdict)
 
         try:
-            self.pages = pickle.load(open(self.__pages_path, 'rb'))
-            self.__previous_symbol_maps = pickle.load(
-                open(self.__symbol_maps_path, 'rb'))
+            self.pages = pickle.load(open(
+                self.__pages_path, 'rb'))
+            self.__previous_symbol_maps = pickle.load(open(
+                self.__symbol_maps_path, 'rb'))
+            self.reference_map = pickle.load(open(
+                self.__reference_map_path, 'rb'))
         except IOError:
-            self.__symbol_maps = defaultdict(defaultdict)
             self.pages = {}
+            self.reference_map = defaultdict(set)
             self.__incremental = False
 
         DocDatabase.comment_updated_signal.connect(self.__comment_updated)
@@ -585,7 +593,33 @@ class DocTree(object):
         self.__do_build_tree(source_file, extension_name)
         moved_symbols = self.__update_symbol_maps()
         self.__root = self.pages[source_file]
-        return self.__root, moved_symbols
+
+        for symbol_id in moved_symbols:
+            referencing_pages = self.reference_map.get(symbol_id, set())
+            for pagename in referencing_pages:
+                page = self.pages[pagename]
+                if page:
+                    page.is_stale = True
+
+        return self.__root
+
+    def format(self, link_resolver, output, extensions):
+        """Banana banana
+        """
+        self.__setup_folder(output)
+
+        Page.formatting_signal.connect(self.__formatting_page_cb)
+        Link.resolving_link_signal.connect(self.__link_referenced_cb)
+
+        for page in self.walk():
+            self.__current_page = page
+            extension = extensions[page.extension_name]
+            if page.is_stale:
+                page.formatted_contents = self.page_parser.render(
+                    page, link_resolver)
+            extension.format_page(page, link_resolver, output)
+
+        self.__create_navigation_script(output, extensions)
 
     def resolve_symbols(self, doc_database, link_resolver, page):
         """Will call resolve_symbols on all the stale subpages of the tree.
@@ -656,6 +690,40 @@ class DocTree(object):
         """
         pickle.dump(self.pages, open(self.__pages_path, 'wb'))
         pickle.dump(self.__symbol_maps, open(self.__symbol_maps_path, 'wb'))
+        pickle.dump(self.reference_map, open(self.__reference_map_path, 'wb'))
+
+    def __create_navigation_script(self, output, extensions):
+        # Wrapping this is in a javascript file to allow
+        # circumventing stupid chrome same origin policy
+        formatter = extensions['core'].get_formatter('html')
+        site_navigation = formatter.format_site_navigation(self.__root, self)
+        path = os.path.join(output,
+                            'assets',
+                            'js',
+                            'site_navigation.js')
+        site_navigation = site_navigation.replace('\n', '')
+        site_navigation = site_navigation.replace('"', '\\"')
+        js_wrapper = 'site_navigation_downloaded_cb("'
+        js_wrapper += site_navigation
+        js_wrapper += '");'
+        with open(path, 'w') as _:
+            _.write(js_wrapper.encode('utf-8'))
+
+    def __link_referenced_cb(self, link):
+        self.reference_map[link.id_].add(
+            self.__current_page.source_file)
+        self.__current_page.reference_map.add(link.id_)
+        return None
+
+    def __formatting_page_cb(self, page, formatter):
+        for link_id in page.reference_map:
+            self.reference_map.get(link_id, set()).discard(page.source_file)
+        return None
+
+    # pylint: disable=no-self-use
+    def __setup_folder(self, folder):
+        if not os.path.exists(folder):
+            os.mkdir(folder)
 
     def __add_to_symbol_map(self, page, unique_name):
         self.__symbol_maps[unique_name][page.source_file] = page

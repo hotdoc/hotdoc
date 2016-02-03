@@ -9,15 +9,14 @@ import os
 import shutil
 import sys
 import io
-from collections import defaultdict
 
 from hotdoc.core import file_includer
 from hotdoc.core.base_extension import BaseExtension
 from hotdoc.core.base_formatter import Formatter
 from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.doc_database import DocDatabase
-from hotdoc.core.doc_tree import DocTree, Page
-from hotdoc.core.links import LinkResolver, Link
+from hotdoc.core.doc_tree import DocTree
+from hotdoc.core.links import LinkResolver
 from hotdoc.core.wizard import HotdocWizard
 from hotdoc.utils.utils import get_all_extension_classes, all_subclasses
 
@@ -74,7 +73,6 @@ class DocTool(object):
         self.extensions = {}
         self.__root_page = None
         self.__current_page = None
-        self.reference_map = defaultdict(set)
         self.tag_validators = {}
         self.link_resolver = None
         self.incremental = False
@@ -153,14 +151,6 @@ class DocTool(object):
         self.doc_database.setup(self.get_private_folder())
         self.link_resolver = LinkResolver(self.doc_database)
 
-    def __load_reference_map(self):
-        try:
-            self.reference_map = \
-                pickle.load(open(os.path.join(self.get_private_folder(),
-                                              'reference_map.p'), 'rb'))
-        except IOError:
-            pass
-
     def __create_change_tracker(self):
         try:
             self.change_tracker = \
@@ -207,53 +197,11 @@ class DocTool(object):
         """
         return os.path.join(self.output, 'assets')
 
-    def __link_referenced_cb(self, link):
-        self.reference_map[link.id_].add(
-            self.__current_page.source_file)
-        self.__current_page.reference_map.add(link.id_)
-        return None
-
-    def __formatting_page_cb(self, page, formatter):
-        for link_id in page.reference_map:
-            self.reference_map.get(link_id, set()).discard(page.source_file)
-        page.reference_map = set()
-        return None
-
-    def __create_navigation_script(self, root):
-        # Wrapping this is in a javascript file to allow
-        # circumventing stupid chrome same origin policy
-        formatter = self.extensions['core'].get_formatter('html')
-        site_navigation = formatter.format_site_navigation(root, self.doc_tree)
-        path = os.path.join(self.output,
-                            'assets',
-                            'js',
-                            'site_navigation.js')
-        site_navigation = site_navigation.replace('\n', '')
-        site_navigation = site_navigation.replace('"', '\\"')
-        js_wrapper = 'site_navigation_downloaded_cb("'
-        js_wrapper += site_navigation
-        js_wrapper += '");'
-        with open(path, 'w') as _:
-            _.write(js_wrapper.encode('utf-8'))
-
     def format(self):
         """
         Banana banana
         """
-        self.__setup_folder(self.output)
-
-        Page.formatting_signal.connect(self.__formatting_page_cb)
-        Link.resolving_link_signal.connect(self.__link_referenced_cb)
-
-        for page in self.doc_tree.walk():
-            self.__current_page = page
-            extension = self.extensions[page.extension_name]
-            if page.is_stale:
-                page.formatted_contents = self.doc_tree.page_parser.render(
-                    page, self.link_resolver)
-            extension.format_page(page, self.link_resolver, self.output)
-
-        self.__create_navigation_script(self.__root_page)
+        self.doc_tree.format(self.link_resolver, self.output, self.extensions)
 
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-statements
@@ -411,8 +359,6 @@ class DocTool(object):
         if self.output_format not in ["html"]:
             raise ConfigError("Unsupported output format : %s" %
                               self.output_format)
-
-        self.__load_reference_map()
         self.__create_change_tracker()
         self.__setup_folder('hotdoc-private')
         self.__setup_database()
@@ -427,15 +373,7 @@ class DocTool(object):
 
         self.__create_extensions(config)
 
-        self.__root_page, moved_symbols = \
-            self.doc_tree.build_tree(self.index_file, 'core')
-
-        for symbol_id in moved_symbols:
-            referencing_pages = self.reference_map.get(symbol_id, set())
-            for pagename in referencing_pages:
-                page = self.doc_tree.pages[pagename]
-                if page:
-                    page.is_stale = True
+        self.__root_page = self.doc_tree.build_tree(self.index_file, 'core')
 
         self.change_tracker.add_hard_dependency(self.conf_file)
 
@@ -449,9 +387,6 @@ class DocTool(object):
         pickle.dump(self.change_tracker,
                     open(os.path.join(self.get_private_folder(),
                                       'change_tracker.p'), 'wb'))
-        pickle.dump(self.reference_map,
-                    open(os.path.join(self.get_private_folder(),
-                                      'reference_map.p'), 'wb'))
 
     def finalize(self):
         """
