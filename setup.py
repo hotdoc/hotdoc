@@ -49,7 +49,7 @@ SOURCE_DIR = os.path.abspath('./')
 
 
 DEFAULT_THEME =\
-    'https://people.collabora.com/~meh/hotdoc_bootstrap_theme/dist.tgz'
+    'https://people.collabora.com/~meh/hotdoc_bootstrap_theme-0.6.6/dist.tgz'
 
 
 class DownloadDefaultTemplate(Command):
