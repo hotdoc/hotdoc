@@ -68,22 +68,23 @@ class Page(object):
         title: str, workaround to use the title of the first included
             ClassSymbol or StructSymbol as the title of that page,
             in case it did not have one of its own. Direct access
-            is not recommended, use the `get_title` method to
+            is not recommended, use the `Page.get_title` method to
             get the preferred display name for that page.
         short_description: str, workaround to use the short description of the
             first included ClassSymbol or StructSymbol as the title of that
             page, in case it did not have one of its own. Direct access
-            is not recommended, use the `get_short_description` method to
+            is not recommended, use the `Page.get_short_description` method to
             get the preferred summary for that page.
         first_header: str, the first header in the markdown source
             file. Mainly exposed to let PageParser provide it,
-            direct access is not recommended, use the `get_title`
+            direct access is not recommended, use the `Page.get_title`
             method to get the preferred display name for that
             page.
         first_paragraph: str, the first paragraph in the markdown
             source file. Mainly exposed to let PageParser provide it,
-            direct access is not recommended, use the `get_short_description`
-            method to get the preferred summary for that page.
+            direct access is not recommended, use the
+            `Page.get_short_description` method to get the preferred summary
+            for that page.
         source_file: str, the absolute path to the markdown file this page
             was constructed from.
         output_attrs: collections.defaultdict, a lightweight mechanism
@@ -186,16 +187,6 @@ class Page(object):
                 'is_stale': False,  # At pickle time, assume non-staleness
                 'mtime': self.mtime}
 
-    def reset_output_attributes(self):
-        """Reset output_attrs to its original state
-
-        After this call, page.output_attrs is an empty defaultdict of
-        defaultdict.
-
-        See the documentation of `output_attrs` for more information.
-        """
-        self.output_attrs = defaultdict(lambda: defaultdict(dict))
-
     def get_short_description(self):
         """
         Returns a string suitable for displaying as a summary, for example
@@ -268,7 +259,7 @@ class Page(object):
         """
         Banana banana
         """
-        self.reset_output_attributes()
+        self.output_attrs = defaultdict(lambda: defaultdict(dict))
         formatter.prepare_page_attributes(self)
         Page.formatting_signal(self, formatter)
         self.reference_map = set()
@@ -348,7 +339,7 @@ class PageParser(object):
             source_file: str, path to the source file to parse
             extension_name: str, name of the extension responsible
                 for this page. If None, the responsible entity is
-                the `DocRepo` itself.
+                the `doc_repo.DocRepo` itself.
         """
         if not os.path.exists(source_file):
             return None
@@ -392,7 +383,7 @@ class PageParser(object):
         Can only format to html for now.
 
         Args:
-            page: hodoc.core.doc_tree.Page, the page which contents
+            page: hotdoc.core.doc_tree.Page, the page which contents
                 have to be formatted.
         """
         self.__update_links(page.ast, link_resolver)

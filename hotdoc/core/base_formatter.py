@@ -32,7 +32,7 @@ def _create_hierarchy_graph(hierarchy):
 
 
 class Formatter(object):
-    """Formats and writes `doc_tree.Page` s and `symbols.Symbol` s
+    """Formats and writes `doc_tree.Page` and `symbols.Symbol`
 
     Subclasses should implement the protected methods.
     """
@@ -143,7 +143,7 @@ class Formatter(object):
         raise NotImplementedError
 
     def format_comment(self, comment, link_resolver):
-        """Convenience function wrapping `format_docstring`.
+        """Convenience function wrapping `Formatter.format_docstring`.
 
         Args:
             comment: hotdoc.core.comment_block.Comment, the code comment
