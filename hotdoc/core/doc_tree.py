@@ -377,7 +377,7 @@ class PageParser(object):
         """
         self.__well_known_names[wkn] = callback
 
-    def render(self, page, link_resolver):
+    def format_page(self, page, link_resolver, formatter):
         """Returns the formatted page contents.
 
         Can only format to html for now.
@@ -386,10 +386,13 @@ class PageParser(object):
             page: hotdoc.core.doc_tree.Page, the page which contents
                 have to be formatted.
         """
+        self.__rename_page_links(page,
+                                 formatter,
+                                 link_resolver)
         self.__update_links(page.ast, link_resolver)
         return self.__cmr.render(page.ast)
 
-    def rename_page_links(self, page, formatter, link_resolver):
+    def __rename_page_links(self, page, formatter, link_resolver):
         """Prettifies the intra-documentation page links.
 
         For example a link to a valid markdown page such as:
@@ -408,6 +411,9 @@ class PageParser(object):
             page: hotdoc.core.doc_tree.Page, the page to rename navigational
                 links in.
         """
+        if page.extension_name == 'core':
+            return
+
         for original_name, parsed_header in page.headers.items():
             ast_node = parsed_header.ast_node
             page = self.__doc_tree.get_page(parsed_header.original_destination)
@@ -605,9 +611,6 @@ class DocTree(object):
         for page in self.walk():
             self.__current_page = page
             extension = extensions[page.extension_name]
-            if page.is_stale:
-                page.formatted_contents = self.page_parser.render(
-                    page, link_resolver)
             extension.format_page(page, link_resolver, output)
 
         self.__create_navigation_script(output, extensions)

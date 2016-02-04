@@ -139,7 +139,7 @@ class BaseExtension(object):
         """
         formatter = self.get_formatter('html')
         if page.is_stale:
-            self.doc_repo.doc_tree.page_parser.rename_page_links(page,
-                                                                 formatter,
-                                                                 link_resolver)
+            page.formatted_contents = \
+                self.doc_repo.doc_tree.page_parser.format_page(
+                    page, link_resolver, formatter)
             page.format(formatter, link_resolver, output)
