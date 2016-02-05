@@ -375,6 +375,8 @@ class GtkDocStringFormatter(object):
     A parser for the legacy gtk-doc format.
     """
 
+    remove_xml_tags = False
+
     def __init__(self):
         self.funcs = {
             'other': self.__format_other,
@@ -523,6 +525,9 @@ class GtkDocStringFormatter(object):
         if not text:
             return out
 
+        if GtkDocStringFormatter.remove_xml_tags:
+            text = re.sub('<.*?>', '', text)
+
         text = unescape(text)
 
         out = self.__legacy_to_md(text, link_resolver)
@@ -533,6 +538,28 @@ class GtkDocStringFormatter(object):
             return self.__md_to_html(out)
 
         raise Exception("Unrecognized format %s" % output_format)
+
+    @classmethod
+    def add_arguments(cls, parser):
+        """Banana banana
+        """
+        if cls != GtkDocStringFormatter:
+            return
+
+        group = parser.add_argument_group(
+            'GtkDocStringFormatter', 'GtkDocStringFormatter options')
+        group.add_argument("--gtk-doc-remove-xml", action="store_true",
+                           dest="gtk_doc_remove_xml", help="Remove xml?")
+
+    @classmethod
+    def parse_config(cls, wizard):
+        """Banana banana
+        """
+        if cls != GtkDocStringFormatter:
+            return
+
+        GtkDocStringFormatter.remove_xml_tags = wizard.config.get(
+            'gtk_doc_remove_xml')
 
 if __name__ == "__main__":
     PARSER = GtkDocStringFormatter()

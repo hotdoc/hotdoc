@@ -671,6 +671,8 @@ class HtmlFormatter(Formatter):
                            default='default',
                            finalize_function=HotdocWizard.finalize_path)
 
+        GtkDocStringFormatter.add_arguments(parser)
+
     @classmethod
     def parse_config(cls, wizard):
         """Banana banana
@@ -688,3 +690,4 @@ class HtmlFormatter(Formatter):
             html_theme = wizard.resolve_config_path(html_theme)
 
         HtmlFormatter.theme_path = html_theme
+        GtkDocStringFormatter.parse_config(wizard)
