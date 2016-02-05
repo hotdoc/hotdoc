@@ -13,4 +13,12 @@
 	<td>
 		@return_item.formatted_link
 	</td>
+	@if return_item.extension_contents:
+	\
+	@for name, ex in return_item.extension_contents.iteritems():
+	<td>
+	@ex
+	</td>
+	@end
+	@end
 </tr>
