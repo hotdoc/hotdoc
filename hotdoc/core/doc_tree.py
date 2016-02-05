@@ -253,7 +253,7 @@ class Page(object):
             self.__query_extra_symbols(sym, new_syms, link_resolver)
 
         for sym in new_syms:
-            self.add_symbol(sym)
+            self.add_symbol(sym.unique_name)
 
     def format(self, formatter, link_resolver, output):
         """
