@@ -172,6 +172,7 @@ class CustomBDistEgg(bdist_egg):
 
 INSTALL_REQUIRES = [
     'cffi',
+    'pyyaml',
     'git-pylint-commit-hook',
     'git-pep8-commit-hook',
     'wheezy.template==0.1.167',

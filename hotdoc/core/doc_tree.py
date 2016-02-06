@@ -7,11 +7,15 @@ import cPickle as pickle
 import io
 import linecache
 import os
+import urllib
+import urlparse
 from collections import OrderedDict
 from collections import namedtuple
 from collections import defaultdict
 
 import CommonMark
+import yaml as pyyaml
+
 from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.links import Link
 from hotdoc.core.symbols import\
@@ -22,6 +26,62 @@ from hotdoc.core.symbols import\
 from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.core.file_includer import add_md_includes, find_md_file
+
+
+Yaml = namedtuple('Yaml', ['group_to_pages', 'page_to_meta'])
+
+
+def _url_is_absolute(url):
+    return bool(urlparse.urlparse(url).netloc)
+
+
+def _find_md_file_for_yaml_file(basename):
+    if os.path.exists(basename + '.markdown'):
+        return basename + '.markdown'
+    if os.path.exists(basename + '.md'):
+        return basename + '.md'
+    return None
+
+
+def _parse_yaml_folder(folder, yaml):
+    for name in os.listdir(folder):
+        fname = os.path.join(folder, name)
+        if not os.path.isfile(fname):
+            continue
+        split_ext = os.path.splitext(name)
+        if len(split_ext) != 2:
+            continue
+        ext = split_ext[1]
+        basename = split_ext[0]
+        if ext != '.yaml':
+            continue
+
+        md_file = _find_md_file_for_yaml_file(
+            os.path.join(folder, basename))
+
+        if md_file is None:
+            continue
+
+        with io.open(fname, 'r', encoding='utf-8') as _:
+            contents = _.read()
+
+        # FIXME: Ahem
+        contents = contents.replace('\\#', '#')
+
+        data = pyyaml.load(contents)
+        group = data.get("guide-group")
+
+        if group:
+            yaml.group_to_pages[group].add(md_file)
+
+        yaml.page_to_meta[basename] = data
+
+
+def _parse_yaml_folders(folders):
+    yaml = Yaml(group_to_pages=defaultdict(set), page_to_meta=dict())
+    for folder in folders:
+        _parse_yaml_folder(folder, yaml)
+    return yaml
 
 
 def _get_children(node, recursive=False):
@@ -325,6 +385,7 @@ class PageParser(object):
         self.__doc_tree = doc_tree
         self.__seen_pages = set({})
         self.__include_paths = include_paths
+        self.__yaml = _parse_yaml_folders(include_paths)
         self.__parsed_header_class = namedtuple('ParsedHeader',
                                                 ['ast_node',
                                                  'original_destination'])
@@ -445,11 +506,83 @@ class PageParser(object):
                     for _ in _get_children(new_desc.first_child):
                         ast_node[0].parent.append_child(_)
 
+    def __add_subpage(self, cur_page, path):
+        if path not in self.__seen_pages:
+            cur_page.subpages[path] = cur_page.extension_name
+            self.__seen_pages.add(path)
+
+    # pylint: disable=too-many-locals
+    def __parse_topic_link(self, cur_page, node):
+        parent = node.parent
+        if not parent:
+            return False
+        if not self.__yaml.group_to_pages:
+            return False
+        label = _get_label(node)
+        if label:
+            return False
+        dest = urllib.unquote(node.destination)
+        groups = dest.split()
+        group_to_pages = self.__yaml.group_to_pages
+        page_to_meta = self.__yaml.page_to_meta
+        if not all(g in group_to_pages or g == u"#default" for g in groups):
+            return False
+
+        generated = u''
+
+        for group in groups:
+            # FIXME : add pages not referenced anywhere here
+            if group == u'#default':
+                continue
+            # FIXME: Special formatting for first ?
+            if group != u'#first':
+                generated += '\n### %s\n\n' % group
+            page_names = group_to_pages[group]
+            for page_path in page_names:
+                basename = os.path.basename(page_path)
+                split_ext = os.path.splitext(basename)
+                ref = split_ext[0] + '.html'
+                page_yaml = page_to_meta[split_ext[0]]
+
+                desc = page_yaml.get("description")
+                if desc is not None:
+                    desc = unicode(' '.join(desc.split()))
+                    desc = u' — %s' % desc
+                else:
+                    desc = u''
+
+                title = page_yaml.get("title")
+                if not title:
+                    title = basename
+
+                self.__add_subpage(cur_page, page_path)
+                generated += '\n#### [%s](%s)%s\n' % (title, ref, desc)
+
+        generated_ast = self.__cmp.parse(generated)
+        for new_node in _get_children(generated_ast):
+            node.insert_before(new_node)
+
+        node.unlink()
+        return True
+
+    def __find_md_file(self, dest):
+        path = None
+        for fname in (
+                dest,
+                dest + '.markdown',
+                dest + '.md'):
+            path = find_md_file(fname, self.__include_paths)
+            if path:
+                break
+        return path
+
     def __check_links(self, page, node, parent_node=None):
         if node.t == 'Link':
             if node.destination:
-                path = find_md_file(node.destination,
-                                    self.__include_paths)
+                # The rest of this sub-ast does not matter anymore
+                if self.__parse_topic_link(page, node):
+                    return
+                path = self.__find_md_file(node.destination)
             else:
                 path = None
 
@@ -461,10 +594,8 @@ class PageParser(object):
                 if subfolder:
                     new_dest = subfolder + '/' + new_dest
                 node.destination = '%s.html' % new_dest
-            elif parent_node and parent_node.t == 'Heading' and path:
-                if path not in self.__seen_pages:
-                    page.subpages[path] = page.extension_name
-                    self.__seen_pages.add(path)
+            elif parent_node and path:
+                self.__add_subpage(page, path)
 
                 original_name = _get_label(node)
                 parsed_header = self.__parsed_header_class(
@@ -510,6 +641,13 @@ class PageParser(object):
             return True
         return False
 
+    def __check_yaml_meta(self, node):
+        if _url_is_absolute(node.destination):
+            return
+
+        if node.destination in self.__yaml.page_to_meta:
+            node.destination += ".html"
+
     def __update_links(self, node, link_resolver):
         if node.t == 'Link':
             if not hasattr(node, 'original_dest'):
@@ -523,6 +661,8 @@ class PageParser(object):
 
             if link and link.get_link() is not None:
                 node.destination = link.get_link()
+            else:
+                self.__check_yaml_meta(node)
 
         for _ in _get_children(node):
             self.__update_links(_, link_resolver)

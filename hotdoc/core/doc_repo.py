@@ -19,6 +19,7 @@ from hotdoc.core.doc_tree import DocTree
 from hotdoc.core.links import LinkResolver
 from hotdoc.core.wizard import HotdocWizard
 from hotdoc.utils.utils import get_all_extension_classes, all_subclasses
+from hotdoc.utils.utils import OrderedSet
 
 
 class ConfigError(Exception):
@@ -366,8 +367,8 @@ class DocRepo(object):
         """
         self.output = config.get('output')
         self.output_format = config.get('output_format')
-        self.include_paths = [self.resolve_config_path(path) for path in
-                              config.get('include_paths', [])]
+        cmd_line_includes = [self.resolve_config_path(path) for path in
+                             config.get('include_paths', [])]
         self.git_repo_path = self.resolve_config_path(config.get('git_repo'))
 
         if self.output_format not in ["html"]:
@@ -381,8 +382,9 @@ class DocRepo(object):
         if self.__index_file is None:
             raise ConfigError("'index' is required")
 
-        self.include_paths.insert(0,
-                                  os.path.dirname(self.__index_file))
+        self.include_paths = OrderedSet([os.path.dirname(self.__index_file)])
+        self.include_paths |= OrderedSet(cmd_line_includes)
+
         self.doc_tree = DocTree(self.include_paths, self.get_private_folder())
 
         self.__create_extensions(config)
