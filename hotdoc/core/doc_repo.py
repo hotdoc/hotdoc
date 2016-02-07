@@ -243,6 +243,10 @@ class DocRepo(object):
         run_parser.add_argument('--conf-file', help='Path to the config file',
                                 dest='conf_file', default='hotdoc.json')
 
+        help_parser = subparsers.add_parser('help', help='print hotdoc help')
+        help_parser.add_argument('--conf-file', help='Path to the config file',
+                                dest='conf_file', default='hotdoc.json')
+
         conf_parser = subparsers.add_parser('conf', help='configure hotdoc')
         conf_parser.add_argument('--quickstart',
                                  help='run a quickstart wizard',
@@ -255,8 +259,10 @@ class DocRepo(object):
         # FIXME: subparsers is useless, remove that hack
         init_args = list(args)
         split_pos = 0
+        cmd = None
         for i, arg in enumerate(init_args):
-            if arg in ['run', 'conf']:
+            if arg in ['run', 'conf', 'help']:
+                cmd = arg
                 split_pos = i
                 break
 
@@ -291,6 +297,10 @@ class DocRepo(object):
                             " of arguments before a command",
                             dest="whatever")
 
+        if cmd == 'help':
+            parser.print_help()
+            sys.exit(0)
+
         args = parser.parse_args(args)
         self.__load_config(args, self.__conf_file, wizard)
 
@@ -316,6 +326,9 @@ class DocRepo(object):
                         exit_now = False
                     except EOFError:
                         exit_now = True
+        elif args.cmd == 'help':
+            exit_now = True
+            save_config = False
 
         if save_config:
             with open(self.__conf_file, 'w') as _:

@@ -51,7 +51,7 @@ def _main():
     except ConfigError as exception:
         print "Configuration error:", exception
         return 1
-    except:
+    except Exception as e:
         print ("An unknown error happened while building the documentation"
                " and hotdoc cannot recover from it. Please report "
                "a bug with this error message and the steps to "
