@@ -361,6 +361,17 @@ class DocRepo(object):
             ext = ext_class(self, args)
             self.extensions[ext.EXTENSION_NAME] = ext
 
+    def get_base_doc_folder(self):
+        """Get the folder in which the main index was located
+        """
+        return next(iter(self.include_paths))
+
+    def get_generated_doc_folder(self):
+        """Get the folder in which auto-generated doc pages
+        are to be output
+        """
+        return os.path.join(self.get_base_doc_folder(), 'generated')
+
     def __parse_config(self, config):
         """
         Banana banana
@@ -382,8 +393,13 @@ class DocRepo(object):
         if self.__index_file is None:
             raise ConfigError("'index' is required")
 
-        self.include_paths = OrderedSet([os.path.dirname(self.__index_file)])
+        base_doc_path = os.path.dirname(self.__index_file)
+        self.include_paths = OrderedSet([base_doc_path])
         self.include_paths |= OrderedSet(cmd_line_includes)
+        gen_folder = self.get_generated_doc_folder()
+        self.include_paths.add(gen_folder)
+        if not os.path.exists(gen_folder):
+            os.makedirs(gen_folder)
 
         self.doc_tree = DocTree(self.include_paths, self.get_private_folder())
 

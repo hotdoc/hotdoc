@@ -101,8 +101,8 @@ class BaseExtension(object):
         Banana banana
         """
         index_name = self.EXTENSION_NAME + "-index.markdown"
-        prefix = next(iter(self.doc_repo.include_paths))
-        index_path = os.path.join(prefix, index_name)
+        dirname = self.doc_repo.get_generated_doc_folder()
+        index_path = os.path.join(dirname, index_name)
 
         with open(index_path, 'w') as _:
             _.write('## API reference\n\n')
@@ -120,11 +120,11 @@ class BaseExtension(object):
         """
         subtree = DocTree(self.doc_repo.include_paths,
                           self.doc_repo.get_private_folder())
-        prefix = next(iter(self.doc_repo.include_paths))
+        dirname = self.doc_repo.get_generated_doc_folder()
         for source_file, symbols in self.__created_symbols.items():
             link_title = self._get_naive_link_title(source_file)
             markdown_path = link_title + '.markdown'
-            markdown_path = os.path.join(prefix,
+            markdown_path = os.path.join(dirname,
                                          markdown_path)
             with open(markdown_path, 'w') as _:
                 _.write(self._get_naive_page_description(link_title))
