@@ -1,0 +1,8 @@
+{
+    "output_format": "html", 
+    "git_repo": "..", 
+    "index": "markdown_files/index.markdown",
+    "python_sources": ["../hotdoc/core/*.py"],
+    "python_source_filters": ["../hotdoc/core/__init__.py"],
+    "output": "html"
+}
