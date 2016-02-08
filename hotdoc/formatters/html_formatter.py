@@ -27,6 +27,9 @@ from hotdoc.core.wizard import HotdocWizard
 from hotdoc.parsers.gtk_doc_parser import GtkDocStringFormatter
 
 
+HERE = os.path.dirname(__file__)
+
+
 # pylint: disable=too-few-public-methods
 class TocSection(object):
     """
@@ -57,6 +60,7 @@ class HtmlFormatter(Formatter):
     """
 
     theme_path = None
+    add_anchors = False
 
     def __init__(self, searchpath):
         Formatter.__init__(self)
@@ -100,12 +104,10 @@ class HtmlFormatter(Formatter):
                           VFunctionSymbol, EnumSymbol, ConstantSymbol,
                           ExportedVariableSymbol, AliasSymbol, CallbackSymbol]
 
-        module_path = os.path.dirname(__file__)
-
         searchpath.insert(0, str(os.path.join(HtmlFormatter.theme_path,
                                               'templates')))
 
-        searchpath.append(os.path.join(module_path, "html_templates"))
+        searchpath.append(os.path.join(HERE, "html_templates"))
         self.engine = Engine(
             loader=FileLoader(searchpath, encoding='UTF-8'),
             extensions=[CoreExtension(), CodeExtension()]
@@ -397,6 +399,9 @@ class HtmlFormatter(Formatter):
         Banana banana
         """
         page.output_attrs['html']['scripts'] = set()
+        if HtmlFormatter.add_anchors:
+            page.output_attrs['html']['scripts'].add(
+                os.path.join(HERE, 'html_assets', 'anchorizer.js'))
         Formatter.prepare_page_attributes(self, page)
 
     def patch_page(self, page, symbol):
@@ -670,6 +675,10 @@ class HtmlFormatter(Formatter):
                            dest="html_theme", help="html theme to use",
                            default='default',
                            finalize_function=HotdocWizard.finalize_path)
+        group.add_argument("--html-add-anchors", action="store_true",
+                           dest="html_add_anchors",
+                           help="Add anchors to html headers",
+                           default='default')
 
         GtkDocStringFormatter.add_arguments(parser)
 
@@ -680,14 +689,16 @@ class HtmlFormatter(Formatter):
         if cls != HtmlFormatter:
             return
 
-        module_path = os.path.dirname(__file__)
         html_theme = wizard.config.get('html_theme')
         if html_theme == 'default':
-            default_theme = os.path.join(module_path, '..',
+            default_theme = os.path.join(HERE, '..',
                                          'default_theme')
             html_theme = os.path.abspath(default_theme)
         else:
             html_theme = wizard.resolve_config_path(html_theme)
 
         HtmlFormatter.theme_path = html_theme
+
+        HtmlFormatter.add_anchors = bool(wizard.config.get("add_anchors"))
+
         GtkDocStringFormatter.parse_config(wizard)
