@@ -11,7 +11,7 @@ hotdoc to provide (for now basic) wiki-like functionalities: users
 can edit and preview the documentation, and the server patches the sources it was
 extracted from.
 
-> See [disabling incremental build](#disabling-incremental-build) if you do not wish / need to use this feature.
+> See [disabling incremental build](disabling-incremental-build.markdown) if you do not wish / need to use this feature.
 
 ### Simple yet powerful syntax
 
@@ -46,7 +46,7 @@ Hotdoc 1.0 will expose a (reasonably) stable API, its intended users being:
   for a given symbol, to showing a live preview during editing of any
   documentation snippet.
 
-> See [the bootstraped documentation](#hotdocs-own-bootstrapped-documentation) to have a first taste of the API.
+> See [the bootstraped documentation](#hotdocs-own-bootstrapped-documentation) to get a first taste of the API.
 
 ### Smart inclusion syntax
 

@@ -1,6 +1,6 @@
 ## Examples
 
-### Hotdoc's own bootstrapped documentation
+### Hotdoc's own bootstrapped documentation {#plop}
 
 > This is a *very* alpha work in progress, as the API isn't stable yet, docstrings are only partially filled out, and the python extension itself is also in an alpha state.
 

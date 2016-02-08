@@ -42,7 +42,7 @@ def _run():
 def _main():
     run_profile = os.environ.get('HOTDOC_PROFILING', False)
 
-    # pylint: disable=bare-except
+    # pylint: disable=broad-except
     try:
         if run_profile:
             cProfile.run('_run()', 'runstats')
@@ -51,7 +51,7 @@ def _main():
     except ConfigError as exception:
         print "Configuration error:", exception
         return 1
-    except Exception as e:
+    except Exception:
         print ("An unknown error happened while building the documentation"
                " and hotdoc cannot recover from it. Please report "
                "a bug with this error message and the steps to "

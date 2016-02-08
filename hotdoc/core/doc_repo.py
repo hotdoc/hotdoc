@@ -231,6 +231,7 @@ class DocRepo(object):
 
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-statements
+    # pylint: disable=too-many-branches
     def __setup(self, args):
         parser = \
             argparse.ArgumentParser(
@@ -245,7 +246,7 @@ class DocRepo(object):
 
         help_parser = subparsers.add_parser('help', help='print hotdoc help')
         help_parser.add_argument('--conf-file', help='Path to the config file',
-                                dest='conf_file', default='hotdoc.json')
+                                 dest='conf_file', default='hotdoc.json')
 
         conf_parser = subparsers.add_parser('conf', help='configure hotdoc')
         conf_parser.add_argument('--quickstart',
