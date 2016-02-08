@@ -13,8 +13,8 @@ from collections import OrderedDict
 from collections import namedtuple
 from collections import defaultdict
 
-import CommonMark
 import yaml as pyyaml
+import CommonMark
 
 from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.links import Link
@@ -29,10 +29,6 @@ from hotdoc.core.file_includer import add_md_includes, find_md_file
 
 
 Yaml = namedtuple('Yaml', ['group_to_pages', 'page_to_meta'])
-
-
-def _url_is_absolute(url):
-    return bool(urlparse.urlparse(url).netloc)
 
 
 def _find_md_file_for_yaml_file(basename):
@@ -578,13 +574,14 @@ class PageParser(object):
 
     def __check_links(self, page, node, parent_node=None):
         if node.t == 'Link':
+            path = None
             if node.destination:
                 # The rest of this sub-ast does not matter anymore
                 if self.__parse_topic_link(page, node):
                     return
-                path = self.__find_md_file(node.destination)
-            else:
-                path = None
+                elif (node.parent and node.parent.t == 'Heading') or \
+                        node.destination in self.__yaml.page_to_meta:
+                    path = self.__find_md_file(node.destination)
 
             handler = self.__well_known_names.get(node.destination)
             if handler:
@@ -594,7 +591,7 @@ class PageParser(object):
                 if subfolder:
                     new_dest = subfolder + '/' + new_dest
                 node.destination = '%s.html' % new_dest
-            elif parent_node and path:
+            elif path:
                 self.__add_subpage(page, path)
 
                 original_name = _get_label(node)
@@ -642,11 +639,20 @@ class PageParser(object):
         return False
 
     def __check_yaml_meta(self, node):
-        if _url_is_absolute(node.destination):
+        url_components = urlparse.urlparse(node.destination)
+        if bool(url_components.netloc):
             return
 
         if node.destination in self.__yaml.page_to_meta:
             node.destination += ".html"
+        else:
+            md_file = self.__find_md_file(url_components.path)
+            if md_file:
+                basename = os.path.basename(md_file)
+                split_ext = os.path.splitext(basename)
+                node.destination = split_ext[0] + '.html'
+                if url_components.fragment:
+                    node.destination += '#' + url_components.fragment
 
     def __update_links(self, node, link_resolver):
         if node.t == 'Link':

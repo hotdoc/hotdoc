@@ -1,10 +1,10 @@
 ## Examples
 
-### Hotdoc's own bootstrapped documentation {#plop}
+### Hotdoc's own bootstrapped documentation
 
 > This is a *very* alpha work in progress, as the API isn't stable yet, docstrings are only partially filled out, and the python extension itself is also in an alpha state.
 
-With the above warning taken into consideration, you can visit [this page]() to browse hotdoc's documentation.
+You're looking at it, check <https://github.com/hotdoc/hotdoc/tree/master/documentation> for the sources.
 
 ### A large GObject introspected C library
 

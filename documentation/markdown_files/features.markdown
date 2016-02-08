@@ -46,7 +46,7 @@ Hotdoc 1.0 will expose a (reasonably) stable API, its intended users being:
   for a given symbol, to showing a live preview during editing of any
   documentation snippet.
 
-> See [the bootstraped documentation](#hotdocs-own-bootstrapped-documentation) to get a first taste of the API.
+> See [the bootstraped documentation](examples.markdown#hotdocs-own-bootstrapped-documentation) to get a first taste of the API.
 
 ### Smart inclusion syntax
 

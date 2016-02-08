@@ -49,7 +49,7 @@ hotdoc --index markdown_files/index.markdown --output html  run
 
 from the `~/hotdoc_layout_test` folder, and check the output with `firefox html/index.html`.
 
-See the [configuration file section](#the-configuration-file) if you'd like to convert this command-line to a configuration file.
+See the [configuration file section](the-configuration-file.markdown) if you'd like to convert this command-line to a configuration file.
 
 A few things are to be noted here:
 

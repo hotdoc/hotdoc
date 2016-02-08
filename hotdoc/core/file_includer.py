@@ -20,10 +20,10 @@ def find_md_file(filename, include_paths):
 
     for include_path in include_paths:
         fpath = os.path.join(include_path, filename)
-        if os.path.exists(fpath):
+        if os.path.exists(fpath) and os.path.isfile(fpath):
             return fpath
 
-    if os.path.exists(filename):
+    if os.path.exists(filename) and os.path.isfile(filename):
         return filename
     return None
 

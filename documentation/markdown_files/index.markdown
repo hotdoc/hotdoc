@@ -1,8 +1,11 @@
 ## HotDoc documentation
 
-This documentation is bootstrapped by the tool, how cool is that ?
+Hotdoc is a documentation micro-framework. It provides an interface for
+extensions to plug upon, along with some base objects (formatters, ...)
 
-### [Overview](overview.markdown)
+Please check the packages listed at [https://github.com/hotdoc](https://github.com/hotdoc) to
+pick the extensions you are interested in.
+
 ### [Features](features.markdown)
 ### [Examples](examples.markdown)
 ### [Installing](installing.markdown)
