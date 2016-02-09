@@ -14,6 +14,7 @@ from hotdoc.core import file_includer
 from hotdoc.core.base_extension import BaseExtension
 from hotdoc.core.base_formatter import Formatter
 from hotdoc.core.change_tracker import ChangeTracker
+from hotdoc.core.comment_block import Tag
 from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.doc_tree import DocTree
 from hotdoc.core.links import LinkResolver
@@ -203,8 +204,18 @@ class DocRepo(object):
         """
         self.doc_tree.format(self.link_resolver, self.output, self.extensions)
 
+    def __add_default_tags(self, _, comment):
+        for validator in self.tag_validators.values():
+            if validator.default and validator.name not in comment.tags:
+                comment.tags[validator.name] = \
+                    Tag(name=validator.name,
+                        description=validator.default)
+
     def __setup_database(self):
         self.doc_database = DocDatabase()
+        self.doc_database.comment_added_signal.connect(self.__add_default_tags)
+        self.doc_database.comment_updated_signal.connect(
+            self.__add_default_tags)
         self.doc_database.setup(self.get_private_folder())
         self.link_resolver = LinkResolver(self.doc_database)
 

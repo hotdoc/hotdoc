@@ -16,6 +16,7 @@ from hotdoc.utils.simple_signals import Signal
 class DocDatabase(object):
     """Banana banana
     """
+    comment_added_signal = Signal()
     comment_updated_signal = Signal()
     symbol_updated_signal = Signal()
 
@@ -31,13 +32,10 @@ class DocDatabase(object):
         Banana banana
         """
         self.__comments[comment.name] = comment
-        # for validator in self.tag_validators.values():
-        #    if validator.default and validator.name not in comment.tags:
-        #        comment.tags[validator.name] = \
-        #            Tag(name=validator.name,
-        #                description=validator.default)
         if self.__incremental:
             self.__update_symbol_comment(comment)
+        else:
+            self.comment_added_signal(self, comment)
 
     def get_comment(self, name):
         """
