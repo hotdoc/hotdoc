@@ -7,6 +7,21 @@ import os
 from hotdoc.utils.simple_signals import Signal
 
 # pylint: disable=invalid-name
+# pylint: disable=pointless-string-statement
+"""
+Signal emitted to retrieve included content.
+
+Args:
+    include_path: str: The path of the file to include from
+    line_ranges: list(str): The ranges of the lines to include from
+    symbol: str: The name of the symbol to include
+
+Returns a 2 tuple containing the included content and the lang it is in.
+
+Returns:
+    str: The content to be included
+    str: The lang of the content ('' means unknown but not markdown)
+"""
 include_signal = Signal()
 
 
@@ -46,6 +61,16 @@ def __parse_include(include):
     return (include_filename, line_ranges, symbol)
 
 
+def __get_content(include_path, line_ranges, symbol):
+    for c in include_signal(include_path, line_ranges, symbol):
+        if c is not None:
+            included_content, lang = c
+            if lang != "markdown":
+                included_content = '\n``` %s\n%s\n```\n' % (
+                    lang, included_content)
+            return included_content, lang
+
+
 # pylint: disable=unused-argument
 def add_md_includes(contents, source_file, include_paths=None, lineno=0):
     """
@@ -57,11 +82,11 @@ def add_md_includes(contents, source_file, include_paths=None, lineno=0):
         lineno: int, The line number from which the content comes from in
             source_file
     """
-
     if include_paths is None:
         return contents
 
     inclusions = set(re.findall('{{(.+?)}}', contents))
+    lang = None
     for inclusion in inclusions:
         include_filename, line_ranges, symbol = __parse_include(inclusion)
         include_path = find_md_file(include_filename, include_paths)
@@ -69,19 +94,18 @@ def add_md_includes(contents, source_file, include_paths=None, lineno=0):
         if include_path is None:
             continue
 
-        for c in include_signal(include_path.strip(), line_ranges, symbol):
-            if c is not None:
-                included_content = c
-                break
+        included_content, lang = __get_content(include_path.strip(),
+                                               line_ranges, symbol)
 
-        nincluded_content = included_content
-        including = True
+        # Recurse only if in markdown (otherwise we are in a code block)
+        including = lang is "markdown"
+        new_included_content = included_content
         while including:
-            # Recurse in the included content
-            nincluded_content = add_md_includes(
-                nincluded_content, include_path, include_paths, lineno)
-            including = (nincluded_content != included_content)
-            included_content = nincluded_content
+            new_included_content = add_md_includes(new_included_content,
+                                                   include_path, include_paths,
+                                                   lineno)
+            including = (new_included_content != included_content)
+            included_content = new_included_content
 
         contents = contents.replace('{{' + inclusion + '}}', included_content)
 

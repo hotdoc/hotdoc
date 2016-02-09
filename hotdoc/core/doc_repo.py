@@ -49,8 +49,12 @@ class CoreExtension(BaseExtension):
 
     # pylint: disable=no-self-use
     def __include_file_cb(self, include_path, line_ranges, symbol):
+        lang = ''
+        if include_path.endswith((".md", ".markdown")):
+            lang = 'markdown'
+
         with io.open(include_path, 'r', encoding='utf-8') as _:
-            return _.read()
+            return _.read(), lang
 
 
 class DocRepo(object):
@@ -256,20 +260,7 @@ class DocRepo(object):
                                  help='Path to the config file',
                                  dest='conf_file', default='hotdoc.json')
 
-        # First pass to get the conf path
-        # FIXME: subparsers is useless, remove that hack
-        init_args = list(args)
-        split_pos = 0
-        cmd = None
-        for i, arg in enumerate(init_args):
-            if arg in ['run', 'conf', 'help']:
-                cmd = arg
-                split_pos = i
-                break
-
-        init_args = init_args[split_pos:]
-        init_args = list(parser.parse_known_args(init_args))
-        self.__conf_file = os.path.abspath(init_args[0].conf_file)
+        cmd = self.__setup_config_file(parser, args)
         conf_path = os.path.dirname(self.__conf_file)
         wizard = HotdocWizard(parser, conf_path=conf_path)
         self.wizard = wizard
@@ -337,6 +328,24 @@ class DocRepo(object):
 
         if exit_now:
             sys.exit(0)
+
+    def __setup_config_file(self, parser, args):
+        # First pass to get the conf path
+        # FIXME: subparsers is useless, remove that hack
+        init_args = list(args)
+        split_pos = 0
+        cmd = None
+        for i, arg in enumerate(init_args):
+            if arg in ['run', 'conf', 'help']:
+                cmd = arg
+                split_pos = i
+                break
+
+        init_args = init_args[split_pos:]
+        init_args = list(parser.parse_known_args(init_args))
+        self.__conf_file = os.path.abspath(init_args[0].conf_file)
+
+        return cmd
 
     # pylint: disable=no-self-use
     def __load_config(self, args, conf_file, wizard):
