@@ -45,7 +45,11 @@ def find_md_file(filename, include_paths):
 
 def __parse_include(include):
     include = include.strip()
-    line_ranges_str = re.findall(r'\[(.+?):(.+?)\]', include)
+    line_ranges_str = re.findall(r'\[([0-9]+?):([0-9]+?)\]', include)
+
+    if len(line_ranges_str) != len(re.findall(r'\[(.+?):(.+?)\]', include)):
+        return None, None, None
+
     line_ranges = []
     for s, e in line_ranges_str:
         line_ranges.append((int(s), int(e)))
@@ -89,6 +93,9 @@ def add_md_includes(contents, source_file, include_paths=None, lineno=0):
     lang = None
     for inclusion in inclusions:
         include_filename, line_ranges, symbol = __parse_include(inclusion)
+        if include_filename is None:
+            continue
+
         include_path = find_md_file(include_filename, include_paths)
 
         if include_path is None:
