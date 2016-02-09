@@ -189,7 +189,7 @@ if PYGIT2_VERSION is not None:
     INSTALL_REQUIRES.append('pygit2==%s' % PYGIT2_VERSION)
 
 setup(name='hotdoc',
-      version='0.6.9',
+      version='0.6.9.1',
       description='A documentation tool micro-framework',
       keywords='documentation',
       url='https://github.com/hotdoc/hotdoc',
