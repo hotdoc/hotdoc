@@ -47,31 +47,3 @@ Hotdoc 1.0 will expose a (reasonably) stable API, its intended users being:
   documentation snippet.
 
 > See [the bootstraped documentation](examples.markdown#hotdocs-own-bootstrapped-documentation) to get a first taste of the API.
-
-### Smart inclusion syntax
-
-Hotdoc extends the CommonMark syntax with the concept of transclusion, lifted
-from MultiMarkdown. See [this page](http://talk.commonmark.org/t/transclusion-or-including-sub-documents-for-reuse/270>)
-for the beginning of a discussion about having this feature in CommonMark itself.
-
-The syntax is:
-
-```
-Please include \{\{ my_file \}\}
-```
-
-includes the file and parses it as markdown
-
-```
-Please include this subsection of my file \{\{ my_file[start:end] \}\}
-```
-
-includes the lines comprised between start and end and parse them as markdown.
-
-```
-Please include this symbol in my source code file \{\{ my_file.recognized_language_extension#symbol_name \}\}
-```
-
-for example with `{ my_file.c#foo_bar }` , retrieves the symbol named `foo_bar` in `my_file.c` , and includes its content as a markdown code block. The range syntax can also be used in combination with this, for example { my_file.c#foo_bar[2:4] } will only include the lines 2 to 4 in the local scope of foo_bar.
-
-> The file extension needs to be recognized and handled by a source code parsing hotdoc extension for this feature to work as described.

@@ -10,5 +10,6 @@ pick the extensions you are interested in.
 ### [Examples](examples.markdown)
 ### [Installing](installing.markdown)
 ### [Basic concepts and tutorials](basic-concepts-and-tutorials.markdown)
+### [Extensions to the CommonMark syntax](syntax-extensions.markdown)
 ### [Usage](usage.markdown)
 ### [API Reference](python-api)

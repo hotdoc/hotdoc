@@ -2,9 +2,9 @@
 
 The standalone markdown files (usually located in "markdown_files) serve three main purposes:
 
-* Actually holding documentation: the contents in all markdown files will get rendered with CommonMark nearly as is, with the exception of the [syntax extensions](#syntax-extensions).
+* Actually holding documentation: the contents in all markdown files will get rendered with CommonMark nearly as is, with the exception of the [syntax extensions](syntax-extensions.markdown).
 
-* Creating the site hierarchy, or site map, that is the way in which the various pages of the resulting documentation link to each other, starting from the provided index page. See the [link syntax extension documentation](#link-syntax-extension) for the complete description of how links may be defined.
+* Creating the site hierarchy, or site map, that is the way in which the various pages of the resulting documentation link to each other, starting from the provided index page. See the [link syntax extension documentation](syntax-extensions.markdown#link-syntax) for the complete description of how links may be defined.
 
 * Optionally defining in which subpages source code symbols should be documented.
 
