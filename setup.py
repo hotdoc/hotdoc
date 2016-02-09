@@ -49,7 +49,7 @@ SOURCE_DIR = os.path.abspath('./')
 
 
 DEFAULT_THEME =\
-    'https://people.collabora.com/~meh/hotdoc_bootstrap_theme-0.6.6/dist.tgz'
+    'https://people.collabora.com/~meh/hotdoc_bootstrap_theme-0.7/dist.tgz'
 
 
 class DownloadDefaultTemplate(Command):
@@ -70,6 +70,8 @@ class DownloadDefaultTemplate(Command):
     # pylint: disable=missing-docstring
     # pylint: disable=no-self-use
     def run(self):
+        # Only installed at setup_requires time, whatever
+        # pylint: disable=import-error
         import requests
         response = \
             requests.get(DEFAULT_THEME)
@@ -187,7 +189,7 @@ if PYGIT2_VERSION is not None:
     INSTALL_REQUIRES.append('pygit2==%s' % PYGIT2_VERSION)
 
 setup(name='hotdoc',
-      version='0.6.6',
+      version='0.6.9',
       description='A documentation tool micro-framework',
       keywords='documentation',
       url='https://github.com/hotdoc/hotdoc',
