@@ -7,6 +7,7 @@ import errno
 import shutil
 import subprocess
 import tarfile
+import unittest
 from distutils.command.build import build
 from distutils.core import Command
 
@@ -15,6 +16,7 @@ from setuptools import find_packages, setup
 from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.develop import develop
 from setuptools.command.sdist import sdist
+from setuptools.command.test import test
 
 from hotdoc.utils.setup_utils import VersionList, THEME_VERSION
 
@@ -177,6 +179,38 @@ class CustomBDistEgg(bdist_egg):
         self.run_command('download_default_template')
         return bdist_egg.run(self)
 
+
+# From http://stackoverflow.com/a/17004263/2931197
+def discover_and_run_tests():
+    # use the default shared TestLoader instance
+    test_loader = unittest.defaultTestLoader
+
+    # use the basic test runner that outputs to sys.stderr
+    test_runner = unittest.TextTestRunner()
+
+    # automatically discover all tests
+    # NOTE: only works for python 2.7 and later
+    test_suite = test_loader.discover(SOURCE_DIR)
+
+    # run the test suite
+    test_runner.run(test_suite)
+
+
+class DiscoverTest(test):
+    def __init__(self, *args, **kwargs):
+        test.__init__(self, *args, **kwargs)
+        self.test_args = []
+        self.test_suite = True
+
+    def finalize_options(self):
+        test.finalize_options(self)
+        self.test_args = []
+        self.test_suite = True
+
+    def run_tests(self):
+        discover_and_run_tests()
+
+
 INSTALL_REQUIRES = [
     'cffi>=1.1.2,<=1.3.0',
     'pyyaml',
@@ -212,6 +246,7 @@ setup(name='hotdoc',
                 'sdist': CustomSDist,
                 'develop': CustomDevelop,
                 'bdist_egg': CustomBDistEgg,
+                'test': DiscoverTest,
                 'link_pre_commit_hook': LinkPreCommitHook,
                 'download_default_template': DownloadDefaultTemplate},
       scripts=['hotdoc/hotdoc'],
