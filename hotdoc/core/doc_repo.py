@@ -19,6 +19,7 @@ from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.doc_tree import DocTree
 from hotdoc.core.links import LinkResolver
 from hotdoc.core.wizard import HotdocWizard
+from hotdoc.utils.loggable import info
 from hotdoc.utils.utils import get_all_extension_classes, all_subclasses
 from hotdoc.utils.utils import OrderedSet
 
@@ -227,10 +228,10 @@ class DocRepo(object):
             if self.change_tracker.hard_dependencies_are_stale():
                 raise IOError
             self.incremental = True
-            print "Building incrementally"
+            info("Building incrementally")
         # pylint: disable=broad-except
         except Exception:
-            print "Building from scratch"
+            info("Building from scratch")
             shutil.rmtree(self.get_private_folder(), ignore_errors=True)
             shutil.rmtree(self.output, ignore_errors=True)
             self.change_tracker = ChangeTracker()
@@ -320,7 +321,7 @@ class DocRepo(object):
             exit_now = True
             if args.quickstart:
                 if wizard.quick_start():
-                    print "Setup complete, building the documentation now"
+                    info("Setup complete, building the documentation now")
                     try:
                         wizard.wait_for_continue(
                             "Setup complete,"

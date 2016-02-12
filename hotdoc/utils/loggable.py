@@ -111,48 +111,124 @@ class TerminalController(object):
         return re.sub(r'\$<\d+>[/*]?', '', cap.decode()).encode()
 
 
-class Loggable(object):
+(INFO,
+ WARNING,
+ ERROR) = range(3)
+
+
+class Logger(object):
 
     """Subclasses can inherit from this class to report recoverable errors."""
 
-    _error_type_to_exception = defaultdict()
-
+    _error_code_to_exception = defaultdict()
     _domain_codes = defaultdict(set)
-
-    _warning_type_to_exception = defaultdict()
-
-    log = []
+    _warning_code_to_exception = defaultdict()
+    journal = []
     fatal_warnings = False
+    _ignored_codes = set()
+    _ignored_domains = set()
     extra_log_data = None
+    _last_checkpoint = 0
+    _verbose = False
 
     @staticmethod
-    def get_error_codes():
-        """Return a list of all possible error codes."""
-        return Loggable._error_type_to_exception.keys()
-
-    @staticmethod
-    def register_error_code(code, exception_type, domain='default'):
+    def register_error_code(code, exception_type, domain='core'):
         """Register a new error code"""
-        Loggable._error_type_to_exception[code] = (exception_type, domain)
-        Loggable._domain_codes[domain].add(code)
+        Logger._error_code_to_exception[code] = (exception_type, domain)
+        Logger._domain_codes[domain].add(code)
 
     @staticmethod
-    def register_warning_code(code, exception_type, domain='default'):
+    def register_warning_code(code, exception_type, domain='core'):
         """Register a new warning code"""
-        Loggable._warning_type_to_exception[code] = (exception_type, domain)
-        Loggable._domain_codes[domain].add(code)
+        Logger._warning_code_to_exception[code] = (exception_type, domain)
+        Logger._domain_codes[domain].add(code)
+
+    @staticmethod
+    def _log(code, message, level, domain):
+        """Call this to add an entry in the journal"""
+        Logger.journal.append(
+            (Logger.extra_log_data, level, domain, code, message))
 
     @staticmethod
     def error(code, message):
-        """Call this to raise an exception and have it stored in the log"""
-        raise Loggable._error_type_to_exception[code](message)
+        """Call this to raise an exception and have it stored in the journal"""
+        assert code in Logger._error_code_to_exception
+        exc_type, domain = Logger._error_code_to_exception[code]
+        Logger._log(code, message, ERROR, domain)
+        raise exc_type(message)
 
     @staticmethod
     def warn(code, message):
-        """Call this to either raise an exception or """
-        if not Loggable.fatal_warnings:
-            domain = Loggable._domain_codes[code]
-            Loggable.log.append(
-                (Loggable.extra_log_data, domain, code, message))
-        else:
-            raise Loggable._warning_type_to_exception[code](message)
+        """
+        Call this to store a warning in the journal.
+
+        Will raise if `Logger.fatal_warnings` is set to True.
+        """
+
+        if code in Logger._ignored_codes:
+            return
+
+        assert code in Logger._warning_code_to_exception
+        exc_type, domain = Logger._warning_code_to_exception[code]
+
+        if domain in Logger._ignored_domains:
+            return
+
+        level = WARNING
+        if Logger.fatal_warnings:
+            level = ERROR
+
+        Logger._log(code, message, level, domain)
+
+        if Logger.fatal_warnings:
+            raise exc_type(message)
+
+    @staticmethod
+    def info(message, domain):
+        """Log simple info"""
+        if not Logger._verbose:
+            return
+
+        if domain in Logger._ignored_domains:
+            return
+
+        Logger._log(None, message, INFO, domain)
+
+    @staticmethod
+    def add_ignored_code(code):
+        """Add a code to ignore. Errors cannot be ignored."""
+        Logger._ignored_codes.add(code)
+
+    @staticmethod
+    def add_ignored_domain(code):
+        """Add a domain to ignore. Errors cannot be ignored."""
+        Logger._ignored_domains.add(code)
+
+    @staticmethod
+    def checkpoint():
+        """Add a checkpoint"""
+        Logger._last_checkpoint = len(Logger.journal)
+
+    @staticmethod
+    def since_checkpoint():
+        """Get journal since last checkpoint"""
+        return Logger.journal[Logger._last_checkpoint:]
+
+    @staticmethod
+    def reset():
+        """Resets Logger to its initial state"""
+        Logger._error_code_to_exception = defaultdict()
+        Logger._domain_codes = defaultdict(set)
+        Logger._warning_code_to_exception = defaultdict()
+        Logger.journal = []
+        Logger.fatal_warnings = False
+        Logger._ignored_codes = set()
+        Logger._ignored_domains = set()
+        Logger.extra_log_data = None
+        Logger._verbose = False
+        Logger._last_checkpoint = 0
+
+
+def info(message, domain='core'):
+    """Shortcut to `Logger.info`"""
+    Logger.info(message, domain)
