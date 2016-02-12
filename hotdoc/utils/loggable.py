@@ -3,6 +3,7 @@ Banana banana
 """
 import re
 import sys
+from collections import defaultdict
 
 
 # pylint: disable=too-few-public-methods
@@ -108,3 +109,50 @@ class TerminalController(object):
         import curses
         cap = curses.tigetstr(cap_name) or b''
         return re.sub(r'\$<\d+>[/*]?', '', cap.decode()).encode()
+
+
+class Loggable(object):
+
+    """Subclasses can inherit from this class to report recoverable errors."""
+
+    _error_type_to_exception = defaultdict()
+
+    _domain_codes = defaultdict(set)
+
+    _warning_type_to_exception = defaultdict()
+
+    log = []
+    fatal_warnings = False
+    extra_log_data = None
+
+    @staticmethod
+    def get_error_codes():
+        """Return a list of all possible error codes."""
+        return Loggable._error_type_to_exception.keys()
+
+    @staticmethod
+    def register_error_code(code, exception_type, domain='default'):
+        """Register a new error code"""
+        Loggable._error_type_to_exception[code] = (exception_type, domain)
+        Loggable._domain_codes[domain].add(code)
+
+    @staticmethod
+    def register_warning_code(code, exception_type, domain='default'):
+        """Register a new warning code"""
+        Loggable._warning_type_to_exception[code] = (exception_type, domain)
+        Loggable._domain_codes[domain].add(code)
+
+    @staticmethod
+    def error(code, message):
+        """Call this to raise an exception and have it stored in the log"""
+        raise Loggable._error_type_to_exception[code](message)
+
+    @staticmethod
+    def warn(code, message):
+        """Call this to either raise an exception or """
+        if not Loggable.fatal_warnings:
+            domain = Loggable._domain_codes[code]
+            Loggable.log.append(
+                (Loggable.extra_log_data, domain, code, message))
+        else:
+            raise Loggable._warning_type_to_exception[code](message)
