@@ -53,20 +53,25 @@ You are now in a virtual environment, to exit it you may call "deactivate", to e
 
 ### Hotdoc itself
 
-Two main alternatives are available:
+Three main alternatives are available:
 
 * Using pip to get the last released version of hotdoc:
   ```
   pip install hotdoc
   ```
 
-* Installing from a github clone:
+* Installing a "read-only" version from a github clone:
   ```
   git clone https://github.com/hotdoc/hotdoc.git
   cd hotdoc
   python setup.py install
   ```
 
-  > You can replace `install` with `develop` if you intend to edit the sources and do not want to run install again each time you want to test your modifications
+* Installing an editable version from a github clone:
+  ```
+  git clone https://github.com/hotdoc/hotdoc.git
+  cd hotdoc
+  pip install -e .[dev]
+  ```
 
 Congratulations, you have successfully installed hotdoc! You may now want to check the [list of available extensions](https://github.com/hotdoc).

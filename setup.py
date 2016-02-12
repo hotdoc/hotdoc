@@ -173,20 +173,23 @@ class CustomBDistEgg(bdist_egg):
         return bdist_egg.run(self)
 
 INSTALL_REQUIRES = [
-    'cffi',
+    'cffi>=1.1.2,<=1.3.0',
     'pyyaml',
-    'git-pylint-commit-hook',
-    'git-pep8-commit-hook',
     'wheezy.template==0.1.167',
     'CommonMark==0.6.1',
     'cmarkpy==0.1.3',
-    'pygraphviz==1.3.1',
-    'sqlalchemy==1.0.9',
-    'ipython==4.0.0',
+    'pygraphviz>=1.3.rc2',
+    'sqlalchemy>=1.0.8',
+    'ipython>=4.0.0',
     'toposort==1.4']
 
 if PYGIT2_VERSION is not None:
     INSTALL_REQUIRES.append('pygit2==%s' % PYGIT2_VERSION)
+
+EXTRAS_REQUIRE = {
+    'dev': ['git-pylint-commit-hook',
+            'git-pep8-commit-hook']
+}
 
 setup(name='hotdoc',
       version='0.6.9.1',
@@ -215,5 +218,6 @@ setup(name='hotdoc',
                      'default_theme/fonts/*'],
       },
       install_requires=INSTALL_REQUIRES,
-      setup_requires=['cffi',
+      extras_require=EXTRAS_REQUIRE,
+      setup_requires=['cffi>=1.1.2,<=1.3.0',
                       'requests'])
