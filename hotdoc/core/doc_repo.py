@@ -279,6 +279,8 @@ class DocRepo(object):
         self.wizard = wizard
 
         extension_classes = get_all_extension_classes(sort=True)
+        for subclass in extension_classes:
+            self.__extension_classes[subclass.EXTENSION_NAME] = subclass
 
         configurable_classes = all_subclasses(Configurable)
 
@@ -287,10 +289,6 @@ class DocRepo(object):
             if subclass.add_arguments not in seen:
                 subclass.add_arguments(parser)
                 seen.add(subclass.add_arguments)
-
-        for subclass in extension_classes:
-            subclass.add_arguments(parser)
-            self.__extension_classes[subclass.EXTENSION_NAME] = subclass
 
         parser.add_argument("-i", "--index", action="store",
                             dest="index", help="location of the index file",

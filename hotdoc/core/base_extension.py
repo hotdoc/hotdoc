@@ -9,6 +9,7 @@ from collections import defaultdict
 from hotdoc.core.doc_tree import DocTree
 from hotdoc.formatters.html_formatter import HtmlFormatter
 from hotdoc.utils.utils import OrderedSet
+from hotdoc.utils.configurable import Configurable
 
 
 # pylint: disable=too-few-public-methods
@@ -22,7 +23,7 @@ class ExtDependency(object):
         self.is_upstream = is_upstream
 
 
-class BaseExtension(object):
+class BaseExtension(Configurable):
     """
     All extensions should inherit from this base class
     """
@@ -34,14 +35,6 @@ class BaseExtension(object):
         self.formatters = {"html": HtmlFormatter([])}
         self.__created_symbols = defaultdict(OrderedSet)
         self.__naive_path = None
-
-    @staticmethod
-    def add_arguments(parser):
-        """
-        Subclasses should implement this if they need to get
-        arguments from the command line.
-        """
-        pass
 
     def get_formatter(self, output_format):
         """
