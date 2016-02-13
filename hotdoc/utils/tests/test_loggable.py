@@ -2,7 +2,7 @@
 # pylint: disable=invalid-name
 
 import unittest
-from hotdoc.utils.loggable import Logger, ERROR, WARNING
+from hotdoc.utils.loggable import Logger, ERROR, WARNING, LogEntry
 
 
 class FooError(Exception):
@@ -16,6 +16,7 @@ class BazError(Exception):
 class TestLogger(unittest.TestCase):
     def setUp(self):
         Logger.reset()
+        Logger.silent = True
         Logger.register_error_code('foo', FooError, 'bar')
         Logger.register_warning_code('baz', BazError, 'bar')
 
@@ -25,14 +26,15 @@ class TestLogger(unittest.TestCase):
         with self.assertRaises(FooError) as cm:
             Logger.error('foo', 'This foo is bad')
         self.assertEqual(cm.exception.message, 'This foo is bad')
-        test_journal.append((None, ERROR, 'bar', 'foo', 'This foo is bad'))
+        test_journal.append(LogEntry(ERROR, 'bar', 'foo', 'This foo is bad'))
         self.assertListEqual(Logger.journal, test_journal)
 
     def test_warning(self):
         test_journal = []
 
         Logger.warn('baz', 'This baz is bad')
-        test_journal.append((None, WARNING, 'bar', 'baz', 'This baz is bad'))
+        test_journal.append(
+            LogEntry(WARNING, 'bar', 'baz', 'This baz is bad'))
         self.assertListEqual(Logger.journal, test_journal)
 
     def test_fatal_warnings(self):
@@ -42,7 +44,8 @@ class TestLogger(unittest.TestCase):
         with self.assertRaises(BazError) as cm:
             Logger.warn('baz', 'This baz is bad')
         self.assertEqual(cm.exception.message, 'This baz is bad')
-        test_journal.append((None, ERROR, 'bar', 'baz', 'This baz is bad'))
+        test_journal.append(
+            LogEntry(ERROR, 'bar', 'baz', 'This baz is bad'))
         self.assertListEqual(Logger.journal, test_journal)
 
     def test_unknown_codes(self):
@@ -61,24 +64,25 @@ class TestLogger(unittest.TestCase):
         Logger.add_ignored_code('foo')
         with self.assertRaises(FooError):
             Logger.error('foo', 'This foo is bad I have to care')
-        test_journal.append((None, ERROR, 'bar', 'foo',
-                             'This foo is bad I have to care'))
+        test_journal.append(LogEntry(ERROR, 'bar', 'foo',
+                                     'This foo is bad I have to care'))
         self.assertListEqual(Logger.journal, test_journal)
 
     def test_checkpoint(self):
         test_journal = []
 
         Logger.warn('baz', 'This baz is bad')
-        test_journal.append((None, WARNING, 'bar', 'baz', 'This baz is bad'))
+        test_journal.append(
+            LogEntry(WARNING, 'bar', 'baz', 'This baz is bad'))
         self.assertListEqual(Logger.journal, test_journal)
         self.assertListEqual(Logger.since_checkpoint(), test_journal)
         Logger.checkpoint()
         self.assertListEqual(Logger.since_checkpoint(), [])
         Logger.warn('baz', 'This baz is really bad')
-        test_journal.append((None, WARNING, 'bar', 'baz',
-                             'This baz is really bad'))
-        partial_journal = [(None, WARNING, 'bar', 'baz',
-                            'This baz is really bad')]
+        test_journal.append(LogEntry(WARNING, 'bar', 'baz',
+                                     'This baz is really bad'))
+        partial_journal = [LogEntry(WARNING, 'bar', 'baz',
+                                    'This baz is really bad')]
         self.assertListEqual(Logger.journal, test_journal)
         self.assertListEqual(Logger.since_checkpoint(), partial_journal)
 

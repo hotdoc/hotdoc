@@ -3,7 +3,7 @@ Banana banana
 """
 import re
 import sys
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 from hotdoc.utils.configurable import Configurable
 
@@ -56,6 +56,14 @@ class TerminalController(object):
     HIDE_CURSOR=cinvis SHOW_CURSOR=cnorm""".split()
     _COLORS = """BLACK BLUE GREEN CYAN RED MAGENTA YELLOW WHITE""".split()
     _ANSICOLORS = "BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE".split()
+
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(TerminalController, cls).__new__(
+                cls, *args, **kwargs)
+        return cls._instance
 
     def __init__(self, term_stream=sys.stdout):
         # Curses isn't available on all platforms
@@ -118,6 +126,31 @@ class TerminalController(object):
  ERROR) = range(3)
 
 
+LogEntry = namedtuple('LogEntry', ['level', 'domain', 'code', 'message'])
+
+
+def _print_entry(entry):
+    termc = TerminalController()
+
+    out = sys.stdout
+    if entry.level > INFO:
+        out = sys.stderr
+
+    if entry.level == INFO:
+        out.write(termc.GREEN + 'INFO' + termc.NORMAL)
+    elif entry.level == WARNING:
+        out.write(termc.YELLOW + 'WARNING' + termc.NORMAL)
+    elif entry.level == ERROR:
+        out.write(termc.RED + 'ERROR' + termc.NORMAL)
+
+    out.write(': [%s]:' % entry.domain)
+
+    if entry.code:
+        out.write(' (%s):' % entry.code)
+
+    out.write(' %s\n' % entry.message)
+
+
 class Logger(Configurable):
 
     """Subclasses can inherit from this class to report recoverable errors."""
@@ -129,9 +162,9 @@ class Logger(Configurable):
     fatal_warnings = False
     _ignored_codes = set()
     _ignored_domains = set()
-    extra_log_data = None
     _last_checkpoint = 0
     _verbose = False
+    silent = False
 
     @staticmethod
     def register_error_code(code, exception_type, domain='core'):
@@ -148,8 +181,14 @@ class Logger(Configurable):
     @staticmethod
     def _log(code, message, level, domain):
         """Call this to add an entry in the journal"""
-        Logger.journal.append(
-            (Logger.extra_log_data, level, domain, code, message))
+        entry = LogEntry(level, domain, code, message)
+        Logger.journal.append(entry)
+
+        if Logger.silent:
+            return
+
+        if Logger._verbose or level > INFO:
+            _print_entry(entry)
 
     @staticmethod
     def error(code, message):
@@ -188,9 +227,6 @@ class Logger(Configurable):
     @staticmethod
     def info(message, domain):
         """Log simple info"""
-        if not Logger._verbose:
-            return
-
         if domain in Logger._ignored_domains:
             return
 
@@ -226,11 +262,33 @@ class Logger(Configurable):
         Logger.fatal_warnings = False
         Logger._ignored_codes = set()
         Logger._ignored_domains = set()
-        Logger.extra_log_data = None
         Logger._verbose = False
         Logger._last_checkpoint = 0
+
+    @staticmethod
+    def add_arguments(parser):
+        """Banana banana
+        """
+        group = parser.add_argument_group(
+            'Logger', 'logging options')
+        group.add_argument("--verbose", action="store_true",
+                           dest="verbose", help="Turn on verbosity")
+
+    @staticmethod
+    def parse_config(doc_repo, config):
+        Logger._verbose = bool(config.get("verbose"))
 
 
 def info(message, domain='core'):
     """Shortcut to `Logger.info`"""
     Logger.info(message, domain)
+
+
+def warn(code, message):
+    """Shortcut to `Logger.warn`"""
+    Logger.warn(code, message)
+
+
+def error(code, message):
+    """Shortcut to `Logger.error`"""
+    Logger.error(code, message)
