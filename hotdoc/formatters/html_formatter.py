@@ -664,13 +664,10 @@ class HtmlFormatter(Formatter):
 
         return res
 
-    @classmethod
-    def add_arguments(cls, parser):
+    @staticmethod
+    def add_arguments(parser):
         """Banana banana
         """
-        if cls != HtmlFormatter:
-            return
-
         group = parser.add_argument_group(
             'Html formatter', 'html formatter options')
         group.add_argument("--html-theme", action="store",
@@ -682,25 +679,18 @@ class HtmlFormatter(Formatter):
                            help="Add anchors to html headers",
                            default='default')
 
-        GtkDocStringFormatter.add_arguments(parser)
-
-    @classmethod
-    def parse_config(cls, wizard):
+    @staticmethod
+    def parse_config(doc_repo, config):
         """Banana banana
         """
-        if cls != HtmlFormatter:
-            return
-
-        html_theme = wizard.config.get('html_theme')
+        html_theme = config.get('html_theme')
         if html_theme == 'default':
             default_theme = os.path.join(HERE, '..',
                                          'default_theme-%s' % THEME_VERSION)
             html_theme = os.path.abspath(default_theme)
         else:
-            html_theme = wizard.resolve_config_path(html_theme)
+            html_theme = doc_repo.resolve_config_path(html_theme)
 
         HtmlFormatter.theme_path = html_theme
 
-        HtmlFormatter.add_anchors = bool(wizard.config.get("add_anchors"))
-
-        GtkDocStringFormatter.parse_config(wizard)
+        HtmlFormatter.add_anchors = bool(config.get("add_anchors"))

@@ -9,6 +9,7 @@ import shutil
 from xml.sax.saxutils import unescape
 
 import pygraphviz as pg
+from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.utils import recursive_overwrite
 
@@ -31,7 +32,7 @@ def _create_hierarchy_graph(hierarchy):
     return graph
 
 
-class Formatter(object):
+class Formatter(Configurable):
     """Formats and writes `doc_tree.Page` and `symbols.Symbol`
 
     Subclasses should implement the protected methods.
@@ -169,24 +170,18 @@ class Formatter(object):
         """
         pass
 
-    @classmethod
-    def add_arguments(cls, parser):
+    @staticmethod
+    def add_arguments(parser):
         """Banana banana
         """
-        if cls != Formatter:
-            return
-
         group = parser.add_argument_group(
             'Base formatter', 'base formatter options')
         group.add_argument("--editing-server", action="store",
                            dest="editing_server", help="Editing server url,"
                            " if provided, an edit button will be added")
 
-    @classmethod
-    def parse_config(cls, wizard):
+    @staticmethod
+    def parse_config(doc_repo, config):
         """Banana banana
         """
-        if cls != Formatter:
-            return
-
-        Formatter.editing_server = wizard.config.get('editing_server')
+        Formatter.editing_server = config.get('editing_server')

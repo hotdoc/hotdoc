@@ -20,6 +20,7 @@ from hotdoc.core.doc_tree import DocTree
 from hotdoc.core.links import LinkResolver
 from hotdoc.core.wizard import HotdocWizard
 from hotdoc.utils.loggable import info
+from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.utils import get_all_extension_classes, all_subclasses
 from hotdoc.utils.utils import OrderedSet
 
@@ -278,10 +279,14 @@ class DocRepo(object):
         self.wizard = wizard
 
         extension_classes = get_all_extension_classes(sort=True)
-        formatter_classes = all_subclasses(Formatter) + [Formatter]
 
-        for subclass in formatter_classes:
-            subclass.add_arguments(parser)
+        configurable_classes = all_subclasses(Configurable)
+
+        seen = set()
+        for subclass in configurable_classes:
+            if subclass.add_arguments not in seen:
+                subclass.add_arguments(parser)
+                seen.add(subclass.add_arguments)
 
         for subclass in extension_classes:
             subclass.add_arguments(parser)
@@ -308,8 +313,11 @@ class DocRepo(object):
         args = parser.parse_args(args)
         self.__load_config(args, self.__conf_file, wizard)
 
-        for subclass in formatter_classes:
-            subclass.parse_config(wizard)
+        configured = set()
+        for subclass in configurable_classes:
+            if subclass.parse_config not in configured:
+                subclass.parse_config(self, wizard.config)
+                configured.add(subclass.parse_config)
 
         exit_now = False
         save_config = True

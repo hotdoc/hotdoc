@@ -1,2 +1,2 @@
 [TYPECHECK]
-ignored-modules=distutils
+ignored-modules=distutils,cmarkpy

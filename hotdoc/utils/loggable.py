@@ -5,6 +5,8 @@ import re
 import sys
 from collections import defaultdict
 
+from hotdoc.utils.configurable import Configurable
+
 
 # pylint: disable=too-few-public-methods
 class TerminalController(object):
@@ -116,7 +118,7 @@ class TerminalController(object):
  ERROR) = range(3)
 
 
-class Logger(object):
+class Logger(Configurable):
 
     """Subclasses can inherit from this class to report recoverable errors."""
 

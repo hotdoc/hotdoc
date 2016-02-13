@@ -15,6 +15,7 @@ import cmarkpy
 
 from hotdoc.core.comment_block import Comment, Annotation, Tag
 from hotdoc.core.file_includer import add_md_includes
+from hotdoc.utils.configurable import Configurable
 
 
 # http://stackoverflow.com/questions/434287/what-is-the-most-pythonic-way-to-iterate-over-a-list-in-chunks
@@ -370,7 +371,7 @@ class DocScanner(object):
             yield ('other', text[pos:], None)
 
 
-class GtkDocStringFormatter(object):
+class GtkDocStringFormatter(Configurable):
     """
     A parser for the legacy gtk-doc format.
     """
@@ -539,26 +540,20 @@ class GtkDocStringFormatter(object):
 
         raise Exception("Unrecognized format %s" % output_format)
 
-    @classmethod
-    def add_arguments(cls, parser):
+    @staticmethod
+    def add_arguments(parser):
         """Banana banana
         """
-        if cls != GtkDocStringFormatter:
-            return
-
         group = parser.add_argument_group(
             'GtkDocStringFormatter', 'GtkDocStringFormatter options')
         group.add_argument("--gtk-doc-remove-xml", action="store_true",
                            dest="gtk_doc_remove_xml", help="Remove xml?")
 
-    @classmethod
-    def parse_config(cls, wizard):
+    @staticmethod
+    def parse_config(doc_repo, config):
         """Banana banana
         """
-        if cls != GtkDocStringFormatter:
-            return
-
-        GtkDocStringFormatter.remove_xml_tags = wizard.config.get(
+        GtkDocStringFormatter.remove_xml_tags = config.get(
             'gtk_doc_remove_xml')
 
 if __name__ == "__main__":
