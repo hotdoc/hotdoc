@@ -8,6 +8,7 @@ from collections import defaultdict
 
 from hotdoc.core.doc_tree import DocTree
 from hotdoc.formatters.html_formatter import HtmlFormatter
+from hotdoc.utils.loggable import info
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.configurable import Configurable
 
@@ -134,7 +135,11 @@ class BaseExtension(Configurable):
         """
         formatter = self.get_formatter('html')
         if page.is_stale:
+            info('Formatting page %s' % page.source_file, 'formatting')
             page.formatted_contents = \
                 self.doc_repo.doc_tree.page_parser.format_page(
                     page, link_resolver, formatter)
             page.format(formatter, link_resolver, output)
+        else:
+            info('Not formatting page %s, up to date' % page.source_file,
+                 'formatting')

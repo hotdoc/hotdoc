@@ -57,14 +57,6 @@ class TerminalController(object):
     _COLORS = """BLACK BLUE GREEN CYAN RED MAGENTA YELLOW WHITE""".split()
     _ANSICOLORS = "BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE".split()
 
-    _instance = None
-
-    def __new__(cls, *args, **kwargs):
-        if not cls._instance:
-            cls._instance = super(TerminalController, cls).__new__(
-                cls, *args, **kwargs)
-        return cls._instance
-
     def __init__(self, term_stream=sys.stdout):
         # Curses isn't available on all platforms
         try:
@@ -120,6 +112,7 @@ class TerminalController(object):
         cap = curses.tigetstr(cap_name) or b''
         return re.sub(r'\$<\d+>[/*]?', '', cap.decode()).encode()
 
+TERMC = TerminalController()
 
 (INFO,
  WARNING,
@@ -130,18 +123,16 @@ LogEntry = namedtuple('LogEntry', ['level', 'domain', 'code', 'message'])
 
 
 def _print_entry(entry):
-    termc = TerminalController()
-
     out = sys.stdout
     if entry.level > INFO:
         out = sys.stderr
 
     if entry.level == INFO:
-        out.write(termc.GREEN + 'INFO' + termc.NORMAL)
+        out.write(TERMC.GREEN + 'INFO' + TERMC.NORMAL)
     elif entry.level == WARNING:
-        out.write(termc.YELLOW + 'WARNING' + termc.NORMAL)
+        out.write(TERMC.YELLOW + 'WARNING' + TERMC.NORMAL)
     elif entry.level == ERROR:
-        out.write(termc.RED + 'ERROR' + termc.NORMAL)
+        out.write(TERMC.RED + 'ERROR' + TERMC.NORMAL)
 
     out.write(': [%s]:' % entry.domain)
 

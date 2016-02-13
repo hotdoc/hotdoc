@@ -11,7 +11,7 @@ try:
     HAVE_GIT_INTERFACE = True
 except ImportError:
     HAVE_GIT_INTERFACE = False
-from hotdoc.utils.loggable import TerminalController
+from hotdoc.utils.loggable import TERMC
 from hotdoc.utils.wizard import (QUICKSTART_HELP, QuickStartArgument,
                                  QuickStartWizard, Skip)
 
@@ -73,7 +73,7 @@ class HotdocWizard(QuickStartWizard):
             self.doc_database = self
             self.comments = {}
             self.symbols = {}
-            self.term_controller = TerminalController()
+            self.term_controller = TERMC
             if HAVE_GIT_INTERFACE:
                 self.git_interface = GitInterface()
             else:

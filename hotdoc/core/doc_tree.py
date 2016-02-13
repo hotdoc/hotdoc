@@ -25,6 +25,7 @@ from hotdoc.core.symbols import\
      VFunctionSymbol, ClassSymbol)
 from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.utils import OrderedSet
+from hotdoc.utils.loggable import info
 from hotdoc.core.file_includer import add_md_includes, find_md_file
 
 
@@ -751,6 +752,7 @@ class DocTree(object):
     def format(self, link_resolver, output, extensions):
         """Banana banana
         """
+        info('Formatting documentation tree', 'formatting')
         self.__setup_folder(output)
 
         Page.formatting_signal.connect(self.__formatting_page_cb)

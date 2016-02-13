@@ -151,6 +151,7 @@ class DocRepo(object):
         """
         Banana banana
         """
+        info('Persisting database and private files', 'persisting')
         self.doc_tree.persist()
         self.doc_database.persist()
         self.change_tracker.track_core_dependencies()
@@ -163,7 +164,9 @@ class DocRepo(object):
         Banana banana
         """
         for extension in self.extensions.values():
+            info('Finalizing %s' % extension.EXTENSION_NAME)
             extension.finalize()
+        info('Closing database')
         self.doc_database.finalize()
 
     # pylint: disable=no-self-use
@@ -186,6 +189,7 @@ class DocRepo(object):
         self.__setup(args)
 
         for extension in self.extensions.values():
+            info('Setting up %s' % extension.EXTENSION_NAME)
             extension.setup()
             self.doc_database.flush()
 
@@ -446,6 +450,7 @@ class DocRepo(object):
 
         self.__create_extensions()
 
+        info('Building documentation tree')
         self.__root_page = self.doc_tree.build_tree(self.__index_file, 'core')
 
         self.change_tracker.add_hard_dependency(self.__conf_file)
