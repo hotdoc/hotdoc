@@ -19,17 +19,10 @@ from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.doc_tree import DocTree
 from hotdoc.core.links import LinkResolver
 from hotdoc.core.wizard import HotdocWizard
-from hotdoc.utils.loggable import info
+from hotdoc.utils.loggable import info, error
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.utils import get_all_extension_classes, all_subclasses
 from hotdoc.utils.utils import OrderedSet
-
-
-class ConfigError(Exception):
-    """
-    Banana banana
-    """
-    pass
 
 
 SUBCOMMAND_DESCRIPTION = """
@@ -392,8 +385,8 @@ class DocRepo(object):
     def __setup_folder(self, folder):
         if os.path.exists(folder):
             if not os.path.isdir(folder):
-                print "Folder %s exists but is not a directory" % folder
-                raise ConfigError()
+                error('setup-issue',
+                      'Folder %s exists but is not a directory' % folder)
         else:
             os.mkdir(folder)
 
@@ -418,21 +411,28 @@ class DocRepo(object):
         Banana banana
         """
         self.output = config.get('output')
+        if not self.output:
+            error('invalid-config', 'output has to be specified')
         self.output_format = config.get('output_format')
+
+        if self.output_format not in ["html"]:
+            error('invalid-config',
+                  'Unsupported output format : %s' % self.output_format)
+
+        self.__index_file = self.resolve_config_path(config.get('index'))
+        if self.__index_file is None:
+            error('invalid-config', 'index is required')
+        if not os.path.exists(self.__index_file):
+            error('invalid-config',
+                  'The provided index "%s" does not exist' %
+                  self.__index_file)
+
         cmd_line_includes = [self.resolve_config_path(path) for path in
                              config.get('include_paths', [])]
         self.git_repo_path = self.resolve_config_path(config.get('git_repo'))
-
-        if self.output_format not in ["html"]:
-            raise ConfigError("Unsupported output format : %s" %
-                              self.output_format)
         self.__create_change_tracker()
         self.__setup_folder('hotdoc-private')
         self.__setup_database()
-        self.__index_file = self.resolve_config_path(config.get('index'))
-
-        if self.__index_file is None:
-            raise ConfigError("'index' is required")
 
         base_doc_path = os.path.dirname(self.__index_file)
         self.include_paths = OrderedSet([base_doc_path])

@@ -585,12 +585,14 @@ class PageParser(object):
 
             handler = self.__well_known_names.get(node.destination)
             if handler:
-                subpage, subfolder, extension_name = handler(self.__doc_tree)
-                page.subpages[subpage] = extension_name
-                new_dest = os.path.splitext(os.path.basename(subpage))[0]
-                if subfolder:
-                    new_dest = subfolder + '/' + new_dest
-                node.destination = '%s.html' % new_dest
+                res = handler(self.__doc_tree)
+                if res is not None:
+                    subpage, subfolder, extension_name = res
+                    page.subpages[subpage] = extension_name
+                    new_dest = os.path.splitext(os.path.basename(subpage))[0]
+                    if subfolder:
+                        new_dest = subfolder + '/' + new_dest
+                    node.destination = '%s.html' % new_dest
             elif path:
                 self.__add_subpage(page, path)
 

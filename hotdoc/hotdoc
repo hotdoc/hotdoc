@@ -28,7 +28,9 @@ import traceback
 
 # WTF
 # pylint: disable=no-name-in-module
-from hotdoc.core.doc_repo import ConfigError, DocRepo
+from hotdoc.core.doc_repo import DocRepo
+from hotdoc.core.exceptions import HotdocException
+from hotdoc.utils.loggable import Logger
 
 
 def _run():
@@ -48,9 +50,8 @@ def _main():
             cProfile.run('_run()', 'runstats')
         else:
             _run()
-    except ConfigError as exception:
-        print "Configuration error:", exception
-        return 1
+    except HotdocException:
+        return len(Logger.journal)
     except Exception:
         print ("An unknown error happened while building the documentation"
                " and hotdoc cannot recover from it. Please report "

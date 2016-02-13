@@ -149,6 +149,7 @@ def _print_entry(entry):
         out.write(' (%s):' % entry.code)
 
     out.write(' %s\n' % entry.message)
+    out.flush()
 
 
 class Logger(Configurable):
@@ -273,10 +274,13 @@ class Logger(Configurable):
             'Logger', 'logging options')
         group.add_argument("--verbose", action="store_true",
                            dest="verbose", help="Turn on verbosity")
+        group.add_argument("--fatal-warnings", action="store_true",
+                           dest="fatal_warnings", help="Make warnings fatal")
 
     @staticmethod
     def parse_config(doc_repo, config):
         Logger._verbose = bool(config.get("verbose"))
+        Logger.fatal_warnings = bool(config.get("fatal_warnings"))
 
 
 def info(message, domain='core'):
