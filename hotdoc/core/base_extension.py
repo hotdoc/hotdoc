@@ -30,7 +30,7 @@ class BaseExtension(Configurable):
     # pylint: disable=unused-argument
     EXTENSION_NAME = "base-extension"
 
-    def __init__(self, doc_repo, config):
+    def __init__(self, doc_repo):
         self.doc_repo = doc_repo
         self.formatters = {"html": HtmlFormatter([])}
         self.__created_symbols = defaultdict(OrderedSet)

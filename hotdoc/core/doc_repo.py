@@ -46,8 +46,8 @@ class CoreExtension(BaseExtension):
     """
     EXTENSION_NAME = 'core'
 
-    def __init__(self, doc_repo, args):
-        super(CoreExtension, self).__init__(doc_repo, args)
+    def __init__(self, doc_repo):
+        super(CoreExtension, self).__init__(doc_repo)
         file_includer.include_signal.connect_after(self.__include_file_cb)
 
     # pylint: disable=no-self-use
@@ -397,9 +397,9 @@ class DocRepo(object):
         else:
             os.mkdir(folder)
 
-    def __create_extensions(self, args):
+    def __create_extensions(self):
         for ext_class in self.__extension_classes.values():
-            ext = ext_class(self, args)
+            ext = ext_class(self)
             self.extensions[ext.EXTENSION_NAME] = ext
 
     def get_base_doc_folder(self):
@@ -444,7 +444,7 @@ class DocRepo(object):
 
         self.doc_tree = DocTree(self.include_paths, self.get_private_folder())
 
-        self.__create_extensions(config)
+        self.__create_extensions()
 
         self.__root_page = self.doc_tree.build_tree(self.__index_file, 'core')
 
