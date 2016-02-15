@@ -114,9 +114,10 @@ class TerminalController(object):
 
 TERMC = TerminalController()
 
-(INFO,
+(DEBUG,
+ INFO,
  WARNING,
- ERROR) = range(3)
+ ERROR) = range(4)
 
 
 LogEntry = namedtuple('LogEntry', ['level', 'domain', 'code', 'message'])
@@ -127,7 +128,9 @@ def _print_entry(entry):
     if entry.level > INFO:
         out = sys.stderr
 
-    if entry.level == INFO:
+    if entry.level == DEBUG:
+        out.write(TERMC.CYAN + 'DEBUG' + TERMC.NORMAL)
+    elif entry.level == INFO:
         out.write(TERMC.GREEN + 'INFO' + TERMC.NORMAL)
     elif entry.level == WARNING:
         out.write(TERMC.YELLOW + 'WARNING' + TERMC.NORMAL)
@@ -155,7 +158,7 @@ class Logger(Configurable):
     _ignored_codes = set()
     _ignored_domains = set()
     _last_checkpoint = 0
-    _verbose = False
+    _verbosity = 2
     silent = False
 
     @staticmethod
@@ -179,7 +182,7 @@ class Logger(Configurable):
         if Logger.silent:
             return
 
-        if Logger._verbose or level > INFO:
+        if level >= Logger._verbosity:
             _print_entry(entry)
 
     @staticmethod
@@ -215,6 +218,14 @@ class Logger(Configurable):
 
         if Logger.fatal_warnings:
             raise exc_type(message)
+
+    @staticmethod
+    def debug(message, domain):
+        """Log debugging information"""
+        if domain in Logger._ignored_domains:
+            return
+
+        Logger._log(None, message, DEBUG, domain)
 
     @staticmethod
     def info(message, domain):
@@ -254,7 +265,7 @@ class Logger(Configurable):
         Logger.fatal_warnings = False
         Logger._ignored_codes = set()
         Logger._ignored_domains = set()
-        Logger._verbose = False
+        Logger._verbosity = 2
         Logger._last_checkpoint = 0
 
     @staticmethod
@@ -263,14 +274,15 @@ class Logger(Configurable):
         """
         group = parser.add_argument_group(
             'Logger', 'logging options')
-        group.add_argument("--verbose", action="store_true",
-                           dest="verbose", help="Turn on verbosity")
+        group.add_argument("--verbose", '-v', action="count",
+                           dest="verbose",
+                           help="Turn on verbosity, -vv for debug")
         group.add_argument("--fatal-warnings", action="store_true",
                            dest="fatal_warnings", help="Make warnings fatal")
 
     @staticmethod
     def parse_config(doc_repo, config):
-        Logger._verbose = bool(config.get("verbose"))
+        Logger._verbosity = max(0, WARNING - (config.get('verbose') or 0))
         Logger.fatal_warnings = bool(config.get("fatal_warnings"))
 
 
@@ -282,6 +294,11 @@ def info(message, domain='core'):
 def warn(code, message):
     """Shortcut to `Logger.warn`"""
     Logger.warn(code, message)
+
+
+def debug(message, domain='core'):
+    """Shortcut to `Logger.debug`"""
+    Logger.debug(message, domain)
 
 
 def error(code, message):
