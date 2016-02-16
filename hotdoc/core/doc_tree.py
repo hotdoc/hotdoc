@@ -343,8 +343,6 @@ class Page(object):
                 self.__query_extra_symbols(symbol, new_syms, link_resolver)
 
     def __resolve_symbol(self, symbol, link_resolver):
-        debug('Resolving symbol %s to page %s' %
-              (symbol.display_name, self.link.ref), 'database')
         symbol.resolve_links(link_resolver)
 
         symbol.link.ref = "%s#%s" % (self.link.ref, symbol.unique_name)
@@ -361,6 +359,9 @@ class Page(object):
                 self.short_description = symbol.comment.short_description
             if symbol.comment.title:
                 self.title = symbol.comment.title
+
+        debug('Resolved symbol %s to page %s' %
+              (symbol.display_name, self.link.ref), 'resolution')
 
 
 # pylint: disable=too-many-instance-attributes

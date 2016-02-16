@@ -8,9 +8,9 @@ from collections import defaultdict
 
 from hotdoc.core.doc_tree import DocTree
 from hotdoc.formatters.html_formatter import HtmlFormatter
-from hotdoc.utils.loggable import debug
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.configurable import Configurable
+from hotdoc.utils.loggable import debug, info, warn, error
 
 
 # pylint: disable=too-few-public-methods
@@ -36,6 +36,28 @@ class BaseExtension(Configurable):
         self.formatters = {"html": HtmlFormatter([])}
         self.__created_symbols = defaultdict(OrderedSet)
         self.__naive_path = None
+
+    # pylint: disable=no-self-use
+    def warn(self, code, message):
+        """Shortcut function for `loggable.warn`"""
+        warn(code, message)
+
+    # pylint: disable=no-self-use
+    def error(self, code, message):
+        """Shortcut function for `loggable.error`"""
+        error(code, message)
+
+    def debug(self, message, domain=None):
+        """Shortcut function for `loggable.debug`"""
+        if domain is None:
+            domain = self.EXTENSION_NAME
+        debug(message, domain)
+
+    def info(self, message, domain=None):
+        """Shortcut function for `loggable.info`"""
+        if domain is None:
+            domain = self.EXTENSION_NAME
+        info(message, domain)
 
     def get_formatter(self, output_format):
         """
