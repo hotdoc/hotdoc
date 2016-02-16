@@ -25,7 +25,7 @@ from hotdoc.core.symbols import\
      VFunctionSymbol, ClassSymbol)
 from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.utils import OrderedSet
-from hotdoc.utils.loggable import info
+from hotdoc.utils.loggable import info, debug
 from hotdoc.core.file_includer import add_md_includes, find_md_file
 
 
@@ -343,6 +343,8 @@ class Page(object):
                 self.__query_extra_symbols(symbol, new_syms, link_resolver)
 
     def __resolve_symbol(self, symbol, link_resolver):
+        debug('Resolving symbol %s to page %s' %
+              (symbol.display_name, self.link.ref), 'database')
         symbol.resolve_links(link_resolver)
 
         symbol.link.ref = "%s#%s" % (self.link.ref, symbol.unique_name)

@@ -193,6 +193,7 @@ class DocRepo(object):
             extension.setup()
             self.doc_database.flush()
 
+        info("Resolving symbols", 'database')
         self.doc_tree.resolve_symbols(self.doc_database, self.link_resolver,
                                       self.__root_page)
         self.doc_database.flush()

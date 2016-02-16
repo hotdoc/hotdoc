@@ -135,11 +135,11 @@ class BaseExtension(Configurable):
         """
         formatter = self.get_formatter('html')
         if page.is_stale:
-            debug('Formatting page %s' % page.source_file, 'formatting')
+            debug('Formatting page %s' % page.link.ref, 'formatting')
             page.formatted_contents = \
                 self.doc_repo.doc_tree.page_parser.format_page(
                     page, link_resolver, formatter)
             page.format(formatter, link_resolver, output)
         else:
-            debug('Not formatting page %s, up to date' % page.source_file,
+            debug('Not formatting page %s, up to date' % page.link.ref,
                   'formatting')
