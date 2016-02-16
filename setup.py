@@ -192,7 +192,7 @@ EXTRAS_REQUIRE = {
 }
 
 setup(name='hotdoc',
-      version='0.6.9.1',
+      version='0.6.9.2',
       description='A documentation tool micro-framework',
       keywords='documentation',
       url='https://github.com/hotdoc/hotdoc',
