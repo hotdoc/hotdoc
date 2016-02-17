@@ -26,6 +26,8 @@ from hotdoc.core.wizard import HotdocWizard
 
 from hotdoc.parsers.gtk_doc_parser import GtkDocStringFormatter
 
+from hotdoc.utils.setup_utils import THEME_VERSION
+
 
 HERE = os.path.dirname(__file__)
 
@@ -692,7 +694,7 @@ class HtmlFormatter(Formatter):
         html_theme = wizard.config.get('html_theme')
         if html_theme == 'default':
             default_theme = os.path.join(HERE, '..',
-                                         'default_theme')
+                                         'default_theme-%s' % THEME_VERSION)
             html_theme = os.path.abspath(default_theme)
         else:
             html_theme = wizard.resolve_config_path(html_theme)

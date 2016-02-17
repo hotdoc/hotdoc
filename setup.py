@@ -16,7 +16,7 @@ from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.develop import develop
 from setuptools.command.sdist import sdist
 
-from hotdoc.utils.setup_utils import VersionList
+from hotdoc.utils.setup_utils import VersionList, THEME_VERSION
 
 PYGIT2_VERSION = None
 try:
@@ -49,7 +49,8 @@ SOURCE_DIR = os.path.abspath('./')
 
 
 DEFAULT_THEME =\
-    'https://people.collabora.com/~meh/hotdoc_bootstrap_theme-0.7/dist.tgz'
+    'https://people.collabora.com/~meh/hotdoc_bootstrap_theme-%s/dist.tgz' % \
+    THEME_VERSION
 
 
 class DownloadDefaultTemplate(Command):
@@ -70,6 +71,12 @@ class DownloadDefaultTemplate(Command):
     # pylint: disable=missing-docstring
     # pylint: disable=no-self-use
     def run(self):
+        theme_path = os.path.join(SOURCE_DIR, 'hotdoc', 'default_theme-%s' %
+                                  THEME_VERSION)
+
+        if os.path.exists(theme_path):
+            return
+
         # Only installed at setup_requires time, whatever
         # pylint: disable=import-error
         import requests
@@ -85,8 +92,6 @@ class DownloadDefaultTemplate(Command):
         tar.close()
 
         extract_path = os.path.join(extract_path, 'dist')
-
-        theme_path = os.path.join(SOURCE_DIR, 'hotdoc', 'default_theme')
 
         shutil.rmtree(theme_path, ignore_errors=True)
 

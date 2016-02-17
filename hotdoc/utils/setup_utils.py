@@ -4,6 +4,9 @@ Banana banana
 from bisect import bisect_left, bisect_right
 
 
+THEME_VERSION = "0.7"
+
+
 # pylint: disable=no-self-argument
 # pylint: disable=invalid-name
 class VersionList(list):
