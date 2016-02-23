@@ -145,7 +145,9 @@ class BaseExtension(Configurable):
             with open(markdown_path, 'w') as _:
                 _.write(self._get_naive_page_description(link_title))
                 for symbol in symbols:
-                    _.write('* [%s]()\n' % symbol.unique_name)
+                    # FIXME: more generic escaping
+                    unique_name = symbol.unique_name.replace('_', r'\_')
+                    _.write('* [%s]()\n' % unique_name)
 
         subtree.build_tree(self.__naive_path,
                            extension_name=self.EXTENSION_NAME)

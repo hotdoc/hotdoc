@@ -115,7 +115,6 @@ class Symbol(Base):
             self.link = Link(self.unique_name, self._make_name(),
                              self.unique_name)
         self.link = link_resolver.upsert_link(self.link, overwrite_ref=True)
-
         for sym in self.get_children_symbols():
             if sym:
                 sym.resolve_links(link_resolver)
