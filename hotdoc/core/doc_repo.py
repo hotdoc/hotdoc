@@ -404,7 +404,7 @@ class DocRepo(object):
         """Get the folder in which auto-generated doc pages
         are to be output
         """
-        return os.path.join(self.get_base_doc_folder(), 'generated')
+        return os.path.join(self.get_private_folder(), 'generated')
 
     def __parse_config(self, config):
         """

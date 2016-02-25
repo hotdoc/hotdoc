@@ -170,6 +170,6 @@ Then run hotdoc without specifying a `python-index`:
 rm -rf hotdoc-private/ && hotdoc --index markdown_files/index.markdown --output html --python-sources module_to_document.py - run
 ```
 
-The result for that simple project should be strictly the same, you can find generated "intermediary" markdown pages in `markdown_files/generated`
+The result for that simple project should be strictly the same, you can find generated "intermediary" markdown pages in `hotdoc-private/generated`
 
 > If you cloned <https://github.com/hotdoc/simplest_example> , you can checkout the "generated_symbol_list" branch to see this approach instead.
