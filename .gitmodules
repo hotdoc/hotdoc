@@ -1,3 +1,4 @@
 [submodule "cmark"]
 	path = cmark
 	url = https://github.com/MathieuDuponchelle/cmark.git
+	branch = extensions_draft_3
