@@ -5,6 +5,7 @@
 *.so
 *.dot
 build
+build_cmark
 dist
 hotdoc.egg-info/
 *.eggs

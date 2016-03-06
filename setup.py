@@ -3,16 +3,19 @@ Setup file for hotdoc.
 """
 
 import os
+import sys
 import errno
 import shutil
 import subprocess
 import tarfile
 import unittest
 from distutils.command.build import build
+from distutils.command.build_ext import build_ext
 from distutils.core import Command
+import distutils.spawn as spawn
 
 from pkg_resources import parse_version as V
-from setuptools import find_packages, setup
+from setuptools import find_packages, setup, Extension
 from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.develop import develop
 from setuptools.command.sdist import sdist
@@ -22,6 +25,11 @@ from hotdoc.utils.setup_utils import (
     VersionList, THEME_VERSION, require_clean_submodules)
 
 SOURCE_DIR = os.path.abspath('./')
+CMARK_DIR = os.path.join(SOURCE_DIR, 'cmark')
+CMARK_SRCDIR = os.path.join(CMARK_DIR, 'src')
+CMARK_BUILD_DIR = os.path.join(SOURCE_DIR, 'build_cmark')
+CMARK_BUILT_SRCDIR = os.path.join(CMARK_BUILD_DIR, 'src')
+CMARK_INCLUDE_DIRS = [CMARK_SRCDIR, CMARK_BUILT_SRCDIR]
 
 require_clean_submodules(SOURCE_DIR, ['cmark'])
 
@@ -51,6 +59,46 @@ except OSError:
 except subprocess.CalledProcessError:
     print "\nError when trying to figure out the libgit2 version\n"
     print "git integration disabled"
+
+
+# pylint: disable=too-few-public-methods
+class CMarkExtension(Extension):
+    """
+    A custom extension that will run cmake in the cmark subdir
+    before building itself.
+    """
+    # pylint: disable=no-self-use
+    def __run_cmake(self):
+        if spawn.find_executable('cmake') is None:
+            print "CMake  is required"
+            print "Please install cmake and re-run setup"
+            sys.exit(-1)
+
+        cwd = os.getcwd()
+        if not os.path.exists(CMARK_BUILD_DIR):
+            os.mkdir(CMARK_BUILD_DIR)
+        os.chdir(CMARK_BUILD_DIR)
+        try:
+            spawn.spawn(['cmake', CMARK_DIR])
+        except spawn.DistutilsExecError:
+            print "Error while running cmake"
+            sys.exit(-1)
+        os.chdir(cwd)
+
+    # pylint: disable=missing-docstring
+    def build_custom(self):
+        self.__run_cmake()
+
+CMARK_SOURCES = []
+for filename in os.listdir(CMARK_SRCDIR):
+    if filename.endswith('.c'):
+        CMARK_SOURCES.append(os.path.join(CMARK_SRCDIR, filename))
+
+CMARK_MODULE = CMarkExtension('hotdoc.parsers.hotdoc_cmark',
+                              sources=CMARK_SOURCES,
+                              include_dirs=CMARK_INCLUDE_DIRS,
+                              define_macros=[
+                                  ('LIBDIR', '"%s"' % CMARK_BUILD_DIR)])
 
 
 DEFAULT_THEME =\
@@ -183,6 +231,15 @@ class CustomBDistEgg(bdist_egg):
         return bdist_egg.run(self)
 
 
+class CustomBuildExt(build_ext):
+    def run(self):
+        for extension in self.extensions:
+            extension.build_custom()
+
+        build_ext.run(self)
+        return True
+
+
 # From http://stackoverflow.com/a/17004263/2931197
 def discover_and_run_tests():
     # use the default shared TestLoader instance
@@ -233,6 +290,16 @@ EXTRAS_REQUIRE = {
             'git-pep8-commit-hook']
 }
 
+CMARK_DIST_FILES = []
+
+for root, dirs, files in os.walk(CMARK_DIR):
+    for f in files:
+        if f == '.git':
+            continue
+        path = os.path.join(root, f)
+        path = os.path.relpath(path, CMARK_DIR)
+        CMARK_DIST_FILES.append(path)
+
 setup(name='hotdoc',
       version='0.7',
       description='A documentation tool micro-framework',
@@ -241,11 +308,11 @@ setup(name='hotdoc',
       author='Mathieu Duponchelle',
       author_email='mathieu.duponchelle@opencreed.com',
       license='LGPL',
-      packages=find_packages(),
+      packages=find_packages() + ['cmark'],
+      ext_modules=[CMARK_MODULE],
 
-      # Only fancy thing in there now, we want to download a
-      # a default theme and bower is shitty.
       cmdclass={'build': CustomBuild,
+                'build_ext': CustomBuildExt,
                 'sdist': CustomSDist,
                 'develop': CustomDevelop,
                 'bdist_egg': CustomBDistEgg,
@@ -259,6 +326,7 @@ setup(name='hotdoc',
                      'default_theme-%s/js/*' % THEME_VERSION,
                      'default_theme-%s/css/*' % THEME_VERSION,
                      'default_theme-%s/fonts/*' % THEME_VERSION],
+          'cmark': CMARK_DIST_FILES,
       },
       install_requires=INSTALL_REQUIRES,
       extras_require=EXTRAS_REQUIRE,
