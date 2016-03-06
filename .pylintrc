@@ -1,2 +1,2 @@
 [TYPECHECK]
-ignored-modules=distutils,cmarkpy
+ignored-modules=distutils,hotdoc.parsers.cmark

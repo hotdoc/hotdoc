@@ -89,12 +89,13 @@ class CMarkExtension(Extension):
     def build_custom(self):
         self.__run_cmake()
 
-CMARK_SOURCES = []
+CMARK_SOURCES = [os.path.join('hotdoc', 'parsers', f) for f in
+                 ('cmark_module.c',)]
 for filename in os.listdir(CMARK_SRCDIR):
     if filename.endswith('.c'):
         CMARK_SOURCES.append(os.path.join(CMARK_SRCDIR, filename))
 
-CMARK_MODULE = CMarkExtension('hotdoc.parsers.hotdoc_cmark',
+CMARK_MODULE = CMarkExtension('hotdoc.parsers.cmark',
                               sources=CMARK_SOURCES,
                               include_dirs=CMARK_INCLUDE_DIRS,
                               define_macros=[
@@ -276,7 +277,6 @@ INSTALL_REQUIRES = [
     'pyyaml',
     'wheezy.template==0.1.167',
     'CommonMark==0.6.1',
-    'cmarkpy==0.1.3',
     'pygraphviz>=1.3.rc2',
     'sqlalchemy>=1.0.8',
     'ipython>=4.0.0',

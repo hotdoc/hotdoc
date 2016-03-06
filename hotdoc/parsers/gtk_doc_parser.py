@@ -11,11 +11,11 @@ import sys
 from itertools import izip_longest
 from xml.sax.saxutils import unescape
 
-import cmarkpy
 
 from hotdoc.core.comment_block import Comment, Annotation, Tag
 from hotdoc.core.file_includer import add_md_includes
 from hotdoc.utils.configurable import Configurable
+from hotdoc.parsers import cmark
 
 
 # http://stackoverflow.com/questions/434287/what-is-the-most-pythonic-way-to-iterate-over-a-list-in-chunks
@@ -494,7 +494,7 @@ class GtkDocStringFormatter(Configurable):
 
     def __md_to_html(self, md):
         out = cgi.escape(md)
-        rendered_text = cmarkpy.markdown_to_html(unicode(out))
+        rendered_text = cmark.to_html(unicode(out))
         return rendered_text
 
     def __legacy_to_md(self, text, link_resolver):
