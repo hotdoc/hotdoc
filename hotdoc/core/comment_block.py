@@ -5,6 +5,7 @@ by code-parsing extensions.
 
 import linecache
 import os
+from collections import defaultdict
 
 
 # pylint: disable=too-few-public-methods
@@ -45,6 +46,7 @@ class Comment(object):
         self.annotations = annotations or {}
         self.description = description
         self.short_description = short_description
+        self.extension_attrs = defaultdict(lambda: defaultdict(dict))
         self.tags = tags or {}
 
         # FIXME : would be nicer to have the scanner do that ^^
@@ -54,6 +56,17 @@ class Comment(object):
             leading_ws = (len(orig) - len(orig.lstrip(' '))) * ' '
 
         self.raw_comment = leading_ws + raw_comment
+
+    def __getstate__(self):
+        # Return a copy
+        res = dict(self.__dict__)
+        res['extension_attrs'] = None
+        return res
+
+    # pylint: disable=attribute-defined-outside-init
+    def __setstate__(self, state):
+        self.__dict__ = state
+        self.extension_attrs = defaultdict(lambda: defaultdict(dict))
 
 
 class Annotation(object):

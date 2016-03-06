@@ -116,7 +116,7 @@ class HtmlFormatter(Formatter):
         )
 
         self.all_scripts = set()
-        self.__docstring_formatter = GtkDocStringFormatter()
+        self._docstring_formatter = GtkDocStringFormatter()
 
     # pylint: disable=no-self-use
     def _get_extension(self):
@@ -127,7 +127,7 @@ class HtmlFormatter(Formatter):
             format_ = 'markdown'
         else:
             format_ = 'html'
-        return self.__docstring_formatter.translate(
+        return self._docstring_formatter.translate(
             docstring, link_resolver, format_)
 
     def _format_link(self, link, title):

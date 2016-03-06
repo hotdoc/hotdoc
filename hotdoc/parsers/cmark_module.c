@@ -137,7 +137,7 @@ ast_to_html(PyObject *self, PyObject *args) {
 
 static PyMethodDef ScannerMethods[] = {
   {"gtkdoc_to_ast",  gtkdoc_to_ast, METH_VARARGS, "Translate gtk-doc syntax to an opaque AST"},
-  {"ast_to_html",  ast_to_html, METH_VARARGS, "Translate gtk-doc syntax to an opaque AST"},
+  {"ast_to_html",  ast_to_html, METH_VARARGS, "Translate an opaque AST to html"},
   {NULL, NULL, 0, NULL}
 };
 

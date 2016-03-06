@@ -6,7 +6,6 @@ This module defines a base Formatter class
 
 import os
 import shutil
-from xml.sax.saxutils import unescape
 
 import pygraphviz as pg
 from hotdoc.utils.configurable import Configurable
@@ -100,8 +99,6 @@ class Formatter(Configurable):
     def format_docstring(self, docstring, link_resolver, to_native=False):
         """Formats a doc string.
 
-        You don't need to unescape the docstring.
-
         Args:
             docstring: str, the code documentation string to format.
                 Can be none, in which case the empty string will be returned.
@@ -112,7 +109,6 @@ class Formatter(Configurable):
         if not docstring:
             return ""
 
-        docstring = unescape(docstring)
         return self._format_docstring(docstring, link_resolver, to_native)
 
     def _format_docstring(self, docstring, link_resolver, to_native):
@@ -143,6 +139,10 @@ class Formatter(Configurable):
         """
         raise NotImplementedError
 
+    def _format_comment(self, comment, link_resolver):
+        return self.format_docstring(comment.description,
+                                     link_resolver)
+
     def format_comment(self, comment, link_resolver):
         """Convenience function wrapping `Formatter.format_docstring`.
 
@@ -154,8 +154,7 @@ class Formatter(Configurable):
             str: The comment formatted to the chosen format.
         """
         if comment:
-            return self.format_docstring(comment.description,
-                                         link_resolver)
+            return self._format_comment(comment, link_resolver)
 
         return ''
 

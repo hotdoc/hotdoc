@@ -509,6 +509,44 @@ class GtkDocStringFormatter(Configurable):
 
         return out
 
+    def to_ast(self, text, link_resolver):
+        """
+        Given a gtk-doc comment string, returns an opaque PyCapsule
+        containing the document root.
+
+        This is an optimization allowing to parse the docstring only
+        once, and to render it multiple times with
+        `ast_to_html`, links discovery and
+        most of the link resolution being lazily done in that second phase.
+
+        If you don't care about performance, you should simply
+        use `translate`.
+
+        Args:
+            text: unicode, the docstring to parse.
+            link_resolver: hotdoc.core.links.LinkResolver, an object
+                which will be called to retrieve `hotdoc.core.links.Link`
+                objects.
+
+        Returns:
+            capsule: A PyCapsule wrapping an opaque C pointer, which
+                can be passed to `ast_to_html`
+                afterwards.
+        """
+        return cmark.gtkdoc_to_ast(text, link_resolver)
+
+    def ast_to_html(self, ast, link_resolver):
+        """
+        See the documentation of `to_ast` for
+        more information.
+
+        Args:
+            ast: PyCapsule, a capsule as returned by `to_ast`
+            link_resolver: hotdoc.core.links.LinkResolver, a link
+                resolver instance.
+        """
+        return cmark.ast_to_html(ast, link_resolver)
+
     def translate(self, text, link_resolver, output_format):
         """
         Given a gtk-doc comment string, returns the comment translated
@@ -525,8 +563,8 @@ class GtkDocStringFormatter(Configurable):
         if output_format == 'markdown':
             return self.__legacy_to_md(text, link_resolver)
         elif output_format == 'html':
-            ast = cmark.gtkdoc_to_ast(text, link_resolver)
-            return cmark.ast_to_html(ast, link_resolver)
+            ast = self.to_ast(text, link_resolver)
+            return self.ast_to_html(ast, link_resolver)
 
         raise Exception("Unrecognized format %s" % output_format)
 
