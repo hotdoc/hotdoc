@@ -1,0 +1,3 @@
+[submodule "cmark"]
+	path = cmark
+	url = https://github.com/MathieuDuponchelle/cmark.git

@@ -18,7 +18,12 @@ from setuptools.command.develop import develop
 from setuptools.command.sdist import sdist
 from setuptools.command.test import test
 
-from hotdoc.utils.setup_utils import VersionList, THEME_VERSION
+from hotdoc.utils.setup_utils import (
+    VersionList, THEME_VERSION, require_clean_submodules)
+
+SOURCE_DIR = os.path.abspath('./')
+
+require_clean_submodules(SOURCE_DIR, ['cmark'])
 
 PYGIT2_VERSION = None
 try:
@@ -46,8 +51,6 @@ except OSError:
 except subprocess.CalledProcessError:
     print "\nError when trying to figure out the libgit2 version\n"
     print "git integration disabled"
-
-SOURCE_DIR = os.path.abspath('./')
 
 
 DEFAULT_THEME =\
