@@ -287,7 +287,7 @@ INSTALL_REQUIRES = [
     'CommonMark==0.6.1',
     'pygraphviz>=1.3.rc2',
     'sqlalchemy>=1.0.8',
-    'ipython>=4.0.0',
+    'ipython==4.0.0',
     'toposort==1.4']
 
 if PYGIT2_VERSION is not None:
@@ -335,6 +335,8 @@ setup(name='hotdoc',
                      'default_theme-%s/css/*' % THEME_VERSION,
                      'default_theme-%s/fonts/*' % THEME_VERSION],
           'cmark': CMARK_DIST_FILES,
+          'hotdoc.parsers': ['cmark_gtkdoc_extension.h',
+                             'cmark_gtkdoc_scanner.h'],
       },
       install_requires=INSTALL_REQUIRES,
       extras_require=EXTRAS_REQUIRE,
