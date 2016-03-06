@@ -22,6 +22,11 @@ class BadInclusionException(HotdocException):
     pass
 
 
+class InvalidOutputException(HotdocException):
+    """Banana banana"""
+    pass
+
+
 Logger.register_error_code('invalid-config', ConfigError)
 Logger.register_error_code('setup-issue', ConfigError)
 Logger.register_warning_code('parsing-issue', ParsingException)
