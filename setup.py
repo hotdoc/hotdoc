@@ -70,8 +70,12 @@ class CMarkExtension(Extension):
     # pylint: disable=no-self-use
     def __run_cmake(self):
         if spawn.find_executable('cmake') is None:
-            print "CMake  is required"
+            print "cmake  is required"
             print "Please install cmake and re-run setup"
+            sys.exit(-1)
+        if spawn.find_executable('make') is None:
+            print "make  is required"
+            print "please get a version of make and re-run setup"
             sys.exit(-1)
 
         cwd = os.getcwd()
@@ -80,6 +84,7 @@ class CMarkExtension(Extension):
         os.chdir(CMARK_BUILD_DIR)
         try:
             spawn.spawn(['cmake', CMARK_DIR])
+            spawn.spawn(['make', 'cmarkextensions'])
         except spawn.DistutilsExecError:
             print "Error while running cmake"
             sys.exit(-1)
@@ -90,7 +95,10 @@ class CMarkExtension(Extension):
         self.__run_cmake()
 
 CMARK_SOURCES = [os.path.join('hotdoc', 'parsers', f) for f in
-                 ('cmark_module.c',)]
+                 ('cmark_module.c',
+                  'cmark_gtkdoc_extension.c',
+                  'cmark_gtkdoc_scanner.c')]
+
 for filename in os.listdir(CMARK_SRCDIR):
     if filename.endswith('.c'):
         CMARK_SOURCES.append(os.path.join(CMARK_SRCDIR, filename))

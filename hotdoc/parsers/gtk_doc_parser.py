@@ -5,11 +5,9 @@ This module implements a parsing utilities for the legacy
 gtk-doc comment format.
 """
 
-import cgi
 import re
 import sys
 from itertools import izip_longest
-from xml.sax.saxutils import unescape
 
 
 from hotdoc.core.comment_block import Comment, Annotation, Tag
@@ -492,11 +490,6 @@ class GtkDocStringFormatter(Configurable):
     def __format_code_end(self, match, props, link_resolver):
         return "\n```\n"
 
-    def __md_to_html(self, md):
-        out = cgi.escape(md)
-        rendered_text = cmark.to_html(unicode(out))
-        return rendered_text
-
     def __legacy_to_md(self, text, link_resolver):
         out = u''
 
@@ -529,14 +522,11 @@ class GtkDocStringFormatter(Configurable):
         if GtkDocStringFormatter.remove_xml_tags:
             text = re.sub('<.*?>', '', text)
 
-        text = unescape(text)
-
-        out = self.__legacy_to_md(text, link_resolver)
-
         if output_format == 'markdown':
-            return out
+            return self.__legacy_to_md(text, link_resolver)
         elif output_format == 'html':
-            return self.__md_to_html(out)
+            ast = cmark.gtkdoc_to_ast(text, link_resolver)
+            return cmark.ast_to_html(ast, link_resolver)
 
         raise Exception("Unrecognized format %s" % output_format)
 

@@ -34,6 +34,14 @@ class Link(MutableObject):
     def title(self, value):
         self._title = value
 
+    def get_title(self):
+        """
+        Convenience wrapper for the `title` property.
+
+        Exists mainly to facilitate the task of the cmark C extension.
+        """
+        return self.title
+
     def get_link(self):
         """
         Banana banana
