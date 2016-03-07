@@ -326,8 +326,11 @@ for root, dirs, files in os.walk(CMARK_DIR):
         path = os.path.relpath(path, CMARK_DIR)
         CMARK_DIST_FILES.append(path)
 
+with open(os.path.join('hotdoc', 'VERSION.txt'), 'r') as _:
+    VERSION = _.read().strip()
+
 setup(name='hotdoc',
-      version='0.7',
+      version=VERSION,
       description='A documentation tool micro-framework',
       keywords='documentation',
       url='https://github.com/hotdoc/hotdoc',
@@ -351,7 +354,8 @@ setup(name='hotdoc',
           'hotdoc': ['default_theme-%s/templates/*' % THEME_VERSION,
                      'default_theme-%s/js/*' % THEME_VERSION,
                      'default_theme-%s/css/*' % THEME_VERSION,
-                     'default_theme-%s/fonts/*' % THEME_VERSION],
+                     'default_theme-%s/fonts/*' % THEME_VERSION,
+                     'VERSION.txt'],
           'cmark': CMARK_DIST_FILES,
           'hotdoc.parsers': ['cmark_gtkdoc_extension.h',
                              'cmark_gtkdoc_scanner.h'],
