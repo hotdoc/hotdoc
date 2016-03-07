@@ -8,7 +8,7 @@ import subprocess
 from bisect import bisect_left, bisect_right
 
 
-THEME_VERSION = "0.7"
+THEME_VERSION = "0.7.1"
 
 
 # pylint: disable=no-self-argument
