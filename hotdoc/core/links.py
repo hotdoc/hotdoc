@@ -57,9 +57,10 @@ class LinkResolver(object):
     """
     Banana banana
     """
+    get_link_signal = Signal()
+
     def __init__(self, doc_database):
         self.__links = {}
-        self.__external_links = {}
         self.__doc_db = doc_database
 
     def get_named_link(self, name):
@@ -74,9 +75,13 @@ class LinkResolver(object):
             self.__links[name] = sym.link
             return sym.link
 
-        if name in self.__external_links:
-            self.__links[name] = self.__external_links[name]
-            return self.__links[name]
+        lazy_loaded = LinkResolver.get_link_signal(self, name)
+        lazy_loaded = [elem for elem in lazy_loaded if elem is not None]
+        if lazy_loaded:
+            link = lazy_loaded[0]
+            self.__links[name] = link
+            link.id_ = name
+            return link
 
         return None
 
@@ -87,24 +92,19 @@ class LinkResolver(object):
         if link.id_ not in self.__links:
             self.__links[link.id_] = link
 
-    def upsert_link(self, link, overwrite_ref=False, external=False):
+    def upsert_link(self, link, overwrite_ref=False):
         """
         Banana banana
         """
         elink = self.__links.get(link.id_)
 
-        if elink and external:
-            return elink
-
-        if external:
-            self.__external_links[link.id_] = link
-            return link
-
         if elink:
             if elink.ref is None or overwrite_ref and link.ref:
                 elink.ref = link.ref
-            if link.title is not None:
-                elink.title = link.title
+            # pylint: disable=protected-access
+            if link._title is not None:
+                # pylint: disable=protected-access
+                elink.title = link._title
             return elink
 
         self.add_link(link)
