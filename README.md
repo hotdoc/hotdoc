@@ -10,3 +10,8 @@ Please check the packages listed at [https://github.com/hotdoc](https://github.c
 pick the extensions you are interested in.
 
 You can find the documentation for hotdoc, by hotdoc [here](https://people.collabora.com/~meh/hotdoc_hotdoc/html/index.html)
+
+### Licensing
+
+hotdoc is licensed under the LGPL version 2.1 (or, at your option, any
+later version). See COPYING for more details.

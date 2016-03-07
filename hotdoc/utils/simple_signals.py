@@ -1,6 +1,21 @@
+# -*- coding: utf-8 -*-
+# A signal/slot implementation
+#
+# Author:  Thiago Marcos P. Santos
+# Author:  Christopher S. Case
+# Author:  David H. Bronke
+# Author:  Mathieu Duponchelle
+# Author:  Thibault Saunier
+# Created: August 28, 2008
+# Updated: January 29, 2016
+# License: MIT
+
+# http://code.activestate.com/recipes/577980-improved-signalsslots-implementation-in-python/
+
 """
 Simple signalling system
 """
+
 from __future__ import print_function
 import inspect
 from weakref import WeakSet, WeakKeyDictionary
