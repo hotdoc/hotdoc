@@ -44,6 +44,7 @@ class TestGtkDocExtension(unittest.TestCase):
         self.doc_database = DocDatabase()
         self.link_resolver = LinkResolver(self.doc_database)
         self.link_resolver.add_link(Link("here.com", "foo", "foo"))
+        self.link_resolver.add_link(Link("there.org", "there", "Test::test"))
 
     def assertOutputs(self, inp, expected):
         ast = cmark.gtkdoc_to_ast(inp, self.link_resolver)
@@ -103,3 +104,21 @@ class TestGtkDocExtension(unittest.TestCase):
         self.assertOutputs(
             inp,
             u'<p><a href="function_link"></a></p>\n')
+
+    def test_qualified_links(self):
+        inp = u' #Test::test is a link'
+        self.assertOutputs(
+            inp,
+            u'<p><a href="there.org">there</a> is a link</p>\n')
+
+    def test_param_no_match(self):
+        inp = u'Should@not@match please'
+        self.assertOutputs(
+            inp,
+            u'<p>Should@not@match please</p>\n')
+
+    def test_param_ref(self):
+        inp = u'Should @match please'
+        self.assertOutputs(
+            inp,
+            u'<p>Should <em>match</em> please</p>\n')

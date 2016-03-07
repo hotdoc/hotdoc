@@ -152,6 +152,14 @@ static cmark_node *param_ref_match(cmark_syntax_extension *self,
                                 cmark_inline_parser *inline_parser) {
   cmark_node *emph, *text_node;
   char *param_name;
+  char prev_char;
+
+  prev_char = cmark_inline_parser_peek_at(
+      inline_parser,
+      cmark_inline_parser_get_offset(inline_parser) - 1);
+
+  if (prev_char && prev_char != ' ' && prev_char != '\t' && prev_char != '\n')
+    return NULL;
 
   cmark_inline_parser_advance_offset(inline_parser);
   param_name = cmark_inline_parser_take_while(inline_parser,
@@ -181,7 +189,7 @@ static cmark_node *symbol_link_match(cmark_syntax_extension *self,
       inline_parser,
       cmark_inline_parser_get_offset(inline_parser) - 1);
 
-  if (prev_char != ' ' && prev_char != '\t')
+  if (prev_char && prev_char != ' ' && prev_char != '\t' && prev_char != '\n')
     return NULL;
 
   cmark_inline_parser_advance_offset(inline_parser);
