@@ -140,7 +140,7 @@ class BaseExtension(Configurable):
 
         with open(index_path, 'w') as _:
             _.write('## API reference\n\n')
-            for source_file in all_source_files:
+            for source_file in sorted(all_source_files):
                 link_title = self._get_naive_link_title(source_file)
                 markdown_name = link_title + '.markdown'
                 _.write('#### [%s](%s)\n' % (link_title, markdown_name))
@@ -162,7 +162,7 @@ class BaseExtension(Configurable):
                                          markdown_path)
             with open(markdown_path, 'w') as _:
                 _.write(self._get_naive_page_description(link_title))
-                for symbol in symbols:
+                for symbol in sorted(symbols, key=lambda s: s.unique_name):
                     # FIXME: more generic escaping
                     unique_name = symbol.unique_name.replace('_', r'\_')
                     _.write('* [%s]()\n' % unique_name)
