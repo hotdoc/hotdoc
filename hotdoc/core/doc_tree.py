@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+# pylint: disable=too-many-lines
+
 """
 Implements standalone markdown files parsing.
 """
@@ -217,6 +219,8 @@ class Page(object):
         pagename = '%s.html' % name
 
         self.symbol_names = OrderedSet()
+        self.topic_symbol_names = OrderedSet()
+        self.topic = None
         self.subpages = OrderedDict({})
         self.link = Link(pagename, name, name)
         self.title = None
@@ -242,6 +246,8 @@ class Page(object):
 
     def __getstate__(self):
         return {'symbol_names': self.symbol_names,
+                'topic_symbol_names': self.topic_symbol_names,
+                'topic': self.topic,
                 'subpages': self.subpages,
                 'link': self.link,
                 'title': self.title,
@@ -279,7 +285,7 @@ class Page(object):
         """
         return self.title or self.first_header or self.link.title
 
-    def add_symbol(self, unique_name):
+    def add_symbol(self, unique_name, is_topic=False):
         """Adds a symbol name to the ordered set of symbol names contained
         in this page.
 
@@ -290,6 +296,8 @@ class Page(object):
         """
         self.adding_symbol_signal(self, unique_name)
         self.symbol_names.add(unique_name)
+        if is_topic:
+            self.topic_symbol_names.add(unique_name)
 
     def resolve_symbols(self, doc_database, link_resolver):
         """
@@ -529,7 +537,7 @@ class PageParser(object):
             self.__seen_pages.add(path)
 
     # pylint: disable=too-many-locals
-    def __parse_topic_link(self, cur_page, node):
+    def __parse_yaml_topics_link(self, cur_page, node):
         parent = node.parent
         if not parent:
             return False
@@ -593,16 +601,26 @@ class PageParser(object):
                 break
         return path
 
+    def __parse_symbols_topic_link(self, page, node):
+        topic = _get_label(node)
+        _set_label(self.__cmp, node.parent, topic)
+        page.topic = topic
+        self.__doc_tree.add_topic_to_page(topic, page)
+
+    # pylint: disable=too-many-branches
     def __check_links(self, page, node, parent_node=None):
         if node.t == 'Link':
             path = None
             if node.destination:
                 # The rest of this sub-ast does not matter anymore
-                if self.__parse_topic_link(page, node):
+                if self.__parse_yaml_topics_link(page, node):
                     return
-                elif (node.parent and node.parent.t == 'Heading') or \
+                if (node.parent and node.parent.t == 'Heading') or \
                         node.destination in self.__yaml.page_to_meta:
                     path = self.__find_md_file(node.destination)
+            else:
+                self.__parse_symbols_topic_link(page, node)
+                return
 
             handler = self.__well_known_names.get(node.destination)
             if handler:
@@ -721,6 +739,8 @@ class DocTree(object):
             private_folder, 'pages.p')
         self.__symbol_maps_path = os.path.join(
             private_folder, 'symbol_maps.p')
+        self.__topics_map_path = os.path.join(
+            private_folder, 'topics_map.p')
         self.__reference_map_path = os.path.join(
             private_folder, 'reference_map.p')
 
@@ -735,12 +755,16 @@ class DocTree(object):
                 self.__symbol_maps_path, 'rb'))
             self.reference_map = pickle.load(open(
                 self.__reference_map_path, 'rb'))
+            self.__topics_map = pickle.load(open(
+                self.__topics_map_path, 'rb'))
         except IOError:
             self.pages = {}
             self.reference_map = defaultdict(set)
+            self.__topics_map = {}
             self.__incremental = False
 
         DocDatabase.comment_updated_signal.connect(self.__comment_updated)
+        DocDatabase.comment_added_signal.connect(self.__comment_added)
         DocDatabase.symbol_updated_signal.connect(self.__symbol_updated)
         self.__root = None
 
@@ -796,6 +820,7 @@ class DocTree(object):
                 new_page = self.page_parser.parse(page.source_file,
                                                   page.extension_name)
                 self.pages[page.source_file] = new_page
+                self.__add_topic_symbols(page, new_page)
                 page = new_page
 
             page.resolve_symbols(doc_database, link_resolver)
@@ -854,7 +879,14 @@ class DocTree(object):
         """
         pickle.dump(self.pages, open(self.__pages_path, 'wb'))
         pickle.dump(self.__symbol_maps, open(self.__symbol_maps_path, 'wb'))
+        pickle.dump(self.__topics_map, open(self.__topics_map_path, 'wb'))
         pickle.dump(self.reference_map, open(self.__reference_map_path, 'wb'))
+
+    def add_topic_to_page(self, topic, page):
+        """
+        Banana banana
+        """
+        self.__topics_map[topic] = page.source_file
 
     def __create_navigation_script(self, output, extensions):
         # Wrapping this is in a javascript file to allow
@@ -916,6 +948,7 @@ class DocTree(object):
 
     def __do_build_tree(self, source_file, extension_name):
         page = None
+        epage = None
 
         if source_file in self.pages:
             epage = self.pages[source_file]
@@ -930,6 +963,9 @@ class DocTree(object):
         if not page:
             page = self.page_parser.parse(source_file, extension_name)
 
+        if epage and page != epage:
+            self.__add_topic_symbols(epage, page)
+
         self.pages[source_file] = page
 
         for subpage, extension_name in page.subpages.items():
@@ -940,8 +976,34 @@ class DocTree(object):
         for page in pages.values():
             page.is_stale = True
 
+    def __check_topics(self, comment):
+        topic_tag = comment.tags.get('topic')
+        if not topic_tag:
+            return
+
+        pagename = self.__topics_map.get(topic_tag.value)
+        if not pagename:
+            return
+
+        page = self.pages.get(pagename)
+
+        if not page:
+            return
+
+        page.add_symbol(comment.name, is_topic=True)
+
+    def __add_topic_symbols(self, epage, page):
+        if epage.topic == page.topic:
+            for name in epage.topic_symbol_names:
+                page.add_symbol(name)
+
+    # pylint: disable=unused-argument
+    def __comment_added(self, doc_db, comment):
+        self.__check_topics(comment)
+
     # pylint: disable=unused-argument
     def __comment_updated(self, doc_db, comment):
+        self.__check_topics(comment)
         self.__stale_symbol_pages(comment.name)
 
     # pylint: disable=unused-argument

@@ -65,7 +65,7 @@ class GtkDocParser(object):
 
         tag_validation_regex = r'((?:^|\n)[ \t]*('
         tag_validation_regex += 'returns|Returns|since|Since|deprecated'\
-            '|Deprecated|stability|Stability|Return value'
+            '|Deprecated|stability|Stability|Return value|topic|Topic'
         for validator in doc_repo.tag_validators.values():
             tag_validation_regex += '|%s|%s' % (validator.name,
                                                 validator.name.lower())
@@ -170,6 +170,9 @@ class GtkDocParser(object):
     def __parse_since_tag(self, name, desc):
         return Tag(name=name, description=desc)
 
+    def __parse_topic_tag(self, name, desc):
+        return Tag(name=name, description='', value=desc)
+
     # pylint: disable=no-self-use
     def __parse_deprecated_tag(self, name, desc):
         return Tag(name=name, description=desc)
@@ -197,6 +200,8 @@ class GtkDocParser(object):
             return self.__parse_stability_tag("stability", desc)
         elif name.lower() == "deprecated":
             return self.__parse_deprecated_tag("deprecated", desc)
+        elif name.lower() == "topic":
+            return self.__parse_topic_tag("topic", desc)
         else:
             validator = self.doc_repo.tag_validators.get(name)
             if not validator:

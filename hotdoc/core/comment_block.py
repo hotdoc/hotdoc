@@ -54,10 +54,11 @@ class Comment(object):
     def __init__(self, name='', title='', params=None, filename='',
                  lineno=-1, endlineno=-1, annotations=None,
                  description='', short_description='', tags=None,
-                 raw_comment=''):
+                 raw_comment='', topics=None):
         self.name = name
         self.title = title
         self.params = params or {}
+        self.topics = topics or {}
         self.filename = os.path.abspath(filename)
         self.lineno = lineno
         self.endlineno = endlineno
