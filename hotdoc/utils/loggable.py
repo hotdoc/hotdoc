@@ -21,6 +21,7 @@
 Banana banana
 """
 
+import os
 import re
 import sys
 from collections import defaultdict, namedtuple
@@ -301,8 +302,16 @@ class Logger(Configurable):
                            dest="fatal_warnings", help="Make warnings fatal")
 
     @staticmethod
+    def set_verbosity(verbosity):
+        """Banana banana
+        """
+        Logger._verbosity = min(max(0, WARNING - verbosity), 2)
+        debug("Verbosity set to %d" % (WARNING - Logger._verbosity), 'logging')
+
+    @staticmethod
     def parse_config(doc_repo, config):
         Logger._verbosity = max(0, WARNING - (config.get('verbose') or 0))
+
         Logger.fatal_warnings = bool(config.get("fatal_warnings"))
 
 
@@ -324,3 +333,8 @@ def debug(message, domain='core'):
 def error(code, message):
     """Shortcut to `Logger.error`"""
     Logger.error(code, message)
+
+
+ENV_VERBOSITY = os.getenv('HOTDOC_DEBUG')
+if ENV_VERBOSITY is not None:
+    Logger.set_verbosity(int(ENV_VERBOSITY))
