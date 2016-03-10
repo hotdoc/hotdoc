@@ -344,16 +344,7 @@ class DocRepo(object):
         elif args.cmd == 'conf':
             exit_now = True
             if args.quickstart:
-                if wizard.quick_start():
-                    info("Setup complete, building the documentation now")
-                    try:
-                        wizard.wait_for_continue(
-                            "Setup complete,"
-                            " press Enter to build the doc now ")
-                        self.__parse_config(wizard.config)
-                        exit_now = False
-                    except EOFError:
-                        exit_now = True
+                exit_now = self.__quickstart(wizard)
         elif args.cmd == 'help':
             exit_now = True
             save_config = False
@@ -364,6 +355,20 @@ class DocRepo(object):
 
         if exit_now:
             sys.exit(0)
+
+    def __quickstart(self, wizard):
+        exit_now = True
+        if wizard.quick_start():
+            info("Setup complete, building the documentation now")
+            try:
+                wizard.wait_for_continue(
+                    "Setup complete,"
+                    " press Enter to build the doc now ")
+                self.__parse_config(wizard.config)
+                exit_now = False
+            except EOFError:
+                pass
+        return exit_now
 
     def __setup_config_file(self, parser, args):
         # First pass to get the conf path
