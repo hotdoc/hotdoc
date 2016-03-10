@@ -430,6 +430,8 @@ class PageParser(object):
         if not os.path.exists(source_file):
             return None
 
+        debug('Parsing markdown file %s' % source_file, 'parsing')
+
         with io.open(source_file, 'r', encoding='utf-8') as _:
             contents = add_md_includes(_.read(), source_file,
                                        self.__include_paths, 0)
@@ -537,6 +539,8 @@ class PageParser(object):
         if path not in self.__seen_pages:
             cur_page.subpages[path] = cur_page.extension_name
             self.__seen_pages.add(path)
+        else:
+            print "Already seen", path
 
     # pylint: disable=too-many-locals
     def __parse_yaml_topics_link(self, cur_page, node):
@@ -770,7 +774,9 @@ class DocTree(object):
         DocDatabase.symbol_updated_signal.connect(self.__symbol_updated)
         self.__root = None
 
-    def build_tree(self, source_file, extension_name=None):
+        self.__parent_tree = None
+
+    def build_tree(self, source_file, extension_name=None, parent_tree=None):
         """
         The main entry point, given a root source_file, this method
         will construct (or update) the complete doc_tree, including
@@ -782,6 +788,12 @@ class DocTree(object):
           extension_name: str, The extension in charge of handling this
             page and its subpages.
         """
+        self.__parent_tree = parent_tree
+        if parent_tree:
+            info("Building subtree from %s" % source_file, "parsing")
+        else:
+            info("Building tree from %s" % source_file, "parsing")
+
         self.__do_build_tree(source_file, extension_name)
         moved_symbols = self.__update_symbol_maps()
         self.__root = self.pages[source_file]
@@ -948,6 +960,18 @@ class DocTree(object):
 
         return moved_symbols
 
+    def __try_merging_pages(self, page):
+        if self.__parent_tree is None:
+            return
+
+        old_page = self.__parent_tree.pages.get(page.source_file)
+        if not old_page:
+            return
+
+        debug("Merging page %s" % page.source_file, 'parsing')
+        page.symbol_names |= old_page.symbol_names
+        page.topic_symbol_names |= old_page.symbol_names
+
     def __do_build_tree(self, source_file, extension_name):
         page = None
         epage = None
@@ -967,6 +991,8 @@ class DocTree(object):
 
         if epage and page != epage:
             self.__add_topic_symbols(epage, page)
+
+        self.__try_merging_pages(page)
 
         self.pages[source_file] = page
 

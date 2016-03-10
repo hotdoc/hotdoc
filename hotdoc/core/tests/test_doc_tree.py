@@ -59,7 +59,7 @@ class TestExtension(BaseExtension):
         return self.index_path, '', 'test-extension'
 
     # pylint: disable=arguments-differ
-    def setup(self, incremental=2):
+    def setup(self, incremental=2, add_topic=False):
         if incremental >= 1:
             self.get_or_create_symbol(
                 FunctionSymbol, display_name='do_ze_foo',
@@ -68,6 +68,16 @@ class TestExtension(BaseExtension):
         if incremental == 2:
             self.get_or_create_symbol(
                 FunctionSymbol, display_name='do_ze_bar',
+                filename=self.sources[1])
+
+        if add_topic:
+            tags = {'topic': Tag('topic', description='', value='My topic')}
+            comment = Comment(name='bar_with_topic', tags=tags)
+            # FIXME: make this unneeded
+            self.doc_repo.doc_database.add_comment(comment)
+            self.get_or_create_symbol(
+                FunctionSymbol, display_name='bar_with_topic',
+                tags=tags,
                 filename=self.sources[1])
 
         self.update_naive_index(smart=self.smart)
@@ -325,3 +335,52 @@ class TestDocTree(unittest.TestCase):
                          "\n"
                          "#### [bar](gen-bar.markdown)\n"
                          "#### [foo](gen-foo.markdown)\n")
+
+    def test_smart_and_topics(self):
+        self.__create_md_file('index.markdown',
+                              "## Generated documentation\n"
+                              "\n"
+                              "### [Test well known name](test-api)\n")
+        self.__create_md_file('ext-index.markdown',
+                              "## Smart extension index\n"
+                              "\n"
+                              "### [Test topic page](topic-page.markdown)\n")
+        self.__create_md_file('bar.markdown',
+                              "## Smart symbol list\n")
+        self.__create_md_file('topic-page.markdown',
+                              "## Topic based documentation\n"
+                              "\n"
+                              "### [My topic]()\n")
+
+        topic_page_path = os.path.join(self.__md_dir,
+                                       'topic-page.markdown')
+        bar_page_path = os.path.join(self.__md_dir,
+                                     'bar.markdown')
+        gen_bar_page_path = os.path.join(self.get_generated_doc_folder(),
+                                         'gen-bar.markdown')
+
+        extension = TestExtension(self, smart=True)
+
+        index_path = os.path.abspath(
+            os.path.join(self.__md_dir, 'index.markdown'))
+
+        self.doc_tree.build_tree(index_path)
+
+        extension.setup(add_topic=True)
+
+        topic_page = self.doc_tree.pages[topic_page_path]
+        self.assertSetEqual(set(topic_page.symbol_names), {'bar_with_topic'})
+        bar_page = self.doc_tree.pages[gen_bar_page_path]
+        self.assertSetEqual(set(bar_page.symbol_names), {'do_ze_bar'})
+
+        # Test incremental build
+        self.__reload()
+        extension = TestExtension(self, smart=True)
+        touch(bar_page_path)
+        self.doc_tree.build_tree(index_path)
+        extension.setup(incremental=0, add_topic=True)
+
+        topic_page = self.doc_tree.pages[topic_page_path]
+        self.assertSetEqual(set(topic_page.symbol_names), {'bar_with_topic'})
+        bar_page = self.doc_tree.pages[gen_bar_page_path]
+        self.assertSetEqual(set(bar_page.symbol_names), {'do_ze_bar'})

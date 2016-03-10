@@ -361,10 +361,18 @@ class BaseExtension(Configurable):
         else:
             preamble = self._get_naive_page_description(source_file)
 
+        info("Generating symbols list for %s" % source_file)
+
         with open(gen_path, 'w') as _:
             _.write(preamble + '\n')
             for symbol in sorted(symbols):
+                containing_pages =\
+                    self.doc_repo.doc_tree.get_pages_for_symbol(symbol)
+                if containing_pages and gen_path not in containing_pages:
+                    debug("symbol %s is already contained elsewhere" % symbol)
+                    continue
                 # FIXME: more generic escaping
+                debug("Adding symbol %s to page %s" % (symbol, source_file))
                 unique_name = symbol.replace('_', r'\_')
                 _.write('* [%s]()\n' % unique_name)
 
@@ -426,7 +434,8 @@ class BaseExtension(Configurable):
                                        user_file)
 
         subtree.build_tree(index_path,
-                           extension_name=self.EXTENSION_NAME)
+                           extension_name=self.EXTENSION_NAME,
+                           parent_tree=self.doc_repo.doc_tree)
         self.doc_repo.doc_tree.pages.update(subtree.pages)
 
     def format_page(self, page, link_resolver, output):
