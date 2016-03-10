@@ -455,10 +455,10 @@ class DocRepo(object):
         cmd_line_includes = [self.resolve_config_path(path) for path in
                              config.get('include_paths', [])]
         base_doc_path = os.path.dirname(self.__index_file)
-        self.include_paths = OrderedSet([base_doc_path])
-        self.include_paths |= OrderedSet(cmd_line_includes)
         gen_folder = self.get_generated_doc_folder()
-        self.include_paths.add(gen_folder)
+        self.include_paths = OrderedSet([gen_folder])
+        self.include_paths.add(base_doc_path)
+        self.include_paths |= OrderedSet(cmd_line_includes)
         self.git_repo_path = self.resolve_config_path(config.get('git_repo'))
         self.__create_change_tracker()
         self.__setup_folder('hotdoc-private')
