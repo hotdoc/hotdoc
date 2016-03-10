@@ -527,9 +527,10 @@ class HtmlFormatter(Formatter):
 
         tags = {}
         if callable_.comment:
-            tags = callable_.comment.tags
+            tags = dict(callable_.comment.tags)
 
         tags.pop('returns', None)
+        tags.pop('topic', None)
 
         out = template.render({'prototype': prototype,
                                'symbol': callable_,
