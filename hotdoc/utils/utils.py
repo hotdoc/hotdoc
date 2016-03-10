@@ -184,3 +184,11 @@ class OrderedSet(collections.MutableSet):
         if isinstance(other, OrderedSet):
             return len(self) == len(other) and list(self) == list(other)
         return set(self) == set(other)
+
+
+def touch(fname, times=None):
+    """
+    Mimic the `touch` command
+    """
+    with open(fname, 'a'):
+        os.utime(fname, times)
