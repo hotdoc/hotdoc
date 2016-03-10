@@ -401,8 +401,13 @@ class DocRepo(object):
 
         try:
             config = json.loads(contents)
-        except ValueError:
-            config = {}
+        except ValueError as ze_error:
+            error('invalid-config',
+                  'The provided configuration file %s is not valid json.\n'
+                  'The exact error was %s.\n'
+                  'This often happens because of missing or extra commas, '
+                  'but it may be something else, please fix it!\n' %
+                  (conf_file, str(ze_error)))
 
         wizard.config.update(config)
         cli = dict(vars(args))
