@@ -513,9 +513,11 @@ class PageParser(object):
                     rep = next(rep for rep in replacements if rep is not None)
                     _set_label(self.__cmp, ast_node[0], rep)
                 except StopIteration:
-                    _set_label(self.__cmp, ast_node[0], original_name)
+                    _set_label(self.__cmp, ast_node[0], page.get_title() or
+                               original_name)
 
             desc = page.get_short_description()
+
             if desc:
                 first = True
                 for _ in _get_children(ast_node[0].parent):
