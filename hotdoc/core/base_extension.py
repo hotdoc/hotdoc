@@ -24,6 +24,7 @@ import os
 
 from collections import defaultdict, OrderedDict
 
+from hotdoc.core.wizard import HotdocWizard
 from hotdoc.core.doc_tree import DocTree
 from hotdoc.core.file_includer import find_md_file
 from hotdoc.core.exceptions import BadInclusionException
@@ -80,6 +81,8 @@ class BaseExtension(Configurable):
     """
     # pylint: disable=unused-argument
     EXTENSION_NAME = "base-extension"
+
+    index = None
 
     def __init__(self, doc_repo):
         """Constructor for `BaseExtension`.
@@ -200,6 +203,31 @@ class BaseExtension(Configurable):
             list: A list of `ExtDependency` instances.
         """
         return []
+
+    @classmethod
+    def add_index_argument(cls, group, prefix, smart):
+        """
+        Subclasses may all this to add an index argument.
+
+        Args:
+            group: arparse.ArgumentGroup, the extension argument group
+            prefix: str, arguments have to be namespaced
+            smart: bool, whether smart index generation should be exposed
+                for this extension
+        """
+        group.add_argument(
+            '--%s-index' % prefix, action="store",
+            dest="%s_index" % prefix,
+            help=("Name of the %s root markdown file, can be None" % (
+                cls.EXTENSION_NAME)),
+            finalize_function=HotdocWizard.finalize_path)
+
+        if smart:
+            group.add_argument(
+                '--%s-smart-index' % prefix, action="store_true",
+                dest="%s_smart_index" % prefix,
+                help="Smart symbols list generation in %s" % (
+                    cls.EXTENSION_NAME))
 
     def get_or_create_symbol(self, *args, **kwargs):
         """
