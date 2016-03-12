@@ -25,31 +25,48 @@ class Signal(object):
     """
     The Signalling class
     """
-    def __init__(self):
+    def __init__(self, optimized=False):
         self._functions = WeakSet()
         self._after_functions = WeakSet()
         self._methods = WeakKeyDictionary()
         self._after_methods = WeakKeyDictionary()
+        self._optimized = optimized
 
     def __call__(self, *args, **kargs):
-        res = []
+        res_list = []
         # Call handler functions
         for func in self._functions:
-            res.append(func(*args, **kargs))
+            res = func(*args, **kargs)
+            if res and self._optimized:
+                return res
+            res_list.append(res)
 
         # Call handler methods
         for obj, funcs in self._methods.items():
             for func in funcs:
-                res.append(func(obj, *args, **kargs))
+                res = func(obj, *args, **kargs)
+                if res and self._optimized:
+                    return res
+                res_list.append(res)
 
         for func in self._after_functions:
-            res.append(func(*args, **kargs))
+            res = func(*args, **kargs)
+            if res and self._optimized:
+                return res
+            res_list.append(res)
 
         # Call handler methods
         for obj, funcs in self._after_methods.items():
             for func in funcs:
-                res.append(func(obj, *args, **kargs))
-        return res
+                res = func(obj, *args, **kargs)
+                if res and self._optimized:
+                    return res
+                res_list.append(res)
+
+        if self._optimized:
+            return None
+
+        return res_list
 
     def connect(self, slot):
         """

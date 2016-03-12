@@ -41,11 +41,16 @@ Returns:
     str: The lang of the content ('' means unknown but not markdown)
 """
 include_signal = Signal()
+resolve_markdown_signal = Signal(optimized=True)
 
 
 def find_md_file(filename, include_paths):
     """Banana banana
     """
+    res = resolve_markdown_signal(filename)
+    if res:
+        return res
+
     if os.path.isabs(filename):
         if os.path.exists(filename):
             return filename
@@ -114,6 +119,7 @@ def add_md_includes(contents, source_file, include_paths=None, lineno=0):
         if include_filename is None:
             continue
 
+        # pylint: disable=no-member
         include_path = find_md_file(include_filename, include_paths)
 
         if include_path is None:

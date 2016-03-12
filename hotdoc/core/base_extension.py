@@ -25,8 +25,8 @@ import os
 from collections import defaultdict, OrderedDict
 
 from hotdoc.core.wizard import HotdocWizard
-from hotdoc.core.doc_tree import DocTree
-from hotdoc.core.file_includer import find_md_file
+from hotdoc.core.doc_tree import DocTree, PageParser
+from hotdoc.core.file_includer import find_md_file, resolve_markdown_signal
 from hotdoc.core.exceptions import BadInclusionException
 from hotdoc.formatters.html_formatter import HtmlFormatter
 from hotdoc.utils.utils import OrderedSet
@@ -99,6 +99,7 @@ class BaseExtension(Configurable):
             self.formatters = {"html": HtmlFormatter([])}
 
         self.__created_symbols = defaultdict(OrderedSet)
+        self.__gen_markdowns = {}
 
     # pylint: disable=no-self-use
     def warn(self, code, message):
@@ -332,6 +333,7 @@ class BaseExtension(Configurable):
 
         user_index_is_stale = False
         subpages_changed = True
+        user_subpages = set()
 
         if user_index:
             filename = find_md_file(user_index, self.doc_repo.include_paths)
@@ -346,6 +348,18 @@ class BaseExtension(Configurable):
             if stale or unlisted:
                 user_index_is_stale = True
 
+            def __dummy_add_topic(topic, page):
+                pass
+
+            # FIXME funny hack
+            setattr(self, 'add_topic_to_page', __dummy_add_topic)
+            page_parser = PageParser(self, self.doc_repo.include_paths)
+            user_page = page_parser.parse(filename, self.EXTENSION_NAME)
+            delattr(self, 'add_topic_to_page')
+
+            for subpage in user_page.subpages:
+                user_subpages.add(os.path.basename(subpage))
+
             with open(filename, 'r') as _:
                 preamble = _.read()
         else:
@@ -355,6 +369,8 @@ class BaseExtension(Configurable):
         full_gen_paths = set()
         for source_file in sorted(all_source_files):
             link_title = self._get_naive_link_title(source_file)
+            if link_title + '.markdown' in user_subpages:
+                continue
             markdown_name = 'gen-' + link_title + '.markdown'
             gen_paths[link_title] = markdown_name
             full_gen_paths.add(
@@ -404,6 +420,9 @@ class BaseExtension(Configurable):
                 unique_name = symbol.replace('_', r'\_')
                 _.write('* [%s]()\n' % unique_name)
 
+    def __resolve_markdown_path(self, filename):
+        return self.__gen_markdowns.get(filename)
+
     # pylint: disable=too-many-locals
     def update_naive_index(self, smart=False):
         """
@@ -427,6 +446,7 @@ class BaseExtension(Configurable):
                           self.doc_repo.get_private_folder())
 
         user_files = {}
+        self.__gen_markdowns = {}
         source_map = {}
 
         if smart:
@@ -439,6 +459,8 @@ class BaseExtension(Configurable):
                 if user_file:
                     user_files[source] = user_file
                     source_map[user_file] = source
+                    self.__gen_markdowns[stripped + '.markdown'] = \
+                        self.__make_gen_path(source)
 
         stale, unlisted = self.doc_repo.change_tracker.get_stale_files(
             user_files.values(), 'gen-' + self.EXTENSION_NAME)
@@ -461,9 +483,14 @@ class BaseExtension(Configurable):
             self.__create_symbols_list(source_file, epage.symbol_names,
                                        user_file)
 
+        resolve_markdown_signal.connect(self.__resolve_markdown_path)
+
         subtree.build_tree(index_path,
                            extension_name=self.EXTENSION_NAME,
                            parent_tree=self.doc_repo.doc_tree)
+
+        resolve_markdown_signal.disconnect(self.__resolve_markdown_path)
+
         self.doc_repo.doc_tree.pages.update(subtree.pages)
 
     def format_page(self, page, link_resolver, output):

@@ -645,8 +645,9 @@ class PageParser(object):
                 parsed_header = self.__parsed_header_class(
                     list(_get_children(parent_node)), path)
                 page.headers[original_name] = parsed_header
+                bname = os.path.basename(path)
                 node.destination = '%s.html' %\
-                    os.path.splitext(node.destination)[0]
+                    os.path.splitext(bname)[0]
 
         elif node.t == "Heading" and not page.first_header:
             page.first_header = _get_label(node)
@@ -901,6 +902,12 @@ class DocTree(object):
         Banana banana
         """
         self.__topics_map[topic] = page.source_file
+
+    def update_pages(self, new_pages):
+        """
+        Banana banana
+        """
+        self.pages.update(new_pages)
 
     def __create_navigation_script(self, output, extensions):
         # Wrapping this is in a javascript file to allow
