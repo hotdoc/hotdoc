@@ -992,6 +992,7 @@ class DocTree(object):
         debug("Merging page %s" % page.source_file, 'parsing')
         page.symbol_names |= old_page.symbol_names
         page.topic_symbol_names |= old_page.symbol_names
+        page.is_stale |= old_page.is_stale
 
     def __do_build_tree(self, source_file, extension_name):
         page = None
@@ -1023,6 +1024,8 @@ class DocTree(object):
     def __stale_symbol_pages(self, symbol_name):
         pages = self.__symbol_maps.get(symbol_name, {})
         for page in pages.values():
+            if not page.is_stale:
+                debug('staling %s' % page.source_file)
             page.is_stale = True
 
     def __check_topics(self, comment):
