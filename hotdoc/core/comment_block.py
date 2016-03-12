@@ -108,8 +108,8 @@ class Tag(object):
     """
     def __init__(self, name, description, value=None, annotations=None):
         self.name = name
-        self.description = description
-        self.value = value
+        self.description = description or ''
+        self.value = value or ''
         self.annotations = annotations or {}
 
 

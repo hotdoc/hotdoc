@@ -482,16 +482,18 @@ class BaseExtension(Configurable):
 
         resolve_markdown_signal.connect(self.__resolve_markdown_path)
 
-        subtree.build_tree(index_path,
-                           extension_name=self.EXTENSION_NAME,
-                           parent_tree=self.doc_repo.doc_tree)
+        index_root = subtree.build_tree(
+            index_path,
+            extension_name=self.EXTENSION_NAME,
+            parent_tree=self.doc_repo.doc_tree)
 
         resolve_markdown_signal.disconnect(self.__resolve_markdown_path)
 
         for gen_path in gen_paths:
             page = subtree.pages.get(gen_path)
             if page:
-                page.smart = True
+                if not page.symbol_names:
+                    index_root.remove_subpage(page.source_file)
 
         self.doc_repo.doc_tree.pages.update(subtree.pages)
 

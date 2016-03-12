@@ -74,12 +74,13 @@ static char *render_doc(CMarkDocument *doc, PyObject *link_resolver)
 
           if (cmark_node_first_child(cur) == NULL && url[0] != '\0') {
             PyObject *link;
+            cmark_node *label = cmark_node_new(CMARK_NODE_TEXT);
+            cmark_node_append_child(cur, label);
 
             link = PyObject_CallMethod(link_resolver, "get_named_link", "s", url);
             if (link != Py_None) {
               PyObject *ref = PyObject_CallMethod(link, "get_link", NULL);
               PyObject *title = PyObject_CallMethod(link, "get_title", NULL);
-              cmark_node *label = cmark_node_new(CMARK_NODE_TEXT);
 
               doc->empty_links = cmark_llist_append(doc->empty_links, cur);
 
@@ -92,10 +93,14 @@ static char *render_doc(CMarkDocument *doc, PyObject *link_resolver)
 
               if (title != Py_None)
                 cmark_node_set_literal(label, PyString_AsString(title));
+              else
+                cmark_node_set_literal(label, url);
 
               cmark_node_append_child(cur, label);
               Py_DECREF(title);
               Py_DECREF(ref);
+            } else {
+              cmark_node_set_literal(label, url);
             }
             Py_DECREF(link);
           }
@@ -127,6 +132,8 @@ static char *render_doc(CMarkDocument *doc, PyObject *link_resolver)
 
         Py_DECREF(title);
         Py_DECREF(ref);
+      } else {
+        cmark_node_set_literal(label, id);
       }
       Py_DECREF(link);
     }

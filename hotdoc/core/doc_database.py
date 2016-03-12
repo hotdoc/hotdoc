@@ -29,6 +29,7 @@ from hotdoc.core.symbols import Symbol
 
 from hotdoc.utils.alchemy_integration import Base
 from hotdoc.utils.simple_signals import Signal
+from hotdoc.utils.loggable import debug
 
 
 class DocDatabase(object):
@@ -88,6 +89,8 @@ class DocDatabase(object):
         if not symbol:
             symbol = type_()
             self.__session.add(symbol)
+            debug('Created symbol with unique name %s' % unique_name,
+                  'symbols')
 
         for key, value in kwargs.items():
             setattr(symbol, key, value)

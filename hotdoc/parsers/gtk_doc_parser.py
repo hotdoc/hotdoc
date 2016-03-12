@@ -168,25 +168,37 @@ class GtkDocParser(object):
 
     # pylint: disable=no-self-use
     def __parse_since_tag(self, name, desc):
-        return Tag(name=name, description=desc)
+        return Tag(name, desc, value=desc)
 
     def __parse_topic_tag(self, name, desc):
-        return Tag(name=name, description='', value=desc)
+        return Tag(name, None, value=desc)
 
     # pylint: disable=no-self-use
     def __parse_deprecated_tag(self, name, desc):
-        return Tag(name=name, description=desc)
+        split = desc.split(':', 1)
+        if len(split) == 2 and len(split[0]) > 1:
+            value = split[0]
+            if ' ' in value:
+                value = None
+        else:
+            value = None
+
+        return Tag(name, desc, value=value)
 
     # pylint: disable=no-self-use
     def __parse_stability_tag(self, name, desc):
-        return Tag(name=name, description=desc)
+        value = desc.strip().lower()
+        if value not in ('private', 'stable', 'unstable'):
+            # FIXME warn
+            return None
+        return Tag(name, desc, value=value)
 
     # pylint: disable=no-self-use
     def __parse_returns_tag(self, name, desc):
         desc, annotations = self.__extract_annotations(desc)
         annotations = {annotation.name: annotation for annotation in
                        annotations}
-        return Tag(name=name, annotations=annotations, description=desc)
+        return Tag(name, desc, annotations=annotations)
 
     # pylint: disable=too-many-return-statements
     def __parse_tag(self, name, desc):
@@ -225,6 +237,8 @@ class GtkDocParser(object):
             tag = self.__parse_tag(name.strip(), tag_desc.strip())
             if tag:
                 tags.append(tag)
+            else:
+                desc += '\n%s: %s' % (name, tag_desc)
 
         return desc, tags
 
@@ -590,6 +604,15 @@ class GtkDocStringFormatter(Configurable):
             return self.ast_to_html(ast, link_resolver)
 
         raise Exception("Unrecognized format %s" % output_format)
+
+    def translate_tags(self, comment, link_resolver):
+        """Banana banana
+        """
+        for tname in ('deprecated',):
+            tag = comment.tags.get(tname)
+            if tag is not None and tag.description:
+                ast = self.to_ast(tag.description, link_resolver)
+                tag.description = self.ast_to_html(ast, link_resolver) or ''
 
     @staticmethod
     def add_arguments(parser):

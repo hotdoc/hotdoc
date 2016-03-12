@@ -219,7 +219,6 @@ class Page(object):
         pagename = '%s.html' % name
 
         self.symbol_names = OrderedSet()
-        self.smart = False
         self.topic_symbol_names = OrderedSet()
         self.topic = None
         self.subpages = OrderedDict({})
@@ -249,7 +248,6 @@ class Page(object):
         return {'symbol_names': self.symbol_names,
                 'topic_symbol_names': self.topic_symbol_names,
                 'topic': self.topic,
-                'smart': self.smart,
                 'subpages': self.subpages,
                 'link': self.link,
                 'title': self.title,
@@ -352,10 +350,23 @@ class Page(object):
             formatter.format_page(self)[0]
         formatter.write_page(self, output)
 
+    def remove_subpage(self, source_file):
+        """
+        Banana banana
+        """
+        self.subpages.pop(source_file, None)
+        for name, header in self.headers.items():
+            if header.original_destination == source_file:
+                header.ast_node[0].parent.unlink()
+                self.headers.pop(name)
+                break
+
     def __format_symbols(self, formatter, link_resolver):
         for symbol in self.symbols:
             if symbol is None:
                 continue
+            debug('Formatting symbol %s in page %s' % (
+                symbol.unique_name, self.source_file), 'formatting')
             symbol.skip = not formatter.format_symbol(symbol, link_resolver)
 
     def __query_extra_symbols(self, sym, new_syms, link_resolver):
@@ -504,15 +515,9 @@ class PageParser(object):
         if page.extension_name == 'core':
             return
 
-        ppage = page
-
         for original_name, parsed_header in page.headers.items():
             ast_node = parsed_header.ast_node
             page = self.__doc_tree.get_page(parsed_header.original_destination)
-            if page.smart and not page.symbol_names:
-                ast_node[0].parent.unlink()
-                ppage.headers.pop(original_name)
-                continue
 
             if page.title is not None:
                 _set_label(self.__cmp, ast_node[0], page.title)

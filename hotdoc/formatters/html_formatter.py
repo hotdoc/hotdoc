@@ -135,6 +135,12 @@ class HtmlFormatter(Formatter):
         self.all_scripts = set()
         self._docstring_formatter = GtkDocStringFormatter()
 
+    def format_comment(self, comment, link_resolver):
+        if comment:
+            self._docstring_formatter.translate_tags(comment, link_resolver)
+        return super(HtmlFormatter, self).format_comment(
+            comment, link_resolver)
+
     # pylint: disable=no-self-use
     def _get_extension(self):
         return "html"
