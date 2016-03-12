@@ -605,6 +605,7 @@ class PageParser(object):
         return True
 
     def __find_md_file(self, dest):
+        dest = urllib.unquote(dest)
         path = None
         for fname in (
                 dest,
