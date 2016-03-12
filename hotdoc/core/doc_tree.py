@@ -219,6 +219,7 @@ class Page(object):
         pagename = '%s.html' % name
 
         self.symbol_names = OrderedSet()
+        self.smart = False
         self.topic_symbol_names = OrderedSet()
         self.topic = None
         self.subpages = OrderedDict({})
@@ -248,6 +249,7 @@ class Page(object):
         return {'symbol_names': self.symbol_names,
                 'topic_symbol_names': self.topic_symbol_names,
                 'topic': self.topic,
+                'smart': self.smart,
                 'subpages': self.subpages,
                 'link': self.link,
                 'title': self.title,
@@ -502,9 +504,15 @@ class PageParser(object):
         if page.extension_name == 'core':
             return
 
+        ppage = page
+
         for original_name, parsed_header in page.headers.items():
             ast_node = parsed_header.ast_node
             page = self.__doc_tree.get_page(parsed_header.original_destination)
+            if page.smart and not page.symbol_names:
+                ast_node[0].parent.unlink()
+                ppage.headers.pop(original_name)
+                continue
 
             if page.title is not None:
                 _set_label(self.__cmp, ast_node[0], page.title)

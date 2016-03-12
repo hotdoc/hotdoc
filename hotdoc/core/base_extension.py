@@ -99,7 +99,7 @@ class BaseExtension(Configurable):
             self.formatters = {"html": HtmlFormatter([])}
 
         self.__created_symbols = defaultdict(OrderedSet)
-        self.__gen_markdowns = {}
+        self.__overriden_md = {}
 
     # pylint: disable=no-self-use
     def warn(self, code, message):
@@ -421,7 +421,7 @@ class BaseExtension(Configurable):
                 _.write('* [%s]()\n' % unique_name)
 
     def __resolve_markdown_path(self, filename):
-        return self.__gen_markdowns.get(filename)
+        return self.__overriden_md.get(filename)
 
     # pylint: disable=too-many-locals
     def update_naive_index(self, smart=False):
@@ -446,7 +446,8 @@ class BaseExtension(Configurable):
                           self.doc_repo.get_private_folder())
 
         user_files = {}
-        self.__gen_markdowns = {}
+        self.__overriden_md = {}
+        gen_paths = []
         source_map = {}
 
         if smart:
@@ -459,7 +460,7 @@ class BaseExtension(Configurable):
                 if user_file:
                     user_files[source] = user_file
                     source_map[user_file] = source
-                    self.__gen_markdowns[stripped + '.markdown'] = \
+                    self.__overriden_md[stripped + '.markdown'] = \
                         self.__make_gen_path(source)
 
         stale, unlisted = self.doc_repo.change_tracker.get_stale_files(
@@ -468,6 +469,7 @@ class BaseExtension(Configurable):
 
         for source_file, symbols in self.__created_symbols.items():
             user_file = user_files.pop(source_file, None)
+            gen_paths.append(self.__make_gen_path(source_file))
             self.__create_symbols_list(source_file, symbols, user_file)
 
             if user_file:
@@ -479,6 +481,7 @@ class BaseExtension(Configurable):
         for user_file in stale:
             source_file = source_map[user_file]
             gen_path = self.__make_gen_path(source_file)
+            gen_paths.append(gen_path)
             epage = self.doc_repo.doc_tree.pages[gen_path]
             self.__create_symbols_list(source_file, epage.symbol_names,
                                        user_file)
@@ -490,6 +493,11 @@ class BaseExtension(Configurable):
                            parent_tree=self.doc_repo.doc_tree)
 
         resolve_markdown_signal.disconnect(self.__resolve_markdown_path)
+
+        for gen_path in gen_paths:
+            page = subtree.pages.get(gen_path)
+            if page:
+                page.smart = True
 
         self.doc_repo.doc_tree.pages.update(subtree.pages)
 
