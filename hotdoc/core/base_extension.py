@@ -25,7 +25,7 @@ import os
 from collections import defaultdict, OrderedDict
 
 from hotdoc.core.wizard import HotdocWizard
-from hotdoc.core.doc_tree import DocTree, PageParser
+from hotdoc.core.doc_tree import DocTree
 from hotdoc.core.file_includer import find_md_file, resolve_markdown_signal
 from hotdoc.core.exceptions import BadInclusionException
 from hotdoc.formatters.html_formatter import HtmlFormatter
@@ -348,17 +348,11 @@ class BaseExtension(Configurable):
             if stale or unlisted:
                 user_index_is_stale = True
 
-            def __dummy_add_topic(topic, page):
-                pass
-
-            # FIXME funny hack
-            setattr(self, 'add_topic_to_page', __dummy_add_topic)
-            page_parser = PageParser(self, self.doc_repo.include_paths)
-            user_page = page_parser.parse(filename, self.EXTENSION_NAME)
-            delattr(self, 'add_topic_to_page')
-
-            for subpage in user_page.subpages:
-                user_subpages.add(os.path.basename(subpage))
+            user_tree = DocTree(self.doc_repo.include_paths,
+                                self.doc_repo.get_private_folder())
+            user_tree.build_tree(filename, self.EXTENSION_NAME)
+            for subpage in user_tree.pages.values():
+                user_subpages.add(os.path.basename(subpage.source_file))
 
             with open(filename, 'r') as _:
                 preamble = _.read()

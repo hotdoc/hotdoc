@@ -748,9 +748,15 @@ class DocTree(object):
         reference_map: dict, link ids -> referencing pages
     """
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, include_paths, private_folder):
+    def __init__(self, include_paths, private_folder, toplevel=True):
         self.page_parser = PageParser(self, include_paths)
 
+        self.pages = {}
+        self.reference_map = defaultdict(set)
+        self.__topics_map = {}
+        self.__incremental = False
+        self.__current_page = None
+        self.__symbol_maps = defaultdict(defaultdict)
         self.__pages_path = os.path.join(
             private_folder, 'pages.p')
         self.__symbol_maps_path = os.path.join(
@@ -759,32 +765,26 @@ class DocTree(object):
             private_folder, 'topics_map.p')
         self.__reference_map_path = os.path.join(
             private_folder, 'reference_map.p')
-
-        self.__incremental = True
-        self.__current_page = None
-        self.__symbol_maps = defaultdict(defaultdict)
-
-        try:
-            self.pages = pickle.load(open(
-                self.__pages_path, 'rb'))
-            self.__previous_symbol_maps = pickle.load(open(
-                self.__symbol_maps_path, 'rb'))
-            self.reference_map = pickle.load(open(
-                self.__reference_map_path, 'rb'))
-            self.__topics_map = pickle.load(open(
-                self.__topics_map_path, 'rb'))
-        except IOError:
-            self.pages = {}
-            self.reference_map = defaultdict(set)
-            self.__topics_map = {}
-            self.__incremental = False
-
-        DocDatabase.comment_updated_signal.connect(self.__comment_updated)
-        DocDatabase.comment_added_signal.connect(self.__comment_added)
-        DocDatabase.symbol_updated_signal.connect(self.__symbol_updated)
         self.__root = None
-
         self.__parent_tree = None
+
+        if toplevel:
+            try:
+                self.pages = pickle.load(open(
+                    self.__pages_path, 'rb'))
+                self.__previous_symbol_maps = pickle.load(open(
+                    self.__symbol_maps_path, 'rb'))
+                self.reference_map = pickle.load(open(
+                    self.__reference_map_path, 'rb'))
+                self.__topics_map = pickle.load(open(
+                    self.__topics_map_path, 'rb'))
+                self.__incremental = True
+            except IOError:
+                pass
+
+            DocDatabase.comment_updated_signal.connect(self.__comment_updated)
+            DocDatabase.comment_added_signal.connect(self.__comment_added)
+            DocDatabase.symbol_updated_signal.connect(self.__symbol_updated)
 
     def build_tree(self, source_file, extension_name=None, parent_tree=None):
         """
