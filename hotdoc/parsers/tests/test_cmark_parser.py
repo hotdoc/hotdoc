@@ -74,11 +74,6 @@ class TestGtkDocExtension(unittest.TestCase):
         self.assertOutputs(
             inp, '<p>this : <a href="here.com">foo</a> is a link !</p>\n')
 
-    def test_missing_link(self):
-        inp = u"this : #fo is not a link .."
-        self.assertOutputs(
-            inp, u'<p>this : <a href="fo"></a> is not a link ..</p>\n')
-
     def test_modified_link(self):
         inp = u"this : #foo is a link !"
         ast = self.assertOutputs(
@@ -120,7 +115,7 @@ class TestGtkDocExtension(unittest.TestCase):
         inp = u"function_link()"
         self.assertOutputs(
             inp,
-            u'<p><a href="function_link"></a></p>\n')
+            u'<p><a href="function_link">function_link</a></p>\n')
 
     def test_qualified_links(self):
         inp = u' #Test::test is a link'
