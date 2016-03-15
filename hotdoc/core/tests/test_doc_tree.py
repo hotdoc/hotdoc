@@ -83,6 +83,15 @@ class TestExtension(BaseExtension):
         self.update_naive_index(smart=self.smart)
 
 
+class TestDuplicateExtension(TestExtension):
+    def create_naive_index(self, all_source_files):
+        extra_path = os.path.join(self.doc_repo.get_private_folder(),
+                                  'deprecated/foo.x')
+        self.sources.append(extra_path)
+        return super(TestDuplicateExtension, self).create_naive_index(
+            self.sources)
+
+
 class TestDocTree(unittest.TestCase):
 
     def setUp(self):
@@ -111,6 +120,9 @@ class TestDocTree(unittest.TestCase):
 
     def get_generated_doc_folder(self):
         return os.path.join(self.__priv_dir, 'generated')
+
+    def get_base_doc_folder(self):
+        return self.__md_dir
 
     def get_private_folder(self):
         return self.__priv_dir
@@ -384,3 +396,22 @@ class TestDocTree(unittest.TestCase):
         self.assertSetEqual(set(topic_page.symbol_names), {'bar_with_topic'})
         bar_page = self.doc_tree.pages[gen_bar_page_path]
         self.assertSetEqual(set(bar_page.symbol_names), {'do_ze_bar'})
+
+    def test_naive_duplicates(self):
+        self.__create_md_file('index.markdown',
+                              "## Generated documentation\n"
+                              "\n"
+                              "### [Test well known name](test-api)\n")
+        extension = TestDuplicateExtension(self)
+        extension.get_or_create_symbol(
+            FunctionSymbol,
+            display_name='do_ze_deprecated_foo',
+            filename=os.path.join(self.get_private_folder(),
+                                  'deprecated/foo.x'))
+
+        index_path = os.path.abspath(
+            os.path.join(self.__md_dir, 'index.markdown'))
+        self.doc_tree.build_tree(index_path)
+        extension.setup()
+
+        self.assertEqual(len(self.doc_tree.pages), 5)

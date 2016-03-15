@@ -102,6 +102,7 @@ class DocRepo(object):
             CoreExtension.EXTENSION_NAME: CoreExtension}
         self.__index_file = None
         self.__root_page = None
+        self.__base_doc_folder = None
 
     def register_tag_validator(self, validator):
         """
@@ -433,7 +434,7 @@ class DocRepo(object):
     def get_base_doc_folder(self):
         """Get the folder in which the main index was located
         """
-        return next(iter(self.include_paths))
+        return self.__base_doc_folder
 
     def get_generated_doc_folder(self):
         """Get the folder in which auto-generated doc pages
@@ -464,10 +465,10 @@ class DocRepo(object):
 
         cmd_line_includes = [self.resolve_config_path(path) for path in
                              config.get('include_paths', [])]
-        base_doc_path = os.path.dirname(self.__index_file)
+        self.__base_doc_folder = os.path.dirname(self.__index_file)
         gen_folder = self.get_generated_doc_folder()
         self.include_paths = OrderedSet([gen_folder])
-        self.include_paths.add(base_doc_path)
+        self.include_paths.add(self.__base_doc_folder)
         self.include_paths |= OrderedSet(cmd_line_includes)
         self.git_repo_path = self.resolve_config_path(config.get('git_repo'))
         self.__create_change_tracker()

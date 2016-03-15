@@ -32,6 +32,7 @@ from hotdoc.formatters.html_formatter import HtmlFormatter
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.loggable import debug, info, warn, error, Logger
+from hotdoc.core.symbols import Symbol
 
 Logger.register_error_code('smart-index-missing', BadInclusionException,
                            domain='base-extension')
@@ -100,6 +101,7 @@ class BaseExtension(Configurable):
 
         self.__created_symbols = defaultdict(OrderedSet)
         self.__overriden_md = {}
+        self.__package_root = ''
 
     # pylint: disable=no-self-use
     def warn(self, code, message):
@@ -248,10 +250,15 @@ class BaseExtension(Configurable):
         """
         sym = self.doc_repo.doc_database.get_or_create_symbol(*args, **kwargs)
 
-        if sym:
+        # pylint: disable=unidiomatic-typecheck
+        if sym and type(sym) != Symbol:
             self.__created_symbols[sym.filename].add(sym.unique_name)
 
         return sym
+
+    def __get_rel_source_path(self, source_file):
+        stripped = os.path.splitext(source_file)[0]
+        return os.path.relpath(stripped, self.__package_root)
 
     # pylint: disable=no-self-use
     def _get_naive_link_title(self, source_file):
@@ -272,9 +279,7 @@ class BaseExtension(Configurable):
         Returns:
             str: a custom label.
         """
-        stripped = os.path.splitext(source_file)[0]
-        title = os.path.basename(stripped)
-        return title
+        return os.path.basename(self.__get_rel_source_path(source_file))
 
     def _get_naive_page_description(self, source_file):
         """
@@ -292,9 +297,8 @@ class BaseExtension(Configurable):
         Returns:
             str: a custom description.
         """
-        stripped = os.path.splitext(source_file)[0]
-        title = os.path.basename(stripped)
-        return '## %s\n\n' % title
+        return '## %s\n\n' % (os.path.basename(
+            self.__get_rel_source_path(source_file)))
 
     def _get_user_index_path(self):
         return None
@@ -331,6 +335,12 @@ class BaseExtension(Configurable):
         index_path = self.__get_naive_index_path()
         epage = self.doc_repo.doc_tree.pages.get(index_path)
 
+        common_prefix = os.path.commonprefix(all_source_files)
+        self.__package_root = os.path.dirname(common_prefix)
+
+        debug('Package root for %s is %s' % (self.EXTENSION_NAME,
+                                             self.__package_root))
+
         user_index_is_stale = False
         subpages_changed = True
         user_subpages = set()
@@ -352,7 +362,10 @@ class BaseExtension(Configurable):
                                 self.doc_repo.get_private_folder())
             user_tree.build_tree(filename, self.EXTENSION_NAME)
             for subpage in user_tree.pages.values():
-                user_subpages.add(os.path.basename(subpage.source_file))
+                rel_path = os.path.relpath(
+                    subpage.source_file,
+                    self.doc_repo.get_base_doc_folder())
+                user_subpages.add(rel_path)
 
             with open(filename, 'r') as _:
                 preamble = _.read()
@@ -362,14 +375,13 @@ class BaseExtension(Configurable):
         gen_paths = OrderedDict()
         full_gen_paths = set()
         for source_file in sorted(all_source_files):
-            link_title = self._get_naive_link_title(source_file)
-            if link_title + '.markdown' in user_subpages:
+            relpath = self.__get_rel_source_path(source_file)
+            if relpath + '.markdown' in user_subpages:
                 continue
-            markdown_name = 'gen-' + link_title + '.markdown'
-            gen_paths[link_title] = markdown_name
-            full_gen_paths.add(
-                os.path.join(self.doc_repo.get_generated_doc_folder(),
-                             markdown_name))
+            gen_path = self.__get_gen_path(source_file)
+            gen_paths[relpath] = os.path.relpath(
+                gen_path, self.doc_repo.get_generated_doc_folder())
+            full_gen_paths.add(gen_path)
 
         if epage:
             subpages_changed = (full_gen_paths != set(epage.subpages.keys()))
@@ -377,17 +389,25 @@ class BaseExtension(Configurable):
         if user_index_is_stale or subpages_changed:
             with open(index_path, 'w') as _:
                 _.write(preamble + '\n')
-                for link_title, markdown_name in gen_paths.items():
-                    _.write('#### [%s](%s)\n' % (link_title, markdown_name))
+                for rel_path, markdown_name in gen_paths.items():
+                    _.write('#### [%s](%s)\n' % (os.path.basename(rel_path),
+                                                 markdown_name))
 
         return index_path, '', self.EXTENSION_NAME
 
-    def __make_gen_path(self, source_file):
+    def __get_gen_path(self, source_file):
         dirname = self.doc_repo.get_generated_doc_folder()
-        link_title = self._get_naive_link_title(source_file)
-        gen_path = 'gen-' + link_title + '.markdown'
-        gen_path = os.path.join(dirname, gen_path)
+        rel_path = self.__get_rel_source_path(source_file)
+        dirname = os.path.join(dirname, os.path.dirname(rel_path))
+        bname = os.path.basename(rel_path)
+        gen_path = 'gen-' + bname + '.markdown'
+        return os.path.abspath(os.path.join(dirname, gen_path))
 
+    def __make_gen_path(self, source_file):
+        gen_path = self.__get_gen_path(source_file)
+        dname = os.path.dirname(gen_path)
+        if not os.path.exists(dname):
+            os.mkdir(dname)
         return gen_path
 
     def __create_symbols_list(self, source_file, symbols, user_file):
@@ -410,7 +430,7 @@ class BaseExtension(Configurable):
                     debug("symbol %s is already contained elsewhere" % symbol)
                     continue
                 # FIXME: more generic escaping
-                debug("Adding symbol %s to page %s" % (symbol, source_file))
+                debug("Adding symbol %s to page %s" % (symbol, gen_path))
                 unique_name = symbol.replace('_', r'\_')
                 _.write('* [%s]()\n' % unique_name)
 
@@ -447,15 +467,14 @@ class BaseExtension(Configurable):
         if smart:
             all_sources = self._get_all_sources()
             for source in all_sources:
-                bname = os.path.basename(source)
-                stripped = os.path.splitext(bname)[0]
-                user_file = find_md_file(stripped + '.markdown',
+                relpath = self.__get_rel_source_path(source)
+                user_file = find_md_file(relpath + '.markdown',
                                          self.doc_repo.include_paths)
                 if user_file:
                     user_files[source] = user_file
                     source_map[user_file] = source
-                    self.__overriden_md[stripped + '.markdown'] = \
-                        self.__make_gen_path(source)
+                    self.__overriden_md[relpath + '.markdown'] = \
+                        self.__get_gen_path(source)
 
         stale, unlisted = self.doc_repo.change_tracker.get_stale_files(
             user_files.values(), 'gen-' + self.EXTENSION_NAME)
@@ -463,7 +482,7 @@ class BaseExtension(Configurable):
 
         for source_file, symbols in self.__created_symbols.items():
             user_file = user_files.pop(source_file, None)
-            gen_paths.append(self.__make_gen_path(source_file))
+            gen_paths.append(self.__get_gen_path(source_file))
             self.__create_symbols_list(source_file, symbols, user_file)
 
             if user_file:
@@ -474,7 +493,7 @@ class BaseExtension(Configurable):
 
         for user_file in stale:
             source_file = source_map[user_file]
-            gen_path = self.__make_gen_path(source_file)
+            gen_path = self.__get_gen_path(source_file)
             gen_paths.append(gen_path)
             epage = self.doc_repo.doc_tree.pages[gen_path]
             self.__create_symbols_list(source_file, epage.symbol_names,
