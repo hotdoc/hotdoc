@@ -25,6 +25,7 @@ gtk-doc comment format.
 
 import re
 import sys
+import cgi
 from itertools import izip_longest
 
 
@@ -412,6 +413,7 @@ class GtkDocStringFormatter(Configurable):
     """
 
     remove_xml_tags = False
+    escape_html = False
 
     def __init__(self):
         self.funcs = {
@@ -530,6 +532,9 @@ class GtkDocStringFormatter(Configurable):
     def __legacy_to_md(self, text, link_resolver):
         out = u''
 
+        if GtkDocStringFormatter.escape_html:
+            text = cgi.escape(text)
+
         tokens = self.__doc_scanner.scan(text)
         in_code = False
         for tok in tokens:
@@ -570,6 +575,9 @@ class GtkDocStringFormatter(Configurable):
                 can be passed to `ast_to_html`
                 afterwards.
         """
+        if GtkDocStringFormatter.escape_html:
+            text = cgi.escape(text)
+
         return cmark.gtkdoc_to_ast(text, link_resolver)
 
     def ast_to_html(self, ast, link_resolver):
@@ -622,6 +630,9 @@ class GtkDocStringFormatter(Configurable):
             'GtkDocStringFormatter', 'GtkDocStringFormatter options')
         group.add_argument("--gtk-doc-remove-xml", action="store_true",
                            dest="gtk_doc_remove_xml", help="Remove xml?")
+        group.add_argument("--gtk-doc-escape-html", action="store_true",
+                           dest="gtk_doc_esape_html", help="Escape html "
+                           "in gtk-doc comments")
 
     @staticmethod
     def parse_config(doc_repo, config):
@@ -629,6 +640,8 @@ class GtkDocStringFormatter(Configurable):
         """
         GtkDocStringFormatter.remove_xml_tags = config.get(
             'gtk_doc_remove_xml')
+        GtkDocStringFormatter.escape_html = config.get(
+            'gtk_doc_escape_html')
 
 if __name__ == "__main__":
     PARSER = GtkDocStringFormatter()
