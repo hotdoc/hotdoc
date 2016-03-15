@@ -512,9 +512,6 @@ class PageParser(object):
             page: hotdoc.core.doc_tree.Page, the page to rename navigational
                 links in.
         """
-        if page.extension_name == 'core':
-            return
-
         for original_name, parsed_header in page.headers.items():
             ast_node = parsed_header.ast_node
             page = self.__doc_tree.get_page(parsed_header.original_destination)
@@ -528,8 +525,8 @@ class PageParser(object):
                     rep = next(rep for rep in replacements if rep is not None)
                     _set_label(self.__cmp, ast_node[0], rep)
                 except StopIteration:
-                    _set_label(self.__cmp, ast_node[0], page.get_title() or
-                               original_name)
+                    title = page.get_title() or original_name
+                    _set_label(self.__cmp, ast_node[0], title)
 
             desc = page.get_short_description()
 
@@ -543,8 +540,11 @@ class PageParser(object):
                 desc = formatter.format_docstring(desc, link_resolver,
                                                   to_native=True)
                 if desc:
-                    new_desc = self.__cmp.parse(u' — %s' %
+                    new_desc = self.__cmp.parse(u'— %s' %
                                                 desc.encode('utf-8'))
+                    space_node = CommonMark.node.Node('Text', None)
+                    space_node.literal = ' '
+                    ast_node[0].parent.append_child(space_node)
                     for _ in _get_children(new_desc.first_child):
                         ast_node[0].parent.append_child(_)
 
