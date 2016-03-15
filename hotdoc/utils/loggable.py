@@ -179,7 +179,7 @@ class Logger(Configurable):
     _ignored_codes = set()
     _ignored_domains = set()
     _last_checkpoint = 0
-    _verbosity = 2
+    _verbosity = WARNING
     silent = False
 
     @staticmethod
@@ -310,7 +310,8 @@ class Logger(Configurable):
 
     @staticmethod
     def parse_config(doc_repo, config):
-        Logger._verbosity = max(0, WARNING - (config.get('verbose') or 0))
+        Logger._verbosity = max(0, Logger._verbosity - (
+            config.get('verbose') or 0))
 
         Logger.fatal_warnings = bool(config.get("fatal_warnings"))
 
