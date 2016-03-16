@@ -425,11 +425,12 @@ class DocRepo(object):
 
         wizard.config.update(cli)
 
-    def __setup_folder(self, folder):
+    def __setup_private_folder(self):
+        folder = self.get_private_folder()
         if os.path.exists(folder):
             if not os.path.isdir(folder):
                 error('setup-issue',
-                      'Folder %s exists but is not a directory' % folder)
+                      '%s exists but is not a directory' % folder)
         else:
             os.mkdir(folder)
 
@@ -479,7 +480,7 @@ class DocRepo(object):
         self.include_paths |= OrderedSet(cmd_line_includes)
         self.git_repo_path = self.resolve_config_path(config.get('git_repo'))
         self.__create_change_tracker()
-        self.__setup_folder('hotdoc-private')
+        self.__setup_private_folder()
         self.__setup_database()
 
         if not os.path.exists(gen_folder):

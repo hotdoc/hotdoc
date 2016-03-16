@@ -40,7 +40,7 @@ def run(args):
         doc_repo.format()
         doc_repo.persist()
     except HotdocException:
-        res = len(Logger.journal)
+        res = len(Logger.get_issues())
     except Exception:
         print ("An unknown error happened while building the documentation"
                " and hotdoc cannot recover from it. Please report "

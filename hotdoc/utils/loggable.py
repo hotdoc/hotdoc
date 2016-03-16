@@ -277,6 +277,15 @@ class Logger(Configurable):
         return Logger.journal[Logger._last_checkpoint:]
 
     @staticmethod
+    def get_issues():
+        """Get actual issues in the journal."""
+        issues = []
+        for entry in Logger.journal:
+            if entry.level >= WARNING:
+                issues.append(entry)
+        return issues
+
+    @staticmethod
     def reset():
         """Resets Logger to its initial state"""
         Logger._error_code_to_exception = defaultdict()
