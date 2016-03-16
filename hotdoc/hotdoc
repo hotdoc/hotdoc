@@ -23,37 +23,9 @@
 import cProfile
 import os
 import sys
-import traceback
 
-# WTF
 # pylint: disable=no-name-in-module
-from hotdoc.core.doc_repo import DocRepo
-from hotdoc.core.exceptions import HotdocException
-from hotdoc.utils.loggable import Logger
-
-
-def _run(args):
-    res = 0
-    doc_repo = DocRepo()
-
-    # pylint: disable=broad-except
-    try:
-        doc_repo.setup(args)
-        doc_repo.format()
-        doc_repo.persist()
-    except HotdocException:
-        res = len(Logger.journal)
-    except Exception:
-        print ("An unknown error happened while building the documentation"
-               " and hotdoc cannot recover from it. Please report "
-               "a bug with this error message and the steps to "
-               "reproduce it")
-        traceback.print_exc()
-        res = 1
-    finally:
-        doc_repo.finalize()
-
-    return res
+from hotdoc.run_hotdoc import run
 
 
 def _main():
@@ -62,10 +34,10 @@ def _main():
 
     if run_profile:
         prof = cProfile.Profile()
-        res = prof.runcall(_run, sys.argv[1:])
+        res = prof.runcall(run, sys.argv[1:])
         prof.dump_stats('hotdoc-runstats')
     else:
-        res = _run(sys.argv[1:])
+        res = run(sys.argv[1:])
 
     return res
 
