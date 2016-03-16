@@ -151,16 +151,17 @@ class DocDatabase(object):
         """
         self.__session.commit()
 
+    def close(self):
+        """
+        Banana banana
+        """
+        self.__session.close()
+
     def get_session(self):
         """
         Banana banana
         """
         return self.__session
-
-    def finalize(self):
-        """Banana banana
-        """
-        self.__session.close()
 
     def __update_symbol_comment(self, comment):
         self.__session.query(Symbol).filter(

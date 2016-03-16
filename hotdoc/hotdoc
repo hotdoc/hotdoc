@@ -32,24 +32,15 @@ from hotdoc.core.exceptions import HotdocException
 from hotdoc.utils.loggable import Logger
 
 
-def _run():
-    doc_repo = DocRepo()
-    doc_repo.setup(sys.argv[1:])
-    doc_repo.format()
-    doc_repo.persist()
-    doc_repo.finalize()
-
-
-def _main():
-    run_profile = os.environ.get('HOTDOC_PROFILING', False)
+def _run(args):
     res = 0
+    doc_repo = DocRepo()
 
     # pylint: disable=broad-except
     try:
-        if run_profile:
-            cProfile.run('_run()', 'runstats')
-        else:
-            _run()
+        doc_repo.setup(args)
+        doc_repo.format()
+        doc_repo.persist()
     except HotdocException:
         res = len(Logger.journal)
     except Exception:
@@ -59,6 +50,22 @@ def _main():
                "reproduce it")
         traceback.print_exc()
         res = 1
+    finally:
+        doc_repo.finalize()
+
+    return res
+
+
+def _main():
+    run_profile = os.environ.get('HOTDOC_PROFILING', False)
+    res = 0
+
+    if run_profile:
+        prof = cProfile.Profile()
+        res = prof.runcall(_run, sys.argv[1:])
+        prof.dump_stats('hotdoc-runstats')
+    else:
+        res = _run(sys.argv[1:])
 
     return res
 

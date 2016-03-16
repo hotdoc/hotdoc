@@ -175,15 +175,6 @@ class BaseExtension(Configurable):
         """
         pass
 
-    def finalize(self):
-        """
-        This method will be called during the last phase of the generation
-        process. The only action taken after this is to persist and close
-        some resources, such as the `doc_repo.DocRepo.doc_database` of
-        this instance's `BaseExtension.doc_repo`
-        """
-        pass
-
     def get_stale_files(self, all_files):
         """
         Shortcut function to `change_tracker.ChangeTracker.get_stale_files`

@@ -41,6 +41,7 @@ from hotdoc.utils.loggable import info, error
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.utils import get_all_extension_classes, all_subclasses
 from hotdoc.utils.utils import OrderedSet
+from hotdoc.utils.simple_signals import Signal
 
 
 SUBCOMMAND_DESCRIPTION = """
@@ -71,12 +72,14 @@ class CoreExtension(BaseExtension):
             return _.read(), lang
 
 
+# pylint: disable=too-many-instance-attributes
 class DocRepo(object):
     """
     Banana banana
     """
 
-    # pylint: disable=too-many-instance-attributes
+    formatted_signal = Signal()
+
     def __init__(self):
         self.output = None
         self.wizard = None
@@ -103,6 +106,7 @@ class DocRepo(object):
         self.__index_file = None
         self.__root_page = None
         self.__base_doc_folder = None
+        self.__dry = False
 
     def register_tag_validator(self, validator):
         """
@@ -182,11 +186,9 @@ class DocRepo(object):
         """
         Banana banana
         """
-        for extension in self.extensions.values():
-            info('Finalizing %s' % extension.EXTENSION_NAME)
-            extension.finalize()
-        info('Closing database')
-        self.doc_database.finalize()
+        if self.doc_database is not None:
+            info('Closing database')
+            self.doc_database.close()
 
     # pylint: disable=no-self-use
     def get_private_folder(self):
@@ -222,6 +224,7 @@ class DocRepo(object):
         Banana banana
         """
         self.doc_tree.format(self.link_resolver, self.output, self.extensions)
+        self.formatted_signal(self)
 
     def __add_default_tags(self, _, comment):
         for validator in self.tag_validators.values():
@@ -279,6 +282,9 @@ class DocRepo(object):
         run_parser = subparsers.add_parser('run', help='run hotdoc')
         run_parser.add_argument('--conf-file', help='Path to the config file',
                                 dest='conf_file', default='hotdoc.json')
+        run_parser.add_argument('--dry',
+                                help='Dry run, nothing will be output',
+                                dest='dry', action='store_true')
 
         help_parser = subparsers.add_parser('help', help='print hotdoc help')
         help_parser.add_argument('--conf-file', help='Path to the config file',
@@ -341,6 +347,7 @@ class DocRepo(object):
 
         if args.cmd == 'run':
             save_config = False
+            self.__dry = bool(args.dry)
             self.__parse_config(wizard.config)
         elif args.cmd == 'conf':
             exit_now = True
