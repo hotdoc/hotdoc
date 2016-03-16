@@ -397,6 +397,8 @@ class Page(object):
                 self.short_description = symbol.comment.short_description
             if symbol.comment.title:
                 self.title = symbol.comment.title
+            else:
+                self.title = symbol.display_name
 
         debug('Resolved symbol %s to page %s' %
               (symbol.display_name, self.link.ref), 'resolution')
