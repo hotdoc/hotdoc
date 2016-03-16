@@ -174,6 +174,10 @@ class DocRepo(object):
         """
         Banana banana
         """
+
+        if self.__dry:
+            return
+
         info('Persisting database and private files', 'persisting')
         self.doc_tree.persist()
         self.doc_database.persist()
@@ -223,6 +227,9 @@ class DocRepo(object):
         """
         Banana banana
         """
+        if not self.output:
+            return
+
         self.doc_tree.format(self.link_resolver, self.output, self.extensions)
         self.formatted_signal(self)
 
@@ -254,7 +261,9 @@ class DocRepo(object):
         except Exception:
             info("Building from scratch")
             shutil.rmtree(self.get_private_folder(), ignore_errors=True)
-            shutil.rmtree(self.output, ignore_errors=True)
+            if self.output:
+                shutil.rmtree(self.output, ignore_errors=True)
+
             gen_folder = self.get_generated_doc_folder()
             shutil.rmtree(gen_folder, ignore_errors=True)
             self.change_tracker = ChangeTracker()
@@ -455,8 +464,6 @@ class DocRepo(object):
         Banana banana
         """
         self.output = config.get('output')
-        if not self.output:
-            error('invalid-config', 'output has to be specified')
         self.output_format = config.get('output_format')
 
         if self.output_format not in ["html"]:

@@ -116,7 +116,7 @@ class TestDocTree(unittest.TestCase):
 
     def tearDown(self):
         self.__remove_tmp_dirs()
-        self.doc_database.finalize()
+        self.doc_database.close()
 
     def get_generated_doc_folder(self):
         return os.path.join(self.__priv_dir, 'generated')
