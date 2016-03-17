@@ -1,0 +1,186 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright © 2016 Mathieu Duponchelle <mathieu.duponchelle@opencreed.com>
+# Copyright © 2016 Collabora Ltd
+#
+# This library is free software; you can redistribute it and/or modify it under
+# the terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation; either version 2.1 of the License, or (at your option)
+# any later version.
+#
+# This library is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+Implement a high-level config parser for hotdoc.
+"""
+
+import os
+import sys
+import json
+import glob
+
+from hotdoc.utils.utils import OrderedSet
+
+
+class ConfigParser(object):
+    """
+    Helper class to help deal with common extension dependencies.
+
+    This class has two goals:
+        * Help extensions retrieve sources and indexes, with
+            support for filters and wildcards.
+        * Provide a generic way to list all the dependencies
+            for a given hotdoc project, without needing to
+            import extensions and query them individually, as it
+            is costly and we want to make this operation as
+            transparent as possible for the build system.
+
+    This implies that extensions with external dependencies
+    need to follow several semantic conventions for the arguments
+    they expose:
+
+        * When an extension exposes an index, it needs to expose
+            an argument named `prefix`index to retrieve it.
+        * When an extension accepts a list of sources, it needs
+            to expose two arguments, one named `<prefix>sources`,
+            and the other named `<prefix>source_filters`. With this
+            done, `ConfigParser` will automatically provide wildcard
+            expansion and filtering.
+
+    Note that `base_extension.BaseExtension` provides helper methods
+    to register index and sources options, this documentation should
+    only be interesting for 'advanced' use cases.
+    """
+
+    # pylint: disable=unused-argument
+    def __init__(self, command_line_args=None, conf_file=None):
+        """
+        Constructor for `ConfigParser`.
+
+        Args:
+            command_line_args: list, a list of command line arguments
+                that will override the keys defined in `conf_file`,
+                or `None`
+            conf_file: str, the path to the configuration file. If
+                `None`, `ConfigParser` will look for a file named
+                `hotdoc.json` in the current directory.
+        """
+        conf_file = conf_file or 'hotdoc.json'
+        self.__conf_file = os.path.abspath(conf_file)
+        self.__conf_dir = os.path.dirname(self.__conf_file)
+
+        try:
+            with open(self.__conf_file, 'r') as _:
+                contents = _.read()
+        except IOError:
+            contents = '{}'
+
+        self.__config = json.loads(contents)
+
+    def __abspath(self, path):
+        if path is None:
+            return None
+
+        if os.path.isabs(path):
+            return path
+        return os.path.abspath(os.path.join(self.__conf_dir, path))
+
+    def __resolve_patterns(self, source_patterns):
+        if source_patterns is None:
+            return OrderedSet()
+
+        all_files = OrderedSet()
+        for item in source_patterns:
+            item = self.__abspath(item)
+            all_files |= glob.glob(item)
+
+        return all_files
+
+    # pylint: disable=no-self-use
+    def __get_markdown_files(self, dir_):
+        md_files = OrderedSet()
+        for root, _, files in os.walk(dir_):
+            for name in files:
+                split = os.path.splitext(name)
+                if len(split) == 1:
+                    continue
+                if split[1] in ('markdown', 'md', 'yaml'):
+                    md_files.add(os.path.join(root, name))
+        return md_files
+
+    def get_index(self, prefix=''):
+        """
+        Retrieve the absolute path to an index, according to
+        `prefix`.
+
+        Args:
+            prefix: str, the desired prefix or `None`.
+
+        Returns:
+            str: An absolute path, or `None`
+        """
+        index = self.__config.get('%sindex' % prefix)
+        return self.__abspath(index)
+
+    def get_sources(self, prefix=''):
+        """
+        Retrieve a set of absolute paths to sources, according to `prefix`
+
+        `ConfigParser` will perform wildcard expansion and
+        filtering.
+
+        Args:
+            prefix: str, the desired prefix.
+
+        Returns:
+            utils.utils.OrderedSet: The set of sources for the given
+                `prefix`.
+        """
+        sources = self.__config.get('%ssources' % prefix)
+
+        if sources is None:
+            return OrderedSet()
+
+        sources = self.__resolve_patterns(sources)
+
+        filters = self.__config.get('%ssource_filters' % prefix)
+
+        if filters is None:
+            return sources
+
+        sources -= self.__resolve_patterns(filters)
+
+        return sources
+
+    def get_dependencies(self):
+        """
+        Retrieve the set of all dependencies for a given configuration.
+
+        Returns:
+            utils.utils.OrderedSet: The set of all dependencies for the
+                tracked configuration.
+        """
+        all_deps = OrderedSet()
+        for key, value in self.__config.items():
+            if key.endswith('index') and not key.endswith('smart_index'):
+                path = self.__abspath(value)
+                if path:
+                    all_deps.add(path)
+                    if key == 'index':
+                        all_deps |= self.__get_markdown_files(
+                            os.path.dirname(path))
+            elif key.endswith('sources'):
+                all_deps |= self.get_sources(key[:len('sources') * -1])
+        return all_deps
+
+    def print_make_dependencies(self):
+        """
+        Convenience function for printing dependencies with a Makefile style.
+        """
+        sys.stdout.write(' '.join(self.get_dependencies()))
