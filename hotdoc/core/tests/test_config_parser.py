@@ -106,3 +106,47 @@ class TestConfigParser(unittest.TestCase):
                  os.path.join(self.__priv_dir, 'baz.x'),
                  os.path.join(self.__priv_dir, 'my_index.markdown'),
                  '/home/meh/test_index.markdown']))
+
+    def test_cli_overrides(self):
+        conf_file = os.path.join(self.__priv_dir, 'test.json')
+        with open(conf_file, 'w') as _:
+            _.write(
+                '{\n'
+                '"index": "my_index.markdown",\n'
+                '"test_index": "/home/meh/test_index.markdown",\n'
+                '"test_sources": ["*.x"],\n'
+                '"test_source_filters": ["foobar.x"]\n'
+                '}\n')
+
+        touch(os.path.join(self.__priv_dir, 'foo.x'))
+        touch(os.path.join(self.__priv_dir, 'foobar.x'))
+
+        here = os.path.abspath(os.path.dirname(__file__))
+        invoke_dir = os.getcwd()
+        relpath = os.path.relpath(here, invoke_dir)
+        overriden_src_dir = os.path.join(relpath, 'overridden_sources')
+
+        shutil.rmtree(overriden_src_dir, ignore_errors=True)
+        os.mkdir(overriden_src_dir)
+        touch(os.path.join(overriden_src_dir, 'other.x'))
+        touch(os.path.join(overriden_src_dir, 'foobar.x'))
+        touch(os.path.join(overriden_src_dir, 'ignored.x'))
+
+        cli = {'index': 'another_index.markdown',
+               'test_sources': ['%s/*.x' % overriden_src_dir],
+               'test_source_filters': ['%s/ignored.x' % overriden_src_dir]}
+
+        cp = ConfigParser(command_line_args=cli, conf_file=conf_file)
+        self.assertEqual(cp.get('index'), 'another_index.markdown')
+
+        self.assertEqual(cp.get_index(),
+                         os.path.join(invoke_dir, 'another_index.markdown'))
+
+        overriden_abs_dir = os.path.join(invoke_dir, overriden_src_dir)
+
+        self.assertSetEqual(
+            set(cp.get_sources('test_')),
+            set([os.path.join(overriden_abs_dir, 'other.x'),
+                 os.path.join(overriden_abs_dir, 'foobar.x')]))
+
+        shutil.rmtree(overriden_src_dir, ignore_errors=True)

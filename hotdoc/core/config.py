@@ -58,7 +58,6 @@ class ConfigParser(object):
     only be interesting for 'advanced' use cases.
     """
 
-    # pylint: disable=unused-argument
     def __init__(self, command_line_args=None, conf_file=None):
         """
         Constructor for `ConfigParser`.
@@ -74,6 +73,7 @@ class ConfigParser(object):
         conf_file = conf_file or 'hotdoc.json'
         self.__conf_file = os.path.abspath(conf_file)
         self.__conf_dir = os.path.dirname(self.__conf_file)
+        self.__invoke_dir = os.getcwd()
 
         try:
             with open(self.__conf_file, 'r') as _:
@@ -82,22 +82,25 @@ class ConfigParser(object):
             contents = '{}'
 
         self.__config = json.loads(contents)
+        self.__cli = command_line_args
 
-    def __abspath(self, path):
+    def __abspath(self, path, from_conf):
         if path is None:
             return None
 
         if os.path.isabs(path):
             return path
-        return os.path.abspath(os.path.join(self.__conf_dir, path))
+        if from_conf:
+            return os.path.abspath(os.path.join(self.__conf_dir, path))
+        return os.path.abspath(os.path.join(self.__invoke_dir, path))
 
-    def __resolve_patterns(self, source_patterns):
+    def __resolve_patterns(self, source_patterns, from_conf):
         if source_patterns is None:
             return OrderedSet()
 
         all_files = OrderedSet()
         for item in source_patterns:
-            item = self.__abspath(item)
+            item = self.__abspath(item, from_conf)
             all_files |= glob.glob(item)
 
         return all_files
@@ -114,6 +117,22 @@ class ConfigParser(object):
                     md_files.add(os.path.join(root, name))
         return md_files
 
+    def get(self, key):
+        """
+        Get the value for `key`.
+
+        Gives priority to command-line overrides.
+
+        Args:
+            key: str, the key to get the value for.
+
+        Returns:
+            object: The value for `key`
+        """
+        if key in self.__cli:
+            return self.__cli[key]
+        return self.__config.get(key)
+
     def get_index(self, prefix=''):
         """
         Retrieve the absolute path to an index, according to
@@ -125,8 +144,15 @@ class ConfigParser(object):
         Returns:
             str: An absolute path, or `None`
         """
-        index = self.__config.get('%sindex' % prefix)
-        return self.__abspath(index)
+        prefixed = '%sindex' % prefix
+        if prefixed in self.__cli:
+            index = self.__cli.get(prefixed)
+            from_conf = False
+        else:
+            index = self.__config.get('%sindex' % prefix)
+            from_conf = True
+
+        return self.__abspath(index, from_conf)
 
     def get_sources(self, prefix=''):
         """
@@ -142,19 +168,32 @@ class ConfigParser(object):
             utils.utils.OrderedSet: The set of sources for the given
                 `prefix`.
         """
-        sources = self.__config.get('%ssources' % prefix)
+        prefixed = '%ssources' % prefix
+
+        if prefixed in self.__cli:
+            sources = self.__cli.get(prefixed)
+            from_conf = False
+        else:
+            sources = self.__config.get(prefixed)
+            from_conf = True
 
         if sources is None:
             return OrderedSet()
 
-        sources = self.__resolve_patterns(sources)
+        sources = self.__resolve_patterns(sources, from_conf)
 
-        filters = self.__config.get('%ssource_filters' % prefix)
+        prefixed = '%ssource_filters' % prefix
+        if prefixed in self.__cli:
+            filters = self.__cli.get(prefixed)
+            from_conf = False
+        else:
+            filters = self.__config.get(prefixed)
+            from_conf = True
 
         if filters is None:
             return sources
 
-        sources -= self.__resolve_patterns(filters)
+        sources -= self.__resolve_patterns(filters, from_conf)
 
         return sources
 
@@ -168,8 +207,11 @@ class ConfigParser(object):
         """
         all_deps = OrderedSet()
         for key, value in self.__config.items():
+            if key in self.__cli:
+                continue
+
             if key.endswith('index') and not key.endswith('smart_index'):
-                path = self.__abspath(value)
+                path = self.__abspath(value, from_conf=True)
                 if path:
                     all_deps.add(path)
                     if key == 'index':
@@ -177,6 +219,18 @@ class ConfigParser(object):
                             os.path.dirname(path))
             elif key.endswith('sources'):
                 all_deps |= self.get_sources(key[:len('sources') * -1])
+
+        for key, value in self.__cli.items():
+            if key.endswith('index') and not key.endswith('smart_index'):
+                path = self.__abspath(value, from_conf=False)
+                if path:
+                    all_deps.add(path)
+                    if key == 'index':
+                        all_deps |= self.__get_markdown_files(
+                            os.path.dirname(path))
+            elif key.endswith('sources'):
+                all_deps |= self.get_sources(key[:len('sources') * -1])
+
         return all_deps
 
     def print_make_dependencies(self):
