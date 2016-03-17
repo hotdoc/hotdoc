@@ -44,7 +44,8 @@ class TestConfigParser(unittest.TestCase):
             _.write(
                 '{\n'
                 '"index": "my_index.markdown",\n'
-                '"test_index": "/home/meh/test_index.markdown"\n'
+                '"test_index": "/home/meh/test_index.markdown",\n'
+                '"test_other_index": "other_index.markdown"\n'
                 '}\n')
 
         cp = ConfigParser(conf_file=conf_file)
@@ -59,6 +60,10 @@ class TestConfigParser(unittest.TestCase):
                          '/home/meh/test_index.markdown')
 
         self.assertIsNone(cp.get_index('invalid_prefix'))
+
+        self.assertEqual(cp.get_index('test_other_'),
+                         os.path.join(self.__priv_dir,
+                                      'other_index.markdown'))
 
     def test_sources(self):
         conf_file = os.path.join(self.__priv_dir, 'test.json')
@@ -150,3 +155,52 @@ class TestConfigParser(unittest.TestCase):
                  os.path.join(overriden_abs_dir, 'foobar.x')]))
 
         shutil.rmtree(overriden_src_dir, ignore_errors=True)
+
+    def test_dump(self):
+        conf_file = os.path.join(self.__priv_dir, 'test.json')
+        with open(conf_file, 'w') as _:
+            _.write(
+                '{\n'
+                '"index": "my_index.markdown",\n'
+                '"test_index": "/home/meh/test_index.markdown",\n'
+                '"test_sources": ["*.x"],\n'
+                '"test_source_filters": ["foobar.x"]\n'
+                '}\n')
+
+        here = os.path.abspath(os.path.dirname(__file__))
+        invoke_dir = os.getcwd()
+        relpath = os.path.relpath(here, invoke_dir)
+        overriden_src_dir = os.path.join(relpath, 'overridden_sources')
+
+        cli = {'index': 'another_index.markdown',
+               'test_sources': ['%s/*.x' % overriden_src_dir],
+               'test_source_filters': ['%s/ignored.x' % overriden_src_dir]}
+
+        cp = ConfigParser(command_line_args=cli, conf_file=conf_file)
+        cp.dump(conf_file=conf_file)
+        ncp = ConfigParser(conf_file=conf_file)
+        self.assertEqual(
+            ncp.get_index(),
+            os.path.join(invoke_dir, 'another_index.markdown'))
+        self.assertListEqual(
+            ncp.get('test_sources'),
+            [u'../overridden_sources/*.x'])
+
+    def test_path(self):
+        conf_file = os.path.join(self.__priv_dir, 'test.json')
+        with open(conf_file, 'w') as _:
+            _.write(
+                '{\n'
+                '"my_path_argument": "somewhere/plop.x"\n'
+                '}\n')
+
+        cli = {'my_cli_path_argument': 'elsewhere/foo.x'}
+
+        cp = ConfigParser(command_line_args=cli, conf_file=conf_file)
+        self.assertEqual(
+            cp.get_path('my_path_argument'),
+            os.path.join(self.__priv_dir, 'somewhere', 'plop.x'))
+        invoke_dir = os.getcwd()
+        self.assertEqual(
+            cp.get_path('my_cli_path_argument'),
+            os.path.join(invoke_dir, 'elsewhere', 'foo.x'))

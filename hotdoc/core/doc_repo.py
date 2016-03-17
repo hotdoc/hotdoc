@@ -33,6 +33,7 @@ from hotdoc.core.base_extension import BaseExtension
 from hotdoc.core.base_formatter import Formatter
 from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.comment_block import Tag
+from hotdoc.core.config import ConfigParser
 from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.doc_tree import DocTree
 from hotdoc.core.links import LinkResolver
@@ -93,6 +94,7 @@ class DocRepo(object):
         self.link_resolver = None
         self.incremental = False
         self.doc_database = None
+        self.config = None
 
         if os.name == 'nt':
             self.datadir = os.path.join(
@@ -348,7 +350,7 @@ class DocRepo(object):
         configured = set()
         for subclass in configurable_classes:
             if subclass.parse_config not in configured:
-                subclass.parse_config(self, wizard.config)
+                subclass.parse_config(self, self.config)
                 configured.add(subclass.parse_config)
 
         exit_now = False
@@ -431,6 +433,8 @@ class DocRepo(object):
         cli.pop('cmd', None)
         cli.pop('quickstart', None)
         cli.pop('conf_file', None)
+
+        self.config = ConfigParser(command_line_args=cli, conf_file=conf_file)
 
         wizard.config.update(cli)
 

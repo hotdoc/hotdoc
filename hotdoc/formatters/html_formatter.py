@@ -707,7 +707,7 @@ class HtmlFormatter(Formatter):
     def parse_config(doc_repo, config):
         """Banana banana
         """
-        html_theme = config.get('html_theme')
+        html_theme = config.get('html_theme', 'default')
         if html_theme == 'default':
             default_theme = os.path.join(HERE, '..',
                                          'default_theme-%s' % THEME_VERSION)

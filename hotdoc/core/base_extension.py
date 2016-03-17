@@ -82,8 +82,13 @@ class BaseExtension(Configurable):
     """
     # pylint: disable=unused-argument
     EXTENSION_NAME = "base-extension"
+    argument_prefix = ''
 
     index = None
+    sources = None
+    paths_arguments = {}
+    path_arguments = {}
+    smart_index = False
 
     def __init__(self, doc_repo):
         """Constructor for `BaseExtension`.
@@ -199,9 +204,33 @@ class BaseExtension(Configurable):
         return []
 
     @classmethod
-    def add_index_argument(cls, group, prefix, smart):
+    def parse_standard_config(cls, config):
         """
-        Subclasses may all this to add an index argument.
+        Subclasses should call this in their
+        `utils.configurable.Configurable.parse_config` implementation.
+
+        Args:
+            config: core.config.ConfigParser, the configuration holder.
+        """
+        prefix = cls.argument_prefix
+        prefix += '_'
+        cls.sources = config.get_sources(prefix)
+        cls.index = config.get_index(prefix)
+        cls.smart_index = bool(config.get('%s_smart_index' %
+                                          cls.argument_prefix))
+
+        for arg, dest in cls.paths_arguments.items():
+            val = config.get_paths(arg)
+            setattr(cls, dest, val)
+
+        for arg, dest in cls.path_arguments.items():
+            val = config.get_path(arg)
+            setattr(cls, dest, val)
+
+    @classmethod
+    def add_index_argument(cls, group, prefix=None, smart=True):
+        """
+        Subclasses may call this to add an index argument.
 
         Args:
             group: arparse.ArgumentGroup, the extension argument group
@@ -209,6 +238,8 @@ class BaseExtension(Configurable):
             smart: bool, whether smart index generation should be exposed
                 for this extension
         """
+        prefix = prefix or cls.argument_prefix
+
         group.add_argument(
             '--%s-index' % prefix, action="store",
             dest="%s_index" % prefix,
@@ -222,6 +253,80 @@ class BaseExtension(Configurable):
                 dest="%s_smart_index" % prefix,
                 help="Smart symbols list generation in %s" % (
                     cls.EXTENSION_NAME))
+
+    @classmethod
+    def add_sources_argument(cls, group, allow_filters=True, prefix=None):
+        """
+        Subclasses may call this to add sources and source_filters arguments.
+
+        Args:
+            group: arparse.ArgumentGroup, the extension argument group
+            allow_filters: bool,  Whether the extension wishes to expose a
+                source_filters argument.
+            prefix: str, arguments have to be namespaced.
+        """
+        prefix = prefix or cls.argument_prefix
+
+        group.add_argument("--%s-sources" % prefix,
+                           action="store", nargs="+",
+                           dest="%s_sources" % prefix,
+                           help="%s source files to parse" % prefix)
+
+        if allow_filters:
+            group.add_argument("--%s-source-filters" % prefix,
+                               action="store", nargs="+",
+                               dest="%s_source_filters" % prefix,
+                               help="%s source files to ignore" % prefix)
+
+    @classmethod
+    def add_path_argument(cls, group, argname, dest=None, help_=None):
+        """
+        Subclasses may call this to expose a path argument.
+
+        Args:
+            group: arparse.ArgumentGroup, the extension argument group
+            argname: str, the name of the argument, will be namespaced.
+            dest: str, similar to the `dest` argument of
+                `argparse.ArgumentParser.add_argument`, will be namespaced.
+            help_: str, similar to the `help` argument of
+                `argparse.ArgumentParser.add_argument`.
+        """
+        prefixed = '%s-%s' % (cls.argument_prefix, argname)
+        if dest is None:
+            dest = prefixed.replace('-', '_')
+            final_dest = dest[len(cls.argument_prefix) + 1:]
+        else:
+            final_dest = dest
+            dest = '%s_%s' % (cls.argument_prefix, dest)
+
+        group.add_argument('--%s' % prefixed, action='store',
+                           dest=dest, help=help_)
+        cls.path_arguments[dest] = final_dest
+
+    @classmethod
+    def add_paths_argument(cls, group, argname, dest=None, help_=None):
+        """
+        Subclasses may call this to expose a paths argument.
+
+        Args:
+            group: arparse.ArgumentGroup, the extension argument group
+            argname: str, the name of the argument, will be namespaced.
+            dest: str, similar to the `dest` argument of
+                `argparse.ArgumentParser.add_argument`, will be namespaced.
+            help_: str, similar to the `help` argument of
+                `argparse.ArgumentParser.add_argument`.
+        """
+        prefixed = '%s-%s' % (cls.argument_prefix, argname)
+        if dest is None:
+            dest = prefixed.replace('-', '_')
+            final_dest = dest[len(cls.argument_prefix) + 1:]
+        else:
+            final_dest = dest
+            dest = '%s_%s' % (cls.argument_prefix, dest)
+
+        group.add_argument('--%s' % prefixed, action='store', nargs='+',
+                           dest=dest, help=help_)
+        cls.paths_arguments[dest] = final_dest
 
     def get_or_create_symbol(self, *args, **kwargs):
         """

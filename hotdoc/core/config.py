@@ -82,7 +82,12 @@ class ConfigParser(object):
             contents = '{}'
 
         self.__config = json.loads(contents)
-        self.__cli = command_line_args
+        self.__cli = command_line_args or {}
+        index = self.get_index()
+        if index:
+            self.__base_index_path = os.path.dirname(index)
+        else:
+            self.__base_index_path = ''
 
     def __abspath(self, path, from_conf):
         if path is None:
@@ -117,7 +122,7 @@ class ConfigParser(object):
                     md_files.add(os.path.join(root, name))
         return md_files
 
-    def get(self, key):
+    def get(self, key, default=None):
         """
         Get the value for `key`.
 
@@ -130,8 +135,8 @@ class ConfigParser(object):
             object: The value for `key`
         """
         if key in self.__cli:
-            return self.__cli[key]
-        return self.__config.get(key)
+            return self.__cli[key] or default
+        return self.__config.get(key) or default
 
     def get_index(self, prefix=''):
         """
@@ -152,7 +157,58 @@ class ConfigParser(object):
             index = self.__config.get('%sindex' % prefix)
             from_conf = True
 
+        if prefix and index:
+            return os.path.join(self.__base_index_path, index)
+
         return self.__abspath(index, from_conf)
+
+    def get_path(self, key):
+        """
+        Retrieve a path from the config, resolving it against
+        the invokation directory or the configuration file directory,
+        depending on whether it was passed through the command-line
+        or the configuration file.
+
+        Args:
+            key: str, the key to lookup the path with
+
+        Returns:
+            str: The path, or `None`
+        """
+        if key in self.__cli:
+            path = self.__cli[key]
+            from_conf = False
+        else:
+            path = self.__config.get(key)
+            from_conf = True
+
+        return self.__abspath(path, from_conf)
+
+    def get_paths(self, key):
+        """
+        Same as `ConfigParser.get_path` for a list of paths.
+
+        Args:
+            key: str, the key to lookup the paths with
+
+        Returns:
+            list: The paths.
+        """
+        final_paths = []
+
+        if key in self.__cli:
+            paths = self.__cli[key] or []
+            from_conf = False
+        else:
+            paths = self.__config.get(key) or []
+            from_conf = True
+
+        for path in paths:
+            final_path = self.__abspath(path, from_conf)
+            if final_path:
+                final_paths.append(final_path)
+
+        return final_paths
 
     def get_sources(self, prefix=''):
         """
@@ -238,3 +294,35 @@ class ConfigParser(object):
         Convenience function for printing dependencies with a Makefile style.
         """
         sys.stdout.write(' '.join(self.get_dependencies()))
+
+    def dump(self, conf_file=None):
+        """
+        Dump the possibly updated config to a file.
+
+        Args:
+            conf_file: str, the destination, or None to overwrite the
+                existing configuration.
+        """
+        final_conf = {}
+        for key, value in self.__config.items():
+            if key in self.__cli:
+                continue
+            final_conf[key] = value
+
+        for key, value in self.__cli.items():
+            if key.endswith('index') and not key.endswith('smart_index'):
+                path = self.__abspath(value, from_conf=False)
+                if path:
+                    relpath = os.path.relpath(path, self.__conf_dir)
+                    final_conf[key] = relpath
+            elif key.endswith('sources') or key.endswith('source_filters'):
+                new_list = []
+                for path in value:
+                    path = self.__abspath(path, from_conf=False)
+                    if path:
+                        relpath = os.path.relpath(path, self.__conf_dir)
+                        new_list.append(relpath)
+                final_conf[key] = new_list
+
+        with open(conf_file or self.__conf_file, 'w') as _:
+            _.write(json.dumps(final_conf))
