@@ -386,15 +386,19 @@ class DocRepo(object):
         cli.pop('conf_file', None)
 
         actual_args = {}
+        defaults = {}
 
         for key, value in cli.items():
             if key in ('cmd', 'conf_file', 'dry'):
                 continue
             if value != parser.get_default(key):
                 actual_args[key] = value
+            if parser.get_default(key) is not None:
+                defaults[key] = value
 
         self.config = ConfigParser(command_line_args=actual_args,
-                                   conf_file=conf_file)
+                                   conf_file=conf_file,
+                                   defaults=defaults)
 
     def __setup_private_folder(self):
         folder = self.get_private_folder()

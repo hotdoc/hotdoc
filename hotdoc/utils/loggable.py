@@ -288,9 +288,6 @@ class Logger(Configurable):
     @staticmethod
     def reset():
         """Resets Logger to its initial state"""
-        Logger._error_code_to_exception = defaultdict()
-        Logger._domain_codes = defaultdict(set)
-        Logger._warning_code_to_exception = defaultdict()
         Logger.journal = []
         Logger.fatal_warnings = False
         Logger._ignored_codes = set()

@@ -29,8 +29,8 @@ from hotdoc.run_hotdoc import run
 
 class TestHotdoc(unittest.TestCase):
     def setUp(self):
-        Logger.silent = True
         here = os.path.dirname(__file__)
+        Logger.reset()
         self.__md_dir = os.path.abspath(os.path.join(
             here, 'tmp-markdown-files'))
         self.__output_dir = os.path.abspath(os.path.join(

@@ -59,7 +59,7 @@ class ConfigParser(object):
     only be interesting for 'advanced' use cases.
     """
 
-    def __init__(self, command_line_args=None, conf_file=None):
+    def __init__(self, command_line_args=None, conf_file=None, defaults=None):
         """
         Constructor for `ConfigParser`.
 
@@ -93,6 +93,7 @@ class ConfigParser(object):
                   (conf_file, str(ze_error)))
 
         self.__cli = command_line_args or {}
+        self.__defaults = defaults or {}
         index = self.get_index()
         if index:
             self.__base_index_path = os.path.dirname(index)
@@ -145,8 +146,12 @@ class ConfigParser(object):
             object: The value for `key`
         """
         if key in self.__cli:
-            return self.__cli[key] or default
-        return self.__config.get(key) or default
+            return self.__cli[key]
+        if key in self.__config:
+            return self.__config.get(key)
+        if key in self.__defaults:
+            return self.__defaults.get(key)
+        return default
 
     def get_index(self, prefix=''):
         """
