@@ -24,7 +24,6 @@ import os
 import sys
 import errno
 import shutil
-import subprocess
 import tarfile
 import unittest
 from distutils.command.build import build
@@ -32,7 +31,6 @@ from distutils.command.build_ext import build_ext
 from distutils.core import Command
 import distutils.spawn as spawn
 
-from pkg_resources import parse_version as V
 from setuptools import find_packages, setup, Extension
 from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.develop import develop
@@ -40,7 +38,7 @@ from setuptools.command.sdist import sdist
 from setuptools.command.test import test
 
 from hotdoc.utils.setup_utils import (
-    VersionList, THEME_VERSION, require_clean_submodules)
+    THEME_VERSION, require_clean_submodules)
 
 SOURCE_DIR = os.path.abspath('./')
 CMARK_DIR = os.path.join(SOURCE_DIR, 'cmark')
@@ -50,33 +48,6 @@ CMARK_BUILT_SRCDIR = os.path.join(CMARK_BUILD_DIR, 'src')
 CMARK_INCLUDE_DIRS = [CMARK_SRCDIR, CMARK_BUILT_SRCDIR]
 
 require_clean_submodules(SOURCE_DIR, ['cmark'])
-
-PYGIT2_VERSION = None
-try:
-    LIBGIT2_VERSION = subprocess.check_output(['pkg-config', '--modversion',
-                                               'libgit2']).strip()
-    KNOWN_LIBGIT2_VERSIONS = VersionList([V('0.22.0'), V('0.23.0')])
-    try:
-        KNOWN_LIBGIT2_VERSION = KNOWN_LIBGIT2_VERSIONS.find_le(
-            V(LIBGIT2_VERSION))
-
-        if KNOWN_LIBGIT2_VERSION == V('0.22.0'):
-            PYGIT2_VERSION = '0.22.1'
-        elif KNOWN_LIBGIT2_VERSION == V('0.23.0'):
-            PYGIT2_VERSION = '0.23.2'
-        else:
-            print "WARNING: no compatible pygit version found"
-            print "git integration disabled"
-    except ValueError:
-        print "Warning: too old libgit2 version %s" % LIBGIT2_VERSION
-        print "git integration disabled"
-except OSError:
-    print "Error when trying to figure out the libgit2 version"
-    print "pkg-config is probably not installed\n"
-    print "git integration disabled"
-except subprocess.CalledProcessError:
-    print "\nError when trying to figure out the libgit2 version\n"
-    print "git integration disabled"
 
 
 # pylint: disable=too-few-public-methods
@@ -299,17 +270,12 @@ class DiscoverTest(test):
 
 
 INSTALL_REQUIRES = [
-    'cffi>=1.1.2,<=1.3.0',
     'pyyaml',
     'wheezy.template==0.1.167',
     'CommonMark==0.6.1',
     'pygraphviz>=1.3.rc2',
     'sqlalchemy>=1.0.8',
-    'ipython==4.0.0',
     'toposort==1.4']
-
-if PYGIT2_VERSION is not None:
-    INSTALL_REQUIRES.append('pygit2==%s' % PYGIT2_VERSION)
 
 EXTRAS_REQUIRE = {
     'dev': ['git-pylint-commit-hook',
@@ -364,5 +330,4 @@ setup(name='hotdoc',
       },
       install_requires=INSTALL_REQUIRES,
       extras_require=EXTRAS_REQUIRE,
-      setup_requires=['cffi>=1.1.2,<=1.3.0',
-                      'requests'])
+      setup_requires=['requests'])

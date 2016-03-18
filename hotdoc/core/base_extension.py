@@ -24,7 +24,6 @@ import os
 
 from collections import defaultdict, OrderedDict
 
-from hotdoc.core.wizard import HotdocWizard
 from hotdoc.core.doc_tree import DocTree
 from hotdoc.core.file_includer import find_md_file, resolve_markdown_signal
 from hotdoc.core.exceptions import BadInclusionException
@@ -244,8 +243,7 @@ class BaseExtension(Configurable):
             '--%s-index' % prefix, action="store",
             dest="%s_index" % prefix,
             help=("Name of the %s root markdown file, can be None" % (
-                cls.EXTENSION_NAME)),
-            finalize_function=HotdocWizard.finalize_path)
+                cls.EXTENSION_NAME)))
 
         if smart:
             group.add_argument(

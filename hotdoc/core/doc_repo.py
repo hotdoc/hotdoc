@@ -37,7 +37,6 @@ from hotdoc.core.config import ConfigParser
 from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.doc_tree import DocTree
 from hotdoc.core.links import LinkResolver
-from hotdoc.core.wizard import HotdocWizard
 from hotdoc.utils.loggable import info, error
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.utils import get_all_extension_classes, all_subclasses
@@ -83,9 +82,7 @@ class DocRepo(object):
 
     def __init__(self):
         self.output = None
-        self.wizard = None
         self.doc_tree = None
-        self.git_repo_path = None
         self.change_tracker = None
         self.output_format = None
         self.include_paths = None
@@ -203,12 +200,6 @@ class DocRepo(object):
         """
         return os.path.abspath('hotdoc-private')
 
-    def resolve_config_path(self, path):
-        """
-        Banana banana
-        """
-        return self.wizard.resolve_config_path(path)
-
     def setup(self, args):
         """
         Banana banana
@@ -302,17 +293,11 @@ class DocRepo(object):
                                  dest='conf_file', default='hotdoc.json')
 
         conf_parser = subparsers.add_parser('conf', help='configure hotdoc')
-        conf_parser.add_argument('--quickstart',
-                                 help='run a quickstart wizard',
-                                 action='store_true')
         conf_parser.add_argument('--conf-file',
                                  help='Path to the config file',
                                  dest='conf_file', default='hotdoc.json')
 
         cmd = self.__setup_config_file(parser, args)
-        conf_path = os.path.dirname(self.__conf_file)
-        wizard = HotdocWizard(parser, conf_path=conf_path)
-        self.wizard = wizard
 
         extension_classes = get_all_extension_classes(sort=True)
         for subclass in extension_classes:
@@ -327,15 +312,14 @@ class DocRepo(object):
                 seen.add(subclass.add_arguments)
 
         parser.add_argument("-i", "--index", action="store",
-                            dest="index", help="location of the index file",
-                            finalize_function=HotdocWizard.finalize_path)
+                            dest="index", help="location of the index file")
         parser.add_argument("-o", "--output", action="store",
                             dest="output",
                             help="where to output the rendered documentation")
         parser.add_argument("--output-format", action="store",
                             dest="output_format", help="format for the output",
                             default="html")
-        parser.add_argument("-", action="store_true", no_prompt=True,
+        parser.add_argument("-", action="store_true",
                             help="Separator to allow finishing a list"
                             " of arguments before a command",
                             dest="whatever")
@@ -345,7 +329,7 @@ class DocRepo(object):
             sys.exit(0)
 
         args = parser.parse_args(args)
-        self.__load_config(args, self.__conf_file, wizard)
+        self.__load_config(parser, args, self.__conf_file)
 
         configured = set()
         for subclass in configurable_classes:
@@ -359,35 +343,19 @@ class DocRepo(object):
         if args.cmd == 'run':
             save_config = False
             self.__dry = bool(args.dry)
-            self.__parse_config(wizard.config)
+            self.__parse_config()
         elif args.cmd == 'conf':
             exit_now = True
-            if args.quickstart:
-                exit_now = self.__quickstart(wizard)
         elif args.cmd == 'help':
             exit_now = True
             save_config = False
 
         if save_config:
             with open(self.__conf_file, 'w') as _:
-                _.write(json.dumps(wizard.config, indent=4))
+                _.write(json.dumps(self.config, indent=4))
 
         if exit_now:
             sys.exit(0)
-
-    def __quickstart(self, wizard):
-        exit_now = True
-        if wizard.quick_start():
-            info("Setup complete, building the documentation now")
-            try:
-                wizard.wait_for_continue(
-                    "Setup complete,"
-                    " press Enter to build the doc now ")
-                self.__parse_config(wizard.config)
-                exit_now = False
-            except EOFError:
-                pass
-        return exit_now
 
     def __setup_config_file(self, parser, args):
         # First pass to get the conf path
@@ -408,35 +376,25 @@ class DocRepo(object):
         return cmd
 
     # pylint: disable=no-self-use
-    def __load_config(self, args, conf_file, wizard):
+    def __load_config(self, parser, args, conf_file):
         """
         Banana banana
         """
-        try:
-            with open(conf_file, 'r') as _:
-                contents = _.read()
-        except IOError:
-            contents = '{}'
-
-        try:
-            config = json.loads(contents)
-        except ValueError as ze_error:
-            error('invalid-config',
-                  'The provided configuration file %s is not valid json.\n'
-                  'The exact error was %s.\n'
-                  'This often happens because of missing or extra commas, '
-                  'but it may be something else, please fix it!\n' %
-                  (conf_file, str(ze_error)))
-
-        wizard.config.update(config)
         cli = dict(vars(args))
         cli.pop('cmd', None)
         cli.pop('quickstart', None)
         cli.pop('conf_file', None)
 
-        self.config = ConfigParser(command_line_args=cli, conf_file=conf_file)
+        actual_args = {}
 
-        wizard.config.update(cli)
+        for key, value in cli.items():
+            if key in ('cmd', 'conf_file', 'dry'):
+                continue
+            if value != parser.get_default(key):
+                actual_args[key] = value
+
+        self.config = ConfigParser(command_line_args=actual_args,
+                                   conf_file=conf_file)
 
     def __setup_private_folder(self):
         folder = self.get_private_folder()
@@ -463,18 +421,18 @@ class DocRepo(object):
         """
         return os.path.join(self.get_private_folder(), 'generated')
 
-    def __parse_config(self, config):
+    def __parse_config(self):
         """
         Banana banana
         """
-        self.output = config.get('output')
-        self.output_format = config.get('output_format')
+        self.output = self.config.get_path('output')
+        self.output_format = self.config.get('output_format')
 
         if self.output_format not in ["html"]:
             error('invalid-config',
                   'Unsupported output format : %s' % self.output_format)
 
-        self.__index_file = self.resolve_config_path(config.get('index'))
+        self.__index_file = self.config.get_index()
         if self.__index_file is None:
             error('invalid-config', 'index is required')
         if not os.path.exists(self.__index_file):
@@ -482,14 +440,12 @@ class DocRepo(object):
                   'The provided index "%s" does not exist' %
                   self.__index_file)
 
-        cmd_line_includes = [self.resolve_config_path(path) for path in
-                             config.get('include_paths', [])]
+        cmd_line_includes = self.config.get_paths('include_paths')
         self.__base_doc_folder = os.path.dirname(self.__index_file)
         gen_folder = self.get_generated_doc_folder()
         self.include_paths = OrderedSet([gen_folder])
         self.include_paths.add(self.__base_doc_folder)
         self.include_paths |= OrderedSet(cmd_line_includes)
-        self.git_repo_path = self.resolve_config_path(config.get('git_repo'))
         self.__create_change_tracker()
         self.__setup_private_folder()
         self.__setup_database()

@@ -39,7 +39,6 @@ from hotdoc.core.symbols import\
 
 from hotdoc.core.base_formatter import Formatter, _create_hierarchy_graph
 from hotdoc.core.links import Link
-from hotdoc.core.wizard import HotdocWizard
 
 from hotdoc.parsers.gtk_doc_parser import GtkDocStringFormatter
 
@@ -696,8 +695,7 @@ class HtmlFormatter(Formatter):
             'Html formatter', 'html formatter options')
         group.add_argument("--html-theme", action="store",
                            dest="html_theme", help="html theme to use",
-                           default='default',
-                           finalize_function=HotdocWizard.finalize_path)
+                           default='default')
         group.add_argument("--html-add-anchors", action="store_true",
                            dest="html_add_anchors",
                            help="Add anchors to html headers",
@@ -713,7 +711,7 @@ class HtmlFormatter(Formatter):
                                          'default_theme-%s' % THEME_VERSION)
             html_theme = os.path.abspath(default_theme)
         else:
-            html_theme = doc_repo.resolve_config_path(html_theme)
+            html_theme = config.get_path('html_theme')
 
         HtmlFormatter.theme_path = html_theme
 

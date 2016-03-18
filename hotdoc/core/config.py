@@ -26,6 +26,7 @@ import json
 import glob
 
 from hotdoc.utils.utils import OrderedSet
+from hotdoc.utils.loggable import error
 
 
 class ConfigParser(object):
@@ -81,7 +82,16 @@ class ConfigParser(object):
         except IOError:
             contents = '{}'
 
-        self.__config = json.loads(contents)
+        try:
+            self.__config = json.loads(contents)
+        except ValueError as ze_error:
+            error('invalid-config',
+                  'The provided configuration file %s is not valid json.\n'
+                  'The exact error was %s.\n'
+                  'This often happens because of missing or extra commas, '
+                  'but it may be something else, please fix it!\n' %
+                  (conf_file, str(ze_error)))
+
         self.__cli = command_line_args or {}
         index = self.get_index()
         if index:
@@ -150,7 +160,7 @@ class ConfigParser(object):
             str: An absolute path, or `None`
         """
         prefixed = '%sindex' % prefix
-        if prefixed in self.__cli:
+        if prefixed in self.__cli and self.__cli[prefixed]:
             index = self.__cli.get(prefixed)
             from_conf = False
         else:
