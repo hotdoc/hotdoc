@@ -467,7 +467,12 @@ class BaseExtension(Configurable):
             with open(filename, 'r') as _:
                 preamble = _.read()
         else:
-            preamble = '## Generated API reference\n'
+            languages = self._get_languages()
+            if languages:
+                language = languages[0]
+                preamble = '## %s API reference\n' % language
+            else:
+                preamble = '## %s API reference\n' % self.EXTENSION_NAME
 
         gen_paths = OrderedDict()
         full_gen_paths = set()
