@@ -1,4 +1,4 @@
-@require(page, scripts, assets_path)
+@require(page, scripts, stylesheets, assets_path)
 
 <!DOCTYPE html>
 <html lang="en">
@@ -10,6 +10,11 @@
 @for script in scripts:
 <script src="@page.assets_path/js/@script"></script>
 @end
+
+@for stylesheet in stylesheets:
+<link rel="stylesheet" href="@assets_path/css/@stylesheet" type="text/css"/>
+@end
+
 </head>
 
 <div class="page_container">

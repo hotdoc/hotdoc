@@ -132,6 +132,7 @@ class HtmlFormatter(Formatter):
         )
 
         self.all_scripts = set()
+        self.all_stylesheets = set()
         self._docstring_formatter = GtkDocStringFormatter()
 
     def format_comment(self, comment, link_resolver):
@@ -427,6 +428,7 @@ class HtmlFormatter(Formatter):
         Banana banana
         """
         page.output_attrs['html']['scripts'] = set()
+        page.output_attrs['html']['stylesheets'] = set()
         if HtmlFormatter.add_anchors:
             page.output_attrs['html']['scripts'].add(
                 os.path.join(HERE, 'html_assets', 'anchorizer.js'))
@@ -435,6 +437,7 @@ class HtmlFormatter(Formatter):
     def patch_page(self, page, symbol):
         raise NotImplementedError
 
+    # pylint: disable=too-many-locals
     def _format_page(self, page):
         toc_sections = []
         symbols_details = []
@@ -458,13 +461,18 @@ class HtmlFormatter(Formatter):
         toc = self._format_summary(toc_sections)
 
         scripts = page.output_attrs['html']['scripts']
+        stylesheets = page.output_attrs['html']['stylesheets']
         scripts_basenames = [os.path.basename(script)
                              for script in scripts]
+        stylesheets_basenames = [os.path.basename(stylesheet)
+                                 for stylesheet in stylesheets]
 
+        self.all_stylesheets.update(stylesheets)
         self.all_scripts.update(scripts)
 
         out = template.render({'page': page,
                                'scripts': scripts_basenames,
+                               'stylesheets': stylesheets_basenames,
                                'toc': toc,
                                'assets_path': self._get_assets_path(),
                                'symbols_details': symbols_details})
@@ -688,6 +696,10 @@ class HtmlFormatter(Formatter):
         for script_path in self.all_scripts:
             dest = os.path.join('js', os.path.basename(script_path))
             res.append((script_path, dest))
+
+        for stylesheet_path in self.all_stylesheets:
+            dest = os.path.join('css', os.path.basename(stylesheet_path))
+            res.append((stylesheet_path, dest))
 
         return res
 
