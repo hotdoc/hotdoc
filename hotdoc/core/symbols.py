@@ -49,6 +49,7 @@ class Symbol(Base):
     extent_start = Column(Integer)
     extent_end = Column(Integer)
     location = Column(PickleType)
+    language = Column(String)
     _type_ = Column(String)
     extension_contents = Column(MutableDict.as_mutable(PickleType))
     extension_attributes = Column(MutableDict.as_mutable(PickleType))

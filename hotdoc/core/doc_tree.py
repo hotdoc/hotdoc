@@ -231,6 +231,7 @@ class Page(object):
         self.output_attrs = None
         self.extension_name = extension_name
         self.is_stale = True
+        self.is_root = False
         self.ast = ast
         self.headers = {}
         self.reference_map = set()
@@ -238,6 +239,7 @@ class Page(object):
         self.symbols = []
         self.formatted_contents = None
         self.detailed_description = None
+        self.languages = []
 
         try:
             self.mtime = os.path.getmtime(source_file)
@@ -264,7 +266,9 @@ class Page(object):
                 'typed_symbols': {},
                 'symbols': [],
                 'formatted_contents': None,
+                'languages': self.languages,
                 'is_stale': False,  # At pickle time, assume non-staleness
+                'is_root': self.is_root,
                 'mtime': self.mtime}
 
     def get_short_description(self):
@@ -391,10 +395,10 @@ class Page(object):
         tsl = self.typed_symbols[type(symbol)]
         tsl.symbols.append(symbol)
         self.symbols.append(symbol)
-        # pylint: disable=unidiomatic-typecheck
-        if type(symbol) in [ClassSymbol, StructSymbol] and symbol.comment:
-            if symbol.comment.short_description:
-                self.short_description = symbol.comment.short_description
+
+        if not self.short_description and symbol.comment and\
+                symbol.comment.short_description:
+            self.short_description = symbol.comment.short_description
             if symbol.comment.title:
                 self.title = symbol.comment.title
             else:
@@ -811,7 +815,7 @@ class DocTree(object):
         else:
             info("Building tree from %s" % source_file, "parsing")
 
-        self.__do_build_tree(source_file, extension_name)
+        self.__do_build_tree(source_file, extension_name, True)
         moved_symbols = self.__update_symbol_maps()
         self.__root = self.pages[source_file]
 
@@ -930,6 +934,7 @@ class DocTree(object):
         # circumventing stupid chrome same origin policy
         formatter = extensions['core'].get_formatter('html')
         site_navigation = formatter.format_site_navigation(self.__root, self)
+        output = os.path.join(output, formatter.get_output_folder())
         path = os.path.join(output,
                             'assets',
                             'js',
@@ -996,7 +1001,7 @@ class DocTree(object):
         page.topic_symbol_names |= old_page.symbol_names
         page.is_stale |= old_page.is_stale
 
-    def __do_build_tree(self, source_file, extension_name):
+    def __do_build_tree(self, source_file, extension_name, is_root):
         page = None
         epage = None
 
@@ -1013,6 +1018,8 @@ class DocTree(object):
         if not page:
             page = self.page_parser.parse(source_file, extension_name)
 
+        page.is_root = is_root
+
         if epage and page != epage:
             self.__add_topic_symbols(epage, page)
 
@@ -1020,8 +1027,10 @@ class DocTree(object):
 
         self.pages[source_file] = page
 
-        for subpage, extension_name in page.subpages.items():
-            self.__do_build_tree(subpage, extension_name=extension_name)
+        for subpage, ext_name in page.subpages.items():
+            is_root = extension_name != ext_name
+            self.__do_build_tree(subpage, extension_name=ext_name,
+                                 is_root=is_root)
 
     def __stale_symbol_pages(self, symbol_name):
         pages = self.__symbol_maps.get(symbol_name, {})

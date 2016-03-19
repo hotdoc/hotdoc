@@ -54,6 +54,7 @@ class Formatter(Configurable):
     """
     formatting_page_signal = Signal()
     formatting_symbol_signal = Signal()
+    writing_page_signal = Signal()
     editing_server = None
 
     # pylint: disable=no-self-use
@@ -107,6 +108,7 @@ class Formatter(Configurable):
         Banana banana
         """
         path = os.path.join(output, page.link.ref)
+        self.writing_page_signal(self, page, path)
         with open(path, 'w') as _:
             out = page.detailed_description
             _.write(out.encode('utf-8'))
@@ -141,7 +143,17 @@ class Formatter(Configurable):
         """
         Banana banana
         """
+        Formatter.formatting_page_signal(self, page)
         return self._format_page(page)
+
+    def get_output_folder(self):
+        """
+        Get the output folder for this formatter
+
+        Returns:
+            str: The output subfolder.
+        """
+        return ''
 
     def _format_page(self, page):
         """

@@ -354,6 +354,9 @@ class BaseExtension(Configurable):
         stripped = os.path.splitext(source_file)[0]
         return os.path.relpath(stripped, self.__package_root)
 
+    def _get_languages(self):
+        return []
+
     # pylint: disable=no-self-use
     def _get_naive_link_title(self, source_file):
         """
@@ -624,11 +627,15 @@ class BaseExtension(Configurable):
         """
         formatter = self.get_formatter('html')
         if page.is_stale:
+            page.languages = self._get_languages()
             debug('Formatting page %s' % page.link.ref, 'formatting')
             page.formatted_contents = \
                 self.doc_repo.doc_tree.page_parser.format_page(
                     page, link_resolver, formatter)
-            page.format(formatter, link_resolver, output)
+            actual_output = os.path.join(output, formatter.get_output_folder())
+            if not os.path.exists(actual_output):
+                os.makedirs(actual_output)
+            page.format(formatter, link_resolver, actual_output)
         else:
             debug('Not formatting page %s, up to date' % page.link.ref,
                   'formatting')

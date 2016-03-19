@@ -92,6 +92,8 @@ class DocRepo(object):
         self.incremental = False
         self.doc_database = None
         self.config = None
+        self.project_name = None
+        self.project_version = None
 
         if os.name == 'nt':
             self.datadir = os.path.join(
@@ -313,6 +315,12 @@ class DocRepo(object):
 
         parser.add_argument("-i", "--index", action="store",
                             dest="index", help="location of the index file")
+        parser.add_argument("--project-name", action="store",
+                            dest="project_name",
+                            help="Name of the documented project")
+        parser.add_argument("--project-version", action="store",
+                            dest="project_version",
+                            help="Version of the documented project")
         parser.add_argument("-o", "--output", action="store",
                             dest="output",
                             help="where to output the rendered documentation")
@@ -429,7 +437,9 @@ class DocRepo(object):
         """
         Banana banana
         """
-        self.output = self.config.get_path('output')
+        self.output = os.path.abspath(self.config.get('output'))
+        self.project_name = self.config.get('project_name', None)
+        self.project_version = self.config.get('project_version', None)
         self.output_format = self.config.get('output_format')
 
         if self.output_format not in ["html"]:
