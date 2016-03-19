@@ -52,7 +52,7 @@ class TestHotdoc(unittest.TestCase):
 
     def assertOutput(self, n_html_files):
         actual = 0
-        for f in os.listdir(self.__output_dir):
+        for f in os.listdir(os.path.join(self.__output_dir, 'html')):
             if f.endswith('.html'):
                 actual += 1
         self.assertEqual(actual, n_html_files)
