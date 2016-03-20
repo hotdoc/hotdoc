@@ -437,7 +437,12 @@ class DocRepo(object):
         """
         Banana banana
         """
-        self.output = os.path.abspath(self.config.get('output'))
+        output = self.config.get('output', None)
+        if output is not None:
+            self.output = os.path.abspath(output)
+        else:
+            self.output = None
+
         self.project_name = self.config.get('project_name', None)
         self.project_version = self.config.get('project_version', None)
         self.output_format = self.config.get('output_format')
