@@ -28,6 +28,7 @@ import linecache
 import os
 import urllib
 import urlparse
+import cgi
 from collections import OrderedDict
 from collections import namedtuple
 from collections import defaultdict
@@ -45,6 +46,7 @@ from hotdoc.core.symbols import\
 from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.loggable import info, debug
+from hotdoc.utils.configurable import Configurable
 from hotdoc.core.file_includer import add_md_includes, find_md_file
 
 
@@ -409,7 +411,7 @@ class Page(object):
 
 
 # pylint: disable=too-many-instance-attributes
-class PageParser(object):
+class PageParser(Configurable):
     """Parses individual pages, detecting empty links to potential subpages.
 
     Creates Page objects.
@@ -419,6 +421,8 @@ class PageParser(object):
             when about to prettify a navigational link in order to let
             listeners provide their own pretty title and summary.
     """
+
+    escape_html = False
 
     def __init__(self, doc_tree, include_paths):
         self.renaming_page_link_signal = Signal()
@@ -454,6 +458,9 @@ class PageParser(object):
         with io.open(source_file, 'r', encoding='utf-8') as _:
             contents = add_md_includes(_.read(), source_file,
                                        self.__include_paths, 0)
+
+        if PageParser.escape_html:
+            contents = cgi.escape(contents)
 
         ast = self.__cmp.parse(contents)
         page = Page(source_file, ast, extension_name)
@@ -498,6 +505,23 @@ class PageParser(object):
                                  link_resolver)
         self.__update_links(page.ast, link_resolver)
         return self.__cmr.render(page.ast)
+
+    @staticmethod
+    def add_arguments(parser):
+        """Banana banana
+        """
+        group = parser.add_argument_group(
+            'PageParser', 'PageParser options')
+        group.add_argument("--page-parser-escape-html", action="store_true",
+                           dest="page_parser_escape_html", help="Escape html "
+                           "in standalone markdown pages")
+
+    @staticmethod
+    def parse_config(doc_repo, config):
+        """Banana banana
+        """
+        PageParser.escape_html = config.get(
+            'page_parser_escape_html')
 
     def __rename_page_links(self, page, formatter, link_resolver):
         """Prettifies the intra-documentation page links.
