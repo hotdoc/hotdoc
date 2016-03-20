@@ -571,7 +571,7 @@ class PageParser(Configurable):
                                                   to_native=True)
                 if desc:
                     new_desc = self.__cmp.parse(u'— %s' %
-                                                desc.encode('utf-8'))
+                                                desc)
                     space_node = CommonMark.node.Node('Text', None)
                     space_node.literal = ' '
                     ast_node[0].parent.append_child(space_node)
@@ -700,7 +700,7 @@ class PageParser(Configurable):
             first_paragraph = ''
             for i in range(node.sourcepos[0][0], node.sourcepos[1][0] + 1):
                 first_paragraph += linecache.getline(page.source_file, i)
-            page.first_paragraph = first_paragraph
+            page.first_paragraph = unicode(first_paragraph.decode('utf8'))
 
         for _ in _get_children(node):
             self.__check_links(page, _, node)

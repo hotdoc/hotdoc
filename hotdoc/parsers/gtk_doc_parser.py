@@ -263,12 +263,13 @@ class GtkDocParser(object):
         if not stripped and not self.__validate_c_comment(comment.strip()):
             return None
 
+        comment = unicode(comment.decode('utf8'))
+
         raw_comment = comment
         if not stripped:
             comment = self.__strip_comment(comment)
 
-        comment = add_md_includes(unicode(comment.decode('utf8')),
-                                  filename, include_paths, lineno)
+        comment = add_md_includes(comment, filename, include_paths, lineno)
 
         split = re.split(r'\n[\W]*\n', comment, maxsplit=1)
         block_name, parameters, annotations = \
