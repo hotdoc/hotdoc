@@ -338,6 +338,8 @@ class ConfigParser(object):
                         relpath = os.path.relpath(path, self.__conf_dir)
                         new_list.append(relpath)
                 final_conf[key] = new_list
+            else:
+                final_conf[key] = value
 
         with open(conf_file or self.__conf_file, 'w') as _:
-            _.write(json.dumps(final_conf))
+            _.write(json.dumps(final_conf, sort_keys=True, indent=4))
