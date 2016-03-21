@@ -509,7 +509,7 @@ class BaseExtension(Configurable):
         gen_path = self.__get_gen_path(source_file)
         dname = os.path.dirname(gen_path)
         if not os.path.exists(dname):
-            os.mkdir(dname)
+            os.makedirs(dname)
         return gen_path
 
     def __create_symbols_list(self, source_file, symbols, user_file):
