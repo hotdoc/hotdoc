@@ -1,5 +1,7 @@
 ## Features
 
+A non-extensive list of hotdoc features.
+
 ### Incremental
 
 Hotdoc is designed as an incremental documentation system. Along with
@@ -11,7 +13,7 @@ hotdoc to provide (for now basic) wiki-like functionalities: users
 can edit and preview the documentation, and the server patches the sources it was
 extracted from.
 
-> See [disabling incremental build](disabling-incremental-build.markdown) if you do not wish / need to use this feature.
+> See [disabling incremental build](running.markdown#disabling-incremental-build) if you do not wish / need to use this feature.
 
 ### Simple yet powerful syntax
 

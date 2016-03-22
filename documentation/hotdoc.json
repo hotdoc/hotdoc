@@ -5,5 +5,7 @@
     "python_sources": ["../hotdoc/core/*.py"],
     "python_source_filters": ["../hotdoc/core/__init__.py"],
     "add_anchors": true,
-    "output": "html"
+    "output": "built_doc",
+    "project_name": "hotdoc",
+    "devhelp_activate": true
 }

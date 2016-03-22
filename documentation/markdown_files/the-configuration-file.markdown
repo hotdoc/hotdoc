@@ -1,5 +1,7 @@
 ## The configuration file
 
+Where we present hotdoc's configuration file.
+
 The configuration file is a simple, flat json file made of a set of key-value pairs, for example:
 
 ```
@@ -21,13 +23,13 @@ Options specified from the command-line will take precedence over their json cou
 An easy way to create a configuration file from a command-line invocation is to replace `run` with `conf` in the command-line, for example to translate:
 
 ```
-hotdoc --index markdown_files/index.markdown --output html run
+hotdoc --index markdown_files/index.markdown --output built_doc run
 ```
 
 you should use 
 
 ```
-hotdoc --index markdown_files/index.markdown --output html conf
+hotdoc --index markdown_files/index.markdown --output built_doc conf
 ```
 
 This will create a hotdoc.json file in the current directory, which means you can now run hotdoc that way:

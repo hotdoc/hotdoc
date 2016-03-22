@@ -1,5 +1,7 @@
 ## The markdown pages
 
+Where we present hotdoc's standalone markdown pages.
+
 The standalone markdown files (usually located in "markdown_files) serve three main purposes:
 
 * Actually holding documentation: the contents in all markdown files will get rendered with CommonMark nearly as is, with the exception of the [syntax extensions](syntax-extensions.markdown).
@@ -44,10 +46,10 @@ Then open `markdown_files/index.markdown` with the editor of your choice, put th
 You can now run hotdoc with
 
 ```
-hotdoc --index markdown_files/index.markdown --output html  run
+hotdoc --index markdown_files/index.markdown --output built_doc  run
 ```
 
-from the `~/hotdoc_layout_test` folder, and check the output with `firefox html/index.html`.
+from the `~/hotdoc_layout_test` folder, and check the output with `firefox built_doc/html/index.html`.
 
 See the [configuration file section](the-configuration-file.markdown) if you'd like to convert this command-line to a configuration file.
 
@@ -95,10 +97,10 @@ This page, and all its (potential) subpages, will be formatted with the PythonHt
 Finally run hotdoc this way:
 
 ```
-hotdoc --index markdown_files/index.markdown --output html --python-index python_index.markdown run
+hotdoc --index markdown_files/index.markdown --output built_doc --python-index python_index.markdown run
 ```
 
-Provided the [python extension](https://github.com/hotdoc/hotdoc_python_extension) is installed in the current environment, the `python_index.markdown` page will be rendered with the `PythonHtmlFormatter`, this is trivially verifiable with `grep "data-extension" html/python_index.html`, which should show : `<div data-extension="python-extension" class="page_container" id="page-wrapper">`
+Provided the [python extension](https://github.com/hotdoc/hotdoc_python_extension) is installed in the current environment, the `python_index.markdown` page will be rendered with the `PythonHtmlFormatter`, this is trivially verifiable with `grep "data-extension" built_doc/html/python_index.html`, which should show : `<div data-extension="python-extension" class="page_container" id="page-wrapper">`
 
 > Note: In that example, the "well-known-name" is `python-api` and the command-line argument to let the extension know about the sub-index filename is `python-index`
 
@@ -146,9 +148,9 @@ This is a module to demonstrate documenting source code symbols.
 
 You can now invoke hotdoc with
 ```
-hotdoc --index markdown_files/index.markdown --output html --python-index python_index.markdown --python-sources module_to_document.py - run
+hotdoc --index markdown_files/index.markdown --output built_doc --python-index python_index.markdown --python-sources module_to_document.py - run
 ```
-, and check the result with `firefox html/python_index.html`.
+, and check the result with `firefox built_doc/html/python_index.html`.
 
 #### Or let extensions generate sub-trees and symbol lists
 
@@ -167,7 +169,7 @@ rm markdown_files/markdown_files/explicit_list_of_symbols_in_python_module.markd
 Then run hotdoc without specifying a `python-index`:
 
 ```
-rm -rf hotdoc-private/ && hotdoc --index markdown_files/index.markdown --output html --python-sources module_to_document.py - run
+rm -rf hotdoc-private/ && hotdoc --index markdown_files/index.markdown --output built_doc --python-sources module_to_document.py - run
 ```
 
 The result for that simple project should be strictly the same, you can find generated "intermediary" markdown pages in `hotdoc-private/generated`

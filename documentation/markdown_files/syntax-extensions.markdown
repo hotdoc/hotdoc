@@ -1,5 +1,7 @@
 ## Extensions to the CommonMark syntax
 
+Summary of hotdoc's extensions to commonmark syntax.
+
 ### Link syntax
 
 The syntax for a "classic link" in markdown is:

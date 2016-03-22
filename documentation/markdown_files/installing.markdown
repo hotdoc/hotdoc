@@ -1,32 +1,12 @@
 ## Installing
 
+Detailed instructions for installing hotdoc.
+
 ### System-wide dependencies
-
-#### libgit2
-
-> If you install these dependencies successfully on a platform not listed here, or have issues on any platform, opening a simple issue (or a pull request with this file edited) will help immensely!
-
-Hotdoc can optionally use [pygit2](http://www.pygit2.org/) to help with porting projects from other documentation systems.
-
-If you wish to enable that feature, you need to install libgit2. On fedora this can be done with:
-
-```
-dnf install libgit2-devel.x86_64
-```
-
-And on ubuntu:
-
-```
-apt-get install libgit2-dev
-```
-
-Adapt to your distribution.
-
-> If your installed version of libgit 2 is older than 0.22.0, this feature will not be enabled
 
 #### graphviz
 
-Hotdoc also needs [graphviz](http://www.graphviz.org/) to generate object hierarchies, you will thus need to install graphviz-dev, and some libraries it depends depend on the python headers, so you will need to install them too.
+Hotdoc needs [graphviz](http://www.graphviz.org/) to generate object hierarchies, you will thus need to install graphviz-dev, and some libraries it depends depend on the python headers, so you will need to install them too.
 
 On Fedora this can be done with:
 
