@@ -34,25 +34,26 @@ class ConfigParser(object):
     Helper class to help deal with common extension dependencies.
 
     This class has two goals:
-        * Help extensions retrieve sources and indexes, with
-            support for filters and wildcards.
-        * Provide a generic way to list all the dependencies
-            for a given hotdoc project, without needing to
-            import extensions and query them individually, as it
-            is costly and we want to make this operation as
-            transparent as possible for the build system.
+
+    * Help extensions retrieve sources and indexes, with
+      support for filters and wildcards.
+    * Provide a generic way to list all the dependencies
+      for a given hotdoc project, without needing to
+      import extensions and query them individually, as it
+      is costly and we want to make this operation as
+      transparent as possible for the build system.
 
     This implies that extensions with external dependencies
     need to follow several semantic conventions for the arguments
     they expose:
 
-        * When an extension exposes an index, it needs to expose
-            an argument named `prefix`index to retrieve it.
-        * When an extension accepts a list of sources, it needs
-            to expose two arguments, one named `<prefix>sources`,
-            and the other named `<prefix>source_filters`. With this
-            done, `ConfigParser` will automatically provide wildcard
-            expansion and filtering.
+    * When an extension exposes an index, it needs to expose
+      an argument named `<prefix>index` to retrieve it.
+    * When an extension accepts a list of sources, it needs
+      to expose two arguments, one named `<prefix>sources`,
+      and the other named `<prefix>source_filters`. With this
+      done, `ConfigParser` will automatically provide wildcard
+      expansion and filtering.
 
     Note that `base_extension.BaseExtension` provides helper methods
     to register index and sources options, this documentation should
