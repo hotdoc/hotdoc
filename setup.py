@@ -38,7 +38,7 @@ from setuptools.command.sdist import sdist
 from setuptools.command.test import test
 
 from hotdoc.utils.setup_utils import (
-    THEME_VERSION, require_clean_submodules)
+    VERSION, THEME_VERSION, require_clean_submodules)
 
 SOURCE_DIR = os.path.abspath('./')
 CMARK_DIR = os.path.join(SOURCE_DIR, 'cmark')
@@ -291,9 +291,6 @@ for root, dirs, files in os.walk(CMARK_DIR):
         path = os.path.join(root, f)
         path = os.path.relpath(path, CMARK_DIR)
         CMARK_DIST_FILES.append(path)
-
-with open(os.path.join('hotdoc', 'VERSION.txt'), 'r') as _:
-    VERSION = _.read().strip()
 
 setup(name='hotdoc',
       version=VERSION,

@@ -22,7 +22,6 @@ Core of the core.
 
 import argparse
 import cPickle as pickle
-import json
 import os
 import shutil
 import sys
@@ -37,6 +36,7 @@ from hotdoc.core.config import ConfigParser
 from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.doc_tree import DocTree
 from hotdoc.core.links import LinkResolver
+from hotdoc.utils.setup_utils import VERSION
 from hotdoc.utils.loggable import info, error
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.utils import get_all_extension_classes, all_subclasses
@@ -280,27 +280,6 @@ class DocRepo(object):
             argparse.ArgumentParser(
                 formatter_class=argparse.RawDescriptionHelpFormatter,)
 
-        subparsers = parser.add_subparsers(title='commands', dest='cmd',
-                                           description=SUBCOMMAND_DESCRIPTION)
-        subparsers.required = False
-        run_parser = subparsers.add_parser('run', help='run hotdoc')
-        run_parser.add_argument('--conf-file', help='Path to the config file',
-                                dest='conf_file', default='hotdoc.json')
-        run_parser.add_argument('--dry',
-                                help='Dry run, nothing will be output',
-                                dest='dry', action='store_true')
-
-        help_parser = subparsers.add_parser('help', help='print hotdoc help')
-        help_parser.add_argument('--conf-file', help='Path to the config file',
-                                 dest='conf_file', default='hotdoc.json')
-
-        conf_parser = subparsers.add_parser('conf', help='configure hotdoc')
-        conf_parser.add_argument('--conf-file',
-                                 help='Path to the config file',
-                                 dest='conf_file', default='hotdoc.json')
-
-        cmd = self.__setup_config_file(parser, args)
-
         extension_classes = get_all_extension_classes(sort=True)
         for subclass in extension_classes:
             self.__extension_classes[subclass.EXTENSION_NAME] = subclass
@@ -313,6 +292,15 @@ class DocRepo(object):
                 subclass.add_arguments(parser)
                 seen.add(subclass.add_arguments)
 
+        parser.add_argument('command', action="store", choices=('run', 'conf'),
+                            nargs="?")
+        parser.add_argument('--dry',
+                            help='Dry run, nothing will be output',
+                            dest='dry', action='store_true')
+        parser.add_argument('--conf-file', help='Path to the config file',
+                            dest='conf_file', default='hotdoc.json')
+        parser.add_argument('--version', help="Print version and exit",
+                            action="store_true")
         parser.add_argument("-i", "--index", action="store",
                             dest="index", help="location of the index file")
         parser.add_argument("--project-name", action="store",
@@ -332,12 +320,18 @@ class DocRepo(object):
                             " of arguments before a command",
                             dest="whatever")
 
+        args = parser.parse_args(args)
+        self.__load_config(parser, args)
+
+        cmd = args.command
+
         if cmd == 'help':
             parser.print_help()
             sys.exit(0)
-
-        args = parser.parse_args(args)
-        self.__load_config(parser, args, self.__conf_file)
+        elif cmd is None:
+            if args.version:
+                print VERSION
+            sys.exit(0)
 
         configured = set()
         for subclass in configurable_classes:
@@ -346,55 +340,32 @@ class DocRepo(object):
                 configured.add(subclass.parse_config)
 
         exit_now = False
-        save_config = True
+        save_config = False
 
-        if args.cmd == 'run':
-            save_config = False
+        if cmd == 'run':
             self.__dry = bool(args.dry)
             self.__parse_config()
-        elif args.cmd == 'conf':
+        elif cmd == 'conf':
+            save_config = True
             exit_now = True
-        elif args.cmd == 'help':
-            exit_now = True
-            save_config = False
 
         if save_config:
-            with open(self.__conf_file, 'w') as _:
-                _.write(json.dumps(self.config, indent=4))
+            self.config.dump()
 
         if exit_now:
             sys.exit(0)
 
-    def __setup_config_file(self, parser, args):
-        # First pass to get the conf path
-        # FIXME: subparsers is useless, remove that hack
-        init_args = list(args)
-        split_pos = 0
-        cmd = None
-        for i, arg in enumerate(init_args):
-            if arg in ['run', 'conf', 'help']:
-                cmd = arg
-                split_pos = i
-                break
-
-        init_args = init_args[split_pos:]
-        init_args = list(parser.parse_known_args(init_args))
-        self.__conf_file = os.path.abspath(init_args[0].conf_file)
-
-        return cmd
-
     # pylint: disable=no-self-use
-    def __load_config(self, parser, args, conf_file):
+    def __load_config(self, parser, args):
         """
         Banana banana
         """
         cli = dict(vars(args))
-        cli.pop('cmd', None)
-        cli.pop('quickstart', None)
-        cli.pop('conf_file', None)
 
         actual_args = {}
         defaults = {}
+
+        self.__conf_file = args.conf_file
 
         for key, value in cli.items():
             if key in ('cmd', 'conf_file', 'dry'):
@@ -405,7 +376,7 @@ class DocRepo(object):
                 defaults[key] = value
 
         self.config = ConfigParser(command_line_args=actual_args,
-                                   conf_file=conf_file,
+                                   conf_file=self.__conf_file,
                                    defaults=defaults)
 
     def __setup_private_folder(self):
