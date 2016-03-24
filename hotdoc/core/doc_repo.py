@@ -21,6 +21,7 @@ Core of the core.
 """
 
 import argparse
+import hashlib
 import cPickle as pickle
 import os
 import shutil
@@ -107,6 +108,7 @@ class DocRepo(object):
         self.__index_file = None
         self.__root_page = None
         self.__base_doc_folder = None
+        self.__private_folder = None
         self.__dry = False
 
     def register_tag_validator(self, validator):
@@ -200,7 +202,7 @@ class DocRepo(object):
         """
         Banana banana
         """
-        return os.path.abspath('hotdoc-private')
+        return self.__private_folder
 
     def setup(self, args):
         """
@@ -272,6 +274,37 @@ class DocRepo(object):
             return ext.get_formatter(self.output_format)
         return None
 
+    def __check_initial_args(self, args):
+        if args.version:
+            print VERSION
+        elif args.makefile_path:
+            here = os.path.dirname(__file__)
+            path = os.path.join(here, '..', 'utils', 'Makefile.hotdoc')
+            print os.path.abspath(path)
+        elif args.print_dependencies:
+            self.config.print_make_dependencies()
+        elif args.get_conf_path:
+            key = args.get_conf_path
+            path = self.config.get_path(key, rel_to_cwd=True)
+            if path is not None:
+                print path
+        elif args.get_conf_key:
+            key = args.get_conf_key
+            value = self.config.get(args.get_conf_key, None)
+            if value is not None:
+                print value
+        elif args.get_private_folder:
+            print os.path.relpath(self.__private_folder,
+                                  self.config.get_invoke_dir())
+        elif args.get_markdown_files:
+            index = self.config.get_index()
+            if index:
+                path = os.path.dirname(index)
+                paths = self.config.get_markdown_files(path)
+                paths = [os.path.relpath(path, self.config.get_invoke_dir())
+                         for path in paths]
+                print ' '.join(paths)
+
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-statements
     # pylint: disable=too-many-branches
@@ -292,7 +325,8 @@ class DocRepo(object):
                 subclass.add_arguments(parser)
                 seen.add(subclass.add_arguments)
 
-        parser.add_argument('command', action="store", choices=('run', 'conf'),
+        parser.add_argument('command', action="store",
+                            choices=('run', 'conf', 'help'),
                             nargs="?")
         parser.add_argument('--dry',
                             help='Dry run, nothing will be output',
@@ -300,6 +334,12 @@ class DocRepo(object):
         parser.add_argument('--conf-file', help='Path to the config file',
                             dest='conf_file', default='hotdoc.json')
         parser.add_argument('--version', help="Print version and exit",
+                            action="store_true")
+        parser.add_argument('--makefile-path',
+                            help="Print path to includable Makefile and exit",
+                            action="store_true")
+        parser.add_argument('--print-dependencies',
+                            help="Print the dependencies for a given conf",
                             action="store_true")
         parser.add_argument("-i", "--index", action="store",
                             dest="index", help="location of the index file")
@@ -312,6 +352,14 @@ class DocRepo(object):
         parser.add_argument("-o", "--output", action="store",
                             dest="output",
                             help="where to output the rendered documentation")
+        parser.add_argument("--get-conf-key", action="store",
+                            help="print the value for a configuration key")
+        parser.add_argument("--get-conf-path", action="store",
+                            help="print the value for a configuration path")
+        parser.add_argument("--get-markdown-files", action="store_true",
+                            help="print the list of standalone markdown files")
+        parser.add_argument("--get-private-folder", action="store_true",
+                            help="get the path to hotdoc's private folder")
         parser.add_argument("--output-format", action="store",
                             dest="output_format", help="format for the output",
                             default="html")
@@ -323,14 +371,21 @@ class DocRepo(object):
         args = parser.parse_args(args)
         self.__load_config(parser, args)
 
+        if self.__conf_file is not None:
+            hash_obj = hashlib.md5(self.__conf_file)
+            priv_name = 'hotdoc-private-' + hash_obj.hexdigest()
+        else:
+            priv_name = 'hotdoc-private'
+
+        self.__private_folder = os.path.abspath(priv_name)
+
         cmd = args.command
 
         if cmd == 'help':
             parser.print_help()
             sys.exit(0)
         elif cmd is None:
-            if args.version:
-                print VERSION
+            self.__check_initial_args(args)
             sys.exit(0)
 
         configured = set()
@@ -408,7 +463,7 @@ class DocRepo(object):
         """
         Banana banana
         """
-        output = self.config.get('output', None)
+        output = self.config.get_path('output')
         if output is not None:
             self.output = os.path.abspath(output)
         else:

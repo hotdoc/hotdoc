@@ -118,21 +118,36 @@ class ConfigParser(object):
         all_files = OrderedSet()
         for item in source_patterns:
             item = self.__abspath(item, from_conf)
-            all_files |= glob.glob(item)
+            if '*' in item:
+                all_files |= glob.glob(item)
+            else:
+                all_files.add(item)
 
         return all_files
 
     # pylint: disable=no-self-use
-    def __get_markdown_files(self, dir_):
+    def get_markdown_files(self, dir_):
+        """
+        Get all the markdown files in a folder, recursively
+
+        Args:
+            dir_: str, a toplevel folder to walk.
+        """
         md_files = OrderedSet()
         for root, _, files in os.walk(dir_):
             for name in files:
                 split = os.path.splitext(name)
                 if len(split) == 1:
                     continue
-                if split[1] in ('markdown', 'md', 'yaml'):
+                if split[1] in ('.markdown', '.md', '.yaml'):
                     md_files.add(os.path.join(root, name))
         return md_files
+
+    def get_invoke_dir(self):
+        """
+        Banana banana
+        """
+        return self.__invoke_dir
 
     def get(self, key, default=None):
         """
@@ -178,7 +193,7 @@ class ConfigParser(object):
 
         return self.__abspath(index, from_conf)
 
-    def get_path(self, key):
+    def get_path(self, key, rel_to_cwd=False, rel_to_conf=False):
         """
         Retrieve a path from the config, resolving it against
         the invokation directory or the configuration file directory,
@@ -197,6 +212,13 @@ class ConfigParser(object):
         else:
             path = self.__config.get(key)
             from_conf = True
+
+        res = self.__abspath(path, from_conf)
+
+        if rel_to_cwd:
+            return os.path.relpath(res, self.__invoke_dir)
+        elif rel_to_conf:
+            return os.path.relpath(res, self.__conf_dir)
 
         return self.__abspath(path, from_conf)
 
@@ -287,7 +309,7 @@ class ConfigParser(object):
                 if path:
                     all_deps.add(path)
                     if key == 'index':
-                        all_deps |= self.__get_markdown_files(
+                        all_deps |= self.get_markdown_files(
                             os.path.dirname(path))
             elif key.endswith('sources'):
                 all_deps |= self.get_sources(key[:len('sources') * -1])
@@ -298,12 +320,16 @@ class ConfigParser(object):
                 if path:
                     all_deps.add(path)
                     if key == 'index':
-                        all_deps |= self.__get_markdown_files(
+                        all_deps |= self.get_markdown_files(
                             os.path.dirname(path))
             elif key.endswith('sources'):
                 all_deps |= self.get_sources(key[:len('sources') * -1])
 
-        return all_deps
+        if self.__conf_file is not None:
+            all_deps.add(self.__conf_file)
+
+        cwd = os.getcwd()
+        return [os.path.relpath(fname, cwd) for fname in all_deps]
 
     def print_make_dependencies(self):
         """

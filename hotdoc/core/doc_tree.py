@@ -862,6 +862,7 @@ class DocTree(object):
         Link.resolving_link_signal.connect(self.__link_referenced_cb)
 
         for page in self.walk():
+            info('formatting %s' % page.source_file, 'formatting')
             self.__current_page = page
             extension = extensions[page.extension_name]
             extension.format_page(page, link_resolver, output)

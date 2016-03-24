@@ -470,9 +470,10 @@ class BaseExtension(Configurable):
             languages = self._get_languages()
             if languages:
                 language = languages[0]
-                preamble = '## %s API reference\n' % language
+                preamble = '## %s API reference\n' % language.capitalize()
             else:
-                preamble = '## %s API reference\n' % self.EXTENSION_NAME
+                preamble = '## %s API reference\n' % (
+                    self.EXTENSION_NAME.capitalize())
 
         gen_paths = OrderedDict()
         full_gen_paths = set()
