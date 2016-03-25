@@ -104,12 +104,15 @@ class TestConfigParser(unittest.TestCase):
 
         cp = ConfigParser(conf_file=conf_file)
 
+        deps = set([os.path.abspath(dep) for dep in cp.get_dependencies()])
+
         self.assertSetEqual(
-            set(cp.get_dependencies()),
+            deps,
             set([os.path.join(self.__priv_dir, 'foo.x'),
                  os.path.join(self.__priv_dir, 'bar.x'),
                  os.path.join(self.__priv_dir, 'baz.x'),
                  os.path.join(self.__priv_dir, 'my_index.markdown'),
+                 conf_file,
                  '/home/meh/test_index.markdown']))
 
     def test_cli_overrides(self):
