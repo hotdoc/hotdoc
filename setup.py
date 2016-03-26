@@ -86,7 +86,9 @@ class CMarkExtension(Extension):
 CMARK_SOURCES = [os.path.join('hotdoc', 'parsers', f) for f in
                  ('cmark_module.c',
                   'cmark_gtkdoc_extension.c',
-                  'cmark_gtkdoc_scanner.c')]
+                  'cmark_gtkdoc_scanner.c',
+                  'cmark_include_extension.c',
+                  'cmark_include_scanner.c',)]
 
 for filename in os.listdir(CMARK_SRCDIR):
     if filename.endswith('.c'):
@@ -323,6 +325,7 @@ setup(name='hotdoc',
           'hotdoc.utils': ['hotdoc.m4'],
           'cmark': CMARK_DIST_FILES,
           'hotdoc.parsers': ['cmark_gtkdoc_extension.h',
+                             'cmark_include_extension.h'
                              'cmark_gtkdoc_scanner.h'],
       },
       install_requires=INSTALL_REQUIRES,

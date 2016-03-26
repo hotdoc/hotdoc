@@ -19,6 +19,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
+#ifndef __CMARK_GTKDOC_EXTENSION_H
+#define __CMARK_GTKDOC_EXTENSION_H
+
 #include "cmark.h"
 
 cmark_syntax_extension *cmark_gtkdoc_extension_new();
+
+#endif

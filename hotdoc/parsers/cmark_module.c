@@ -23,8 +23,10 @@
 
 #include "cmark.h"
 #include "cmark_gtkdoc_extension.h"
+#include "cmark_include_extension.h"
 
 static cmark_parser *gtkdoc_parser = NULL;
+static cmark_parser *hotdoc_parser = NULL;
 
 typedef struct {
   cmark_llist *empty_links;
@@ -43,16 +45,36 @@ gtkdoc_to_ast(PyObject *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "O!O", &PyUnicode_Type, &input, &link_resolver))
     return NULL;
 
-  doc = malloc(sizeof(CMarkDocument));
+  doc = calloc(1, sizeof(CMarkDocument));
 
   utf8 = PyUnicode_AsUTF8String(input);
   cmark_parser_feed(gtkdoc_parser, PyString_AsString(utf8), PyObject_Length(utf8));
   Py_DECREF(utf8);
 
   doc->root = cmark_parser_finish(gtkdoc_parser);
-  /* We fill those lazily in render */
-  doc->empty_links = NULL;
-  doc->lazy_loaded = false;
+
+  ret = PyCapsule_New((void *)doc, "cmark.document", NULL);
+
+  return ret;
+}
+
+static PyObject *
+hotdoc_to_ast(PyObject *self, PyObject *args) {
+  CMarkDocument *doc;
+  PyObject *input;
+  PyObject *utf8;
+  PyObject *ret;
+
+  if (!PyArg_ParseTuple(args, "O!O", &PyUnicode_Type, &input))
+    return NULL;
+
+  doc = calloc(1, sizeof(CMarkDocument));
+
+  utf8 = PyUnicode_AsUTF8String(input);
+  cmark_parser_feed(hotdoc_parser, PyString_AsString(utf8), PyObject_Length(utf8));
+  Py_DECREF(utf8);
+
+  doc->root = cmark_parser_finish(hotdoc_parser);
 
   ret = PyCapsule_New((void *)doc, "cmark.document", NULL);
 
@@ -165,6 +187,7 @@ ast_to_html(PyObject *self, PyObject *args) {
 
 static PyMethodDef ScannerMethods[] = {
   {"gtkdoc_to_ast",  gtkdoc_to_ast, METH_VARARGS, "Translate gtk-doc syntax to an opaque AST"},
+  {"hotdoc_to_ast", hotdoc_to_ast, METH_VARARGS, "Translate hotdoc syntax to an opaque AST"},
   {"ast_to_html",  ast_to_html, METH_VARARGS, "Translate an opaque AST to html"},
   {NULL, NULL, 0, NULL}
 };
@@ -179,6 +202,10 @@ initcmark(void)
   gtkdoc_parser = cmark_parser_new(0);
   cmark_parser_attach_syntax_extension(gtkdoc_parser,
       cmark_gtkdoc_extension_new());
+
+  hotdoc_parser = cmark_parser_new(0);
+  cmark_parser_attach_syntax_extension(hotdoc_parser,
+      cmark_include_extension_new());
 
   /* Who doesn't want tables, seriously ? */
   if (ptables_ext)

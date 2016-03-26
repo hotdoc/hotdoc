@@ -1,5 +1,5 @@
 /*
- * re2c syntax scanner for gtk-doc
+ * re2c syntax scanner for hotdoc includes
  *
  * Copyright 2016 Mathieu Duponchelle <mathieu.duponchelle@opencredd.com>
  * Copyright 2016 Collabora Ltd.
@@ -19,19 +19,17 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#ifndef __CMARK_GTKDOC_SCANNER_H
-#define __CMARK_GTKDOC_SCANNER_H
+#ifndef __CMARK_INCLUDE_SCANNER_H
+#define __CMARK_INCLUDE_SCANNER_H
 
 #include "cmark.h"
 
-cmark_bufsize_t _ext_scan_at(cmark_bufsize_t (*scanner)(const unsigned char *), const char *c,
+cmark_bufsize_t _include_ext_scan_at(cmark_bufsize_t (*scanner)(const unsigned char *), const char *c,
                    cmark_bufsize_t offset);
-cmark_bufsize_t _scan_open_gtkdoc_code_block(const unsigned char *p);
-cmark_bufsize_t _scan_close_gtkdoc_code_block(const unsigned char *p);
-cmark_bufsize_t _scan_language_comment(const unsigned char *p);
+cmark_bufsize_t _scan_open_include_block(const unsigned char *p);
+cmark_bufsize_t _scan_close_include_block(const unsigned char *p);
 
-#define scan_open_gtkdoc_code_block(c, n) _ext_scan_at(&_scan_open_gtkdoc_code_block, c, n)
-#define scan_close_gtkdoc_code_block(c, n) _ext_scan_at(&_scan_close_gtkdoc_code_block, c, n)
-#define scan_language_comment(c, n) _ext_scan_at(&_scan_language_comment, c, n)
+#define scan_open_include_block(c, n) _include_ext_scan_at(&_scan_open_include_block, c, n)
+#define scan_close_include_block(c, n) _include_ext_scan_at(&_scan_close_include_block, c, n)
 
 #endif

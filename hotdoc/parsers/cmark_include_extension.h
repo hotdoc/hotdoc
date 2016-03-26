@@ -1,5 +1,5 @@
 /*
- * re2c syntax scanner for gtk-doc
+ * CMark syntax extension for hotdoc
  *
  * Copyright 2016 Mathieu Duponchelle <mathieu.duponchelle@opencredd.com>
  * Copyright 2016 Collabora Ltd.
@@ -19,19 +19,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#ifndef __CMARK_GTKDOC_SCANNER_H
-#define __CMARK_GTKDOC_SCANNER_H
+#ifndef __CMARK_HOTDOC_EXTENSION_H
+#define __CMARK_HOTDOC_EXTENSION_H
 
 #include "cmark.h"
 
-cmark_bufsize_t _ext_scan_at(cmark_bufsize_t (*scanner)(const unsigned char *), const char *c,
-                   cmark_bufsize_t offset);
-cmark_bufsize_t _scan_open_gtkdoc_code_block(const unsigned char *p);
-cmark_bufsize_t _scan_close_gtkdoc_code_block(const unsigned char *p);
-cmark_bufsize_t _scan_language_comment(const unsigned char *p);
-
-#define scan_open_gtkdoc_code_block(c, n) _ext_scan_at(&_scan_open_gtkdoc_code_block, c, n)
-#define scan_close_gtkdoc_code_block(c, n) _ext_scan_at(&_scan_close_gtkdoc_code_block, c, n)
-#define scan_language_comment(c, n) _ext_scan_at(&_scan_language_comment, c, n)
+cmark_syntax_extension *cmark_include_extension_new();
 
 #endif
