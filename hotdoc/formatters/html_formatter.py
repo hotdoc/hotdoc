@@ -731,4 +731,4 @@ class HtmlFormatter(Formatter):
 
         HtmlFormatter.theme_path = html_theme
 
-        HtmlFormatter.add_anchors = bool(config.get("add_anchors"))
+        HtmlFormatter.add_anchors = bool(config.get("html_add_anchors"))
