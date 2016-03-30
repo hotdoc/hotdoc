@@ -26,6 +26,8 @@
 #include "cmark_include_extension.h"
 
 static cmark_parser *gtkdoc_parser = NULL;
+static cmark_syntax_extension *include_extension = NULL;
+static PyObject *include_resolver = NULL;
 static cmark_parser *hotdoc_parser = NULL;
 
 typedef struct {
@@ -58,6 +60,24 @@ gtkdoc_to_ast(PyObject *self, PyObject *args) {
   return ret;
 }
 
+static char *
+resolve_include(const char *uri) {
+  PyObject *contents;
+  char *res;
+
+  if (!include_resolver) {
+    return NULL;
+  }
+
+  contents = PyObject_CallMethod(include_resolver, "resolve", "s", uri);
+
+  res = PyString_AsString(contents);
+
+  Py_DECREF(contents);
+
+  return res;
+}
+
 static PyObject *
 hotdoc_to_ast(PyObject *self, PyObject *args) {
   CMarkDocument *doc;
@@ -65,10 +85,13 @@ hotdoc_to_ast(PyObject *self, PyObject *args) {
   PyObject *utf8;
   PyObject *ret;
 
-  if (!PyArg_ParseTuple(args, "O!O", &PyUnicode_Type, &input))
+  if (!PyArg_ParseTuple(args, "O!O", &PyUnicode_Type, &input, &include_resolver))
     return NULL;
 
   doc = calloc(1, sizeof(CMarkDocument));
+
+  cmark_include_extension_set_resolve_function(include_extension,
+      resolve_include);
 
   utf8 = PyUnicode_AsUTF8String(input);
   cmark_parser_feed(hotdoc_parser, PyString_AsString(utf8), PyObject_Length(utf8));
@@ -199,13 +222,14 @@ initcmark(void)
   cmark_init();
   cmark_syntax_extension *ptables_ext = cmark_find_syntax_extension("piped-tables");
 
+  include_extension = cmark_include_extension_new();
+
   gtkdoc_parser = cmark_parser_new(0);
   cmark_parser_attach_syntax_extension(gtkdoc_parser,
       cmark_gtkdoc_extension_new());
 
   hotdoc_parser = cmark_parser_new(0);
-  cmark_parser_attach_syntax_extension(hotdoc_parser,
-      cmark_include_extension_new());
+  cmark_parser_attach_syntax_extension(hotdoc_parser, include_extension);
 
   /* Who doesn't want tables, seriously ? */
   if (ptables_ext)

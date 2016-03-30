@@ -18,6 +18,8 @@
 
 # pylint: disable=missing-docstring
 # pylint: disable=invalid-name
+# pylint: disable=no-self-use
+# pylint: disable=too-few-public-methods
 
 import unittest
 from hotdoc.parsers import cmark
@@ -26,6 +28,7 @@ from hotdoc.core.links import LinkResolver, Link
 
 
 class TestParser(unittest.TestCase):
+
     def setUp(self):
         self.doc_database = DocDatabase()
         self.link_resolver = LinkResolver(self.doc_database)
@@ -57,6 +60,7 @@ class TestParser(unittest.TestCase):
 
 
 class TestGtkDocExtension(unittest.TestCase):
+
     def setUp(self):
         self.doc_database = DocDatabase()
         self.link_resolver = LinkResolver(self.doc_database)
@@ -134,3 +138,72 @@ class TestGtkDocExtension(unittest.TestCase):
         self.assertOutputs(
             inp,
             u'<p>Should <em>match</em> please</p>\n')
+
+
+class MockIncludeResolver(object):
+
+    def resolve(self, filename):
+        if filename == 'simple_file.md':
+            return "simple file"
+        elif filename == 'empty_file.markdown':
+            return ""
+        elif filename == 'opens_code_block.md':
+            return "```"
+        return None
+
+
+class TestIncludeExtension(unittest.TestCase):
+
+    def setUp(self):
+        self.doc_database = DocDatabase()
+        self.link_resolver = LinkResolver(self.doc_database)
+        self.include_resolver = MockIncludeResolver()
+
+    def assertOutputs(self, inp, expected):
+        ast = cmark.hotdoc_to_ast(inp, self.include_resolver)
+        out = cmark.ast_to_html(ast, self.link_resolver)
+        self.assertEqual(out, expected)
+        return ast
+
+    def test_basic(self):
+        inp = u'I include a {{simple_file.md}}!'
+        self.assertOutputs(inp,
+                           u'<p>I include a simple file!</p>\n')
+
+    def test_no_such_file(self):
+        inp = u'I include a {{should_not_exist}}!'
+        self.assertOutputs(
+            inp,
+            u'<p>I include a FIXME: missing include: should_not_exist!</p>\n')
+
+    def test_in_code_block(self):
+        inp = (u'```\n'
+               '{{simple_file.md}}\n'
+               '```\n')
+        self.assertOutputs(
+            inp,
+            u'<pre><code>{{simple_file.md}}\n'
+            '</code></pre>\n')
+
+    def test_multiple_includes(self):
+        inp = (u'I include a {{simple_file.md}} and '
+               'another {{simple_file.md}}!\n')
+        self.assertOutputs(inp,
+                           u'<p>I include a simple file and '
+                           'another simple file!</p>\n')
+
+    def test_include_opens_code_block(self):
+        inp = (u'I include\n'
+               '{{opens_code_block.md}}{{simple_file.md}}')
+
+        self.assertOutputs(
+            inp,
+            (u'<p>I include</p>\n'
+             '<pre><code class="language-{{simple_file.md}}">'
+             '</code></pre>\n'))
+
+    def test_empty_file(self):
+        inp = u'I include an empty file{{empty_file.markdown}}!'
+        self.assertOutputs(
+            inp,
+            u'<p>I include an empty file!</p>\n')

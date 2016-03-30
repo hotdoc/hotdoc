@@ -29,3 +29,9 @@ You can then inspect the call tree profile with your preferred image viewer:
 ```
 xdg-open profile.svg
 ```
+
+### Updating cmark
+
+```
+git submodule update --remote
+```

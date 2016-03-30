@@ -24,6 +24,11 @@
 
 #include "cmark.h"
 
+typedef char * (*CMarkIncludeResolveFunc) (const char *uri);
+
 cmark_syntax_extension *cmark_include_extension_new();
+void cmark_include_extension_set_resolve_function(
+    cmark_syntax_extension *ext,
+    CMarkIncludeResolveFunc func);
 
 #endif

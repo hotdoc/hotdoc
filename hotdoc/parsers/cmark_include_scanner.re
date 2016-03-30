@@ -52,13 +52,22 @@ cmark_bufsize_t _include_ext_scan_at(cmark_bufsize_t (*scanner)(const unsigned c
   escaped_char = [\\][|!"#$%&'()*+,./:;<=>?@[\\\]^_`{}~-];
 */
 
-// Scan an opening gtk-doc code block.
 cmark_bufsize_t _scan_open_include_block(const unsigned char *p)
 {
   const unsigned char *marker = NULL;
   const unsigned char *start = p;
 /*!re2c
-  [^{][{{] { return (cmark_bufsize_t)(p - start); }
+  [^{]* [{]{2} / [^}]* [}]{2} { return (cmark_bufsize_t)(p - start); }
+  .?                        { return 0; }
+*/
+}
+
+cmark_bufsize_t _scan_close_include_block(const unsigned char *p)
+{
+  const unsigned char *marker = NULL;
+  const unsigned char *start = p;
+/*!re2c
+  [^}]* / [}]{2} { return (cmark_bufsize_t)(p - start); }
   .?                        { return 0; }
 */
 }
