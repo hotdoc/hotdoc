@@ -18,7 +18,7 @@
 
 """Base Hotdoc Exceptions"""
 
-from hotdoc.utils.loggable import Logger
+import io
 
 
 class HotdocException(Exception):
@@ -45,6 +45,34 @@ class InvalidOutputException(HotdocException):
     pass
 
 
-Logger.register_error_code('invalid-config', ConfigError)
-Logger.register_error_code('setup-issue', ConfigError)
-Logger.register_warning_code('parsing-issue', ParsingException)
+def _format_source_exception(filename, message, lineno, column):
+    with io.open(filename, 'r', encoding='utf-8') as _:
+        text = _.read().expandtabs()
+        lines = text.split('\n')
+
+    res = []
+
+    res.append('%s:%d:%d: %s' % (filename, lineno + 1, column + 1, message))
+
+    for i in range(max(0, lineno - CONTEXT_HEIGHT),
+                   min(len(lines), lineno + CONTEXT_HEIGHT + 1)):
+        res.append('%05d:%s' % (i + 1, lines[i]))
+        if i == lineno and column != -1:
+            res.append(' ' * (column + 5) + '^')
+
+    return '\n'.join(res)
+
+
+CONTEXT_HEIGHT = 2
+
+
+class HotdocSourceException(HotdocException):
+    """Banana banana"""
+    def __init__(self, message=None, filename=None, lineno=-1, column=-1):
+        self.filename = filename
+        self.lineno = lineno
+        self.column = column
+        if filename and lineno != -1:
+            message = _format_source_exception(filename, message,
+                                               lineno, column)
+        super(HotdocSourceException, self).__init__(message)
