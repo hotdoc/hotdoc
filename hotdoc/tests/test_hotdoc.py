@@ -37,6 +37,7 @@ class TestHotdoc(unittest.TestCase):
             here, 'html'))
         self.__remove_tmp_dirs()
         os.mkdir(self.__md_dir)
+        Logger.silent = True
 
     def tearDown(self):
         self.__remove_tmp_dirs()
