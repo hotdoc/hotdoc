@@ -23,10 +23,13 @@ Toolbox
 import collections
 import os
 import shutil
+import math
 import sys
 
 from pkg_resources import iter_entry_points
 from toposort import toposort_flatten
+
+from hotdoc.core.exceptions import HotdocSourceException
 
 WIN32 = (sys.platform == 'win32')
 
@@ -192,3 +195,41 @@ def touch(fname, times=None):
     """
     with open(fname, 'a'):
         os.utime(fname, times)
+
+
+def _round8(num):
+    return int(math.ceil(num / 8.0)) * 8
+
+
+class IndentError(HotdocSourceException):
+    """
+    Banana banana
+    """
+    pass
+
+
+def dedent(line):
+    """
+    Banana banana
+    """
+    indentation = 0
+    for char in line:
+        if char not in ' \t':
+            break
+        indentation += 1
+        if char == '\t':
+            indentation = _round8(indentation)
+
+    if indentation % 8 != 0:
+        raise IndentError(column=indentation)
+
+    return indentation / 8, line.strip()
+
+
+def dequote(line):
+    """
+    Banana banana
+    """
+    if (line[0] == line[-1]) and line.startswith(("'", '"')):
+        return line[1:-1]
+    return line
