@@ -34,6 +34,7 @@ typedef struct {
   cmark_llist *empty_links;
   cmark_node *root;
   bool lazy_loaded;
+  cmark_llist *symbol_names;
 } CMarkDocument;
 
 static PyObject *
@@ -78,6 +79,98 @@ resolve_include(const char *uri) {
   return res;
 }
 
+static bool filter_item(CMarkDocument *doc, cmark_node *item_first_child) {
+  cmark_node *para_first_child;
+  cmark_node *label;
+
+  if (cmark_node_get_type(item_first_child) != CMARK_NODE_PARAGRAPH)
+    return false;
+
+  para_first_child = cmark_node_first_child(item_first_child);
+
+  if (!para_first_child)
+    return false;
+
+  if (cmark_node_next(para_first_child))
+    return false;
+
+  if (cmark_node_get_type(para_first_child) != CMARK_NODE_LINK)
+    return false;
+
+  /* Even with no url, this will return the empty string */
+  if (cmark_node_get_url(para_first_child)[0])
+    return false;
+
+  label = cmark_node_first_child(para_first_child);
+
+  if (!label)
+    return false;
+
+  /* Should not happen, text nodes are consolidated */
+  if (cmark_node_next(label))
+    return false;
+
+  /* Should not happen, let's check anyway */
+  if (cmark_node_get_type(label) != CMARK_NODE_TEXT)
+    return false;
+
+  /* We have found a symbol name */
+  doc->symbol_names = cmark_llist_append(doc->symbol_names,
+    strdup(cmark_node_get_literal(label)));
+
+  return true;
+}
+
+static void filter_list(CMarkDocument *doc, cmark_node *list)
+{
+  cmark_event_type ev_type;
+  cmark_iter *iter;
+
+  iter = cmark_iter_new(list);
+  while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
+    cmark_node *cur = cmark_iter_get_node(iter);
+
+    if (cur == list)
+      continue;
+
+    if (cmark_node_get_type(cur) == CMARK_NODE_ITEM)
+      continue;
+
+    /* We only check top level item contents */
+    cmark_iter_reset(iter, cur, CMARK_EVENT_EXIT);
+
+    if (filter_item(doc, cur)) {
+      cmark_node_unlink(cmark_node_parent(cur));
+    }
+  }
+  cmark_iter_free(iter);
+}
+
+static void filter_symbol_names(CMarkDocument *doc)
+{
+  cmark_event_type ev_type;
+  cmark_iter *iter;
+
+  iter = cmark_iter_new(doc->root);
+
+  while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
+    cmark_node *cur = cmark_iter_get_node(iter);
+
+    if (cur == doc->root)
+      continue;
+
+    /* We only check top level elements */
+    cmark_iter_reset(iter, cur, CMARK_EVENT_EXIT);
+
+    if (cmark_node_get_type(cur) != CMARK_NODE_LIST)
+      continue;
+
+    filter_list(doc, cur);
+  }
+
+  cmark_iter_free(iter);
+}
+
 static PyObject *
 hotdoc_to_ast(PyObject *self, PyObject *args) {
   CMarkDocument *doc;
@@ -98,6 +191,8 @@ hotdoc_to_ast(PyObject *self, PyObject *args) {
   Py_DECREF(utf8);
 
   doc->root = cmark_parser_finish(hotdoc_parser);
+
+  filter_symbol_names(doc);
 
   ret = PyCapsule_New((void *)doc, "cmark.document", NULL);
 
@@ -208,9 +303,30 @@ ast_to_html(PyObject *self, PyObject *args) {
   return ret;
 }
 
+static PyObject *
+symbol_names_in_ast(PyObject *self, PyObject *args) {
+  PyObject *cap;
+  PyObject *ret;
+  CMarkDocument *doc;
+  cmark_llist *tmp;
+
+  PyArg_ParseTuple(args, "O!", &PyCapsule_Type, &cap);
+
+  doc = PyCapsule_GetPointer(cap, "cmark.document");
+
+  ret = PyList_New(0);
+
+  for (tmp = doc->symbol_names; tmp; tmp = tmp->next) {
+    PyList_Append(ret, PyString_FromString((char *)tmp->data));
+  }
+
+  return ret;
+}
+
 static PyMethodDef ScannerMethods[] = {
   {"gtkdoc_to_ast",  gtkdoc_to_ast, METH_VARARGS, "Translate gtk-doc syntax to an opaque AST"},
   {"hotdoc_to_ast", hotdoc_to_ast, METH_VARARGS, "Translate hotdoc syntax to an opaque AST"},
+  {"symbol_names_in_ast", symbol_names_in_ast, METH_VARARGS, "Retrieve symbol names from opaque AST"},
   {"ast_to_html",  ast_to_html, METH_VARARGS, "Translate an opaque AST to html"},
   {NULL, NULL, 0, NULL}
 };
@@ -228,7 +344,7 @@ initcmark(void)
   cmark_parser_attach_syntax_extension(gtkdoc_parser,
       cmark_gtkdoc_extension_new());
 
-  hotdoc_parser = cmark_parser_new(0);
+  hotdoc_parser = cmark_parser_new(CMARK_OPT_NORMALIZE);
   cmark_parser_attach_syntax_extension(hotdoc_parser, include_extension);
 
   /* Who doesn't want tables, seriously ? */

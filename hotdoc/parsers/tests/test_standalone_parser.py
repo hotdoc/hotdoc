@@ -26,17 +26,14 @@ import shutil
 import io
 import os
 
+from hotdoc.core.doc_database import DocDatabase
+from hotdoc.core.links import LinkResolver
+from hotdoc.parsers import cmark
 from hotdoc.parsers.standalone_parser import (
     SitemapParser, SitemapDuplicateError,
     SitemapError)
 from hotdoc.utils.utils import IndentError
 from hotdoc.utils.loggable import Logger
-
-
-class TestStandaloneParser(unittest.TestCase):
-
-    def test_basic(self):
-        pass
 
 
 class TestSitemapParser(unittest.TestCase):
@@ -145,3 +142,36 @@ class TestSitemapParser(unittest.TestCase):
             self.parse(inp)
         self.assertEqual(cm.exception.lineno, 1)
         self.assertEqual(cm.exception.column, 0)
+
+
+class TestStandaloneParser(unittest.TestCase):
+
+    def setUp(self):
+        self.doc_database = DocDatabase()
+        self.link_resolver = LinkResolver(self.doc_database)
+
+    def test_symbol_lists(self):
+        inp = (u'### A title\n'
+               '\n'
+               'A paragraph with *an inline*\n'
+               '\n'
+               '* [A link with no url]()\n'
+               '* [A_link_with_a_url](test.com)\n'
+               '* [A link followed by stuff](test.com) stuff\n')
+
+        ast = cmark.hotdoc_to_ast(inp, None)
+
+        # The empty link should have been filtered out
+        self.assertEqual(
+            cmark.ast_to_html(ast, self.link_resolver),
+            (u'<h3>A title</h3>\n'
+             '<p>A paragraph with <em>an inline</em></p>\n'
+             '<ul>\n'
+             '<li><a href="test.com">A_link_with_a_url</a></li>\n'
+             '<li><a href="test.com">A link followed by stuff</a> stuff</li>\n'
+             '</ul>\n'))
+
+        # And collected in the symbol names
+        self.assertListEqual(
+            cmark.symbol_names_in_ast(ast),
+            [u'A link with no url'])
