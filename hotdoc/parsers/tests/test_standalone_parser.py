@@ -20,19 +20,22 @@
 # pylint: disable=invalid-name
 # pylint: disable=no-self-use
 # pylint: disable=too-few-public-methods
+# pylint: disable=too-many-instance-attributes
 
 import unittest
 import shutil
 import io
 import os
 
+from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.links import LinkResolver
+from hotdoc.core.symbols import FunctionSymbol
 from hotdoc.parsers import cmark
 from hotdoc.parsers.standalone_parser import (
     SitemapParser, SitemapDuplicateError,
-    SitemapError)
-from hotdoc.utils.utils import IndentError
+    SitemapError, Extension, DocTree)
+from hotdoc.utils.utils import IndentError, OrderedSet, touch
 from hotdoc.utils.loggable import Logger
 
 
@@ -175,3 +178,234 @@ class TestStandaloneParser(unittest.TestCase):
         self.assertListEqual(
             cmark.symbol_names_in_ast(ast),
             [u'A link with no url'])
+
+
+class TestExtension(Extension):
+    extension_name = 'test-extension'
+    argument_prefix = 'test'
+
+    def __init__(self, doc_repo):
+        self.formatters = {'html': None}
+        super(TestExtension, self).__init__(doc_repo)
+
+    def setup(self):
+        stale, _ = self.get_stale_files(self.sources)
+        for source in stale:
+            with open(source, 'r') as _:
+                for l in _.readlines():
+                    l = l.strip()
+                    self.get_or_create_symbol(
+                        FunctionSymbol,
+                        unique_name=l, filename=source)
+
+    def _get_all_sources(self):
+        return self.sources
+
+
+class TestDocTree(unittest.TestCase):
+    def setUp(self):
+        here = os.path.dirname(__file__)
+        self.__md_dir = os.path.abspath(os.path.join(
+            here, 'tmp-markdown-files'))
+        self.__priv_dir = os.path.abspath(os.path.join(
+            here, 'tmp-private'))
+        self.__src_dir = os.path.abspath(os.path.join(
+            here, 'tmp-src-files'))
+        self.__remove_tmp_dirs()
+        os.mkdir(self.__md_dir)
+        os.mkdir(self.__priv_dir)
+        os.mkdir(self.__src_dir)
+        os.mkdir(self.get_generated_doc_folder())
+        self.include_paths = OrderedSet([self.__md_dir])
+        self.include_paths.add(self.get_generated_doc_folder())
+
+        # Using the real doc database is too costly, tests should be lightning
+        # fast (and they are)
+        self.doc_database = DocDatabase()
+        self.doc_database.setup(self.__priv_dir)
+
+        self.change_tracker = ChangeTracker()
+
+        self.sitemap_parser = SitemapParser()
+
+        self.test_ext = TestExtension(self)
+
+    def tearDown(self):
+        self.__remove_tmp_dirs()
+        del self.test_ext
+
+    def get_generated_doc_folder(self):
+        return os.path.join(self.__priv_dir, 'generated')
+
+    def get_base_doc_folder(self):
+        return self.__md_dir
+
+    def get_private_folder(self):
+        return self.__priv_dir
+
+    def __parse_sitemap(self, text):
+        path = os.path.join(self.__md_dir, 'sitemap.txt')
+        with io.open(path, 'w', encoding='utf-8') as _:
+            _.write(text)
+        return self.sitemap_parser.parse(path)
+
+    def __create_md_file(self, name, contents):
+        with open(os.path.join(self.__md_dir, name), 'w') as _:
+            _.write(contents)
+
+    def __create_src_file(self, name, symbols):
+        path = os.path.join(self.__md_dir, name)
+        with open(path, 'w') as _:
+            for symbol in symbols:
+                _.write('%s\n' % symbol)
+        return path
+
+    def __remove_tmp_dirs(self):
+        shutil.rmtree(self.__md_dir, ignore_errors=True)
+        shutil.rmtree(self.__priv_dir, ignore_errors=True)
+        shutil.rmtree(self.__src_dir, ignore_errors=True)
+        shutil.rmtree(self.get_generated_doc_folder(), ignore_errors=True)
+
+    def test_basic(self):
+        inp = (u'index.markdown\n'
+               '\tsection.markdown')
+        sitemap = self.__parse_sitemap(inp)
+        self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+        self.__create_md_file(
+            'section.markdown',
+            (u'# My section\n'))
+
+        doc_tree = DocTree(self.__priv_dir, self.include_paths)
+        doc_tree.parse_sitemap(self.change_tracker, sitemap)
+
+        pages = doc_tree.get_pages()
+
+        # We do not care about ordering
+        self.assertSetEqual(
+            set(pages.keys()),
+            set([u'index.markdown',
+                 u'section.markdown']))
+
+    def test_basic_incremental(self):
+        inp = (u'index.markdown\n'
+               '\tsection.markdown')
+        sitemap = self.__parse_sitemap(inp)
+        self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+        self.__create_md_file(
+            'section.markdown',
+            (u'# My section\n'))
+
+        doc_tree = DocTree(self.__priv_dir, self.include_paths)
+        doc_tree.parse_sitemap(self.change_tracker, sitemap)
+
+        # Building from scratch, all pages are stale
+        self.assertSetEqual(
+            set(doc_tree.get_stale_pages()),
+            set([u'index.markdown',
+                 u'section.markdown']))
+
+        doc_tree.persist()
+
+        doc_tree = DocTree(self.__priv_dir, self.include_paths)
+        doc_tree.parse_sitemap(self.change_tracker, sitemap)
+
+        # Nothing changed, no page is stale
+        self.assertSetEqual(
+            set(doc_tree.get_stale_pages()),
+            set({}))
+
+        # But we still have our pages
+        self.assertSetEqual(
+            set(doc_tree.get_pages()),
+            set([u'index.markdown',
+                 u'section.markdown']))
+
+        touch(os.path.join(self.__md_dir, u'section.markdown'))
+
+        doc_tree = DocTree(self.__priv_dir, self.include_paths)
+        doc_tree.parse_sitemap(self.change_tracker, sitemap)
+
+        self.assertSetEqual(
+            set(doc_tree.get_stale_pages()),
+            set([u'section.markdown']))
+
+    def __assert_extension_names(self, doc_tree, name_map):
+        pages = doc_tree.get_pages()
+        for name, ext_name in name_map.items():
+            page = pages[name]
+            self.assertEqual(ext_name, page.extension_name)
+
+    def __assert_stale(self, doc_tree, expected_stale):
+        stale_pages = doc_tree.get_stale_pages()
+        for pagename in expected_stale:
+            self.assertIn(pagename, stale_pages)
+            stale_pages.pop(pagename)
+        self.assertEqual(len(stale_pages), 0)
+
+    def __create_test_layout(self):
+        inp = (u'index.markdown\n'
+               '\ttest-index\n'
+               '\t\tpage_x.markdown\n'
+               '\t\tpage_y.markdown\n'
+               '\tcore_page.markdown\n')
+
+        sources = []
+
+        sources.append(self.__create_src_file(
+            'source_a.test',
+            ['symbol_1',
+             'symbol_2']))
+
+        sources.append(self.__create_src_file(
+            'source_b.test',
+            ['symbol_3',
+             'symbol_4']))
+
+        self.test_ext.index = 'test-index.markdown'
+        self.test_ext.sources = sources
+        self.test_ext.setup()
+
+        sitemap = self.__parse_sitemap(inp)
+
+        self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+        self.__create_md_file(
+            'core_page.markdown',
+            (u'# My non-extension page\n'))
+        self.__create_md_file(
+            'test-index.markdown',
+            (u'# My test index\n'))
+        self.__create_md_file(
+            'page_x.markdown',
+            (u'# Page X\n'
+             '\n'
+             '* [symbol_3]()\n'))
+        self.__create_md_file(
+            'page_y.markdown',
+            (u'# Page Y\n'))
+
+        doc_tree = DocTree(self.__priv_dir, self.include_paths)
+        doc_tree.parse_sitemap(self.change_tracker, sitemap)
+
+        return doc_tree, sitemap
+
+    def test_extension_basic(self):
+        doc_tree, _ = self.__create_test_layout()
+        self.__assert_extension_names(
+            doc_tree,
+            {u'index.markdown': 'core',
+             u'test-index': 'test-extension',
+             u'source_a': 'test-extension',
+             u'source_b': 'test-extension',
+             u'page_x.markdown': 'test-extension',
+             u'page_y.markdown': 'test-extension',
+             u'core_page.markdown': 'core'})
+
+        all_pages = doc_tree.get_pages()
+        self.assertEqual(len(all_pages), 7)
+        self.__assert_stale(doc_tree, all_pages)
