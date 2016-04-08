@@ -189,12 +189,13 @@ class OrderedSet(collections.MutableSet):
         return set(self) == set(other)
 
 
-def touch(fname, times=None):
+def touch(fname):
     """
     Mimic the `touch` command
     """
+    mtime = get_mtime(fname)
     with open(fname, 'a'):
-        os.utime(fname, times)
+        os.utime(fname, (mtime + 1, mtime + 1))
 
 
 def _round8(num):
