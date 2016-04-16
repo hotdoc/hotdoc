@@ -488,9 +488,20 @@ class Extension(Configurable):
 
         return sym
 
-    def __resolve_placeholder_cb(self, doc_tree, name):
+    def __resolve_placeholder_cb(self, doc_tree, name, include_paths):
+        self.__find_package_root()
+
+        override_path = os.path.join(self.__package_root, name)
         if name == '%s-index' % self.argument_prefix:
-            return (self.index or True, self.extension_name)
+            if self.index:
+                path = find_md_file(self.index, include_paths)
+                assert path is not None
+                return path, self.extension_name
+            return True, self.extension_name
+        elif override_path in self._get_all_sources():
+            path = find_md_file('%s.markdown' % name, include_paths)
+            print "resolved", name, path
+            return path or True, None
         return None
 
     def __update_doc_tree_cb(self, doc_tree):
@@ -507,6 +518,9 @@ class Extension(Configurable):
             self.__add_subpage(doc_tree, index, source_file, symbols)
 
     def __find_package_root(self):
+        if self.__package_root is not None:
+            return
+
         commonprefix = os.path.commonprefix(self._get_all_sources())
         self.__package_root = os.path.dirname(commonprefix)
 
@@ -516,10 +530,14 @@ class Extension(Configurable):
 
     def __add_subpage(self, doc_tree, index, source_file, symbols):
         page_name = self.__get_rel_source_path(source_file)
-        page = Page(page_name, None)
+        page = doc_tree.get_pages().get(page_name)
+
+        if not page:
+            page = Page(page_name, None)
+            page.extension_name = self.extension_name
+            doc_tree.add_page(index, page)
+
         page.symbol_names |= symbols
-        page.extension_name = self.extension_name
-        doc_tree.add_page(index, page)
 
     def __get_user_symbols(self, pages):
         symbols = set()
@@ -528,8 +546,7 @@ class Extension(Configurable):
         return symbols
 
     def __get_rel_source_path(self, source_file):
-        stripped = os.path.splitext(source_file)[0]
-        return os.path.relpath(stripped, self.__package_root)
+        return os.path.relpath(source_file, self.__package_root)
 
     def _get_languages(self):
         return []
@@ -602,18 +619,19 @@ class DocTree(object):
         source_map = {}
 
         for fname in sitemap.get_all_sources().keys():
-            resolved = self.resolve_placeholder_signal(self, fname)
+            resolved = self.resolve_placeholder_signal(
+                self, fname, self.__include_paths)
             if resolved is None:
                 source_file = find_md_file(fname, self.__include_paths)
                 source_files.append(source_file)
                 source_map[source_file] = fname
             else:
                 resolved, ext_name = resolved
-                self.__placeholders[fname] = ext_name
+                if ext_name:
+                    self.__placeholders[fname] = ext_name
                 if resolved is not True:
-                    source_file = find_md_file(resolved, self.__include_paths)
-                    source_files.append(source_file)
-                    source_map[source_file] = fname
+                    source_files.append(resolved)
+                    source_map[resolved] = fname
 
         stale, _ = change_tracker.get_stale_files(
             source_files, 'user-pages')
@@ -644,6 +662,7 @@ class DocTree(object):
                 level_and_name[0] = -1
 
             page = self.__all_pages.get(name)
+            print name, page
             page.extension_name = level_and_name[1]
 
         sitemap.walk(_update_sitemap)

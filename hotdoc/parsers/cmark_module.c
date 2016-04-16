@@ -171,6 +171,28 @@ static void filter_symbol_names(CMarkDocument *doc)
   cmark_iter_free(iter);
 }
 
+static void collect_subpage_links(CMarkDocument *doc)
+{
+  cmark_event_type ev_type;
+  cmark_iter *iter;
+
+  iter = cmark_iter_new(doc->root);
+
+  while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
+    cmark_node *cur = cmark_iter_get_node(iter);
+
+    if (ev_type != CMARK_EVENT_ENTER)
+      continue;
+
+    if (cmark_node_get_type(cur) != CMARK_NODE_LINK)
+      continue;
+
+    printf("One link with url %s\n", cmark_node_get_url(cur));
+  }
+
+  cmark_iter_free(iter);
+}
+
 static PyObject *
 hotdoc_to_ast(PyObject *self, PyObject *args) {
   CMarkDocument *doc;
@@ -193,6 +215,8 @@ hotdoc_to_ast(PyObject *self, PyObject *args) {
   doc->root = cmark_parser_finish(hotdoc_parser);
 
   filter_symbol_names(doc);
+
+  collect_subpage_links(doc);
 
   ret = PyCapsule_New((void *)doc, "cmark.document", NULL);
 
@@ -323,10 +347,25 @@ symbol_names_in_ast(PyObject *self, PyObject *args) {
   return ret;
 }
 
+static PyObject *
+update_subpage_links(PyObject *self, PyObject *args) {
+  PyObject *cap;
+  PyObject *links;
+  CMarkDocument *doc;
+
+  PyArg_ParseTuple(args, "O!O!", &PyCapsule_Type, &cap, &PySet_Type, &links);
+
+  doc = PyCapsule_GetPointer(cap, "cmark.document");
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
 static PyMethodDef ScannerMethods[] = {
   {"gtkdoc_to_ast",  gtkdoc_to_ast, METH_VARARGS, "Translate gtk-doc syntax to an opaque AST"},
   {"hotdoc_to_ast", hotdoc_to_ast, METH_VARARGS, "Translate hotdoc syntax to an opaque AST"},
   {"symbol_names_in_ast", symbol_names_in_ast, METH_VARARGS, "Retrieve symbol names from opaque AST"},
+  {"update_subpage_links", update_subpage_links, METH_VARARGS, "Update subpage links in opaque AST"},
   {"ast_to_html",  ast_to_html, METH_VARARGS, "Translate an opaque AST to html"},
   {NULL, NULL, 0, NULL}
 };

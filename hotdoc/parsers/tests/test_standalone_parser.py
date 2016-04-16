@@ -349,6 +349,8 @@ class TestDocTree(unittest.TestCase):
     def __create_test_layout(self):
         inp = (u'index.markdown\n'
                '\ttest-index\n'
+               '\t\ttest-section.markdown\n'
+               '\t\t\tsource_a.test\n'
                '\t\tpage_x.markdown\n'
                '\t\tpage_y.markdown\n'
                '\tcore_page.markdown\n')
@@ -381,6 +383,11 @@ class TestDocTree(unittest.TestCase):
             'test-index.markdown',
             (u'# My test index\n'))
         self.__create_md_file(
+            'test-section.markdown',
+            (u'# My test section\n'
+             '\n'
+             'Linking to [a generated page](source_a.test)\n'))
+        self.__create_md_file(
             'page_x.markdown',
             (u'# Page X\n'
              '\n'
@@ -392,20 +399,33 @@ class TestDocTree(unittest.TestCase):
         doc_tree = DocTree(self.__priv_dir, self.include_paths)
         doc_tree.parse_sitemap(self.change_tracker, sitemap)
 
-        return doc_tree, sitemap
+        return doc_tree
 
     def test_extension_basic(self):
-        doc_tree, _ = self.__create_test_layout()
+        doc_tree = self.__create_test_layout()
         self.__assert_extension_names(
             doc_tree,
             {u'index.markdown': 'core',
              u'test-index': 'test-extension',
-             u'source_a': 'test-extension',
-             u'source_b': 'test-extension',
+             u'test-section.markdown': 'test-extension',
+             u'source_a.test': 'test-extension',
+             u'source_b.test': 'test-extension',
              u'page_x.markdown': 'test-extension',
              u'page_y.markdown': 'test-extension',
              u'core_page.markdown': 'core'})
 
         all_pages = doc_tree.get_pages()
-        self.assertEqual(len(all_pages), 7)
+        self.assertEqual(len(all_pages), 8)
         self.__assert_stale(doc_tree, all_pages)
+        self.assertNotIn('source_a.test', all_pages['test-index'].subpages)
+        self.assertIn('source_a.test',
+                      all_pages['test-section.markdown'].subpages)
+
+    def test_extension_override(self):
+        self.__create_md_file(
+            'source_a.test.markdown',
+            (u'# My override\n'))
+        doc_tree = self.__create_test_layout()
+        page = doc_tree.get_pages()['source_a.test']
+        print cmark.ast_to_html(page.ast, None)
+        print page.symbol_names
