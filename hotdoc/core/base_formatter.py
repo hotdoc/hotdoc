@@ -56,6 +56,7 @@ class Formatter(Configurable):
     formatting_symbol_signal = Signal()
     writing_page_signal = Signal()
     editing_server = None
+    extra_assets = None
 
     # pylint: disable=no-self-use
     def _get_assets_path(self):
@@ -87,6 +88,17 @@ class Formatter(Configurable):
 
         return symbol.detailed_description
 
+    def __copy_extra_assets(self, output):
+        for src in self.extra_assets:
+            dest = os.path.join(output, os.path.basename(src))
+
+            destdir = os.path.dirname(dest)
+            if not os.path.exists(destdir):
+                os.makedirs(destdir)
+
+            if os.path.isdir(src):
+                recursive_overwrite(src, dest)
+
     def __copy_extra_files(self, assets_path):
         if not os.path.exists(assets_path):
             os.mkdir(assets_path)
@@ -113,6 +125,7 @@ class Formatter(Configurable):
             out = page.detailed_description
             _.write(out.encode('utf-8'))
         self.__copy_extra_files(os.path.join(output, 'assets'))
+        self.__copy_extra_assets(output)
 
     def format_docstring(self, docstring, link_resolver, to_native=False):
         """Formats a doc string.
@@ -206,9 +219,14 @@ class Formatter(Configurable):
         group.add_argument("--editing-server", action="store",
                            dest="editing_server", help="Editing server url,"
                            " if provided, an edit button will be added")
+        group.add_argument(
+            "--extra-assets",
+            help="Extra asset folders to copy in the output",
+            action='append', dest='extra_assets', default=[])
 
     @staticmethod
     def parse_config(doc_repo, config):
         """Banana banana
         """
         Formatter.editing_server = config.get('editing_server')
+        Formatter.extra_assets = config.get_paths('extra_assets')
