@@ -86,13 +86,15 @@ def _parse_yaml_folder(folder, yaml):
         # FIXME: Ahem
         contents = contents.replace('\\#', '#')
 
-        data = pyyaml.load(contents)
-        group = data.get("guide-group")
+        docs = list(pyyaml.load_all(contents))
 
-        if group:
-            yaml.group_to_pages[group].add(md_file)
+        if docs and docs[0]:
+            group = docs[0].get("guide-group")
 
-        yaml.page_to_meta[basename] = data
+            if group:
+                yaml.group_to_pages[group].add(md_file)
+
+            yaml.page_to_meta[basename] = docs[0]
 
 
 def _parse_yaml_folders(folders):
