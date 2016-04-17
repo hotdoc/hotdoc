@@ -245,10 +245,28 @@ class Page(object):
         self.detailed_description = None
         self.languages = []
 
+        self.__parse_yaml_metadata()
+
         try:
             self.mtime = os.path.getmtime(source_file)
         except OSError:
             self.mtime = -1
+
+    def __parse_yaml_metadata(self):
+        stripped = os.path.splitext(self.source_file)[0]
+        yaml_path = stripped + '.yaml'
+
+        if not os.path.exists(yaml_path):
+            return
+
+        with io.open(yaml_path, 'r', encoding='utf-8') as _:
+            docs = list(pyyaml.load_all(_.read()))
+
+        if not docs or not docs[0]:
+            return
+
+        metadata = docs[0]
+        self.short_description = metadata.get('short-description')
 
     def __getstate__(self):
         return {'symbol_names': self.symbol_names,
@@ -557,7 +575,7 @@ class PageParser(Configurable):
                     rep = next(rep for rep in replacements if rep is not None)
                     _set_label(self.__cmp, ast_node[0], rep)
                 except StopIteration:
-                    title = page.get_title() or original_name
+                    title = original_name
                     _set_label(self.__cmp, ast_node[0], title)
 
             desc = page.get_short_description()
