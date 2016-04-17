@@ -24,7 +24,17 @@ $(document).ready(function() {
 		if ($(this).attr('id'))
 			return;
 
-    		var hyphenated = $(this).text().replace(/\s/g,'-').toLowerCase();
-    		$(this).attr('id',hyphenated);
+    		var hyphenated = $(this).text().trim().replace(/\s/g,'-').toLowerCase();
+
+		hyphenated = hyphenated.replace(/[!\"#$%&'\(\)\*\+,\.\/:;<=>\?\@\[\\\]\^`\{\|\}~]/g, '');
+
+		var new_id = hyphenated;
+		var counter = 0;
+		while (($('#' + new_id).length)) {
+			counter += 1;
+			new_id = hyphenated + counter;
+		}
+
+    		$(this).attr('id', CSS.escape(new_id));
     	});
 });
