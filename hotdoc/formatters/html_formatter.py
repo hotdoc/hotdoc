@@ -122,8 +122,11 @@ class HtmlFormatter(Formatter):
                           VFunctionSymbol, EnumSymbol, ConstantSymbol,
                           ExportedVariableSymbol, AliasSymbol, CallbackSymbol]
 
-        searchpath.insert(0, str(os.path.join(HtmlFormatter.theme_path,
-                                              'templates')))
+        theme_templates_path = os.path.join(
+            HtmlFormatter.theme_path, 'templates')
+
+        if os.path.exists(theme_templates_path):
+            searchpath.insert(0, theme_templates_path)
 
         searchpath.append(os.path.join(HERE, "html_templates"))
         self.engine = Engine(
@@ -483,10 +486,13 @@ class HtmlFormatter(Formatter):
         """
         Banana banana
         """
-        template = self.engine.get_template('site_navigation.html')
-        if template:
+        try:
+            template = self.engine.get_template('site_navigation.html')
             return template.render({'root': root,
                                     'doc_tree': doc_tree})
+        except IOError:
+            pass
+
         return None
 
     def _format_prototype(self, function, is_pointer, title):
@@ -687,8 +693,9 @@ class HtmlFormatter(Formatter):
 
         if HtmlFormatter.theme_path:
             theme_files = os.listdir(HtmlFormatter.theme_path)
-            theme_files.remove('templates')
             for file_ in theme_files:
+                if file_ == 'templates':
+                    pass
                 src = os.path.join(HtmlFormatter.theme_path, file_)
                 dest = os.path.basename(src)
                 res.append((src, dest))

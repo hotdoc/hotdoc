@@ -979,6 +979,10 @@ class DocTree(object):
         # circumventing stupid chrome same origin policy
         formatter = extensions['core'].get_formatter('html')
         site_navigation = formatter.format_site_navigation(self.__root, self)
+
+        if not site_navigation:
+            return
+
         output = os.path.join(output, formatter.get_output_folder())
         path = os.path.join(output,
                             'assets',
