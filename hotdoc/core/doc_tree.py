@@ -984,6 +984,10 @@ class DocTree(object):
             return
 
         output = os.path.join(output, formatter.get_output_folder())
+
+        with open(os.path.join(output, 'site_navigation.html'), 'w') as _:
+            _.write(site_navigation)
+
         path = os.path.join(output,
                             'assets',
                             'js',
