@@ -434,6 +434,8 @@ class HtmlFormatter(Formatter):
         page.output_attrs['html']['stylesheets'] = set()
         if HtmlFormatter.add_anchors:
             page.output_attrs['html']['scripts'].add(
+                os.path.join(HERE, 'html_assets', 'css.escape.js'))
+            page.output_attrs['html']['scripts'].add(
                 os.path.join(HERE, 'html_assets', 'anchorizer.js'))
         Formatter.prepare_page_attributes(self, page)
 
