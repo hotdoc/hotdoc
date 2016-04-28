@@ -520,8 +520,8 @@ class Extension(Configurable):
         user_symbols = self.__get_user_symbols(user_pages)
 
         for source_file, symbols in self.__created_symbols.items():
-            symbols = symbols - user_symbols
-            self.__add_subpage(doc_tree, index, source_file, symbols)
+            gen_symbols = symbols - user_symbols
+            self.__add_subpage(doc_tree, index, source_file, gen_symbols)
             doc_tree.stale_symbol_pages(symbols)
 
     def __find_package_root(self):

@@ -405,6 +405,14 @@ class TestDocTree(unittest.TestCase):
 
         return doc_tree, sitemap
 
+    def __update_test_layout(self, doc_tree, sitemap):
+        self.test_ext.reset()
+        self.test_ext.setup()
+
+        doc_tree = DocTree(self.__priv_dir, self.include_paths)
+        doc_tree.parse_sitemap(self.change_tracker, sitemap)
+        return doc_tree
+
     def test_extension_basic(self):
         doc_tree, _ = self.__create_test_layout()
         self.__assert_extension_names(
@@ -449,9 +457,14 @@ class TestDocTree(unittest.TestCase):
         # all contained in a generated page, only that page
         # should now be stale
         self.__touch_src_file('source_a.test')
-        self.test_ext.reset()
-        self.test_ext.setup()
-
-        doc_tree = DocTree(self.__priv_dir, self.include_paths)
-        doc_tree.parse_sitemap(self.change_tracker, sitemap)
+        doc_tree = self.__update_test_layout(doc_tree, sitemap)
         self.__assert_stale(doc_tree, set(['source_a.test']))
+
+        # We now touch source_b.test, which symbols are contained
+        # both in a generated page and a user-provided one.
+        # We expect both pages to be stale
+        self.__touch_src_file('source_b.test')
+        doc_tree = self.__update_test_layout(doc_tree, sitemap)
+        self.__assert_stale(doc_tree,
+                            set(['source_b.test',
+                                 'page_x.markdown']))
