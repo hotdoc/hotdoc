@@ -427,5 +427,12 @@ class TestDocTree(unittest.TestCase):
             (u'# My override\n'))
         doc_tree = self.__create_test_layout()
         page = doc_tree.get_pages()['source_a.test']
-        print cmark.ast_to_html(page.ast, None)
-        print page.symbol_names
+
+        self.assertEqual(
+            page.symbol_names,
+            OrderedSet(['symbol_1',
+                        'symbol_2']))
+
+        self.assertEqual(
+            os.path.basename(page.source_file),
+            'source_a.test.markdown')

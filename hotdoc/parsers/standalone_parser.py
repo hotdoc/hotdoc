@@ -218,7 +218,7 @@ class Extension(Configurable):
     argument_prefix = ''
 
     index = None
-    sources = None
+    sources = set()
     paths_arguments = {}
     path_arguments = {}
     smart_index = False
@@ -500,7 +500,6 @@ class Extension(Configurable):
             return True, self.extension_name
         elif override_path in self._get_all_sources():
             path = find_md_file('%s.markdown' % name, include_paths)
-            print "resolved", name, path
             return path or True, None
         return None
 
@@ -617,6 +616,7 @@ class DocTree(object):
     def __parse_pages(self, change_tracker, sitemap):
         source_files = []
         source_map = {}
+        stale_pages = {}
 
         for fname in sitemap.get_all_sources().keys():
             resolved = self.resolve_placeholder_signal(
@@ -632,11 +632,12 @@ class DocTree(object):
                 if resolved is not True:
                     source_files.append(resolved)
                     source_map[resolved] = fname
+                else:
+                    if fname not in self.__all_pages:
+                        stale_pages[fname] = Page(fname, None)
 
         stale, _ = change_tracker.get_stale_files(
             source_files, 'user-pages')
-
-        stale_pages = {}
 
         for source_file in stale:
             stale_pages[source_map[source_file]] =\
@@ -662,7 +663,6 @@ class DocTree(object):
                 level_and_name[0] = -1
 
             page = self.__all_pages.get(name)
-            print name, page
             page.extension_name = level_and_name[1]
 
         sitemap.walk(_update_sitemap)

@@ -66,7 +66,9 @@ class TestHotdoc(unittest.TestCase):
                 'run']
         res = run(args)
         self.assertEqual(res, 0)
-        self.assertOutput(1)
+
+        # Account for the site navigation
+        self.assertOutput(2)
 
     def test_error(self):
         args = ['--index', os.path.join(self.__md_dir, 'index.markdown'),

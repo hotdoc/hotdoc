@@ -186,8 +186,6 @@ static void collect_subpage_links(CMarkDocument *doc)
 
     if (cmark_node_get_type(cur) != CMARK_NODE_LINK)
       continue;
-
-    printf("One link with url %s\n", cmark_node_get_url(cur));
   }
 
   cmark_iter_free(iter);
