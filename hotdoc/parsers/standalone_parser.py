@@ -573,6 +573,7 @@ class Page(object):
         self.source_file = source_file
         self.generated = False
         self.subpages = OrderedSet()
+        self.stale = True
         if ast is not None:
             self.symbol_names = OrderedSet(cmark.symbol_names_in_ast(ast))
         else:
@@ -583,6 +584,7 @@ class Page(object):
                 'extension_name': self.extension_name,
                 'source_file': self.source_file,
                 'generated': self.generated,
+                'stale': False,
                 'subpages': self.subpages,
                 'symbol_names': self.symbol_names}
 
@@ -604,7 +606,6 @@ class DocTree(object):
         except IOError:
             self.__all_pages = {}
 
-        self.__stale_pages = {}
         self.__placeholders = {}
         self.__root = None
         self.__dep_map = self.__create_dep_map()
@@ -635,7 +636,6 @@ class DocTree(object):
     def __parse_pages(self, change_tracker, sitemap):
         source_files = []
         source_map = {}
-        stale_pages = {}
 
         for fname in sitemap.get_all_sources().keys():
             resolved = self.resolve_placeholder_signal(
@@ -655,17 +655,14 @@ class DocTree(object):
                     if fname not in self.__all_pages:
                         page = Page(fname, None)
                         page.generated = True
-                        stale_pages[fname] = page
+                        self.__all_pages[fname] = page
 
         stale, _ = change_tracker.get_stale_files(
             source_files, 'user-pages')
 
         for source_file in stale:
-            stale_pages[source_map[source_file]] =\
-                self.__parse_page(source_file)
-
-        self.__stale_pages.update(stale_pages)
-        self.__all_pages.update(stale_pages)
+            page = self.__parse_page(source_file)
+            self.__all_pages[source_map[source_file]] = page
 
         for source_file in source_files:
             self.__all_pages[source_map[source_file]].subpages |=\
@@ -714,7 +711,6 @@ class DocTree(object):
         Banana banana
         """
         self.__all_pages[page.source_file] = page
-        self.__stale_pages[page.source_file] = page
         parent.subpages.add(page.source_file)
 
     def stale_symbol_pages(self, symbols):
@@ -725,7 +721,7 @@ class DocTree(object):
             pagename = self.__dep_map.get(sym)
             page = self.__all_pages.get(pagename)
             if page:
-                self.__stale_pages[page.source_file] = page
+                page.stale = True
 
     def parse_sitemap(self, change_tracker, sitemap):
         """
@@ -739,7 +735,11 @@ class DocTree(object):
         """
         Banana banana
         """
-        return self.__stale_pages
+        stale = {}
+        for pagename, page in self.__all_pages.items():
+            if page.stale:
+                stale[pagename] = page
+        return stale
 
     def get_pages(self):
         """

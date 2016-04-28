@@ -445,13 +445,13 @@ class TestDocTree(unittest.TestCase):
         doc_tree, sitemap = self.__create_test_layout()
         doc_tree.persist()
 
+        # Here we touch source_a.test, as its symbols were
+        # all contained in a generated page, only that page
+        # should now be stale
         self.__touch_src_file('source_a.test')
         self.test_ext.reset()
         self.test_ext.setup()
 
-        # Here we touch source_a.test, as its symbols were
-        # all contained in a generated page, only that page
-        # should now be stale
         doc_tree = DocTree(self.__priv_dir, self.include_paths)
         doc_tree.parse_sitemap(self.change_tracker, sitemap)
         self.__assert_stale(doc_tree, set(['source_a.test']))
