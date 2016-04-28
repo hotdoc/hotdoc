@@ -260,6 +260,10 @@ class TestDocTree(unittest.TestCase):
                 _.write('%s\n' % symbol)
         return path
 
+    def __touch_src_file(self, name):
+        path = os.path.join(self.__md_dir, name)
+        touch(path)
+
     def __remove_tmp_dirs(self):
         shutil.rmtree(self.__md_dir, ignore_errors=True)
         shutil.rmtree(self.__priv_dir, ignore_errors=True)
@@ -399,10 +403,10 @@ class TestDocTree(unittest.TestCase):
         doc_tree = DocTree(self.__priv_dir, self.include_paths)
         doc_tree.parse_sitemap(self.change_tracker, sitemap)
 
-        return doc_tree
+        return doc_tree, sitemap
 
     def test_extension_basic(self):
-        doc_tree = self.__create_test_layout()
+        doc_tree, _ = self.__create_test_layout()
         self.__assert_extension_names(
             doc_tree,
             {u'index.markdown': 'core',
@@ -425,7 +429,7 @@ class TestDocTree(unittest.TestCase):
         self.__create_md_file(
             'source_a.test.markdown',
             (u'# My override\n'))
-        doc_tree = self.__create_test_layout()
+        doc_tree, _ = self.__create_test_layout()
         page = doc_tree.get_pages()['source_a.test']
 
         self.assertEqual(
@@ -436,3 +440,18 @@ class TestDocTree(unittest.TestCase):
         self.assertEqual(
             os.path.basename(page.source_file),
             'source_a.test.markdown')
+
+    def test_extension_incremental(self):
+        doc_tree, sitemap = self.__create_test_layout()
+        doc_tree.persist()
+
+        self.__touch_src_file('source_a.test')
+        self.test_ext.reset()
+        self.test_ext.setup()
+
+        # Here we touch source_a.test, as its symbols were
+        # all contained in a generated page, only that page
+        # should now be stale
+        doc_tree = DocTree(self.__priv_dir, self.include_paths)
+        doc_tree.parse_sitemap(self.change_tracker, sitemap)
+        self.__assert_stale(doc_tree, set(['source_a.test']))

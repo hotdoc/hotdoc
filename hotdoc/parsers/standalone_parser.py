@@ -241,7 +241,6 @@ class Extension(Configurable):
             self.formatters = {"html": HtmlFormatter([])}
 
         self.__created_symbols = defaultdict(OrderedSet)
-        self.__overriden_md = {}
         self.__package_root = None
 
     # pylint: disable=no-self-use
@@ -302,6 +301,14 @@ class Extension(Configurable):
                 or `None`.
         """
         return self.formatters.get(output_format)
+
+    def reset(self):
+        """
+        This function is only useful for testing purposes, at least
+        for now.
+        """
+        self.__created_symbols = defaultdict(OrderedSet)
+        self.__package_root = None
 
     def setup(self):
         """
@@ -509,12 +516,13 @@ class Extension(Configurable):
         if index is None:
             return
 
-        user_pages = list(doc_tree.walk(index))
+        user_pages = [p for p in doc_tree.walk(index) if not p.generated]
         user_symbols = self.__get_user_symbols(user_pages)
 
         for source_file, symbols in self.__created_symbols.items():
             symbols = symbols - user_symbols
             self.__add_subpage(doc_tree, index, source_file, symbols)
+            doc_tree.stale_symbol_pages(symbols)
 
     def __find_package_root(self):
         if self.__package_root is not None:
@@ -534,6 +542,7 @@ class Extension(Configurable):
         if not page:
             page = Page(page_name, None)
             page.extension_name = self.extension_name
+            page.generated = True
             doc_tree.add_page(index, page)
 
         page.symbol_names |= symbols
@@ -562,6 +571,7 @@ class Page(object):
         self.ast = ast
         self.extension_name = None
         self.source_file = source_file
+        self.generated = False
         self.subpages = OrderedSet()
         if ast is not None:
             self.symbol_names = OrderedSet(cmark.symbol_names_in_ast(ast))
@@ -572,6 +582,7 @@ class Page(object):
         return {'ast': None,
                 'extension_name': self.extension_name,
                 'source_file': self.source_file,
+                'generated': self.generated,
                 'subpages': self.subpages,
                 'symbol_names': self.symbol_names}
 
@@ -596,6 +607,14 @@ class DocTree(object):
         self.__stale_pages = {}
         self.__placeholders = {}
         self.__root = None
+        self.__dep_map = self.__create_dep_map()
+
+    def __create_dep_map(self):
+        dep_map = {}
+        for pagename, page in self.__all_pages.items():
+            for sym_name in page.symbol_names:
+                dep_map[sym_name] = pagename
+        return dep_map
 
     def __load_private(self, name):
         path = os.path.join(self.__priv_dir, name)
@@ -634,7 +653,9 @@ class DocTree(object):
                     source_map[resolved] = fname
                 else:
                     if fname not in self.__all_pages:
-                        stale_pages[fname] = Page(fname, None)
+                        page = Page(fname, None)
+                        page.generated = True
+                        stale_pages[fname] = page
 
         stale, _ = change_tracker.get_stale_files(
             source_files, 'user-pages')
@@ -695,6 +716,16 @@ class DocTree(object):
         self.__all_pages[page.source_file] = page
         self.__stale_pages[page.source_file] = page
         parent.subpages.add(page.source_file)
+
+    def stale_symbol_pages(self, symbols):
+        """
+        Banana banana
+        """
+        for sym in symbols:
+            pagename = self.__dep_map.get(sym)
+            page = self.__all_pages.get(pagename)
+            if page:
+                self.__stale_pages[page.source_file] = page
 
     def parse_sitemap(self, change_tracker, sitemap):
         """
