@@ -204,14 +204,15 @@ static cmark_node *symbol_link_match(cmark_syntax_extension *self,
                                 cmark_inline_parser *inline_parser) {
   cmark_node *link;
   char *symbol_name;
-  char prev_char;
 
-  prev_char = cmark_inline_parser_peek_at(
-      inline_parser,
-      cmark_inline_parser_get_offset(inline_parser) - 1);
+  if (cmark_inline_parser_get_offset(inline_parser) > 0) {
+    char prev_char = cmark_inline_parser_peek_at(
+        inline_parser,
+        cmark_inline_parser_get_offset(inline_parser) - 1);
 
-  if (prev_char && prev_char != ' ' && prev_char != '\t' && prev_char != '\n')
-    return NULL;
+    if (prev_char && prev_char != ' ' && prev_char != '\t' && prev_char != '\n')
+      return NULL;
+  }
 
   cmark_inline_parser_advance_offset(inline_parser);
 
