@@ -57,7 +57,7 @@ cmark_bufsize_t _scan_open_include_block(const unsigned char *p)
   const unsigned char *marker = NULL;
   const unsigned char *start = p;
 /*!re2c
-  [^{]* [{]{2} / [^}]* [}]{2} { return (cmark_bufsize_t)(p - start); }
+  [^{\n]* [{]{2} / [^}\n]* [}]{2} { return (cmark_bufsize_t)(p - start); }
   .?                        { return 0; }
 */
 }
@@ -67,7 +67,7 @@ cmark_bufsize_t _scan_close_include_block(const unsigned char *p)
   const unsigned char *marker = NULL;
   const unsigned char *start = p;
 /*!re2c
-  [^}]* / [}]{2} { return (cmark_bufsize_t)(p - start); }
+  [^}\n]* / [}]{2} { return (cmark_bufsize_t)(p - start); }
   .?                        { return 0; }
 */
 }

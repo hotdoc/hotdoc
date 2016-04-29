@@ -51,7 +51,7 @@ cmark_bufsize_t _scan_open_include_block(const unsigned char *p)
 	unsigned char yych;
 	static const unsigned char yybm[] = {
 		192, 192, 192, 192, 192, 192, 192, 192, 
-		192, 192, 192, 192, 192, 192, 192, 192, 
+		192, 192,   0, 192, 192, 192, 192, 192, 
 		192, 192, 192, 192, 192, 192, 192, 192, 
 		192, 192, 192, 192, 192, 192, 192, 192, 
 		192, 192, 192, 192, 192, 192, 192, 192, 
@@ -86,42 +86,87 @@ cmark_bufsize_t _scan_open_include_block(const unsigned char *p)
 	yych = *(marker = p);
 	if (yych <= 0xDF) {
 		if (yych <= 'z') {
-			if (yych == '\n') goto yy4;
-			goto yy3;
+			if (yych != '\n') goto yy3;
 		} else {
-			if (yych <= '{') goto yy7;
+			if (yych <= '{') goto yy4;
 			if (yych <= 0x7F) goto yy3;
-			if (yych >= 0xC2) goto yy8;
+			if (yych >= 0xC2) goto yy5;
 		}
 	} else {
 		if (yych <= 0xEF) {
-			if (yych <= 0xE0) goto yy9;
-			if (yych == 0xED) goto yy11;
-			goto yy10;
+			if (yych <= 0xE0) goto yy7;
+			if (yych == 0xED) goto yy9;
+			goto yy8;
 		} else {
-			if (yych <= 0xF0) goto yy12;
-			if (yych <= 0xF3) goto yy13;
-			if (yych <= 0xF4) goto yy14;
+			if (yych <= 0xF0) goto yy10;
+			if (yych <= 0xF3) goto yy11;
+			if (yych <= 0xF4) goto yy12;
 		}
 	}
 yy2:
 	{ return 0; }
 yy3:
 	yych = *(marker = ++p);
-	if (yych <= 0x7F) goto yy5;
-	if (yych <= 0xC1) goto yy2;
-	if (yych <= 0xF4) goto yy5;
-	goto yy2;
+	if (yych <= 0x7F) {
+		if (yych == '\n') goto yy2;
+		goto yy14;
+	} else {
+		if (yych <= 0xC1) goto yy2;
+		if (yych <= 0xF4) goto yy14;
+		goto yy2;
+	}
 yy4:
+	yych = *(marker = ++p);
+	if (yych == '{') goto yy23;
+	goto yy2;
+yy5:
+	yych = *++p;
+	if (yych <= 0x7F) goto yy6;
+	if (yych <= 0xBF) goto yy3;
+yy6:
+	p = marker;
+	goto yy2;
+yy7:
+	yych = *++p;
+	if (yych <= 0x9F) goto yy6;
+	if (yych <= 0xBF) goto yy5;
+	goto yy6;
+yy8:
+	yych = *++p;
+	if (yych <= 0x7F) goto yy6;
+	if (yych <= 0xBF) goto yy5;
+	goto yy6;
+yy9:
+	yych = *++p;
+	if (yych <= 0x7F) goto yy6;
+	if (yych <= 0x9F) goto yy5;
+	goto yy6;
+yy10:
+	yych = *++p;
+	if (yych <= 0x8F) goto yy6;
+	if (yych <= 0xBF) goto yy8;
+	goto yy6;
+yy11:
+	yych = *++p;
+	if (yych <= 0x7F) goto yy6;
+	if (yych <= 0xBF) goto yy8;
+	goto yy6;
+yy12:
+	yych = *++p;
+	if (yych <= 0x7F) goto yy6;
+	if (yych <= 0x8F) goto yy8;
+	goto yy6;
+yy13:
 	++p;
 	yych = *p;
-yy5:
+yy14:
 	if (yybm[0+yych] & 64) {
-		goto yy4;
+		goto yy13;
 	}
 	if (yych <= 0xEC) {
 		if (yych <= 0xC1) {
-			if (yych <= '{') goto yy15;
+			if (yych <= '\n') goto yy6;
+			if (yych >= '|') goto yy6;
 		} else {
 			if (yych <= 0xDF) goto yy16;
 			if (yych <= 0xE0) goto yy17;
@@ -135,51 +180,9 @@ yy5:
 		} else {
 			if (yych <= 0xF3) goto yy21;
 			if (yych <= 0xF4) goto yy22;
+			goto yy6;
 		}
 	}
-yy6:
-	p = marker;
-	goto yy2;
-yy7:
-	yych = *(marker = ++p);
-	if (yych == '{') goto yy23;
-	goto yy2;
-yy8:
-	yych = *++p;
-	if (yych <= 0x7F) goto yy6;
-	if (yych <= 0xBF) goto yy3;
-	goto yy6;
-yy9:
-	yych = *++p;
-	if (yych <= 0x9F) goto yy6;
-	if (yych <= 0xBF) goto yy8;
-	goto yy6;
-yy10:
-	yych = *++p;
-	if (yych <= 0x7F) goto yy6;
-	if (yych <= 0xBF) goto yy8;
-	goto yy6;
-yy11:
-	yych = *++p;
-	if (yych <= 0x7F) goto yy6;
-	if (yych <= 0x9F) goto yy8;
-	goto yy6;
-yy12:
-	yych = *++p;
-	if (yych <= 0x8F) goto yy6;
-	if (yych <= 0xBF) goto yy10;
-	goto yy6;
-yy13:
-	yych = *++p;
-	if (yych <= 0x7F) goto yy6;
-	if (yych <= 0xBF) goto yy10;
-	goto yy6;
-yy14:
-	yych = *++p;
-	if (yych <= 0x7F) goto yy6;
-	if (yych <= 0x8F) goto yy10;
-	goto yy6;
-yy15:
 	yych = *++p;
 	if (yych == '{') goto yy23;
 	goto yy6;
@@ -187,7 +190,7 @@ yy16:
 	++p;
 	yych = *p;
 	if (yych <= 0x7F) goto yy6;
-	if (yych <= 0xBF) goto yy4;
+	if (yych <= 0xBF) goto yy13;
 	goto yy6;
 yy17:
 	++p;
@@ -238,6 +241,7 @@ yy25:
 	}
 	if (yych <= 0xEC) {
 		if (yych <= 0xC1) {
+			if (yych <= '\n') goto yy6;
 			if (yych >= '~') goto yy6;
 		} else {
 			if (yych <= 0xDF) goto yy27;
@@ -317,7 +321,7 @@ cmark_bufsize_t _scan_close_include_block(const unsigned char *p)
 	unsigned char yych;
 	static const unsigned char yybm[] = {
 		128, 128, 128, 128, 128, 128, 128, 128, 
-		128, 128, 128, 128, 128, 128, 128, 128, 
+		128, 128,   0, 128, 128, 128, 128, 128, 
 		128, 128, 128, 128, 128, 128, 128, 128, 
 		128, 128, 128, 128, 128, 128, 128, 128, 
 		128, 128, 128, 128, 128, 128, 128, 128, 
@@ -353,22 +357,21 @@ cmark_bufsize_t _scan_close_include_block(const unsigned char *p)
 	marker = p;
 	if (yych <= 0xDF) {
 		if (yych <= '|') {
-			if (yych == '\n') goto yy40;
-			goto yy39;
+			if (yych != '\n') goto yy39;
 		} else {
-			if (yych <= '}') goto yy43;
+			if (yych <= '}') goto yy40;
 			if (yych <= 0x7F) goto yy39;
-			if (yych >= 0xC2) goto yy44;
+			if (yych >= 0xC2) goto yy41;
 		}
 	} else {
 		if (yych <= 0xEF) {
-			if (yych <= 0xE0) goto yy45;
-			if (yych == 0xED) goto yy47;
-			goto yy46;
+			if (yych <= 0xE0) goto yy43;
+			if (yych == 0xED) goto yy45;
+			goto yy44;
 		} else {
-			if (yych <= 0xF0) goto yy48;
-			if (yych <= 0xF3) goto yy49;
-			if (yych <= 0xF4) goto yy50;
+			if (yych <= 0xF0) goto yy46;
+			if (yych <= 0xF3) goto yy47;
+			if (yych <= 0xF4) goto yy48;
 		}
 	}
 yy38:
@@ -376,21 +379,67 @@ yy38:
 yy39:
 	yych = *(marker = ++p);
 	marker = p;
-	if (yych <= 0x7F) goto yy41;
-	if (yych <= 0xC1) goto yy38;
-	if (yych <= 0xF4) goto yy41;
-	goto yy38;
+	if (yych <= 0x7F) {
+		if (yych == '\n') goto yy38;
+		goto yy50;
+	} else {
+		if (yych <= 0xC1) goto yy38;
+		if (yych <= 0xF4) goto yy50;
+		goto yy38;
+	}
 yy40:
+	yych = *++p;
+	if (yych == '}') goto yy59;
+	goto yy38;
+yy41:
+	yych = *++p;
+	if (yych <= 0x7F) goto yy42;
+	if (yych <= 0xBF) goto yy39;
+yy42:
+	p = marker;
+	goto yy38;
+yy43:
+	yych = *++p;
+	if (yych <= 0x9F) goto yy42;
+	if (yych <= 0xBF) goto yy41;
+	goto yy42;
+yy44:
+	yych = *++p;
+	if (yych <= 0x7F) goto yy42;
+	if (yych <= 0xBF) goto yy41;
+	goto yy42;
+yy45:
+	yych = *++p;
+	if (yych <= 0x7F) goto yy42;
+	if (yych <= 0x9F) goto yy41;
+	goto yy42;
+yy46:
+	yych = *++p;
+	if (yych <= 0x8F) goto yy42;
+	if (yych <= 0xBF) goto yy44;
+	goto yy42;
+yy47:
+	yych = *++p;
+	if (yych <= 0x7F) goto yy42;
+	if (yych <= 0xBF) goto yy44;
+	goto yy42;
+yy48:
+	yych = *++p;
+	if (yych <= 0x7F) goto yy42;
+	if (yych <= 0x8F) goto yy44;
+	goto yy42;
+yy49:
 	++p;
 	yych = *p;
 	marker = p;
-yy41:
+yy50:
 	if (yybm[0+yych] & 128) {
-		goto yy40;
+		goto yy49;
 	}
 	if (yych <= 0xEC) {
 		if (yych <= 0xC1) {
-			if (yych <= '}') goto yy51;
+			if (yych <= '\n') goto yy42;
+			if (yych >= '~') goto yy42;
 		} else {
 			if (yych <= 0xDF) goto yy52;
 			if (yych <= 0xE0) goto yy53;
@@ -404,51 +453,9 @@ yy41:
 		} else {
 			if (yych <= 0xF3) goto yy57;
 			if (yych <= 0xF4) goto yy58;
+			goto yy42;
 		}
 	}
-yy42:
-	p = marker;
-	goto yy38;
-yy43:
-	yych = *++p;
-	if (yych == '}') goto yy59;
-	goto yy38;
-yy44:
-	yych = *++p;
-	if (yych <= 0x7F) goto yy42;
-	if (yych <= 0xBF) goto yy39;
-	goto yy42;
-yy45:
-	yych = *++p;
-	if (yych <= 0x9F) goto yy42;
-	if (yych <= 0xBF) goto yy44;
-	goto yy42;
-yy46:
-	yych = *++p;
-	if (yych <= 0x7F) goto yy42;
-	if (yych <= 0xBF) goto yy44;
-	goto yy42;
-yy47:
-	yych = *++p;
-	if (yych <= 0x7F) goto yy42;
-	if (yych <= 0x9F) goto yy44;
-	goto yy42;
-yy48:
-	yych = *++p;
-	if (yych <= 0x8F) goto yy42;
-	if (yych <= 0xBF) goto yy46;
-	goto yy42;
-yy49:
-	yych = *++p;
-	if (yych <= 0x7F) goto yy42;
-	if (yych <= 0xBF) goto yy46;
-	goto yy42;
-yy50:
-	yych = *++p;
-	if (yych <= 0x7F) goto yy42;
-	if (yych <= 0x8F) goto yy46;
-	goto yy42;
-yy51:
 	yych = *++p;
 	if (yych == '}') goto yy59;
 	goto yy42;
@@ -456,7 +463,7 @@ yy52:
 	++p;
 	yych = *p;
 	if (yych <= 0x7F) goto yy42;
-	if (yych <= 0xBF) goto yy40;
+	if (yych <= 0xBF) goto yy49;
 	goto yy42;
 yy53:
 	++p;
