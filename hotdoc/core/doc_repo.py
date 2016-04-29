@@ -193,6 +193,7 @@ class DocRepo(object):
         """
         Banana banana
         """
+        self.formatted_signal.clear()
         if self.doc_database is not None:
             info('Closing database')
             self.doc_database.close()
