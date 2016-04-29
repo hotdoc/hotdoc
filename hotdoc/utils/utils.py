@@ -99,7 +99,7 @@ def get_all_extension_classes(sort):
             continue
 
         for klass in classes:
-            all_classes[klass.EXTENSION_NAME] = klass
+            all_classes[klass.extension_name] = klass
 
     if not sort:
         return all_classes
@@ -111,7 +111,7 @@ def get_all_extension_classes(sort):
         for dep in deps:
             if dep.dependency_name not in all_classes:
                 print "Missing dependency %s for %s" % (dep.dependency_name,
-                                                        klass.EXTENSION_NAME)
+                                                        klass.extension_name)
                 satisfied = False
                 break
             if dep.is_upstream:

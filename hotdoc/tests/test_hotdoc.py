@@ -45,7 +45,9 @@ class TestHotdoc(unittest.TestCase):
     def __remove_tmp_dirs(self):
         shutil.rmtree(self.__md_dir, ignore_errors=True)
         shutil.rmtree(self.__output_dir, ignore_errors=True)
-        shutil.rmtree('hotdoc-private', ignore_errors=True)
+        for _ in os.listdir('.'):
+            if _.startswith('hotdoc-private'):
+                shutil.rmtree(_, ignore_errors=True)
 
     def __create_md_file(self, name, contents):
         with open(os.path.join(self.__md_dir, name), 'w') as _:
@@ -61,8 +63,13 @@ class TestHotdoc(unittest.TestCase):
     def test_basic(self):
         self.__create_md_file('index.markdown',
                               "## A very simple index\n")
+
+        with open(os.path.join(self.__md_dir, 'sitemap.txt'), 'w') as _:
+            _.write('index.markdown')
+
         args = ['--index', os.path.join(self.__md_dir, 'index.markdown'),
                 '--output', self.__output_dir,
+                '--sitemap', os.path.join(self.__md_dir, 'sitemap.txt'),
                 'run']
         res = run(args)
         self.assertEqual(res, 0)

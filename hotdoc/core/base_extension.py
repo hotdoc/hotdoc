@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright © 2015,2016 Mathieu Duponchelle <mathieu.duponchelle@opencreed.com>
-# Copyright © 2015,2016 Collabora Ltd
+# Copyright © 2015-2016 Mathieu Duponchelle <mathieu.duponchelle@opencreed.com>
+# Copyright © 2015-2016 Collabora Ltd
 #
 # This library is free software; you can redistribute it and/or modify it under
 # the terms of the GNU Lesser General Public License as published by the Free
@@ -21,20 +21,15 @@ Utilities and baseclasses for extensions
 """
 
 import os
+from collections import defaultdict
 
-from collections import defaultdict, OrderedDict
-
-from hotdoc.core.doc_tree import DocTree
-from hotdoc.core.file_includer import find_md_file, resolve_markdown_signal
-from hotdoc.core.exceptions import BadInclusionException
-from hotdoc.formatters.html_formatter import HtmlFormatter
-from hotdoc.utils.utils import OrderedSet
-from hotdoc.utils.configurable import Configurable
-from hotdoc.utils.loggable import debug, info, warn, error, Logger
+from hotdoc.core.file_includer import find_md_file
 from hotdoc.core.symbols import Symbol
-
-Logger.register_error_code('smart-index-missing', BadInclusionException,
-                           domain='base-extension')
+from hotdoc.core.doc_tree import DocTree, Page
+from hotdoc.formatters.html_formatter import HtmlFormatter
+from hotdoc.utils.configurable import Configurable
+from hotdoc.utils.loggable import debug, info, warn, error
+from hotdoc.utils.utils import OrderedSet
 
 
 # pylint: disable=too-few-public-methods
@@ -72,7 +67,7 @@ class BaseExtension(Configurable):
     All extensions should inherit from this base class
 
     Attributes:
-        EXTENSION_NAME: str, the unique name of this extension, should
+        extension_name: str, the unique name of this extension, should
             be overriden and namespaced appropriately.
         doc_repo: doc_repo.DocRepo, the DocRepo instance which documentation
             hotdoc is working on.
@@ -80,11 +75,11 @@ class BaseExtension(Configurable):
             subclass instances.
     """
     # pylint: disable=unused-argument
-    EXTENSION_NAME = "base-extension"
+    extension_name = "base-extension"
     argument_prefix = ''
 
     index = None
-    sources = None
+    sources = set()
     paths_arguments = {}
     path_arguments = {}
     smart_index = False
@@ -99,13 +94,15 @@ class BaseExtension(Configurable):
                 is being generated.
         """
         self.doc_repo = doc_repo
+        DocTree.resolve_placeholder_signal.connect(
+            self.__resolve_placeholder_cb)
+        DocTree.update_signal.connect(self.__update_doc_tree_cb)
 
         if not hasattr(self, 'formatters'):
             self.formatters = {"html": HtmlFormatter([])}
 
         self.__created_symbols = defaultdict(OrderedSet)
-        self.__overriden_md = {}
-        self.__package_root = ''
+        self.__package_root = None
 
     # pylint: disable=no-self-use
     def warn(self, code, message):
@@ -138,7 +135,7 @@ class BaseExtension(Configurable):
             domain: see `utils.loggable.debug`
         """
         if domain is None:
-            domain = self.EXTENSION_NAME
+            domain = self.extension_name
         debug(message, domain)
 
     def info(self, message, domain=None):
@@ -150,7 +147,7 @@ class BaseExtension(Configurable):
             domain: see `utils.loggable.info`
         """
         if domain is None:
-            domain = self.EXTENSION_NAME
+            domain = self.extension_name
         info(message, domain)
 
     def get_formatter(self, output_format):
@@ -165,6 +162,14 @@ class BaseExtension(Configurable):
                 or `None`.
         """
         return self.formatters.get(output_format)
+
+    def reset(self):
+        """
+        This function is only useful for testing purposes, at least
+        for now.
+        """
+        self.__created_symbols = defaultdict(OrderedSet)
+        self.__package_root = None
 
     def setup(self):
         """
@@ -189,7 +194,7 @@ class BaseExtension(Configurable):
         """
         return self.doc_repo.change_tracker.get_stale_files(
             all_files,
-            self.EXTENSION_NAME)
+            self.extension_name)
 
     @staticmethod
     def get_dependencies():
@@ -243,14 +248,14 @@ class BaseExtension(Configurable):
             '--%s-index' % prefix, action="store",
             dest="%s_index" % prefix,
             help=("Name of the %s root markdown file, can be None" % (
-                cls.EXTENSION_NAME)))
+                cls.extension_name)))
 
         if smart:
             group.add_argument(
                 '--%s-smart-index' % prefix, action="store_true",
                 dest="%s_smart_index" % prefix,
                 help="Smart symbols list generation in %s" % (
-                    cls.EXTENSION_NAME))
+                    cls.extension_name))
 
     @classmethod
     def add_sources_argument(cls, group, allow_filters=True, prefix=None):
@@ -345,279 +350,85 @@ class BaseExtension(Configurable):
         sym = self.doc_repo.doc_database.get_or_create_symbol(*args, **kwargs)
 
         # pylint: disable=unidiomatic-typecheck
-        if sym and type(sym) != Symbol:
+        if sym and type(sym) != Symbol and sym.filename:
+            # assert sym.filename is not None
             self.__created_symbols[sym.filename].add(sym.unique_name)
 
         return sym
 
+    def __resolve_placeholder_cb(self, doc_tree, name, include_paths):
+        self.__find_package_root()
+
+        override_path = os.path.join(self.__package_root, name)
+        if name == '%s-index' % self.argument_prefix:
+            if self.index:
+                path = find_md_file(self.index, include_paths)
+                assert path is not None
+                return path, self.extension_name
+            return True, self.extension_name
+        elif override_path in self._get_all_sources():
+            path = find_md_file('%s.markdown' % name, include_paths)
+            return path or True, None
+        return None
+
+    def __update_doc_tree_cb(self, doc_tree, unlisted_sym_names):
+        self.__find_package_root()
+        index = self.__get_index_page(doc_tree)
+        if index is None:
+            return
+
+        for sym_name in unlisted_sym_names:
+            sym = self.doc_repo.doc_database.get_symbol(sym_name)
+            if sym and sym.filename in self._get_all_sources():
+                self.__created_symbols[sym.filename].add(sym_name)
+
+        user_pages = [p for p in doc_tree.walk(index) if not p.generated]
+        user_symbols = self.__get_user_symbols(user_pages)
+
+        for source_file, symbols in self.__created_symbols.items():
+            gen_symbols = symbols - user_symbols
+            self.__add_subpage(doc_tree, index, source_file, gen_symbols)
+            doc_tree.stale_symbol_pages(symbols)
+
+    def __find_package_root(self):
+        if self.__package_root is not None:
+            return
+
+        commonprefix = os.path.commonprefix(self._get_all_sources())
+        self.__package_root = os.path.dirname(commonprefix)
+
+    def __get_index_page(self, doc_tree):
+        placeholder = '%s-index' % self.argument_prefix
+        return doc_tree.get_pages().get(placeholder)
+
+    def __add_subpage(self, doc_tree, index, source_file, symbols):
+        page_name = self.__get_rel_source_path(source_file)
+        page = doc_tree.get_pages().get(page_name)
+
+        if not page:
+            page = Page(page_name, None)
+            page.extension_name = self.extension_name
+            page.generated = True
+            doc_tree.add_page(index, page)
+        else:
+            page.is_stale = True
+
+        page.symbol_names |= symbols
+
+    def __get_user_symbols(self, pages):
+        symbols = set()
+        for page in pages:
+            symbols |= page.symbol_names
+        return symbols
+
     def __get_rel_source_path(self, source_file):
-        stripped = os.path.splitext(source_file)[0]
-        return os.path.relpath(stripped, self.__package_root)
+        return os.path.relpath(source_file, self.__package_root)
 
     def _get_languages(self):
         return []
 
-    # pylint: disable=no-self-use
-    def _get_naive_link_title(self, source_file):
-        """
-        When a "naive index" is generated by an extension, this class
-        generates links between the "base index" and its subpages.
-
-        One subpage is generated per code source file, for example
-        if a source file named `my-foo-bar.c` contains documentable
-        symbols, a subpage will be created for it, and the label
-        of the link in the index will be `my-foo-bar`. Override this
-        method to provide a custom label instead.
-
-        Args:
-            source_file: The name of the source file to provide a custom
-                link label for, for example `/home/user/my-foo-bar.c`
-
-        Returns:
-            str: a custom label.
-        """
-        return os.path.basename(self.__get_rel_source_path(source_file))
-
-    def _get_naive_page_description(self, source_file):
-        """
-        When a "naive index" is generated by an extension, this class
-        will preface every subpage it creates for a given source file
-        with a description, the default being simply the name of the
-        source file, stripped of its extension.
-
-        Override this method to provide a custom description instead.
-
-        Args:
-            source_file: The name of the source file to provide a custom
-                description for, for example `/home/user/my-foo-bar.c`
-
-        Returns:
-            str: a custom description.
-        """
-        return '## %s\n\n' % (os.path.basename(
-            self.__get_rel_source_path(source_file)))
-
-    def _get_user_index_path(self):
-        return None
-
     def _get_all_sources(self):
         return []
-
-    def __get_naive_index_path(self):
-        index_name = 'gen-' + self.EXTENSION_NAME + "-index.markdown"
-        dirname = self.doc_repo.get_generated_doc_folder()
-        return os.path.join(dirname, index_name)
-
-    # pylint: disable=too-many-locals
-    def create_naive_index(self, all_source_files):
-        """
-        This class can generate an index for the documentable symbols
-        in a set of source files. To make use of this feature, subclasses
-        should call on this method when the well known name they registered
-        is encountered by the `DocRepo.doc_repo.doc_tree` of their instance's
-        `BaseExtension.doc_repo`.
-
-        This will generate a set of initially empty markdown files, which
-        should be populated by calling `BaseExtension.update_naive_index`
-        once symbols have been discovered and created through
-        `BaseExtension.get_or_create_symbol`.
-
-        Args:
-            all_source_files: list, a list of paths, for example
-                `[my_foo_bar.c]`.
-            user_index: Path to a potential user index
-        Returns: tuple, the arguments expected from a index handler.
-        """
-        user_index = self._get_user_index_path()
-        index_path = self.__get_naive_index_path()
-        epage = self.doc_repo.doc_tree.pages.get(index_path)
-
-        common_prefix = os.path.commonprefix(all_source_files)
-        self.__package_root = os.path.dirname(common_prefix)
-
-        debug('Package root for %s is %s' % (self.EXTENSION_NAME,
-                                             self.__package_root))
-
-        user_index_is_stale = False
-        subpages_changed = True
-        user_subpages = set()
-
-        if user_index:
-            filename = find_md_file(user_index, self.doc_repo.include_paths)
-            if filename is None:
-                self.warn('smart-index-missing', "Unknown smart index %s" %
-                          filename)
-                return None
-
-            stale, unlisted = self.doc_repo.change_tracker.get_stale_files(
-                [filename], 'gen-index-' + self.EXTENSION_NAME)
-
-            if stale or unlisted:
-                user_index_is_stale = True
-
-            user_tree = DocTree(self.doc_repo.include_paths,
-                                self.doc_repo.get_private_folder())
-            user_tree.build_tree(filename, self.EXTENSION_NAME)
-            for subpage in user_tree.pages.values():
-                rel_path = os.path.relpath(
-                    subpage.source_file,
-                    self.doc_repo.get_base_doc_folder())
-                user_subpages.add(rel_path)
-
-            with open(filename, 'r') as _:
-                preamble = _.read()
-        else:
-            languages = self._get_languages()
-            if languages:
-                language = languages[0]
-                preamble = '## %s API reference\n' % language.capitalize()
-            else:
-                preamble = '## %s API reference\n' % (
-                    self.EXTENSION_NAME.capitalize())
-
-        gen_paths = OrderedDict()
-        full_gen_paths = set()
-        for source_file in sorted(all_source_files):
-            relpath = self.__get_rel_source_path(source_file)
-            if relpath + '.markdown' in user_subpages:
-                continue
-            gen_path = self.__get_gen_path(source_file)
-            gen_paths[relpath] = os.path.relpath(
-                gen_path, self.doc_repo.get_generated_doc_folder())
-            full_gen_paths.add(gen_path)
-
-        if epage:
-            subpages_changed = (full_gen_paths != set(epage.subpages.keys()))
-
-        if user_index_is_stale or subpages_changed:
-            with open(index_path, 'w') as _:
-                _.write(preamble + '\n')
-                for rel_path, markdown_name in gen_paths.items():
-                    _.write('#### [%s](%s)\n' % (os.path.basename(rel_path),
-                                                 markdown_name))
-
-        return index_path, '', self.EXTENSION_NAME
-
-    def __get_gen_path(self, source_file):
-        dirname = self.doc_repo.get_generated_doc_folder()
-        rel_path = self.__get_rel_source_path(source_file)
-        dirname = os.path.join(dirname, os.path.dirname(rel_path))
-        bname = os.path.basename(rel_path)
-        gen_path = 'gen-' + bname + '.markdown'
-        return os.path.abspath(os.path.join(dirname, gen_path))
-
-    def __make_gen_path(self, source_file):
-        gen_path = self.__get_gen_path(source_file)
-        dname = os.path.dirname(gen_path)
-        if not os.path.exists(dname):
-            os.makedirs(dname)
-        return gen_path
-
-    def __create_symbols_list(self, source_file, symbols, user_file):
-        gen_path = self.__make_gen_path(source_file)
-
-        if user_file:
-            with open(user_file, 'r') as _:
-                preamble = _.read()
-        else:
-            preamble = self._get_naive_page_description(source_file)
-
-        info("Generating symbols list for %s" % source_file)
-
-        with open(gen_path, 'w') as _:
-            _.write(preamble + '\n')
-            for symbol in sorted(symbols):
-                containing_pages =\
-                    self.doc_repo.doc_tree.get_pages_for_symbol(symbol)
-                if containing_pages and gen_path not in containing_pages:
-                    debug("symbol %s is already contained elsewhere" % symbol)
-                    continue
-                # FIXME: more generic escaping
-                debug("Adding symbol %s to page %s" % (symbol, gen_path))
-                unique_name = symbol.replace('_', r'\_')
-                _.write('* [%s]()\n' % unique_name)
-
-    def __resolve_markdown_path(self, filename):
-        return self.__overriden_md.get(filename)
-
-    # pylint: disable=too-many-locals
-    def update_naive_index(self, smart=False):
-        """
-        This method can populate the pages generated by
-        `BaseExtension.create_naive_index` with the symbols created through
-        `BaseExtension.get_or_create_symbol`.
-
-        In smart mode, this method will take existing markdown files into
-        account, according to this logic:
-
-        For all source files as returned by `BaseExtension._get_all_sources`
-        (which must thus be implemented), we try to find a markdown file
-        in the markdown include paths named similarly, if one is found
-        its contents are prepended to the generated page.
-
-        Args:
-            smart: bool, take existing markdown files into account.
-        """
-        index_path = self.__get_naive_index_path()
-        subtree = DocTree(self.doc_repo.include_paths,
-                          self.doc_repo.get_private_folder())
-
-        user_files = {}
-        self.__overriden_md = {}
-        gen_paths = []
-        source_map = {}
-
-        if smart:
-            all_sources = self._get_all_sources()
-            for source in all_sources:
-                relpath = self.__get_rel_source_path(source)
-                user_file = find_md_file(relpath + '.markdown',
-                                         self.doc_repo.include_paths)
-                if user_file:
-                    user_files[source] = user_file
-                    source_map[user_file] = source
-                    self.__overriden_md[relpath + '.markdown'] = \
-                        self.__get_gen_path(source)
-
-        stale, unlisted = self.doc_repo.change_tracker.get_stale_files(
-            user_files.values(), 'gen-' + self.EXTENSION_NAME)
-        stale |= unlisted
-
-        for source_file, symbols in self.__created_symbols.items():
-            user_file = user_files.pop(source_file, None)
-            gen_paths.append(self.__get_gen_path(source_file))
-            self.__create_symbols_list(source_file, symbols, user_file)
-
-            if user_file:
-                try:
-                    stale.remove(user_file)
-                except IndexError:
-                    pass
-
-        for user_file in stale:
-            source_file = source_map[user_file]
-            gen_path = self.__get_gen_path(source_file)
-            gen_paths.append(gen_path)
-            epage = self.doc_repo.doc_tree.pages[gen_path]
-            self.__create_symbols_list(source_file, epage.symbol_names,
-                                       user_file)
-
-        resolve_markdown_signal.connect(self.__resolve_markdown_path)
-
-        index_root = subtree.build_tree(
-            index_path,
-            extension_name=self.EXTENSION_NAME,
-            parent_tree=self.doc_repo.doc_tree)
-
-        resolve_markdown_signal.disconnect(self.__resolve_markdown_path)
-
-        for gen_path in gen_paths:
-            page = subtree.pages.get(gen_path)
-            if page:
-                if not page.symbol_names:
-                    index_root.remove_subpage(page.source_file)
-
-        self.doc_repo.doc_tree.pages.update(subtree.pages)
 
     def format_page(self, page, link_resolver, output):
         """
@@ -635,9 +446,6 @@ class BaseExtension(Configurable):
         if page.is_stale:
             page.languages = self._get_languages()
             debug('Formatting page %s' % page.link.ref, 'formatting')
-            page.formatted_contents = \
-                self.doc_repo.doc_tree.page_parser.format_page(
-                    page, link_resolver, formatter)
             actual_output = os.path.join(output, formatter.get_output_folder())
             if not os.path.exists(actual_output):
                 os.makedirs(actual_output)

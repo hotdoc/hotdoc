@@ -34,7 +34,9 @@ from hotdoc.core.symbols import FunctionSymbol
 from hotdoc.parsers import cmark
 from hotdoc.parsers.standalone_parser import (
     SitemapParser, SitemapDuplicateError,
-    SitemapError, Extension, DocTree)
+    SitemapError)
+from hotdoc.core.doc_tree import DocTree
+from hotdoc.core.base_extension import BaseExtension
 from hotdoc.utils.utils import IndentError, OrderedSet, touch
 from hotdoc.utils.loggable import Logger
 
@@ -180,7 +182,7 @@ class TestStandaloneParser(unittest.TestCase):
             [u'A link with no url'])
 
 
-class TestExtension(Extension):
+class TestExtension(BaseExtension):
     extension_name = 'test-extension'
     argument_prefix = 'test'
 

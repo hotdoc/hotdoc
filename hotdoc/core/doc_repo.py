@@ -43,6 +43,7 @@ from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.utils import get_all_extension_classes, all_subclasses
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.simple_signals import Signal
+from hotdoc.parsers.standalone_parser import SitemapParser
 
 
 SUBCOMMAND_DESCRIPTION = """
@@ -57,7 +58,7 @@ class CoreExtension(BaseExtension):
     """
     Banana banana
     """
-    EXTENSION_NAME = 'core'
+    extension_name = 'core'
 
     def __init__(self, doc_repo):
         super(CoreExtension, self).__init__(doc_repo)
@@ -95,6 +96,7 @@ class DocRepo(object):
         self.config = None
         self.project_name = None
         self.project_version = None
+        self.sitemap_path = None
 
         if os.name == 'nt':
             self.datadir = os.path.join(
@@ -104,7 +106,7 @@ class DocRepo(object):
 
         self.__conf_file = None
         self.__extension_classes = {
-            CoreExtension.EXTENSION_NAME: CoreExtension}
+            CoreExtension.extension_name: CoreExtension}
         self.__index_file = None
         self.__root_page = None
         self.__base_doc_folder = None
@@ -212,13 +214,16 @@ class DocRepo(object):
         self.__setup(args)
 
         for extension in self.extensions.values():
-            info('Setting up %s' % extension.EXTENSION_NAME)
+            info('Setting up %s' % extension.extension_name)
             extension.setup()
             self.doc_database.flush()
 
+        sitemap = SitemapParser().parse(self.sitemap_path)
+        self.doc_tree = DocTree(self.get_private_folder(), self.include_paths)
+        self.doc_tree.parse_sitemap(self.change_tracker, sitemap)
+
         info("Resolving symbols", 'resolution')
-        self.doc_tree.resolve_symbols(self.doc_database, self.link_resolver,
-                                      self.__root_page)
+        self.doc_tree.resolve_symbols(self.doc_database, self.link_resolver)
         self.doc_database.flush()
 
     def format(self):
@@ -316,7 +321,7 @@ class DocRepo(object):
 
         extension_classes = get_all_extension_classes(sort=True)
         for subclass in extension_classes:
-            self.__extension_classes[subclass.EXTENSION_NAME] = subclass
+            self.__extension_classes[subclass.extension_name] = subclass
 
         configurable_classes = all_subclasses(Configurable)
 
@@ -344,6 +349,9 @@ class DocRepo(object):
                             action="store_true")
         parser.add_argument("-i", "--index", action="store",
                             dest="index", help="location of the index file")
+        parser.add_argument("--sitemap", action="store",
+                            dest="sitemap",
+                            help="Location of the sitemap file")
         parser.add_argument("--project-name", action="store",
                             dest="project_name",
                             help="Name of the documented project")
@@ -447,7 +455,7 @@ class DocRepo(object):
     def __create_extensions(self):
         for ext_class in self.__extension_classes.values():
             ext = ext_class(self)
-            self.extensions[ext.EXTENSION_NAME] = ext
+            self.extensions[ext.extension_name] = ext
 
     def get_base_doc_folder(self):
         """Get the folder in which the main index was located
@@ -465,6 +473,7 @@ class DocRepo(object):
         Banana banana
         """
         output = self.config.get_path('output')
+        self.sitemap_path = self.config.get_path('sitemap')
         if output is not None:
             self.output = os.path.abspath(output)
         else:
@@ -499,11 +508,6 @@ class DocRepo(object):
         if not os.path.exists(gen_folder):
             os.makedirs(gen_folder)
 
-        self.doc_tree = DocTree(self.include_paths, self.get_private_folder())
-
         self.__create_extensions()
-
-        info('Building documentation tree')
-        self.__root_page = self.doc_tree.build_tree(self.__index_file, 'core')
 
         self.change_tracker.add_hard_dependency(self.__conf_file)
