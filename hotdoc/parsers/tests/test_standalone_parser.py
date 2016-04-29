@@ -533,3 +533,72 @@ class TestDocTree(unittest.TestCase):
             OrderedSet(['symbol_4']))
 
         doc_tree.persist()
+
+        # We now move the definition of symbol_3 to source_a.test,
+        # we thus expect the generated page for source_a.test to be
+        # stale because its source changed, same for source_b.test,
+        # and page_x.markdown should be stale as well because the
+        # definition of symbol_3 may have changed. The final
+        # symbol layout should not have changed however.
+        self.__create_src_file(
+            'source_a.test',
+            ['symbol_1',
+             'symbol_2',
+             'symbol_3'])
+        self.__create_src_file(
+            'source_b.test',
+            ['symbol_4'])
+        doc_tree = self.__update_test_layout(doc_tree, sitemap)
+
+        self.__assert_stale(doc_tree,
+                            set(['source_a.test',
+                                 'source_b.test',
+                                 'page_x.markdown']))
+
+        page_x = doc_tree.get_pages()['page_x.markdown']
+        self.assertEqual(page_x.symbol_names, OrderedSet(['symbol_3']))
+
+        source_b_page = doc_tree.get_pages()['source_b.test']
+        self.assertEqual(
+            source_b_page.symbol_names,
+            OrderedSet(['symbol_4']))
+
+        source_a_page = doc_tree.get_pages()['source_a.test']
+        self.assertEqual(
+            source_a_page.symbol_names,
+            OrderedSet(['symbol_1',
+                        'symbol_2']))
+
+        doc_tree.persist()
+
+        # And we rollback again
+        self.__create_src_file(
+            'source_a.test',
+            ['symbol_1',
+             'symbol_2'])
+        self.__create_src_file(
+            'source_b.test',
+            ['symbol_3',
+             'symbol_4'])
+        doc_tree = self.__update_test_layout(doc_tree, sitemap)
+
+        self.__assert_stale(doc_tree,
+                            set(['source_a.test',
+                                 'source_b.test',
+                                 'page_x.markdown']))
+
+        page_x = doc_tree.get_pages()['page_x.markdown']
+        self.assertEqual(page_x.symbol_names, OrderedSet(['symbol_3']))
+
+        source_b_page = doc_tree.get_pages()['source_b.test']
+        self.assertEqual(
+            source_b_page.symbol_names,
+            OrderedSet(['symbol_4']))
+
+        source_a_page = doc_tree.get_pages()['source_a.test']
+        self.assertEqual(
+            source_a_page.symbol_names,
+            OrderedSet(['symbol_1',
+                        'symbol_2']))
+
+        doc_tree.persist()
