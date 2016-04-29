@@ -641,6 +641,7 @@ class DocTree(object):
         return Page(source_file, ast)
 
     # pylint: disable=too-many-locals
+    # pylint: disable=too-many-branches
     def __parse_pages(self, change_tracker, sitemap):
         source_files = []
         source_map = {}
@@ -665,7 +666,7 @@ class DocTree(object):
                         page.generated = True
                         self.__all_pages[fname] = page
 
-        stale, _ = change_tracker.get_stale_files(
+        stale, unlisted = change_tracker.get_stale_files(
             source_files, 'user-pages')
 
         old_user_symbols = set()
@@ -689,9 +690,29 @@ class DocTree(object):
 
             self.__all_pages[pagename] = page
 
+        unlisted_pagenames = set()
+
+        for source_file in unlisted:
+            prev_page = None
+            rel_path = None
+
+            for ipath in self.__include_paths:
+                rel_path = os.path.relpath(source_file, ipath)
+                prev_page = self.__all_pages.get(rel_path)
+                if prev_page:
+                    break
+
+            if not prev_page:
+                continue
+
+            old_user_symbols |= prev_page.symbol_names
+            self.__all_pages.pop(rel_path)
+            unlisted_pagenames.add(rel_path)
+
         for source_file in source_files:
-            self.__all_pages[source_map[source_file]].subpages |=\
-                sitemap.get_subpages(source_map[source_file])
+            page = self.__all_pages[source_map[source_file]]
+            page.subpages |= sitemap.get_subpages(source_map[source_file])
+            page.subpages -= unlisted_pagenames
 
         return old_user_symbols - new_user_symbols
 

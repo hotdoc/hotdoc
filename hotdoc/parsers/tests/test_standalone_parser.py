@@ -274,6 +274,14 @@ class TestDocTree(unittest.TestCase):
 
         return path
 
+    def __remove_src_file(self, name):
+        path = os.path.join(self.__md_dir, name)
+        os.unlink(path)
+
+    def __remove_md_file(self, name):
+        path = os.path.join(self.__md_dir, name)
+        os.unlink(path)
+
     def __touch_src_file(self, name):
         path = os.path.join(self.__md_dir, name)
         touch(path)
@@ -463,6 +471,7 @@ class TestDocTree(unittest.TestCase):
             os.path.basename(page.source_file),
             'source_a.test.markdown')
 
+    # pylint: disable=too-many-statements
     def test_extension_incremental(self):
         doc_tree, sitemap = self.__create_test_layout()
         doc_tree.persist()
@@ -600,5 +609,45 @@ class TestDocTree(unittest.TestCase):
             source_a_page.symbol_names,
             OrderedSet(['symbol_1',
                         'symbol_2']))
+
+        doc_tree.persist()
+
+        # Now we'll try removing page_x altogether
+        self.__remove_md_file('page_x.markdown')
+        inp = (u'index.markdown\n'
+               '\ttest-index\n'
+               '\t\ttest-section.markdown\n'
+               '\t\t\tsource_a.test\n'
+               '\t\tpage_y.markdown\n'
+               '\tcore_page.markdown\n')
+
+        new_sitemap = self.__parse_sitemap(inp)
+        doc_tree = self.__update_test_layout(doc_tree, new_sitemap)
+        self.__assert_stale(doc_tree,
+                            set(['source_b.test']))
+        source_b_page = doc_tree.get_pages()['source_b.test']
+        self.assertEqual(
+            source_b_page.symbol_names,
+            OrderedSet(['symbol_4', 'symbol_3']))
+        doc_tree.persist()
+
+        # And rollback again
+        self.__create_md_file(
+            'page_x.markdown',
+            (u'# Page X\n'
+             '\n'
+             '* [symbol_3]()\n'))
+        doc_tree = self.__update_test_layout(doc_tree, sitemap)
+        self.__assert_stale(doc_tree,
+                            set(['page_x.markdown',
+                                 'source_b.test']))
+
+        page_x = doc_tree.get_pages()['page_x.markdown']
+        self.assertEqual(page_x.symbol_names, OrderedSet(['symbol_3']))
+
+        source_b_page = doc_tree.get_pages()['source_b.test']
+        self.assertEqual(
+            source_b_page.symbol_names,
+            OrderedSet(['symbol_4']))
 
         doc_tree.persist()
