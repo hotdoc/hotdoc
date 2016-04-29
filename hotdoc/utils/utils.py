@@ -25,6 +25,7 @@ import os
 import shutil
 import math
 import sys
+import subprocess
 
 from pkg_resources import iter_entry_points
 from toposort import toposort_flatten
@@ -191,11 +192,9 @@ class OrderedSet(collections.MutableSet):
 
 def touch(fname):
     """
-    Mimic the `touch` command
+    Wraps the `touch` command
     """
-    mtime = get_mtime(fname)
-    with open(fname, 'a'):
-        os.utime(fname, (mtime + 1, mtime + 1))
+    subprocess.call(['touch', fname])
 
 
 def _round8(num):

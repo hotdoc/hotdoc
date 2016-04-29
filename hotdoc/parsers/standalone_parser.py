@@ -510,11 +510,16 @@ class Extension(Configurable):
             return path or True, None
         return None
 
-    def __update_doc_tree_cb(self, doc_tree):
+    def __update_doc_tree_cb(self, doc_tree, unlisted_sym_names):
         self.__find_package_root()
         index = self.__get_index_page(doc_tree)
         if index is None:
             return
+
+        for sym_name in unlisted_sym_names:
+            sym = self.doc_repo.doc_database.get_symbol(sym_name)
+            if sym and sym.filename in self._get_all_sources():
+                self.__created_symbols[sym.filename].add(sym_name)
 
         user_pages = [p for p in doc_tree.walk(index) if not p.generated]
         user_symbols = self.__get_user_symbols(user_pages)
@@ -544,6 +549,8 @@ class Extension(Configurable):
             page.extension_name = self.extension_name
             page.generated = True
             doc_tree.add_page(index, page)
+        else:
+            page.stale = True
 
         page.symbol_names |= symbols
 
@@ -633,6 +640,7 @@ class DocTree(object):
         ast = cmark.hotdoc_to_ast(contents, None)
         return Page(source_file, ast)
 
+    # pylint: disable=too-many-locals
     def __parse_pages(self, change_tracker, sitemap):
         source_files = []
         source_map = {}
@@ -660,13 +668,32 @@ class DocTree(object):
         stale, _ = change_tracker.get_stale_files(
             source_files, 'user-pages')
 
+        old_user_symbols = set()
+        new_user_symbols = set()
+
         for source_file in stale:
+            pagename = source_map[source_file]
+
+            prev_page = self.__all_pages.get(pagename)
+            if prev_page:
+                old_user_symbols |= prev_page.symbol_names
+
             page = self.__parse_page(source_file)
-            self.__all_pages[source_map[source_file]] = page
+            new_user_symbols |= page.symbol_names
+
+            newly_listed_symbols = page.symbol_names
+            if prev_page:
+                newly_listed_symbols -= prev_page.symbol_names
+
+            self.stale_symbol_pages(newly_listed_symbols, page)
+
+            self.__all_pages[pagename] = page
 
         for source_file in source_files:
             self.__all_pages[source_map[source_file]].subpages |=\
                 sitemap.get_subpages(source_map[source_file])
+
+        return old_user_symbols - new_user_symbols
 
     def __update_sitemap(self, sitemap):
         # We need a mutable variable
@@ -684,7 +711,6 @@ class DocTree(object):
             page.extension_name = level_and_name[1]
 
         sitemap.walk(_update_sitemap)
-        self.update_signal(self)
 
     def walk(self, parent=None):
         """Generator that yields pages in infix order
@@ -713,7 +739,7 @@ class DocTree(object):
         self.__all_pages[page.source_file] = page
         parent.subpages.add(page.source_file)
 
-    def stale_symbol_pages(self, symbols):
+    def stale_symbol_pages(self, symbols, new_page=None):
         """
         Banana banana
         """
@@ -722,14 +748,17 @@ class DocTree(object):
             page = self.__all_pages.get(pagename)
             if page:
                 page.stale = True
+                if new_page and new_page.source_file != page.source_file:
+                    page.symbol_names.remove(sym)
 
     def parse_sitemap(self, change_tracker, sitemap):
         """
         Banana banana
         """
-        self.__parse_pages(change_tracker, sitemap)
+        unlisted_symbols = self.__parse_pages(change_tracker, sitemap)
         self.__root = self.__all_pages[sitemap.index_file]
         self.__update_sitemap(sitemap)
+        self.update_signal(self, unlisted_symbols)
 
     def get_stale_pages(self):
         """

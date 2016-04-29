@@ -250,14 +250,28 @@ class TestDocTree(unittest.TestCase):
         return self.sitemap_parser.parse(path)
 
     def __create_md_file(self, name, contents):
-        with open(os.path.join(self.__md_dir, name), 'w') as _:
+        path = os.path.join(self.__md_dir, name)
+        with open(path, 'w') as _:
             _.write(contents)
+
+        # Just making sure we don't hit a race condition,
+        # in real world situations it is assumed users
+        # will not update source files twice in the same
+        # microsecond
+        touch(path)
 
     def __create_src_file(self, name, symbols):
         path = os.path.join(self.__md_dir, name)
         with open(path, 'w') as _:
             for symbol in symbols:
                 _.write('%s\n' % symbol)
+
+        # Just making sure we don't hit a race condition,
+        # in real world situations it is assumed users
+        # will not update source files twice in the same
+        # microsecond
+        touch(path)
+
         return path
 
     def __touch_src_file(self, name):
@@ -459,6 +473,7 @@ class TestDocTree(unittest.TestCase):
         self.__touch_src_file('source_a.test')
         doc_tree = self.__update_test_layout(doc_tree, sitemap)
         self.__assert_stale(doc_tree, set(['source_a.test']))
+        doc_tree.persist()
 
         # We now touch source_b.test, which symbols are contained
         # both in a generated page and a user-provided one.
@@ -468,3 +483,53 @@ class TestDocTree(unittest.TestCase):
         self.__assert_stale(doc_tree,
                             set(['source_b.test',
                                  'page_x.markdown']))
+        doc_tree.persist()
+
+        # This one is trickier: we unlist symbol_3 from
+        # page_x, which means the symbol should now be
+        # documented in the generated page for source_b.test.
+        # We expect both pages to be stale, and make sure
+        # they contain the right symbols
+        self.__create_md_file(
+            'page_x.markdown',
+            (u'# Page X\n'))
+        doc_tree = self.__update_test_layout(doc_tree, sitemap)
+        self.__assert_stale(doc_tree,
+                            set(['source_b.test',
+                                 'page_x.markdown']))
+
+        page_x = doc_tree.get_pages()['page_x.markdown']
+        self.assertEqual(page_x.symbol_names, OrderedSet())
+
+        source_b_page = doc_tree.get_pages()['source_b.test']
+        self.assertEqual(
+            source_b_page.symbol_names,
+            OrderedSet(['symbol_4', 'symbol_3']))
+
+        doc_tree.persist()
+
+        # Let's make sure the opposite use case works as well,
+        # we relocate symbol_3 in page_x , both page_x and
+        # the generated page for source_b.test should be stale
+        # and the symbols should be back to their original
+        # layout.
+        self.__create_md_file(
+            'page_x.markdown',
+            (u'# Page X\n'
+             '\n'
+             '* [symbol_3]()\n'))
+
+        doc_tree = self.__update_test_layout(doc_tree, sitemap)
+        self.__assert_stale(doc_tree,
+                            set(['source_b.test',
+                                 'page_x.markdown']))
+
+        page_x = doc_tree.get_pages()['page_x.markdown']
+        self.assertEqual(page_x.symbol_names, OrderedSet(['symbol_3']))
+
+        source_b_page = doc_tree.get_pages()['source_b.test']
+        self.assertEqual(
+            source_b_page.symbol_names,
+            OrderedSet(['symbol_4']))
+
+        doc_tree.persist()
