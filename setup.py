@@ -241,7 +241,7 @@ class CustomBuildExt(build_ext):
 
 
 # From http://stackoverflow.com/a/17004263/2931197
-def discover_and_run_tests():
+def discover_and_run_tests(forever):
     # use the default shared TestLoader instance
     test_loader = unittest.defaultTestLoader
 
@@ -253,14 +253,25 @@ def discover_and_run_tests():
     test_suite = test_loader.discover(SOURCE_DIR)
 
     # run the test suite
-    test_runner.run(test_suite)
+    loop = True
+    while loop:
+        res = test_runner.run(test_suite)
+        if res.errors or res.failures or not forever:
+            loop = False
 
 
 class DiscoverTest(test):
+    user_options = test.user_options + [('forever', None, 'Run until failure')]
+
     def __init__(self, *args, **kwargs):
         test.__init__(self, *args, **kwargs)
         self.test_args = []
         self.test_suite = True
+        self.forever = False
+
+    def initialize_options(self):
+        test.initialize_options(self)
+        self.forever = False
 
     def finalize_options(self):
         test.finalize_options(self)
@@ -268,7 +279,7 @@ class DiscoverTest(test):
         self.test_suite = True
 
     def run_tests(self):
-        discover_and_run_tests()
+        discover_and_run_tests(self.forever)
 
 
 INSTALL_REQUIRES = [
