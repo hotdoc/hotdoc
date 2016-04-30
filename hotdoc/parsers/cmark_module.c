@@ -434,6 +434,8 @@ initcmark(void)
   cmark_parser_attach_syntax_extension(hotdoc_parser, include_extension);
 
   /* Who doesn't want tables, seriously ? */
-  if (ptables_ext)
+  if (ptables_ext) {
     cmark_parser_attach_syntax_extension(gtkdoc_parser, ptables_ext);
+    cmark_parser_attach_syntax_extension(hotdoc_parser, ptables_ext);
+  }
 }
