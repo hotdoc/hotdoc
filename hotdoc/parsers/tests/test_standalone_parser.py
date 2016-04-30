@@ -157,6 +157,7 @@ class TestStandaloneParser(unittest.TestCase):
                'A paragraph with *an inline*\n'
                '\n'
                '* [A link with no url]()\n'
+               '* [another.link]()\n'
                '* [A_link_with_a_url](test.com)\n'
                '* [A link followed by stuff](test.com) stuff\n')
 
@@ -175,7 +176,7 @@ class TestStandaloneParser(unittest.TestCase):
         # And collected in the symbol names
         self.assertListEqual(
             cmark.symbol_names_in_ast(ast),
-            [u'A link with no url'])
+            [u'A link with no url', 'another.link'])
 
     def test_page_title(self):
         inp = (u'### A title *please* a title\n')

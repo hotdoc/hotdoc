@@ -124,27 +124,19 @@ static bool filter_item(CMarkDocument *doc, cmark_node *item_first_child) {
 
 static void filter_list(CMarkDocument *doc, cmark_node *list)
 {
-  cmark_event_type ev_type;
-  cmark_iter *iter;
+  cmark_node *tmp = cmark_node_first_child(list);
 
-  iter = cmark_iter_new(list);
-  while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
-    cmark_node *cur = cmark_iter_get_node(iter);
+  while (tmp) {
+    cmark_node *next = cmark_node_next(tmp);
 
-    if (cur == list)
-      continue;
-
-    if (cmark_node_get_type(cur) == CMARK_NODE_ITEM)
-      continue;
-
-    /* We only check top level item contents */
-    cmark_iter_reset(iter, cur, CMARK_EVENT_EXIT);
-
-    if (filter_item(doc, cur)) {
-      cmark_node_unlink(cmark_node_parent(cur));
+    if (cmark_node_get_type(tmp) == CMARK_NODE_ITEM) {
+      if (filter_item(doc, cmark_node_first_child(tmp))) {
+        cmark_node_unlink(tmp);
+      }
     }
+
+    tmp = next;
   }
-  cmark_iter_free(iter);
 }
 
 static void filter_symbol_names(CMarkDocument *doc)
