@@ -31,6 +31,7 @@ from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.symbols import FunctionSymbol
 from hotdoc.parsers.standalone_parser import SitemapParser
+from hotdoc.parsers import cmark
 from hotdoc.core.doc_tree import DocTree
 from hotdoc.core.base_extension import BaseExtension
 from hotdoc.utils.utils import OrderedSet, touch
@@ -326,6 +327,10 @@ class TestDocTree(unittest.TestCase):
         self.assertEqual(
             os.path.basename(page.source_file),
             'source_a.test.markdown')
+
+        self.assertEqual(
+            cmark.ast_to_html(page.ast, None),
+            u'<h1>My override</h1>\n')
 
     # pylint: disable=too-many-statements
     def test_extension_incremental(self):

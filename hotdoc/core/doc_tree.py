@@ -68,8 +68,12 @@ class Page(object):
         else:
             self.symbol_names = OrderedSet()
 
+        self.title = None
+        self.__discover_title()
+
     def __getstate__(self):
         return {'ast': None,
+                'title': self.title,
                 'extension_name': self.extension_name,
                 'link': self.link,
                 'source_file': self.source_file,
@@ -121,6 +125,14 @@ class Page(object):
         for sym in new_syms:
             self.symbol_names.add(sym.unique_name)
 
+        if self.title is None:
+            class_syms = self.typed_symbols[ClassSymbol].symbols
+            struct_syms = self.typed_symbols[StructSymbol].symbols
+            if class_syms:
+                self.title = class_syms[0].display_name
+            elif struct_syms:
+                self.title = struct_syms[0].display_name
+
     def format(self, formatter, link_resolver, output):
         """
         Banana banana
@@ -142,7 +154,11 @@ class Page(object):
         """
         Banana banana
         """
-        return 'hotdoc'
+        return self.title or 'unnamed'
+
+    def __discover_title(self):
+        if self.ast:
+            self.title = cmark.title_from_ast(self.ast)
 
     def __format_symbols(self, formatter, link_resolver):
         for symbol in self.symbols:
@@ -367,12 +383,12 @@ class DocTree(object):
             for page in self.walk(parent=cpage):
                 yield page
 
-    def add_page(self, parent, page):
+    def add_page(self, parent, pagename, page):
         """
         Banana banana
         """
-        self.__all_pages[page.source_file] = page
-        parent.subpages.add(page.source_file)
+        self.__all_pages[pagename] = page
+        parent.subpages.add(pagename)
 
     def stale_symbol_pages(self, symbols, new_page=None):
         """

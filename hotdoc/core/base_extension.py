@@ -377,6 +377,9 @@ class BaseExtension(Configurable):
         if index is None:
             return
 
+        if not index.title:
+            index.title = '%s API' % self._get_languages()[0].capitalize()
+
         for sym_name in unlisted_sym_names:
             sym = self.doc_repo.doc_database.get_symbol(sym_name)
             if sym and sym.filename in self._get_all_sources():
@@ -391,7 +394,7 @@ class BaseExtension(Configurable):
             doc_tree.stale_symbol_pages(symbols)
 
     def __find_package_root(self):
-        if self.__package_root is not None:
+        if self.__package_root:
             return
 
         commonprefix = os.path.commonprefix(self._get_all_sources())
@@ -406,10 +409,10 @@ class BaseExtension(Configurable):
         page = doc_tree.get_pages().get(page_name)
 
         if not page:
-            page = Page(page_name, None)
+            page = Page(source_file, None)
             page.extension_name = self.extension_name
             page.generated = True
-            doc_tree.add_page(index, page)
+            doc_tree.add_page(index, page_name, page)
         else:
             page.is_stale = True
 
@@ -428,7 +431,7 @@ class BaseExtension(Configurable):
         return []
 
     def _get_all_sources(self):
-        return []
+        return self.sources
 
     def format_page(self, page, link_resolver, output):
         """
