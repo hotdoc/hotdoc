@@ -35,6 +35,7 @@ typedef struct {
   cmark_node *root;
   bool lazy_loaded;
   cmark_llist *symbol_names;
+  cmark_node *page_title;
 } CMarkDocument;
 
 static PyObject *
@@ -171,7 +172,7 @@ static void filter_symbol_names(CMarkDocument *doc)
   cmark_iter_free(iter);
 }
 
-static void collect_subpage_links(CMarkDocument *doc)
+static void collect_title_and_subpage_links(CMarkDocument *doc)
 {
   cmark_event_type ev_type;
   cmark_iter *iter;
@@ -183,6 +184,10 @@ static void collect_subpage_links(CMarkDocument *doc)
 
     if (ev_type != CMARK_EVENT_ENTER)
       continue;
+
+    if (!doc->page_title && cmark_node_get_type(cur) == CMARK_NODE_HEADING) {
+      doc->page_title = cur;
+    }
 
     if (cmark_node_get_type(cur) != CMARK_NODE_LINK)
       continue;
@@ -214,7 +219,7 @@ hotdoc_to_ast(PyObject *self, PyObject *args) {
 
   filter_symbol_names(doc);
 
-  collect_subpage_links(doc);
+  collect_title_and_subpage_links(doc);
 
   ret = PyCapsule_New((void *)doc, "cmark.document", NULL);
 
@@ -325,6 +330,57 @@ ast_to_html(PyObject *self, PyObject *args) {
   return ret;
 }
 
+static PyObject *concatenate_title(cmark_node *title_node) {
+  cmark_event_type ev_type;
+  cmark_iter *iter;
+  PyObject *tmp_ret;
+  PyObject *ret = PyUnicode_FromString("");
+
+  iter = cmark_iter_new(title_node);
+
+  while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
+    cmark_node *cur = cmark_iter_get_node(iter);
+    const char *content;
+    PyObject *tmp;
+
+    if (ev_type != CMARK_EVENT_ENTER)
+      continue;
+
+    content = cmark_node_get_string_content(cur);
+    if (content) {
+      tmp = PyUnicode_FromString(content);
+      tmp_ret = PyUnicode_Concat(ret, tmp);
+      Py_DECREF(ret);
+      Py_DECREF(tmp);
+      ret = tmp_ret;
+    }
+  }
+
+  cmark_iter_free(iter);
+
+  return ret;
+}
+
+static PyObject *
+ast_get_title(PyObject *self, PyObject *args) {
+  PyObject *cap;
+  CMarkDocument *doc;
+  PyObject *ret;
+
+  PyArg_ParseTuple(args, "O!", &PyCapsule_Type, &cap);
+
+  doc = PyCapsule_GetPointer(cap, "cmark.document");
+
+  if (doc->page_title) {
+    ret = concatenate_title(doc->page_title);
+  } else {
+    ret = Py_None;
+    Py_INCREF(Py_None);
+  }
+
+  return ret;
+}
+
 static PyObject *
 symbol_names_in_ast(PyObject *self, PyObject *args) {
   PyObject *cap;
@@ -362,6 +418,7 @@ update_subpage_links(PyObject *self, PyObject *args) {
 static PyMethodDef ScannerMethods[] = {
   {"gtkdoc_to_ast",  gtkdoc_to_ast, METH_VARARGS, "Translate gtk-doc syntax to an opaque AST"},
   {"hotdoc_to_ast", hotdoc_to_ast, METH_VARARGS, "Translate hotdoc syntax to an opaque AST"},
+  {"title_from_ast", ast_get_title, METH_VARARGS, "Get the first title in an opaque AST"},
   {"symbol_names_in_ast", symbol_names_in_ast, METH_VARARGS, "Retrieve symbol names from opaque AST"},
   {"update_subpage_links", update_subpage_links, METH_VARARGS, "Update subpage links in opaque AST"},
   {"ast_to_html",  ast_to_html, METH_VARARGS, "Translate an opaque AST to html"},
