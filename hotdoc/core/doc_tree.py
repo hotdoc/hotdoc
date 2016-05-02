@@ -28,6 +28,8 @@ import json
 import cPickle as pickle
 from collections import namedtuple, defaultdict, OrderedDict
 
+import yaml
+
 from hotdoc.core.file_includer import find_md_file
 from hotdoc.core.symbols import\
     (Symbol, FunctionSymbol, CallbackSymbol,
@@ -47,7 +49,7 @@ class Page(object):
     resolving_symbol_signal = Signal()
     formatting_signal = Signal()
 
-    def __init__(self, source_file, ast):
+    def __init__(self, source_file, ast, meta=None):
         "Banana banana"
         name = os.path.splitext(os.path.basename(source_file))[0]
         pagename = '%s.html' % name
@@ -64,13 +66,14 @@ class Page(object):
         self.is_stale = True
         self.formatted_contents = None
         self.detailed_description = None
-        if ast is not None:
-            self.symbol_names = OrderedSet(cmark.symbol_names_in_ast(ast))
+
+        if meta and 'symbols' in meta:
+            self.symbol_names = OrderedSet(meta['symbols'])
         else:
             self.symbol_names = OrderedSet()
 
         self.title = None
-        self.__discover_title()
+        self.__discover_title(meta)
 
     def __getstate__(self):
         return {'ast': None,
@@ -157,8 +160,10 @@ class Page(object):
         """
         return self.title or 'unnamed'
 
-    def __discover_title(self):
-        if self.ast:
+    def __discover_title(self, meta):
+        if meta is not None and 'title' in meta:
+            self.title = meta['title']
+        elif self.ast:
             self.title = cmark.title_from_ast(self.ast)
 
     def __format_symbols(self, formatter, link_resolver):
@@ -237,8 +242,17 @@ class DocTree(object):
         with io.open(source_file, 'r', encoding='utf-8') as _:
             contents = _.read()
 
+        meta = {}
+        if contents.startswith('---\n'):
+            split = contents.split('\n...\n', 1)
+            if len(split) == 2:
+                contents = split[1]
+
+            for block in yaml.load_all(split[0]):
+                meta.update(block)
+
         ast = cmark.hotdoc_to_ast(contents, None)
-        return Page(source_file, ast)
+        return Page(source_file, ast, meta=meta)
 
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches
@@ -282,7 +296,7 @@ class DocTree(object):
             page = self.__parse_page(source_file)
             new_user_symbols |= page.symbol_names
 
-            newly_listed_symbols = page.symbol_names
+            newly_listed_symbols = OrderedSet(page.symbol_names)
             if prev_page:
                 newly_listed_symbols -= prev_page.symbol_names
 

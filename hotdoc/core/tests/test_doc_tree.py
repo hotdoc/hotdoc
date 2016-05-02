@@ -171,6 +171,9 @@ class TestDocTree(unittest.TestCase):
             set([u'index.markdown',
                  u'section.markdown']))
 
+        index = pages.get('index.markdown')
+        self.assertEqual(index.title, u'My documentation')
+
     def test_basic_incremental(self):
         inp = (u'index.markdown\n'
                '\tsection.markdown')
@@ -272,9 +275,10 @@ class TestDocTree(unittest.TestCase):
              'Linking to [a generated page](source_a.test)\n'))
         self.__create_md_file(
             'page_x.markdown',
-            (u'# Page X\n'
-             '\n'
-             '* [symbol_3]()\n'))
+            (u'---\n'
+             'symbols: [symbol_3]\n'
+             '...\n'
+             '# Page X\n'))
         self.__create_md_file(
             'page_y.markdown',
             (u'# Page Y\n'))
@@ -332,6 +336,33 @@ class TestDocTree(unittest.TestCase):
             cmark.ast_to_html(page.ast, None),
             u'<h1>My override</h1>\n')
 
+    def test_parse_yaml(self):
+        inp = (u'index.markdown\n')
+        sitemap = self.__parse_sitemap(inp)
+        self.__create_md_file(
+            'index.markdown',
+            (u'---\n'
+             'title: A random title\n'
+             'symbols: [symbol_1, symbol_2]\n'
+             '...\n'
+             '# My documentation\n'))
+
+        doc_tree = DocTree(self.__priv_dir, self.include_paths)
+        doc_tree.parse_sitemap(self.change_tracker, sitemap)
+
+        pages = doc_tree.get_pages()
+        page = pages.get('index.markdown')
+        self.assertEqual(
+            cmark.ast_to_html(page.ast, None),
+            u'<h1>My documentation</h1>\n')
+
+        self.assertEqual(page.title, u'A random title')
+
+        self.assertEqual(
+            page.symbol_names,
+            OrderedSet(['symbol_1',
+                        'symbol_2']))
+
     # pylint: disable=too-many-statements
     def test_extension_incremental(self):
         doc_tree, sitemap = self.__create_test_layout()
@@ -385,9 +416,10 @@ class TestDocTree(unittest.TestCase):
         # layout.
         self.__create_md_file(
             'page_x.markdown',
-            (u'# Page X\n'
-             '\n'
-             '* [symbol_3]()\n'))
+            (u'---\n'
+             'symbols: [symbol_3]\n'
+             '...\n'
+             '# Page X\n'))
 
         doc_tree = self.__update_test_layout(doc_tree, sitemap)
         self.__assert_stale(doc_tree,
@@ -495,9 +527,10 @@ class TestDocTree(unittest.TestCase):
         # And rollback again
         self.__create_md_file(
             'page_x.markdown',
-            (u'# Page X\n'
-             '\n'
-             '* [symbol_3]()\n'))
+            (u'---\n'
+             'symbols: [symbol_3]\n'
+             '...\n'
+             '# Page X\n'))
         doc_tree = self.__update_test_layout(doc_tree, sitemap)
         self.__assert_stale(doc_tree,
                             set(['page_x.markdown',
