@@ -74,8 +74,7 @@ class TestHotdoc(unittest.TestCase):
         res = run(args)
         self.assertEqual(res, 0)
 
-        # Account for the site navigation
-        self.assertOutput(2)
+        self.assertOutput(1)
 
     def test_error(self):
         args = ['--index', os.path.join(self.__md_dir, 'index.markdown'),

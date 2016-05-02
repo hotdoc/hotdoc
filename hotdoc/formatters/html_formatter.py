@@ -484,19 +484,6 @@ class HtmlFormatter(Formatter):
 
         return (out, True)
 
-    def format_site_navigation(self, root, doc_tree):
-        """
-        Banana banana
-        """
-        try:
-            template = self.engine.get_template('site_navigation.html')
-            return template.render({'root': root,
-                                    'doc_tree': doc_tree})
-        except IOError:
-            pass
-
-        return None
-
     def _format_prototype(self, function, is_pointer, title):
         if function.return_value:
             return_value = self._format_linked_symbol(function.return_value[0])

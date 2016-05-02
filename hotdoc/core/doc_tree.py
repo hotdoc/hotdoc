@@ -24,8 +24,9 @@ Implements standalone markdown files parsing.
 
 import io
 import os
+import json
 import cPickle as pickle
-from collections import namedtuple, defaultdict
+from collections import namedtuple, defaultdict, OrderedDict
 
 from hotdoc.core.file_includer import find_md_file
 from hotdoc.core.symbols import\
@@ -337,29 +338,40 @@ class DocTree(object):
         if not os.path.exists(folder):
             os.mkdir(folder)
 
+    def __dump_json_sitemap(self, page, node):
+        node['title'] = page.title
+        node['url'] = page.link.get_link()
+        node['extension'] = page.extension_name
+        node['subpages'] = []
+        for pagename in page.subpages:
+            cnode = OrderedDict()
+            cpage = self.__all_pages[pagename]
+            node['subpages'].append(cnode)
+            self.__dump_json_sitemap(cpage, cnode)
+
+    def __create_json_sitemap(self):
+        node = OrderedDict()
+        self.__dump_json_sitemap(self.__root, node)
+        return json.dumps(node)
+
     def __create_navigation_script(self, output, extensions):
         # Wrapping this is in a javascript file to allow
         # circumventing stupid chrome same origin policy
         formatter = extensions['core'].get_formatter('html')
-        site_navigation = formatter.format_site_navigation(self.__root, self)
-
-        if not site_navigation:
-            return
-
         output = os.path.join(output, formatter.get_output_folder())
 
-        with open(os.path.join(output, 'site_navigation.html'), 'w') as _:
-            _.write(site_navigation)
+        sitemap = self.__create_json_sitemap()
+        sitemap = sitemap.replace('"', '\\"')
+
+        js_wrapper = 'sitemap_downloaded_cb("'
+        js_wrapper += sitemap
+        js_wrapper += '");'
 
         path = os.path.join(output,
                             'assets',
                             'js',
-                            'site_navigation.js')
-        site_navigation = site_navigation.replace('\n', '')
-        site_navigation = site_navigation.replace('"', '\\"')
-        js_wrapper = 'site_navigation_downloaded_cb("'
-        js_wrapper += site_navigation
-        js_wrapper += '");'
+                            'sitemap.js')
+
         with open(path, 'w') as _:
             _.write(js_wrapper.encode('utf-8'))
 
