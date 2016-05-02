@@ -409,7 +409,7 @@ class BaseExtension(Configurable):
         page = doc_tree.get_pages().get(page_name)
 
         if not page:
-            page = Page(source_file, None)
+            page = Page(page_name, None)
             page.extension_name = self.extension_name
             page.generated = True
             doc_tree.add_page(index, page_name, page)
