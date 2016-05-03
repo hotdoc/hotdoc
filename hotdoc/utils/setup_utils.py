@@ -30,7 +30,7 @@ HERE = os.path.dirname(__file__)
 with open(os.path.join(HERE, '..', 'VERSION.txt'), 'r') as _:
     VERSION = _.read().strip()
 
-THEME_VERSION = "0.7.2"
+THEME_VERSION = "0.7.9"
 
 
 def _check_submodule_status(root, submodules):
