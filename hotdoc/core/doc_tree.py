@@ -72,6 +72,11 @@ class Page(object):
         else:
             self.symbol_names = OrderedSet()
 
+        if meta and 'short-description' in meta:
+            self.short_description = meta['short-description']
+        else:
+            self.short_description = None
+
         self.title = None
         self.__discover_title(meta)
         self.link = Link(pagename, self.title or name, name)
@@ -79,6 +84,7 @@ class Page(object):
     def __getstate__(self):
         return {'ast': None,
                 'title': self.title,
+                'short_description': self.short_description,
                 'extension_name': self.extension_name,
                 'link': self.link,
                 'source_file': self.source_file,
@@ -355,6 +361,7 @@ class DocTree(object):
 
     def __dump_json_sitemap(self, page, node):
         node['title'] = page.title
+        node['short_description'] = page.short_description
         node['url'] = page.link.get_link()
         node['extension'] = page.extension_name
         node['subpages'] = []
