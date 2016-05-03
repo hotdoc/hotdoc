@@ -122,11 +122,12 @@ class HtmlFormatter(Formatter):
                           VFunctionSymbol, EnumSymbol, ConstantSymbol,
                           ExportedVariableSymbol, AliasSymbol, CallbackSymbol]
 
-        theme_templates_path = os.path.join(
-            HtmlFormatter.theme_path, 'templates')
+        if HtmlFormatter.theme_path:
+            theme_templates_path = os.path.join(
+                HtmlFormatter.theme_path, 'templates')
 
-        if os.path.exists(theme_templates_path):
-            searchpath.insert(0, theme_templates_path)
+            if os.path.exists(theme_templates_path):
+                searchpath.insert(0, theme_templates_path)
 
         searchpath.append(os.path.join(HERE, "html_templates"))
         self.engine = Engine(

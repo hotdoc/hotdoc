@@ -29,7 +29,9 @@ import os
 
 from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.doc_database import DocDatabase
+from hotdoc.core.doc_repo import CoreExtension
 from hotdoc.core.symbols import FunctionSymbol
+from hotdoc.core.links import LinkResolver
 from hotdoc.parsers.standalone_parser import SitemapParser
 from hotdoc.parsers import cmark
 from hotdoc.core.doc_tree import DocTree
@@ -68,6 +70,8 @@ class TestDocTree(unittest.TestCase):
             here, 'tmp-private'))
         self.__src_dir = os.path.abspath(os.path.join(
             here, 'tmp-src-files'))
+        self.__output_dir = os.path.abspath(os.path.join(
+            here, 'tmp-output'))
         self.__remove_tmp_dirs()
         os.mkdir(self.__md_dir)
         os.mkdir(self.__priv_dir)
@@ -80,16 +84,19 @@ class TestDocTree(unittest.TestCase):
         # fast (and they are)
         self.doc_database = DocDatabase()
         self.doc_database.setup(self.__priv_dir)
+        self.link_resolver = LinkResolver(self.doc_database)
 
         self.change_tracker = ChangeTracker()
 
         self.sitemap_parser = SitemapParser()
 
         self.test_ext = TestExtension(self)
+        self.core_ext = CoreExtension(self)
 
     def tearDown(self):
         self.__remove_tmp_dirs()
         del self.test_ext
+        del self.core_ext
 
     def get_generated_doc_folder(self):
         return os.path.join(self.__priv_dir, 'generated')
@@ -147,6 +154,7 @@ class TestDocTree(unittest.TestCase):
         shutil.rmtree(self.__md_dir, ignore_errors=True)
         shutil.rmtree(self.__priv_dir, ignore_errors=True)
         shutil.rmtree(self.__src_dir, ignore_errors=True)
+        shutil.rmtree(self.__output_dir, ignore_errors=True)
         shutil.rmtree(self.get_generated_doc_folder(), ignore_errors=True)
 
     def test_basic(self):
@@ -362,6 +370,87 @@ class TestDocTree(unittest.TestCase):
             page.symbol_names,
             OrderedSet(['symbol_1',
                         'symbol_2']))
+
+    def test_empty_link_resolution(self):
+        inp = (u'index.markdown\n'
+               '\tsection.markdown')
+        sitemap = self.__parse_sitemap(inp)
+        self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+        self.__create_md_file(
+            'section.markdown',
+            (u'# My section\n'
+             '\n'
+             '[](index.markdown)\n'))
+
+        doc_tree = DocTree(self.__priv_dir, self.include_paths)
+        doc_tree.parse_sitemap(self.change_tracker, sitemap)
+        doc_tree.resolve_symbols(self.doc_database, self.link_resolver)
+        doc_tree.format(
+            self.link_resolver, self.__output_dir,
+            {self.core_ext.extension_name: self.core_ext})
+
+        pages = doc_tree.get_pages()
+        page = pages.get('section.markdown')
+        self.assertEqual(
+            page.formatted_contents,
+            u'<h1>My section</h1>\n'
+            '<p><a href="index.html">My documentation</a></p>\n')
+
+    def test_labeled_link_resolution(self):
+        inp = (u'index.markdown\n'
+               '\tsection.markdown')
+        sitemap = self.__parse_sitemap(inp)
+        self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+        self.__create_md_file(
+            'section.markdown',
+            (u'# My section\n'
+             '\n'
+             '[a label](index.markdown)\n'))
+
+        doc_tree = DocTree(self.__priv_dir, self.include_paths)
+        doc_tree.parse_sitemap(self.change_tracker, sitemap)
+        doc_tree.resolve_symbols(self.doc_database, self.link_resolver)
+        doc_tree.format(
+            self.link_resolver, self.__output_dir,
+            {self.core_ext.extension_name: self.core_ext})
+
+        pages = doc_tree.get_pages()
+        page = pages.get('section.markdown')
+        self.assertEqual(
+            page.formatted_contents,
+            u'<h1>My section</h1>\n'
+            '<p><a href="index.html">a label</a></p>\n')
+
+    def test_anchored_link_resolution(self):
+        inp = (u'index.markdown\n'
+               '\tsection.markdown')
+        sitemap = self.__parse_sitemap(inp)
+        self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+        self.__create_md_file(
+            'section.markdown',
+            (u'# My section\n'
+             '\n'
+             '[](index.markdown#subsection)\n'))
+
+        doc_tree = DocTree(self.__priv_dir, self.include_paths)
+        doc_tree.parse_sitemap(self.change_tracker, sitemap)
+        doc_tree.resolve_symbols(self.doc_database, self.link_resolver)
+        doc_tree.format(
+            self.link_resolver, self.__output_dir,
+            {self.core_ext.extension_name: self.core_ext})
+
+        pages = doc_tree.get_pages()
+        page = pages.get('section.markdown')
+        self.assertEqual(
+            page.formatted_contents,
+            u'<h1>My section</h1>\n'
+            '<p><a href="index.html#subsection">My documentation</a></p>\n')
 
     # pylint: disable=too-many-statements
     def test_extension_incremental(self):

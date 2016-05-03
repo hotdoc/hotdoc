@@ -25,6 +25,7 @@ Implements standalone markdown files parsing.
 import io
 import os
 import json
+import urlparse
 import cPickle as pickle
 from collections import namedtuple, defaultdict, OrderedDict
 
@@ -54,7 +55,6 @@ class Page(object):
         name = os.path.splitext(os.path.basename(source_file))[0]
         pagename = '%s.html' % name
 
-        self.link = Link(pagename, name, name)
         self.ast = ast
         self.extension_name = None
         self.source_file = source_file
@@ -74,6 +74,7 @@ class Page(object):
 
         self.title = None
         self.__discover_title(meta)
+        self.link = Link(pagename, self.title or name, name)
 
     def __getstate__(self):
         return {'ast': None,
@@ -381,13 +382,26 @@ class DocTree(object):
         js_wrapper += sitemap
         js_wrapper += '");'
 
-        path = os.path.join(output,
-                            'assets',
-                            'js',
-                            'sitemap.js')
+        dirname = os.path.join(output, 'assets', 'js')
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        path = os.path.join(dirname, 'sitemap.js')
 
         with open(path, 'w') as _:
             _.write(js_wrapper.encode('utf-8'))
+
+    def __get_link_cb(self, link_resolver, name):
+        url_components = urlparse.urlparse(name)
+        if bool(url_components.netloc):
+            return None
+
+        page = self.__all_pages.get(url_components.path)
+        if page:
+            ref = page.link.get_link()
+            if url_components.fragment:
+                ref += '#%s' % url_components.fragment
+            return Link(ref, page.link.get_title(), None)
+        return None
 
     def walk(self, parent=None):
         """Generator that yields pages in infix order
@@ -492,6 +506,7 @@ class DocTree(object):
         info('Formatting documentation tree', 'formatting')
         self.__setup_folder(output)
 
+        link_resolver.get_link_signal.connect(self.__get_link_cb)
         # Page.formatting_signal.connect(self.__formatting_page_cb)
         # Link.resolving_link_signal.connect(self.__link_referenced_cb)
 
@@ -500,6 +515,7 @@ class DocTree(object):
             extension = extensions[page.extension_name]
             extension.format_page(page, link_resolver, output)
 
+        link_resolver.get_link_signal.disconnect(self.__get_link_cb)
         self.__create_navigation_script(output, extensions)
 
     def persist(self):

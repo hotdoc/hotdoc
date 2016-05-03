@@ -89,7 +89,7 @@ class Formatter(Configurable):
         return symbol.detailed_description
 
     def __copy_extra_assets(self, output):
-        for src in self.extra_assets:
+        for src in self.extra_assets or []:
             dest = os.path.join(output, os.path.basename(src))
 
             destdir = os.path.dirname(dest)
