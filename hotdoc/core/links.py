@@ -48,7 +48,7 @@ class Link(MutableObject):
         resolved_title = [elem for elem in resolved_title if elem is not
                           None]
         if resolved_title:
-            return resolved_title[0]
+            return unicode(resolved_title[0])
         return self._title
 
     @title.setter
@@ -70,7 +70,7 @@ class Link(MutableObject):
         resolved_ref = Link.resolving_link_signal(self)
         resolved_ref = [elem for elem in resolved_ref if elem is not None]
         if resolved_ref:
-            return resolved_ref[0]
+            return unicode(resolved_ref[0])
         return self.ref
 
 
