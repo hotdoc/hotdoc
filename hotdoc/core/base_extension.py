@@ -366,12 +366,15 @@ class BaseExtension(Configurable):
                 assert path is not None
                 return path, self.extension_name
             return True, self.extension_name
-        elif override_path in self._get_all_sources():
+        elif self.smart_index and override_path in self._get_all_sources():
             path = find_md_file('%s.markdown' % name, include_paths)
             return path or True, None
         return None
 
     def __update_doc_tree_cb(self, doc_tree, unlisted_sym_names):
+        if not self.smart_index:
+            return
+
         self.__find_package_root()
         index = self.__get_index_page(doc_tree)
         if index is None:
