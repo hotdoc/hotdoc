@@ -66,8 +66,9 @@ class Sitemap(object):
     Attributes:
         index_file: str, the path to the index file.
     """
-    def __init__(self, root, index_file):
+    def __init__(self, root, source_file, index_file):
         self.__root = root
+        self.source_file = source_file
         self.index_file = index_file
         self.__all_sources = None
 
@@ -190,4 +191,4 @@ class SitemapParser(object):
 
             lineno += 1
 
-        return Sitemap(root, index)
+        return Sitemap(root, filename, index)

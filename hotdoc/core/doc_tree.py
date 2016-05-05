@@ -29,6 +29,7 @@ import urlparse
 import cPickle as pickle
 from collections import namedtuple, defaultdict, OrderedDict
 
+# pylint: disable=import-error
 import yaml
 
 from hotdoc.core.file_includer import find_md_file
@@ -38,10 +39,23 @@ from hotdoc.core.symbols import\
      StructSymbol, EnumSymbol, AliasSymbol, SignalSymbol, PropertySymbol,
      VFunctionSymbol, ClassSymbol)
 from hotdoc.core.links import Link
+from hotdoc.core.exceptions import HotdocSourceException
 from hotdoc.parsers import cmark
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.simple_signals import Signal
-from hotdoc.utils.loggable import info, debug
+from hotdoc.utils.loggable import info, debug, error, Logger
+
+
+class DocTreeNoSuchPageException(HotdocSourceException):
+    """
+    Raised when a subpage listed in the sitemap file could not be found
+    in any of the include paths.
+    """
+    pass
+
+
+Logger.register_error_code('no-such-subpage', DocTreeNoSuchPageException,
+                           domain='doc-tree')
 
 
 # pylint: disable=too-many-instance-attributes
@@ -267,12 +281,19 @@ class DocTree(object):
         source_files = []
         source_map = {}
 
-        for fname in sitemap.get_all_sources().keys():
+        for i, fname in enumerate(sitemap.get_all_sources().keys()):
             resolved = self.resolve_placeholder_signal(
                 self, fname, self.__include_paths)
             if resolved is None:
                 source_file = find_md_file(fname, self.__include_paths)
                 source_files.append(source_file)
+                if source_file is None:
+                    error(
+                        'no-such-subpage',
+                        'No markdown file found for %s' % fname,
+                        filename=sitemap.source_file,
+                        lineno=i,
+                        column=0)
                 source_map[source_file] = fname
             else:
                 resolved, ext_name = resolved
