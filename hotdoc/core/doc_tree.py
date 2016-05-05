@@ -420,8 +420,6 @@ class DocTree(object):
 
     def __get_link_cb(self, link_resolver, name):
         url_components = urlparse.urlparse(name)
-        if bool(url_components.netloc):
-            return None
 
         page = self.__all_pages.get(url_components.path)
         if page:

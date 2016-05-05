@@ -126,6 +126,7 @@ hotdoc_to_ast(PyObject *self, PyObject *args) {
 static char *render_doc(CMarkDocument *doc, PyObject *link_resolver)
 {
   cmark_event_type ev_type;
+  PyObject *utf8;
 
   if (doc->lazy_loaded == false) {
     cmark_iter *iter;
@@ -141,10 +142,25 @@ static char *render_doc(CMarkDocument *doc, PyObject *link_resolver)
             cmark_node *label = cmark_node_new(CMARK_NODE_TEXT);
             cmark_node_append_child(cur, label);
 
-            link = PyObject_CallMethod(link_resolver, "get_named_link", "s", url);
+            link = PyObject_CallMethod(link_resolver, "get_named_link", "(s)", url);
+            if (PyErr_Occurred()) {
+              PyErr_Clear();
+              continue;
+            }
+
             if (link != Py_None) {
               PyObject *ref = PyObject_CallMethod(link, "get_link", NULL);
+              if (PyErr_Occurred()) {
+                PyErr_Clear();
+                continue;
+              }
+
               PyObject *title = PyObject_CallMethod(link, "get_title", NULL);
+
+              if (PyErr_Occurred()) {
+                PyErr_Clear();
+                continue;
+              }
 
               doc->empty_links = cmark_llist_append(doc->empty_links, cur);
 
@@ -152,15 +168,19 @@ static char *render_doc(CMarkDocument *doc, PyObject *link_resolver)
               cmark_node_set_user_data_free_func(cur, free);
 
               if (ref != Py_None) {
-                cmark_node_set_url(cur, PyString_AsString(ref));
+                utf8 = PyUnicode_AsUTF8String(ref);
+                cmark_node_set_url(cur, PyString_AsString(utf8));
+                Py_DECREF(utf8);
               }
 
-              if (title != Py_None)
-                cmark_node_set_literal(label, PyString_AsString(title));
-              else
+              if (title != Py_None) {
+                utf8 = PyUnicode_AsUTF8String(title);
+                cmark_node_set_literal(label, PyString_AsString(utf8));
+                Py_DECREF(utf8);
+              } else {
                 cmark_node_set_literal(label, url);
+              }
 
-              cmark_node_append_child(cur, label);
               Py_DECREF(title);
               Py_DECREF(ref);
             } else {
@@ -170,12 +190,24 @@ static char *render_doc(CMarkDocument *doc, PyObject *link_resolver)
           } else if (url[0] != '\0') {
             PyObject *link;
 
-            link = PyObject_CallMethod(link_resolver, "get_named_link", "s", url);
+            link = PyObject_CallMethod(link_resolver, "get_named_link", "(s)", url);
+            if (PyErr_Occurred()) {
+              PyErr_Clear();
+              continue;
+            }
+
             if (link != Py_None) {
               PyObject *ref = PyObject_CallMethod(link, "get_link", NULL);
 
+              if (PyErr_Occurred()) {
+                PyErr_Clear();
+                continue;
+              }
+
               if (ref != Py_None) {
-                cmark_node_set_url(cur, PyString_AsString(ref));
+                utf8 = PyUnicode_AsUTF8String(ref);
+                cmark_node_set_url(cur, PyString_AsString(utf8));
+                Py_DECREF(utf8);
               }
 
               Py_DECREF(ref);
@@ -196,17 +228,33 @@ static char *render_doc(CMarkDocument *doc, PyObject *link_resolver)
       cmark_node *label = cmark_node_first_child(cur);
       PyObject *link;
 
-      link = PyObject_CallMethod(link_resolver, "get_named_link", "s", id);
+      link = PyObject_CallMethod(link_resolver, "get_named_link", "(s)", id);
 
       if (link != Py_None) {
         PyObject *ref = PyObject_CallMethod(link, "get_link", NULL);
+        if (PyErr_Occurred()) {
+          PyErr_Clear();
+          continue;
+        }
+
         PyObject *title = PyObject_CallMethod(link, "get_title", NULL);
 
-        if (title != Py_None)
-          cmark_node_set_literal(label, PyString_AsString(title));
+        if (PyErr_Occurred()) {
+          PyErr_Clear();
+          continue;
+        }
 
-        if (ref != Py_None)
-          cmark_node_set_url(cur, PyString_AsString(ref));
+        if (title != Py_None) {
+          utf8 = PyUnicode_AsUTF8String(title);
+          cmark_node_set_literal(label, PyString_AsString(utf8));
+          Py_DECREF(utf8);
+        }
+
+        if (ref != Py_None) {
+          utf8 = PyUnicode_AsUTF8String(ref);
+          cmark_node_set_url(cur, PyString_AsString(utf8));
+          Py_DECREF(utf8);
+        }
 
         Py_DECREF(title);
         Py_DECREF(ref);
