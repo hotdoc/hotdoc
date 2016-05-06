@@ -40,6 +40,7 @@ from hotdoc.core.symbols import\
      VFunctionSymbol, ClassSymbol)
 from hotdoc.core.links import Link
 from hotdoc.core.exceptions import HotdocSourceException
+from hotdoc.core.doc_database import DocDatabase
 from hotdoc.parsers import cmark
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.simple_signals import Signal
@@ -242,6 +243,7 @@ class DocTree(object):
         self.__placeholders = {}
         self.__root = None
         self.__dep_map = self.__create_dep_map()
+        DocDatabase.comment_updated_signal.connect(self.__comment_updated_cb)
 
     def __create_dep_map(self):
         dep_map = {}
@@ -429,6 +431,12 @@ class DocTree(object):
             return Link(ref, page.link.get_title(), None)
         return None
 
+    def __comment_updated_cb(self, doc_db, comment):
+        pagename = self.__dep_map.get(comment.name)
+        page = self.__all_pages.get(pagename)
+        if page:
+            page.is_stale = True
+
     def walk(self, parent=None):
         """Generator that yields pages in infix order
 
@@ -517,7 +525,7 @@ class DocTree(object):
 
         if page.is_stale:
             if page.ast is None and not page.generated:
-                with open(page.source_file, 'r') as _:
+                with io.open(page.source_file, 'r', encoding='utf-8') as _:
                     page.ast = cmark.hotdoc_to_ast(_.read(), None)
 
             page.resolve_symbols(doc_database, link_resolver)
