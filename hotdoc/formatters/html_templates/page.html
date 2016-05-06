@@ -1,4 +1,4 @@
-@require(page, toc, symbols_details)
+@require(page, toc, symbols_details, extra_html)
 @extends('base_page.html')
 
 @def content():
@@ -6,6 +6,9 @@
 @if page.formatted_contents:
 <div id="page-description">
 @page.formatted_contents
+@for extra in extra_html:
+@extra
+@end
 </div>
 @end
 

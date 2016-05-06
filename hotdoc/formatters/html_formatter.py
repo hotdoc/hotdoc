@@ -25,6 +25,7 @@ import cgi
 import re
 import tempfile
 
+# pylint: disable=import-error
 from wheezy.template.engine import Engine
 from wheezy.template.ext.core import CoreExtension
 from wheezy.template.ext.code import CodeExtension
@@ -433,6 +434,7 @@ class HtmlFormatter(Formatter):
         """
         page.output_attrs['html']['scripts'] = set()
         page.output_attrs['html']['stylesheets'] = set()
+        page.output_attrs['html']['extra_html'] = []
         if HtmlFormatter.add_anchors:
             page.output_attrs['html']['scripts'].add(
                 os.path.join(HERE, 'html_assets', 'css.escape.js'))
@@ -476,12 +478,14 @@ class HtmlFormatter(Formatter):
         self.all_stylesheets.update(stylesheets)
         self.all_scripts.update(scripts)
 
-        out = template.render({'page': page,
-                               'scripts': scripts_basenames,
-                               'stylesheets': stylesheets_basenames,
-                               'toc': toc,
-                               'assets_path': self._get_assets_path(),
-                               'symbols_details': symbols_details})
+        out = template.render(
+            {'page': page,
+             'scripts': scripts_basenames,
+             'stylesheets': stylesheets_basenames,
+             'toc': toc,
+             'assets_path': self._get_assets_path(),
+             'extra_html': page.output_attrs['html']['extra_html'],
+             'symbols_details': symbols_details})
 
         return (out, True)
 
