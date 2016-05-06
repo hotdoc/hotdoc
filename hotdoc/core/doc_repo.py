@@ -266,9 +266,6 @@ class DocRepo(object):
             shutil.rmtree(self.get_private_folder(), ignore_errors=True)
             if self.output:
                 shutil.rmtree(self.output, ignore_errors=True)
-
-            gen_folder = self.get_generated_doc_folder()
-            shutil.rmtree(gen_folder, ignore_errors=True)
             self.change_tracker = ChangeTracker()
 
     def __get_formatter(self, extension_name):
@@ -462,12 +459,6 @@ class DocRepo(object):
         """
         return self.__base_doc_folder
 
-    def get_generated_doc_folder(self):
-        """Get the folder in which auto-generated doc pages
-        are to be output
-        """
-        return os.path.join(self.get_private_folder(), 'generated')
-
     def __parse_config(self):
         """
         Banana banana
@@ -497,16 +488,11 @@ class DocRepo(object):
 
         cmd_line_includes = self.config.get_paths('include_paths')
         self.__base_doc_folder = os.path.dirname(self.__index_file)
-        gen_folder = self.get_generated_doc_folder()
-        self.include_paths = OrderedSet([gen_folder])
-        self.include_paths.add(self.__base_doc_folder)
+        self.include_paths = OrderedSet([self.__base_doc_folder])
         self.include_paths |= OrderedSet(cmd_line_includes)
         self.__create_change_tracker()
         self.__setup_private_folder()
         self.__setup_database()
-
-        if not os.path.exists(gen_folder):
-            os.makedirs(gen_folder)
 
         self.__create_extensions()
 

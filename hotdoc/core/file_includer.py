@@ -41,16 +41,11 @@ Returns:
     str: The lang of the content ('' means unknown but not markdown)
 """
 include_signal = Signal()
-resolve_markdown_signal = Signal(optimized=True)
 
 
 def find_md_file(filename, include_paths):
     """Banana banana
     """
-    res = resolve_markdown_signal(filename)
-    if res:
-        return res
-
     if os.path.isabs(filename):
         if os.path.exists(filename):
             return filename
@@ -61,8 +56,6 @@ def find_md_file(filename, include_paths):
         if os.path.exists(fpath) and os.path.isfile(fpath):
             return fpath
 
-    if os.path.exists(filename) and os.path.isfile(filename):
-        return filename
     return None
 
 
