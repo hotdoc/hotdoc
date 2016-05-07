@@ -304,24 +304,18 @@ class ConfigParser(object):
             if key in self.__cli:
                 continue
 
-            if key.endswith('index') and not key.endswith('smart_index'):
+            if key == 'index':
                 path = self.__abspath(value, from_conf=True)
                 if path:
-                    all_deps.add(path)
-                    if key == 'index':
-                        all_deps |= self.get_markdown_files(
-                            os.path.dirname(path))
+                    all_deps |= self.get_markdown_files(os.path.dirname(path))
             elif key.endswith('sources'):
                 all_deps |= self.get_sources(key[:len('sources') * -1])
 
         for key, value in self.__cli.items():
-            if key.endswith('index') and not key.endswith('smart_index'):
-                path = self.__abspath(value, from_conf=False)
+            if key == 'index':
+                path = self.__abspath(value, from_conf=True)
                 if path:
-                    all_deps.add(path)
-                    if key == 'index':
-                        all_deps |= self.get_markdown_files(
-                            os.path.dirname(path))
+                    all_deps |= self.get_markdown_files(os.path.dirname(path))
             elif key.endswith('sources'):
                 all_deps |= self.get_sources(key[:len('sources') * -1])
 

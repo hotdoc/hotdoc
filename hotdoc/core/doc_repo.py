@@ -213,13 +213,14 @@ class DocRepo(object):
         """
         self.__setup(args)
 
+        self.doc_tree = DocTree(self.get_private_folder(), self.include_paths)
+
         for extension in self.extensions.values():
             info('Setting up %s' % extension.extension_name)
             extension.setup()
             self.doc_database.flush()
 
         sitemap = SitemapParser().parse(self.sitemap_path)
-        self.doc_tree = DocTree(self.get_private_folder(), self.include_paths)
         self.doc_tree.parse_sitemap(self.change_tracker, sitemap)
 
         info("Resolving symbols", 'resolution')
