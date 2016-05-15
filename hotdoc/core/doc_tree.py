@@ -406,6 +406,7 @@ class DocTree(object):
         output = os.path.join(output, formatter.get_output_folder())
 
         sitemap = self.__create_json_sitemap()
+        sitemap = sitemap.replace('\\', '\\\\')
         sitemap = sitemap.replace('"', '\\"')
 
         js_wrapper = 'sitemap_downloaded_cb("'
