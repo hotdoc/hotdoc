@@ -20,6 +20,7 @@
  */
 
 $(document).ready(function() {
+	var anchor_map = {};
 	$("h1,h2,h3,h4,h5").each(function() {
 		if ($(this).attr('id'))
 			return;
@@ -35,6 +36,22 @@ $(document).ready(function() {
 			new_id = hyphenated + counter;
 		}
 
-    		$(this).attr('id', CSS.escape(new_id));
+		new_id = new_id.replace(/[^\x00-\x7F]/g, "");;
+    		$(this).attr('id', new_id);
+		anchor_map["#" + new_id] = $(this).text();
     	});
+
+	$("a:empty").each(function() {
+		var href = $(this).attr("href");
+		if (href === undefined)
+			return true;
+
+		var text = anchor_map[href];
+		if (text === undefined) {
+			console.log("No local ref for empty link", href);
+			return true;
+		}
+
+		$(this).text(text);
+	});
 });
