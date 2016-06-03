@@ -183,8 +183,6 @@ static char *render_doc(CMarkDocument *doc, PyObject *link_resolver)
 
               Py_DECREF(title);
               Py_DECREF(ref);
-            } else {
-              cmark_node_set_literal(label, url);
             }
             Py_DECREF(link);
           } else if (url[0] != '\0') {
