@@ -415,6 +415,7 @@ class BaseExtension(Configurable):
             page = Page(page_name, None)
             page.extension_name = self.extension_name
             page.generated = True
+            page.comment = self.doc_repo.doc_database.get_comment(page_name)
             doc_tree.add_page(index, page_name, page)
         else:
             page.is_stale = True

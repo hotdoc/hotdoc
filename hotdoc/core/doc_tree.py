@@ -73,6 +73,7 @@ class Page(object):
         self.ast = ast
         self.extension_name = None
         self.source_file = source_file
+        self.comment = None
         self.generated = False
         self.output_attrs = None
         self.subpages = OrderedSet()
@@ -103,6 +104,7 @@ class Page(object):
                 'extension_name': self.extension_name,
                 'link': self.link,
                 'source_file': self.source_file,
+                'comment': self.comment,
                 'generated': self.generated,
                 'is_stale': False,
                 'formatted_contents': None,
@@ -166,6 +168,27 @@ class Page(object):
         if self.ast:
             self.formatted_contents =\
                 cmark.ast_to_html(self.ast, link_resolver)
+
+        elif self.comment:
+            if self.comment.short_description:
+                ast = cmark.gtkdoc_to_ast(self.comment.short_description,
+                                          link_resolver)
+                self.short_description =\
+                    cmark.ast_to_html(ast, link_resolver)
+            if self.comment.title:
+                ast = cmark.gtkdoc_to_ast(self.comment.title,
+                                          link_resolver)
+                self.title =\
+                    cmark.ast_to_html(ast, link_resolver)
+                description = u'# %s\n\n%s\n' % (self.comment.title,
+                                                 self.comment.description)
+            else:
+                description = self.comment.description
+                self.title = self.source_file
+
+            ast = cmark.gtkdoc_to_ast(description, link_resolver)
+            self.formatted_contents =\
+                cmark.ast_to_html(ast, link_resolver)
 
         self.output_attrs = defaultdict(lambda: defaultdict(dict))
         formatter.prepare_page_attributes(self)

@@ -75,12 +75,9 @@ class GtkDocParser(object):
         self.tag_validation_regex = re.compile(tag_validation_regex)
 
     def __parse_title(self, raw_title):
-        # Section comments never contain annotations,
-        # FIXME: This code now only lives here for the purpose of
-        # gtk-doc conversion
-        # Could remove that one day
-        if "SECTION" in raw_title:
-            return raw_title, []
+        if raw_title.startswith('SECTION'):
+            filename = raw_title.split('SECTION:')[1].strip()
+            return filename, []
 
         split = raw_title.split(': ', 1)
         title = split[0].rstrip(':')
