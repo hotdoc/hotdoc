@@ -86,7 +86,7 @@ def __get_content(include_path, line_ranges, symbol):
         if c is not None:
             included_content, lang = c
             if lang != "markdown":
-                included_content = '\n``` %s\n%s\n```\n' % (
+                included_content = u'\n``` %s\n%s\n```\n' % (
                     lang, included_content)
             return included_content
 
