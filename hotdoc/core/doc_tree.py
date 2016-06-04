@@ -32,7 +32,7 @@ from collections import namedtuple, defaultdict, OrderedDict
 # pylint: disable=import-error
 import yaml
 
-from hotdoc.core.file_includer import find_md_file
+from hotdoc.core.file_includer import find_md_file, resolve
 from hotdoc.core.symbols import\
     (Symbol, FunctionSymbol, CallbackSymbol,
      FunctionMacroSymbol, ConstantSymbol, ExportedVariableSymbol,
@@ -297,7 +297,7 @@ class DocTree(object):
             for block in yaml.load_all(split[0]):
                 meta.update(block)
 
-        ast = cmark.hotdoc_to_ast(contents, None)
+        ast = cmark.hotdoc_to_ast(contents, self)
         return Page(source_file, ast, meta=meta)
 
     # pylint: disable=too-many-locals
@@ -461,6 +461,12 @@ class DocTree(object):
         if page:
             page.is_stale = True
 
+    def resolve(self, uri):
+        """
+        Banana banana
+        """
+        return resolve(uri, self.__include_paths)
+
     def walk(self, parent=None):
         """Generator that yields pages in infix order
 
@@ -550,7 +556,7 @@ class DocTree(object):
         if page.is_stale:
             if page.ast is None and not page.generated:
                 with io.open(page.source_file, 'r', encoding='utf-8') as _:
-                    page.ast = cmark.hotdoc_to_ast(_.read(), None)
+                    page.ast = cmark.hotdoc_to_ast(_.read(), self)
 
             page.resolve_symbols(doc_database, link_resolver)
 

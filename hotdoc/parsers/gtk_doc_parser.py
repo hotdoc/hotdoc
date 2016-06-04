@@ -30,7 +30,6 @@ from itertools import izip_longest
 
 
 from hotdoc.core.comment_block import Comment, Annotation, Tag
-from hotdoc.core.file_includer import add_md_includes
 from hotdoc.utils.configurable import Configurable
 from hotdoc.parsers import cmark
 
@@ -251,6 +250,7 @@ class GtkDocParser(object):
 
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
+    # pylint: disable=unused-argument
     def parse_comment(self, comment, filename, lineno, endlineno,
                       include_paths=None, stripped=False):
         """
@@ -264,8 +264,6 @@ class GtkDocParser(object):
         raw_comment = comment
         if not stripped:
             comment = self.__strip_comment(comment)
-
-        comment = add_md_includes(comment, filename, include_paths, lineno)
 
         split = re.split(r'\n[\W]*\n', comment, maxsplit=1)
         block_name, parameters, annotations = \

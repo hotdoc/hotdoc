@@ -88,49 +88,18 @@ def __get_content(include_path, line_ranges, symbol):
             if lang != "markdown":
                 included_content = '\n``` %s\n%s\n```\n' % (
                     lang, included_content)
-            return included_content, lang
+            return included_content
 
 
-# pylint: disable=unused-argument
-def add_md_includes(contents, source_file, include_paths=None, lineno=0):
+def resolve(uri, include_paths):
     """
-    Add includes from the @contents markdown and return the new patched content
-    Args:
-        contents: str, a markdown string
-        source_file: str, the file from which @contents comes from
-        include_paths: list, The list of include paths from the configuration
-        lineno: int, The line number from which the content comes from in
-            source_file
+    Banana banana
     """
-    if include_paths is None:
-        return contents
-
-    inclusions = set(re.findall('{{(.+?)}}', contents))
-    lang = None
-    for inclusion in inclusions:
-        include_filename, line_ranges, symbol = __parse_include(inclusion)
-        if include_filename is None:
-            continue
-
-        # pylint: disable=no-member
-        include_path = find_md_file(include_filename, include_paths)
-
-        if include_path is None:
-            continue
-
-        included_content, lang = __get_content(include_path.strip(),
-                                               line_ranges, symbol)
-
-        # Recurse only if in markdown (otherwise we are in a code block)
-        including = lang is "markdown"
-        new_included_content = included_content
-        while including:
-            new_included_content = add_md_includes(new_included_content,
-                                                   include_path, include_paths,
-                                                   lineno)
-            including = (new_included_content != included_content)
-            included_content = new_included_content
-
-        contents = contents.replace('{{' + inclusion + '}}', included_content)
-
-    return contents
+    include_filename, line_ranges, symbol = __parse_include(uri)
+    if include_filename is None:
+        return ""
+    include_path = find_md_file(include_filename, include_paths)
+    if include_path is None:
+        return ""
+    return __get_content(include_path.strip(),
+                         line_ranges, symbol)
