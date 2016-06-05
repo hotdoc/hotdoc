@@ -68,9 +68,10 @@ static cmark_node *try_opening_include_block(cmark_syntax_extension *self,
 
   contents = PRIV(self)->resolve_func(cmark_strbuf_get(uri));
 
-  if (contents)
+  if (contents) {
     cmark_strbuf_puts(text, contents);
-  else {
+    free(contents);
+  } else {
     cmark_strbuf_puts(text, "FIXME: missing include: ");
     cmark_strbuf_puts(text, cmark_strbuf_get(uri));
   }

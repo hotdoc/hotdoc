@@ -72,7 +72,7 @@ resolve_include(const char *uri) {
 
   contents = PyObject_CallMethod(include_resolver, "resolve", "s", uri);
 
-  res = PyString_AsString(contents);
+  res = strdup(PyString_AsString(contents));
 
   Py_DECREF(contents);
 
