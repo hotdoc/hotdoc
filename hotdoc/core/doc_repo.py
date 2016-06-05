@@ -69,6 +69,10 @@ class CoreExtension(BaseExtension):
         lang = ''
         if include_path.endswith((".md", ".markdown")):
             lang = 'markdown'
+        else:
+            split = os.path.splitext(include_path)
+            if len(split) == 2:
+                lang = split[1].strip('.')
 
         with io.open(include_path, 'r', encoding='utf-8') as _:
             return _.read(), lang
