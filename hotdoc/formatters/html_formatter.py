@@ -44,6 +44,7 @@ from hotdoc.core.links import Link
 from hotdoc.parsers.gtk_doc_parser import GtkDocStringFormatter
 
 from hotdoc.utils.setup_utils import THEME_VERSION
+from hotdoc.utils.utils import OrderedSet
 
 
 HERE = os.path.dirname(__file__)
@@ -432,8 +433,8 @@ class HtmlFormatter(Formatter):
         """
         Banana banana
         """
-        page.output_attrs['html']['scripts'] = set()
-        page.output_attrs['html']['stylesheets'] = set()
+        page.output_attrs['html']['scripts'] = OrderedSet()
+        page.output_attrs['html']['stylesheets'] = OrderedSet()
         page.output_attrs['html']['extra_html'] = []
         if HtmlFormatter.add_anchors:
             page.output_attrs['html']['scripts'].add(
