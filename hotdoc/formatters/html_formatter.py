@@ -25,6 +25,9 @@ import cgi
 import re
 import tempfile
 
+from lxml import etree
+import lxml.html
+
 # pylint: disable=import-error
 from wheezy.template.engine import Engine
 from wheezy.template.ext.core import CoreExtension
@@ -45,6 +48,20 @@ from hotdoc.parsers.gtk_doc_parser import GtkDocStringFormatter
 
 from hotdoc.utils.setup_utils import THEME_VERSION
 from hotdoc.utils.utils import OrderedSet
+from hotdoc.core.exceptions import HotdocException
+from hotdoc.utils.loggable import Logger, warn
+
+
+class HtmlFormatterBadLinkException(HotdocException):
+    """
+    Raised when a produced html page contains an empty local link
+    to nowhere.
+    """
+    pass
+
+
+Logger.register_warning_code('bad-local-link', HtmlFormatterBadLinkException,
+                             domain='html-formatter')
 
 
 HERE = os.path.dirname(__file__)
@@ -146,6 +163,53 @@ class HtmlFormatter(Formatter):
             self._docstring_formatter.translate_tags(comment, link_resolver)
         return super(HtmlFormatter, self).format_comment(
             comment, link_resolver)
+
+    # pylint: disable=too-many-locals
+    def write_page(self, page, output):
+        root = etree.HTML(page.detailed_description)
+        id_nodes = {n.attrib['id']: "".join([x for x in n.itertext()])
+                    for n in root.xpath('.//*[@id]')}
+
+        targets = root.xpath(
+            './/*[self::h1 or self::h2 or self::h3 or self::h4 or self::h5]')
+
+        for target in targets:
+            if 'id' in target.attrib:
+                continue
+
+            text = "".join([x for x in target.itertext()])
+            id_ = text.strip().lower().replace(' ', '-').replace(
+                '\t', '-').replace('\n', '-')
+            # We don't want no utf-8 in urls
+            id_ = str(re.sub(r'[^\x00-\x7F]+', '', id_))
+            id_ = id_.translate(
+                None, r"[!\"#$%&'\(\)\*\+,\.\/:;<=>\?\@\[\\\]\^`\{\|\}~]")
+            ref_id = id_
+            index = 1
+
+            while id_ in id_nodes:
+                id_ = '%s%s' % (ref_id, index)
+                index += 1
+
+            target.attrib['id'] = id_
+            id_nodes[id_] = text
+
+        empty_links = root.xpath('.//a[not(text()) and not(*)]')
+        for link in empty_links:
+            href = link.attrib.get('href')
+            if href and href.startswith('#'):
+                title = id_nodes.get(href.strip('#'))
+                if title:
+                    link.text = title
+                else:
+                    warn('bad-local-link',
+                         "Empty anchor link to %s in %s points nowhere" %
+                         (href, page.source_file))
+                    link.text = "FIXME broken link to %s" % href
+
+        page.detailed_description = lxml.html.tostring(
+            root, doctype="<!DOCTYPE html>")
+        return Formatter.write_page(self, page, output)
 
     # pylint: disable=no-self-use
     def _get_extension(self):
@@ -439,8 +503,6 @@ class HtmlFormatter(Formatter):
         if HtmlFormatter.add_anchors:
             page.output_attrs['html']['scripts'].add(
                 os.path.join(HERE, 'html_assets', 'css.escape.js'))
-            page.output_attrs['html']['scripts'].add(
-                os.path.join(HERE, 'html_assets', 'anchorizer.js'))
         Formatter.prepare_page_attributes(self, page)
 
     def patch_page(self, page, symbol):
