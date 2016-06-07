@@ -171,13 +171,21 @@ class HtmlFormatter(Formatter):
                     for n in root.xpath('.//*[@id]')}
 
         targets = root.xpath(
-            './/*[self::h1 or self::h2 or self::h3 or self::h4 or self::h5]')
+            './/*[self::h1 or self::h2 or self::h3 or '
+            'self::h4 or self::h5 or self::img]')
 
         for target in targets:
             if 'id' in target.attrib:
                 continue
 
-            text = "".join([x for x in target.itertext()])
+            if target.tag == 'img':
+                text = target.attrib.get('alt')
+            else:
+                text = "".join([x for x in target.itertext()])
+
+            if not text:
+                continue
+
             id_ = text.strip().lower().replace(' ', '-').replace(
                 '\t', '-').replace('\n', '-')
             # We don't want no utf-8 in urls
