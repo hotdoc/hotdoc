@@ -470,6 +470,11 @@ class DocRepo(object):
         """
         output = self.config.get_path('output')
         self.sitemap_path = self.config.get_path('sitemap')
+
+        if self.sitemap_path is None:
+            error('invalid-config',
+                  'No sitemap was provided')
+
         if output is not None:
             self.output = os.path.abspath(output)
         else:
