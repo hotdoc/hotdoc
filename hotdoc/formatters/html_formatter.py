@@ -24,6 +24,7 @@ import os
 import cgi
 import re
 import tempfile
+import urlparse
 
 from lxml import etree
 import lxml.html
@@ -65,6 +66,16 @@ Logger.register_warning_code('bad-local-link', HtmlFormatterBadLinkException,
 
 
 HERE = os.path.dirname(__file__)
+
+
+def _id_from_text(text):
+    id_ = text.strip().lower().replace(' ', '-').replace(
+        '\t', '-').replace('\n', '-')
+    # We don't want no utf-8 in urls
+    id_ = str(re.sub(r'[^\x00-\x7F]+', '', id_))
+    id_ = id_.translate(
+        None, r"[!\"#$%&'\(\)\*\+,\.\/:;<=>\?\@\[\\\]\^`\{\|\}~]")
+    return id_
 
 
 # pylint: disable=too-few-public-methods
@@ -186,12 +197,7 @@ class HtmlFormatter(Formatter):
             if not text:
                 continue
 
-            id_ = text.strip().lower().replace(' ', '-').replace(
-                '\t', '-').replace('\n', '-')
-            # We don't want no utf-8 in urls
-            id_ = str(re.sub(r'[^\x00-\x7F]+', '', id_))
-            id_ = id_.translate(
-                None, r"[!\"#$%&'\(\)\*\+,\.\/:;<=>\?\@\[\\\]\^`\{\|\}~]")
+            id_ = _id_from_text(text)
             ref_id = id_
             index = 1
 
@@ -241,6 +247,11 @@ class HtmlFormatter(Formatter):
         if not link:
             print "Issue here plz check", title
             return title
+
+        url_components = urlparse.urlparse(link)
+        if not url_components.netloc and url_components.path ==\
+                self._current_page.link.get_link():
+            link = '#%s' % _id_from_text(url_components.fragment)
 
         template = self.engine.get_template('link.html')
         out += '%s' % template.render({'link': link,
@@ -424,9 +435,10 @@ class HtmlFormatter(Formatter):
         if not klass.comment:
             return ''
 
+        klass_link = self._format_link(klass.link.get_link(), klass.link.title)
         template = self.engine.get_template('class_summary.html')
         return template.render({'symbol': klass,
-                                'klass': klass})
+                                'klass_link': klass_link})
 
     def _format_summary(self, toc_sections):
         template = self.engine.get_template('summary.html')

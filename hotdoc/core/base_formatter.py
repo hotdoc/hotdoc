@@ -58,6 +58,9 @@ class Formatter(Configurable):
     editing_server = None
     extra_assets = None
 
+    def __init__(self):
+        self._current_page = None
+
     # pylint: disable=no-self-use
     def _get_assets_path(self):
         """
@@ -156,6 +159,7 @@ class Formatter(Configurable):
         """
         Banana banana
         """
+        self._current_page = page
         Formatter.formatting_page_signal(self, page)
         return self._format_page(page)
 

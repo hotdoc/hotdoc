@@ -1,11 +1,9 @@
-@require(klass)
+@require(klass_link)
 @extends('base_symbol_summary.html')
 
 @def type():
 <span>class</span>
 @end
 @def name():
-<a href="@klass.link.get_link()">
-	<span>@klass.link.title</span>
-</a>
+@klass_link
 @end

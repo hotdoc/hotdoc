@@ -1,2 +1,2 @@
 [TYPECHECK]
-ignored-modules=distutils,hotdoc.parsers.cmark
+ignored-modules=distutils,hotdoc.parsers.cmark,pygraphviz
