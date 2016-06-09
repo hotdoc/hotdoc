@@ -166,7 +166,7 @@ class HtmlFormatter(Formatter):
 
     # pylint: disable=too-many-locals
     def write_page(self, page, output):
-        root = etree.HTML(page.detailed_description)
+        root = etree.HTML(unicode(page.detailed_description))
         id_nodes = {n.attrib['id']: "".join([x for x in n.itertext()])
                     for n in root.xpath('.//*[@id]')}
 
@@ -216,7 +216,8 @@ class HtmlFormatter(Formatter):
                     link.text = "FIXME broken link to %s" % href
 
         page.detailed_description = lxml.html.tostring(
-            root, doctype="<!DOCTYPE html>")
+            root, doctype="<!DOCTYPE html>", encoding='unicode',
+            include_meta_content_type=True)
         return Formatter.write_page(self, page, output)
 
     # pylint: disable=no-self-use
