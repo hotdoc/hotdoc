@@ -10,8 +10,6 @@ hotdoc help
 
 > The current handling of the command line arguments is not entirely bullet-proof, as the intention was to provide a "git-like" interface, but the current implementation uses argparse.ArgumentParser.add_subparser, which doesn't lend itself very well to that use case, and some manual initial string manipulation is required.
 
-### [Porting from an existing project](porting-guides.markdown)
-
 ### Setting up a project from scratch.
 
 You will first need to create the markdown files that will constitute the "skeleton" of your documentation, see the [page creation tutorial](the-markdown-pages.markdown#page-creation-tutorial) for more information.

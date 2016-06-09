@@ -17,7 +17,8 @@ extracted from.
 
 ### Simple yet powerful syntax
 
-Hotdoc uses [CommonMark](http://commonmark.org/) to parse and render
+Hotdoc follows the [CommonMark](http://commonmark.org/) specification
+and uses [cmark](https://github.com/jgm/cmark) to parse and render
 standalone documentation pages.
 
 This format was chosen because it is very simple to edit, yet allows
@@ -33,9 +34,6 @@ which can additionally override the base templates. By default, hotdoc will use
 a theme based on bootstrap and isotope, see
 [https://github.com/hotdoc/hotdoc_bootstrap_theme](https://github.com/hotdoc/hotdoc_bootstrap_theme)
 for its sources.
-
-> Work is still ongoing on the default theme, a lot of its code needs to be
-> placed in relevant extensions
 
 ### API
 

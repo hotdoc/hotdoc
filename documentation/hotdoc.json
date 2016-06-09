@@ -4,8 +4,11 @@
     "index": "markdown_files/index.markdown",
     "python_sources": ["../hotdoc/core/*.py"],
     "python_source_filters": ["../hotdoc/core/__init__.py"],
+    "python_smart_index": true,
     "add_anchors": true,
     "output": "built_doc",
     "project_name": "hotdoc",
+    "sitemap": "sitemap.txt",
+    "html_theme": "/home/meh/devel/hotdoc/hotdoc_bootstrap_theme/dist",
     "devhelp_activate": true
 }
