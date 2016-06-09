@@ -8,16 +8,18 @@ Detailed instructions for installing hotdoc.
 
 Hotdoc needs [graphviz](http://www.graphviz.org/) to generate object hierarchies, you will thus need to install graphviz-dev, and some libraries it depends depend on the python headers, so you will need to install them too.
 
-On Fedora this can be done with:
+Hotdoc also uses lxml, which depends on libxml2 and libxslt.
+
+On Fedora you can install all these dependencies with:
 
 ```
-dnf install graphviz-devel python-devel
+dnf install graphviz-devel python-devel libxml2-devel libxslt-devel
 ```
 
 And on ubuntu / debian:
 
 ```
-apt-get install libgraphviz-dev python-dev
+apt-get install libgraphviz-dev python-dev libxml2-dev libxslt1-dev
 ```
 
 #### cmake
