@@ -190,6 +190,9 @@ class Page(object):
             self.formatted_contents =\
                 cmark.ast_to_html(ast, link_resolver)
 
+        if not self.title and self.source_file:
+            self.title = os.path.splitext(self.source_file)[0]
+
         self.output_attrs = defaultdict(lambda: defaultdict(dict))
         formatter.prepare_page_attributes(self)
         Page.formatting_signal(self, formatter)

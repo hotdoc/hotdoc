@@ -359,7 +359,7 @@ class ConfigParser(object):
                         relpath = os.path.relpath(path, self.__conf_dir)
                         new_list.append(relpath)
                 final_conf[key] = new_list
-            else:
+            elif key != 'command':
                 final_conf[key] = value
 
         with open(conf_file or self.__conf_file, 'w') as _:

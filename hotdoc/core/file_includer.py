@@ -97,9 +97,9 @@ def resolve(uri, include_paths):
     """
     include_filename, line_ranges, symbol = __parse_include(uri)
     if include_filename is None:
-        return ""
+        return None
     include_path = find_md_file(include_filename, include_paths)
     if include_path is None:
-        return ""
+        return None
     return __get_content(include_path.strip(),
                          line_ranges, symbol)

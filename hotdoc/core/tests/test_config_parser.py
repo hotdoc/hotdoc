@@ -111,9 +111,7 @@ class TestConfigParser(unittest.TestCase):
             set([os.path.join(self.__priv_dir, 'foo.x'),
                  os.path.join(self.__priv_dir, 'bar.x'),
                  os.path.join(self.__priv_dir, 'baz.x'),
-                 os.path.join(self.__priv_dir, 'my_index.markdown'),
-                 conf_file,
-                 '/home/meh/test_index.markdown']))
+                 conf_file]))
 
     def test_cli_overrides(self):
         conf_file = os.path.join(self.__priv_dir, 'test.json')

@@ -56,9 +56,6 @@ static cmark_node *try_opening_include_block(cmark_syntax_extension *self,
   text = cmark_strbuf_new(start);
   cmark_strbuf_put(text, (unsigned char *) input, start - 2);
 
-  cmark_parser_advance_offset(parser, input,
-      start + cmark_parser_get_first_nonspace(parser), false);
-
   end = scan_close_include_block(input,
       cmark_parser_get_first_nonspace(parser));
 
@@ -72,11 +69,14 @@ static cmark_node *try_opening_include_block(cmark_syntax_extension *self,
     cmark_strbuf_puts(text, contents);
     free(contents);
   } else {
-    cmark_strbuf_puts(text, "FIXME: missing include: ");
-    cmark_strbuf_puts(text, cmark_strbuf_get(uri));
+    goto done;
   }
+
   cmark_strbuf_puts(text, input + end + 2);
   final_contents = cmark_strbuf_get(text);
+
+  cmark_parser_advance_offset(parser, input,
+      start + cmark_parser_get_first_nonspace(parser), false);
 
   cmark_parser_feed_reentrant(parser, final_contents, strlen(final_contents));
 

@@ -64,7 +64,7 @@ gtkdoc_to_ast(PyObject *self, PyObject *args) {
 static char *
 resolve_include(const char *uri) {
   PyObject *contents;
-  char *res;
+  char *res = NULL;
 
   if (!include_resolver) {
     return NULL;
@@ -72,7 +72,8 @@ resolve_include(const char *uri) {
 
   contents = PyObject_CallMethod(include_resolver, "resolve", "s", uri);
 
-  res = strdup(PyString_AsString(contents));
+  if (contents != Py_None)
+    res = strdup(PyString_AsString(contents));
 
   Py_DECREF(contents);
 

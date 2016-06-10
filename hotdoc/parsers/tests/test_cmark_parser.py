@@ -119,7 +119,7 @@ class TestGtkDocExtension(unittest.TestCase):
         inp = u"function_link()"
         self.assertOutputs(
             inp,
-            u'<p><a href="function_link">function_link</a></p>\n')
+            u'<p><a href="function_link"></a></p>\n')
 
     def test_qualified_links(self):
         inp = u' #Test::test is a link'
@@ -174,7 +174,7 @@ class TestIncludeExtension(unittest.TestCase):
         inp = u'I include a {{should_not_exist}}!'
         self.assertOutputs(
             inp,
-            u'<p>I include a FIXME: missing include: should_not_exist!</p>\n')
+            u'<p>I include a {{should_not_exist}}!</p>\n')
 
     def test_in_code_block(self):
         inp = (u'```\n'

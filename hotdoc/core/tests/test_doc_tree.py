@@ -45,6 +45,7 @@ class TestExtension(BaseExtension):
 
     def __init__(self, doc_repo):
         self.formatters = {'html': None}
+        self.smart_index = True
         super(TestExtension, self).__init__(doc_repo)
 
     def setup(self):
