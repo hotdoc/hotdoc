@@ -1,40 +1,40 @@
-## Installing
+---
+short-description: Detailed instructions for installing hotdoc
+...
 
-Detailed instructions for installing hotdoc.
+# Installing
 
-### System-wide dependencies
+## System-wide dependencies
 
-#### graphviz
+### graphviz
 
 Hotdoc needs [graphviz](http://www.graphviz.org/) to generate object hierarchies, you will thus need to install graphviz-dev, and some libraries it depends depend on the python headers, so you will need to install them too.
 
+### lxml
+
 Hotdoc also uses lxml, which depends on libxml2 and libxslt.
+
+### cmake
+
+For now, hotdoc bundles its own version of [libcmark](https://github.com/jgm/cmark) as a submodule, and builds it using cmake, which thus needs to be installed on the system.
+
+### Command-line install
 
 On Fedora you can install all these dependencies with:
 
 ```
-dnf install graphviz-devel python-devel libxml2-devel libxslt-devel
+dnf install graphviz-devel python-devel libxml2-devel libxslt-devel cmake
 ```
 
 And on ubuntu / debian:
 
 ```
-apt-get install libgraphviz-dev python-dev libxml2-dev libxslt1-dev
-```
-
-#### cmake
-
-For now, hotdoc bundles its own version of [libcmark](https://github.com/jgm/cmark) as a submodule, and builds it using cmake, which thus needs to be installed on the system.
-
-On Fedora this can be done with:
-
-```
-dnf install cmake
+apt-get install libgraphviz-dev python-dev libxml2-dev libxslt1-dev cmake
 ```
 
 I guess it should be similar on Ubuntu / debian, refer to <https://cmake.org/install/> for more info.
 
-### Creating a virtualenv
+## Creating a virtualenv
 
 It is highly recommended to use [virtualenv](https://virtualenv.readthedocs.org/en/latest/) to try out any new python project, and hotdoc is no exception. You can however skip this step if you really do not
 care about installing hotdoc system-wide.
@@ -47,9 +47,9 @@ virtualenv hotdoc_env
 . hotdoc_env/bin/activate
 ```
 
-You are now in a virtual environment, to exit it you may call "deactivate", to enter it again simply call `. hotdoc_env/bin/activate` from the directory in which the environment was created.
+You are now in a virtual environment, to exit it you may call `deactivate`, to enter it again simply call `. hotdoc_env/bin/activate` from the directory in which the environment was created.
 
-### Hotdoc itself
+## Hotdoc itself
 
 Three main alternatives are available:
 

@@ -1,39 +1,45 @@
-## The configuration file
+---
+short-description: Where we present hotdoc's configuration file
+...
 
-Where we present hotdoc's configuration file.
+# The configuration file
+
+## Format
 
 The configuration file is a simple, flat json file made of a set of key-value pairs, for example:
 
-```
+``` json
 {
-    "html_theme": "default", 
-    "output_format": "html"
+	"index": "markdown_files/index.markdown",
+	"sitemap": "sitemap.txt"
 }
 ```
 
-is a valid hotdoc's configuration file. The valid keys are computed from the command-line arguments,
-which you can list with `hotdoc help`.
+is a valid hotdoc's configuration file. The valid keys are computed from the
+command-line arguments, which you can list with `hotdoc help`.
 
-The convention is to name this file `hotdoc.json`, when hotdoc is called it will look for a file named that way in its invocation folder, use the `--conf-file` command-line argument to specify an alternate path.
+The convention is to name this file `hotdoc.json`, when hotdoc is called it
+will look for a file named that way in its invocation folder, use the
+`--conf-file` command-line argument to specify an alternate path.
 
 Options specified from the command-line will take precedence over their json counterpart.
 
-### Creating from a command line invocation
+## Creating from a command line invocation
 
 An easy way to create a configuration file from a command-line invocation is to replace `run` with `conf` in the command-line, for example to translate:
 
-```
-hotdoc --index markdown_files/index.markdown --output built_doc run
+``` shell
+hotdoc --index markdown_files/index.markdown --output built_doc --sitemap sitemap.txt run
 ```
 
 you should use 
 
-```
-hotdoc --index markdown_files/index.markdown --output built_doc conf
+``` shell
+hotdoc --index markdown_files/index.markdown --output built_doc --sitemap sitemap.txt conf
 ```
 
 This will create a hotdoc.json file in the current directory, which means you can now run hotdoc that way:
 
-```
+``` shell
 hotdoc run
 ```

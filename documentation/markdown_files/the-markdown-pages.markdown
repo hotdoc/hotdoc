@@ -1,26 +1,32 @@
-## The markdown pages
+---
+short-description: Where we present hotdoc's markdown pages
+...
 
-Where we present hotdoc's standalone markdown pages.
+# The markdown pages
 
-The standalone markdown files (usually located in "markdown_files) serve three main purposes:
+The standalone markdown files (usually located in `markdown_files`) serve
+two main purposes:
 
-* Actually holding documentation: the contents in all markdown files will get rendered with CommonMark nearly as is, with the exception of the [syntax extensions](syntax-extensions.markdown).
+* Actually holding documentation: the contents in all markdown files will
+  get rendered following the [CommonMark] specification nearly as is,
+  with the exception of the [syntax extensions](syntax-extensions.markdown).
 
-* Creating the site hierarchy, or site map, that is the way in which the various pages of the resulting documentation link to each other, starting from the provided index page. See the [link syntax extension documentation](syntax-extensions.markdown#link-syntax) for the complete description of how links may be defined.
+* Holding metadata in [yaml] headers.
 
-* Optionally defining in which subpages source code symbols should be documented.
+## Page creation tutorial
 
-### Page creation tutorial
-
-> The final output of this tutorial can be visited [here](https://people.collabora.com/~meh/simplest_example_hotdoc/html/index.html), and the final project is hosted [there](https://github.com/hotdoc/simplest_example), there is a Makefile that defines the `all` and `clean` targets.
+> The final output of this tutorial can be visited
+> [here](https://people.collabora.com/~meh/simplest_example/index.html),
+> and the final project is hosted [there](https://github.com/hotdoc/simplest_example),
+> it contains a Makefile defining the `all` and `clean` targets.
 
 The following instructions will help explaining a few concepts through example.
 
-#### Set up a basic page tree
+### Set up a basic page tree
 
 Set up a test folder
 
-```
+``` shell
 mkdir -p ~/hotdoc_layout_test/markdown_files
 cd ~/hotdoc_layout_test
 ```
@@ -29,90 +35,135 @@ cd ~/hotdoc_layout_test
 
 Now open `markdown_files/subpage.markdown` with the editor of your choice, put the following contents inside it and save it:
 
-```
-# Welcome to my subpage
+``` markdown
+---
+short-description: Just a subpage
+...
+
+# My subpage
 
 Using *some* **random** `CommonMark` [syntax](http://spec.commonmark.org/)
+
+You may want to go back to [the index](index.markdown) now?
 ```
 
 Then open `markdown_files/index.markdown` with the editor of your choice, put the following contents inside it and save it:
 
+``` markdown
+# My project
 ```
-# Welcome to my simple layout test project
 
-### [My subpage](subpage.markdown)
+Finally open `sitemap.txt`, input the following contents and save it:
+
+``` txt
+index.markdown
+	subpage.markdown
 ```
 
 You can now run hotdoc with
 
-```
-hotdoc --index markdown_files/index.markdown --output built_doc  run
+``` shell
+hotdoc --index markdown_files/index.markdown --output built_doc --sitemap sitemap.txt run
 ```
 
-from the `~/hotdoc_layout_test` folder, and check the output with `firefox built_doc/html/index.html`.
+from the `~/hotdoc_layout_test` folder, and check the output with `xdg-open built_doc/html/index.html`.
 
 See the [configuration file section](the-configuration-file.markdown) if you'd like to convert this command-line to a configuration file.
 
 A few things are to be noted here:
 
-* Hotdoc will by default look for subpages in the folder where the provided index is located, so having `markdown_files/subpage.markdown` instead of `subpage.markdown` isn't necessary (and would not be recognized as a subpage anyway). Additional folders in which to look for documentation pages (but also code samples) can be provided to hotdoc with the `include-paths` configuration option.
-* As you have guessed, when `index.markdown` is parsed, hotdoc will see that a page named `subpage.markdown` does exist in the `markdown_files` folder, it will thus open it and parse it in the same fashion, and consider `subpage.markdown` as a subpage of `index.markdown`.
-* The process is of course repeated recursively, and its result is a documentation "tree", with its "root" being the `index.markdown` page and its only "leaf" (a page which doesn't have any subpages) being the `subpage.markdown` page
-* Formatting is done in a latter stage, by walking through the documentation tree, and it's only at this moment that the destination of the link (`subpage.markdown`) is modified to point to the actual location of the output subpage (for example to `subpage.html`)
+* Hotdoc will by default look for subpages in the folder where the provided
+  index is located, so only the basenames need to be input in the sitemap.
+  Additional folders in which to look for documentation pages (but also code
+  samples) can be provided to hotdoc with the `include-paths`
+  configuration option.
 
-If all you want hotdoc to do is help you in generating a multi-page website from a set
-of markdown files, then you can stop reading here.
+* Links to pages in the doc tree are updated at format-time, in our example
+  `index.markdown` will be updated to `index.html` when outputting html.
 
-If however you also want to use one or more hotdoc extensions to parse source code files and document the symbols that they contain, then keep on reading.
+* The metadata in the yaml headers is not directly visible in the pages
+  they document, but it is used when presenting subpages. In our case,
+  we did not provide any `title` metadata, so the title picked for
+  our subpage is the first heading found in the page. Try defining
+  the `title` metadata in the yaml header if that's your thing :)
 
-#### Assign sub-trees to language extensions
+If all you want hotdoc to do is help you in generating a multi-page website
+from a set of markdown files, then you can stop reading this page, throw an
+eye at [this page](the-configuration-file.markdown) and
+[this one too](syntax-extensions.markdown) though, can't hurt.
+
+If however you also want to use one or more hotdoc extensions to parse source
+code files and document the symbols that they contain, then keep on reading.
+
+### Assign sub-trees to language extensions
 
 When hotdoc parses markdown sources, it attributes them an "extension-name". This name allows using language-specific formatters at format-time, amongst other things that extensions can customize. Of course an extension can choose to not provide a specific formatter, in which case the default formatter will be used.
 
-> Note: this is (currently) the case for the C extension, which means that you can technically skip the rest of this section, as the default formatter will format symbols as C symbols.
+> Note: this is (currently) the case for the C extension, which means
+> that you can technically skip the rest of this section if C is your use 
+> case, as the default formatter will format symbols as C symbols.
 
-The current approach for letting hotdoc know that a page and its subpages should be handled by a given extension is to create a separate "sub-index" file, link to it using a "well-known-name" instead of the raw filename in the desired parent page, and finally pass the raw filename to the chosen extension through the `*extension-prefix*-index` configuration option.
-
-> Refer to the documentation of the extensions you're interested in to discover the well-known-names it has registered, and the exact command-line argument to use.
+The current approach for letting hotdoc know that a page and its subpages
+should be handled by a given extension is to create a separate "sub-index"
+file, use a "well-known-name" placeholder in the sitemap instead of the raw
+filename, and finally pass the raw filename to the chosen extension
+through the `*extension-prefix*-index` configuration option.
 
 For example we could rework our previous example as such:
 
-Replace the contents of `markdown_files/index.markdown` with
+Open `markdown_files/python_index.markdown` with the editor of your choice, put the following contents inside it and save it:
 
-```
-# Welcome to my documentation and API reference
+``` markdown
+---
+short-description: Just an API
+...
 
-### [My subpage](subpage.markdown)
-### [Python API reference](python-api)
-```
-
-Then open `markdown_files/python_index.markdown` with the editor of your choice, put the following contents inside it and save it:
-
-```
 # Python API reference
 
-This page, and all its (potential) subpages, will be formatted with the PythonHtmlFormatter, which is a subclass of the default HtmlFormatter.
+This page, and all its (potential) subpages, will be formatted with the
+PythonHtmlFormatter, which is a subclass of the default HtmlFormatter.
+```
+
+Update `sitemap.txt` to:
+
+``` txt
+index.markdown
+	subpage.markdown
+	python-index
 ```
 
 Finally run hotdoc this way:
 
+``` shell
+hotdoc --index markdown_files/index.markdown --output built_doc --python-index python_index.markdown --sitemap sitemap.txt run -vv
 ```
-hotdoc --index markdown_files/index.markdown --output built_doc --python-index python_index.markdown run
-```
 
-Provided the [python extension](https://github.com/hotdoc/hotdoc_python_extension) is installed in the current environment, the `python_index.markdown` page will be rendered with the `PythonHtmlFormatter`, this is trivially verifiable with `grep "data-extension" built_doc/html/python_index.html`, which should show : `<div data-extension="python-extension" class="page_container" id="page-wrapper">`
+> Note that the two pages you created earlier are not reparsed, nor
+> reformatted. This only presents a very theoretical advantage in our case,
+> but this can come in quite handy when managing hundreds of pages.
 
-> Note: In that example, the "well-known-name" is `python-api` and the command-line argument to let the extension know about the sub-index filename is `python-index`
+Provided the [python extension] is installed in the current environment,
+the `python_index.markdown` page will be rendered with the
+`PythonHtmlFormatter`, this is trivially verifiable with
+`grep "data-extension" built_doc/html/python_index.html`, which should show :
+`<div data-extension="python-extension" class="page_container" id="page-wrapper">`
 
-#### Add symbols to pages
+> Note: In that example, the "well-known-name" is `python-index` and the
+> command-line argument to let the extension know about the sub-index filename
+> is `python-index` too.
 
-The next step will show how to include formatted source code symbols' documentation in the output.
+### Add symbols to pages
 
-The current approach to letting users define where to place the documentation for a given set of symbols is to have them explicitly list them as a bullet-list of empty links in the desired markdown page. The following steps will detail the process.
+The next step will show how to include formatted source code symbols'
+documentation in the output.
+
+The current approach to letting users define where to place the documentation
+for a given set of symbols is to have them explicitly listed in
+the page's metadata. The following steps will detail the process.
 
 First open `module_to_document.py` with the editor of your choice, put the following contents inside it and save it:
 
-```
+``` python
 def function_to_document(foo, bar):
     """A function to document
 
@@ -127,51 +178,84 @@ def function_to_document(foo, bar):
     return foo + bar
 ```
 
-Then, add the following to the bottom of `markdown_files/python-index.markdown`:
+Then, edit `sitemap.txt` to:
 
+``` txt
+index.markdown
+	subpage.markdown
+	python-index
+		explicit_list_of_symbols_in_python_module.markdown
 ```
 
-### [Module to document](explicit_list_of_symbols_in_python_module.markdown)
-```
+> This syntax doesn't expose any new concept, we're just defining a subpage
+> in the standard way.
 
-> This syntax doesn't expose any new concept, we're just defining a subpage in the standard way.
+Finally, open `markdown_files/explicit_list_of_symbols_in_python_module.markdown`
+with the editor of your choice, put the following contents inside it and save it:
 
-Finally, open `markdown_files/explicit_list_of_symbols_in_python_module.markdown` with the editor of your choice, put the following contents inside it and save it:
+``` markdown
+---
+short-description: Just a python module
+symbols:
+    - module_to_document.function_to_document
+...
 
-```
+# My module
+
 This is a module to demonstrate documenting source code symbols.
-
-* [module_to_document.function_to_document]()
 ```
-
-> When hotdoc encounters a link with an empty destination in a list item, it treats it as the name of a symbol to include in the containing page.
 
 You can now invoke hotdoc with
+
+``` shell
+hotdoc --index markdown_files/index.markdown --output built_doc --python-index python_index.markdown --python-sources module_to_document.py --sitemap sitemap.txt run
 ```
-hotdoc --index markdown_files/index.markdown --output built_doc --python-index python_index.markdown --python-sources module_to_document.py - run
-```
-, and check the result with `firefox built_doc/html/python_index.html`.
+, and check the result with `xdg-open built_doc/html/python_index.html`.
 
-#### Or let extensions generate sub-trees and symbol lists
+### Or let extensions generate sub-trees and symbol lists
 
-This approach of explicitly listing each symbol presents the advantage of letting users precisely define the page in which symbols will be documented, as well as their relative ordering,
-however if they do not need this level of control, some extensions can generate the symbol's lists and sub-index themselves.
-
-> Currently, only the python extension supports this, however generic support will be implemented pretty soon.
+This approach of explicitly listing each symbol presents the advantage of
+letting users precisely define the page in which symbols will be documented,
+as well as their relative ordering, however if they do not need this level
+of control, all extensions can generate the symbol's lists and sub-index
+themselves.
 
 To have the extension generate these files, all you need to do is:
 
-```
+``` shell
 rm markdown_files/python_index.markdown
 rm markdown_files/markdown_files/explicit_list_of_symbols_in_python_module.markdown
 ```
 
+and edit the sitemap back to:
+
+``` txt
+index.markdown
+	subpage.markdown
+	python-index
+```
+
 Then run hotdoc without specifying a `python-index`:
 
+``` shell
+rm -rf hotdoc-private* && hotdoc --index markdown_files/index.markdown --output built_doc --python-sources module_to_document.py --python-smart-index --sitemap sitemap.txt run
 ```
-rm -rf hotdoc-private/ && hotdoc --index markdown_files/index.markdown --output built_doc --python-sources module_to_document.py - run
-```
+
+> Removing the `hotdoc-private` folder ensures we rebuild from scratch,
+> just to prove our point.
+
+> Also note the --python-smart-index argument.
 
 The result for that simple project should be strictly the same, you can find generated "intermediary" markdown pages in `hotdoc-private/generated`
 
 > If you cloned <https://github.com/hotdoc/simplest_example> , you can checkout the "generated_symbol_list" branch to see this approach instead.
+
+### Advanced layout
+
+The two approaches listed above can be mixed, this will soon<sup>(tm)</sup> be documented.
+
+[yaml]: http://yaml.org/
+
+[CommonMark]: http://commonmark.org/
+
+[python extension]: https://github.com/hotdoc/hotdoc_python_extension

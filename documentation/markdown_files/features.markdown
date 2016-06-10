@@ -1,8 +1,10 @@
-## Features
+---
+short-description: A non-extensive list of hotdoc features
+...
 
-A non-extensive list of hotdoc features.
+# Features
 
-### Incremental
+## Incremental
 
 Hotdoc is designed as an incremental documentation system. Along with
 its final output, it produces a database of symbols and a dependency
@@ -15,7 +17,7 @@ extracted from.
 
 > See [disabling incremental build](running.markdown#disabling-incremental-build) if you do not wish / need to use this feature.
 
-### Simple yet powerful syntax
+## Simple yet powerful syntax
 
 Hotdoc follows the [CommonMark](http://commonmark.org/) specification
 and uses [cmark](https://github.com/jgm/cmark) to parse and render
@@ -26,7 +28,7 @@ a great amount of control over the resulting layout, and the main
 design requirement behind the choice of the format was to lower as
 much as possible the barrier to contribute to documentation.
 
-### Themeability
+## Themeability
 
 The hotdoc html formatter supports theming. Its base output has
 no stylesheets or scripts applied to it whatsoever, this is handled by themes,
@@ -35,7 +37,7 @@ a theme based on bootstrap and isotope, see
 [https://github.com/hotdoc/hotdoc_bootstrap_theme](https://github.com/hotdoc/hotdoc_bootstrap_theme)
 for its sources.
 
-### API
+## API
 
 Hotdoc 1.0 will expose a (reasonably) stable API, its intended users being:
 
