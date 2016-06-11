@@ -521,6 +521,7 @@ class HtmlFormatter(Formatter):
         page.output_attrs['html']['scripts'] = OrderedSet()
         page.output_attrs['html']['stylesheets'] = OrderedSet()
         page.output_attrs['html']['extra_html'] = []
+        page.output_attrs['html']['extra_footer_html'] = []
         if HtmlFormatter.add_anchors:
             page.output_attrs['html']['scripts'].add(
                 os.path.join(HERE, 'html_assets', 'css.escape.js'))
@@ -569,6 +570,8 @@ class HtmlFormatter(Formatter):
              'toc': toc,
              'assets_path': self._get_assets_path(),
              'extra_html': page.output_attrs['html']['extra_html'],
+             'extra_footer_html':
+             page.output_attrs['html']['extra_footer_html'],
              'symbols_details': symbols_details})
 
         return (out, True)

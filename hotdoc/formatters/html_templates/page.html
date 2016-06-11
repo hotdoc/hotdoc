@@ -1,4 +1,4 @@
-@require(page, toc, symbols_details, extra_html)
+@require(page, toc, symbols_details, extra_html, extra_footer_html)
 @extends('base_page.html')
 
 @def content():
@@ -24,4 +24,12 @@
 @description
 @end
 @end
+@end
+\
+@def footer():
+\
+@for extra in extra_footer_html:
+@extra
+@end
+\
 @end
