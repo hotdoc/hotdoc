@@ -26,7 +26,7 @@ import shutil
 import pygraphviz as pg
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.simple_signals import Signal
-from hotdoc.utils.utils import recursive_overwrite
+from hotdoc.utils.utils import recursive_overwrite, OrderedSet
 
 
 def _create_hierarchy_graph(hierarchy):
@@ -101,6 +101,8 @@ class Formatter(Configurable):
 
             if os.path.isdir(src):
                 recursive_overwrite(src, dest)
+            elif os.path.isfile(src):
+                shutil.copyfile(src, dest)
 
     def __copy_extra_files(self, assets_path):
         if not os.path.exists(assets_path):
@@ -233,4 +235,4 @@ class Formatter(Configurable):
         """Banana banana
         """
         Formatter.editing_server = config.get('editing_server')
-        Formatter.extra_assets = config.get_paths('extra_assets')
+        Formatter.extra_assets = OrderedSet(config.get_paths('extra_assets'))
