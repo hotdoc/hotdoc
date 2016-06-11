@@ -31,6 +31,8 @@ from collections import namedtuple, defaultdict, OrderedDict
 
 # pylint: disable=import-error
 import yaml
+from yaml.constructor import ConstructorError
+from schema import Schema, SchemaError, Optional, And
 
 from hotdoc.core.file_includer import find_md_file, resolve
 from hotdoc.core.symbols import\
@@ -39,12 +41,38 @@ from hotdoc.core.symbols import\
      StructSymbol, EnumSymbol, AliasSymbol, SignalSymbol, PropertySymbol,
      VFunctionSymbol, ClassSymbol)
 from hotdoc.core.links import Link
-from hotdoc.core.exceptions import HotdocSourceException
+from hotdoc.core.exceptions import HotdocSourceException, InvalidPageMetadata
 from hotdoc.core.doc_database import DocDatabase
 from hotdoc.parsers import cmark
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.loggable import info, debug, error, Logger
+
+
+def _custom_str_constructor(loader, node):
+    return unicode(loader.construct_scalar(node).encode('utf-8'))
+
+
+def _no_duplicates_constructor(loader, node, deep=False):
+    """Check for duplicate keys."""
+
+    mapping = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        value = loader.construct_object(value_node, deep=deep)
+        if key in mapping:
+            raise ConstructorError("while constructing a mapping",
+                                   node.start_mark,
+                                   "found duplicate key (%s)" % key,
+                                   key_node.start_mark)
+        mapping[key] = value
+
+    return loader.construct_mapping(node, deep)
+
+yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+                     _no_duplicates_constructor)
+yaml.add_constructor(u'tag:yaml.org,2002:str',
+                     _custom_str_constructor)
 
 
 class DocTreeNoSuchPageException(HotdocSourceException):
@@ -57,16 +85,23 @@ class DocTreeNoSuchPageException(HotdocSourceException):
 
 Logger.register_error_code('no-such-subpage', DocTreeNoSuchPageException,
                            domain='doc-tree')
+Logger.register_error_code('invalid-page-metadata', InvalidPageMetadata,
+                           domain='doc-tree')
 
 
 # pylint: disable=too-many-instance-attributes
 class Page(object):
     "Banana banana"
+    meta_schema = {Optional('title'): And(unicode, len),
+                   Optional('symbols'): Schema([And(unicode, len)]),
+                   Optional('short-description'): And(unicode, len)}
+
     resolving_symbol_signal = Signal()
     formatting_signal = Signal()
 
     def __init__(self, source_file, ast, meta=None):
         "Banana banana"
+        assert source_file
         name = os.path.splitext(os.path.basename(source_file))[0]
         pagename = '%s.html' % name
 
@@ -83,15 +118,17 @@ class Page(object):
         self.formatted_contents = None
         self.detailed_description = None
 
-        if meta and 'symbols' in meta:
-            self.symbol_names = OrderedSet(meta['symbols'])
-        else:
-            self.symbol_names = OrderedSet()
+        meta = meta or {}
 
-        if meta and 'short-description' in meta:
-            self.short_description = meta['short-description']
-        else:
-            self.short_description = None
+        try:
+            self.meta = Schema(Page.meta_schema).validate(meta)
+        except SchemaError as _:
+            error('invalid-page-metadata',
+                  '%s: Invalid metadata: \n%s' % (self.source_file,
+                                                  str(_)))
+
+        self.symbol_names = OrderedSet(meta.get('symbols') or [])
+        self.short_description = meta.get('short-description')
 
         self.title = None
         self.__discover_title(meta)
@@ -103,6 +140,7 @@ class Page(object):
                 'short_description': self.short_description,
                 'extension_name': self.extension_name,
                 'link': self.link,
+                'meta': self.meta,
                 'source_file': self.source_file,
                 'comment': self.comment,
                 'generated': self.generated,
@@ -296,9 +334,14 @@ class DocTree(object):
             split = contents.split('\n...\n', 1)
             if len(split) == 2:
                 contents = split[1]
-
-            for block in yaml.load_all(split[0]):
-                meta.update(block)
+                try:
+                    blocks = yaml.load_all(split[0])
+                    for block in blocks:
+                        meta.update(block)
+                except ConstructorError as exception:
+                    error('invalid-page-metadata',
+                          '%s: Invalid metadata: \n%s' % (source_file,
+                                                          str(exception)))
 
         ast = cmark.hotdoc_to_ast(contents, self)
         return Page(source_file, ast, meta=meta)

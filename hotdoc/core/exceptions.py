@@ -25,6 +25,10 @@ class HotdocException(Exception):
     """Base Hotdoc exception"""
 
 
+class InvalidPageMetadata(HotdocException):
+    """Invalid page metadata"""
+
+
 class ConfigError(HotdocException):
     """Banana banana"""
     pass

@@ -285,6 +285,7 @@ class DiscoverTest(test):
 INSTALL_REQUIRES = [
     'pyyaml',
     'lxml',
+    'schema',
     'wheezy.template==0.1.167',
     'CommonMark==0.6.1',
     'pygraphviz>=1.3.rc2',
