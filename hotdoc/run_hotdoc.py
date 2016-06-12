@@ -36,7 +36,8 @@ def run(args):
 
     # pylint: disable=broad-except
     try:
-        doc_repo.setup(args)
+        doc_repo.load_command_line(args)
+        doc_repo.setup()
         doc_repo.format()
         doc_repo.persist()
     except HotdocException:

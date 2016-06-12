@@ -116,6 +116,8 @@ class DocRepo(object):
         self.__base_doc_folder = None
         self.__private_folder = None
         self.__dry = False
+        self.__load_extensions()
+        self.__create_arg_parser()
 
     def register_tag_validator(self, validator):
         """
@@ -211,11 +213,18 @@ class DocRepo(object):
         """
         return self.__private_folder
 
-    def setup(self, args):
+    def setup(self):
         """
         Banana banana
         """
-        self.__setup(args)
+        configurable_classes = all_subclasses(Configurable)
+
+        configured = set()
+        for subclass in configurable_classes:
+            if subclass.parse_config not in configured:
+                subclass.parse_config(self, self.config)
+                configured.add(subclass.parse_config)
+        self.__parse_config()
 
         self.doc_tree = DocTree(self.get_private_folder(), self.include_paths)
 
@@ -313,104 +322,94 @@ class DocRepo(object):
                          for path in paths]
                 print ' '.join(paths)
 
-    # pylint: disable=too-many-locals
-    # pylint: disable=too-many-statements
-    # pylint: disable=too-many-branches
-    def __setup(self, args):
-        parser = \
+    def __create_arg_parser(self):
+        self.parser = \
             argparse.ArgumentParser(
                 formatter_class=argparse.RawDescriptionHelpFormatter,)
-
-        extension_classes = get_all_extension_classes(sort=True)
-        for subclass in extension_classes:
-            self.__extension_classes[subclass.extension_name] = subclass
 
         configurable_classes = all_subclasses(Configurable)
 
         seen = set()
         for subclass in configurable_classes:
             if subclass.add_arguments not in seen:
-                subclass.add_arguments(parser)
+                subclass.add_arguments(self.parser)
                 seen.add(subclass.add_arguments)
 
-        parser.add_argument('command', action="store",
-                            choices=('run', 'conf', 'help'),
-                            nargs="?")
-        parser.add_argument('--dry',
-                            help='Dry run, nothing will be output',
-                            dest='dry', action='store_true')
-        parser.add_argument('--conf-file', help='Path to the config file',
-                            dest='conf_file', default='hotdoc.json')
-        parser.add_argument('--version', help="Print version and exit",
-                            action="store_true")
-        parser.add_argument('--makefile-path',
-                            help="Print path to includable Makefile and exit",
-                            action="store_true")
-        parser.add_argument('--print-dependencies',
-                            help="Print the dependencies for a given conf",
-                            action="store_true")
-        parser.add_argument("-i", "--index", action="store",
-                            dest="index", help="location of the index file")
-        parser.add_argument("--sitemap", action="store",
-                            dest="sitemap",
-                            help="Location of the sitemap file")
-        parser.add_argument("--project-name", action="store",
-                            dest="project_name",
-                            help="Name of the documented project")
-        parser.add_argument("--project-version", action="store",
-                            dest="project_version",
-                            help="Version of the documented project")
-        parser.add_argument("-o", "--output", action="store",
-                            dest="output",
-                            help="where to output the rendered documentation")
-        parser.add_argument("--get-conf-key", action="store",
-                            help="print the value for a configuration key")
-        parser.add_argument("--get-conf-path", action="store",
-                            help="print the value for a configuration path")
-        parser.add_argument("--get-markdown-files", action="store_true",
-                            help="print the list of standalone markdown files")
-        parser.add_argument("--get-private-folder", action="store_true",
-                            help="get the path to hotdoc's private folder")
-        parser.add_argument("--output-format", action="store",
-                            dest="output_format", help="format for the output",
-                            default="html")
-        parser.add_argument("-", action="store_true",
-                            help="Separator to allow finishing a list"
-                            " of arguments before a command",
-                            dest="whatever")
+        self.parser.add_argument('command', action="store",
+                                 choices=('run', 'conf', 'help'),
+                                 nargs="?")
+        self.parser.add_argument('--dry',
+                                 help='Dry run, nothing will be output',
+                                 dest='dry', action='store_true')
+        self.parser.add_argument('--conf-file', help='Path to the config file',
+                                 dest='conf_file')
+        self.parser.add_argument('--version', help="Print version and exit",
+                                 action="store_true")
+        self.parser.add_argument('--makefile-path',
+                                 help="Print path to includable "
+                                 "Makefile and exit",
+                                 action="store_true")
+        self.parser.add_argument('--print-dependencies',
+                                 help="Print the dependencies for a given "
+                                 "conf",
+                                 action="store_true")
+        self.parser.add_argument("-i", "--index", action="store",
+                                 dest="index", help="location of the "
+                                 "index file")
+        self.parser.add_argument("--sitemap", action="store",
+                                 dest="sitemap",
+                                 help="Location of the sitemap file")
+        self.parser.add_argument("--project-name", action="store",
+                                 dest="project_name",
+                                 help="Name of the documented project")
+        self.parser.add_argument("--project-version", action="store",
+                                 dest="project_version",
+                                 help="Version of the documented project")
+        self.parser.add_argument("-o", "--output", action="store",
+                                 dest="output",
+                                 help="where to output the rendered "
+                                 "documentation")
+        self.parser.add_argument("--get-conf-key", action="store",
+                                 help="print the value for a configuration "
+                                 "key")
+        self.parser.add_argument("--get-conf-path", action="store",
+                                 help="print the value for a configuration "
+                                 "path")
+        self.parser.add_argument("--get-markdown-files", action="store_true",
+                                 help="print the list of standalone markdown "
+                                 "files")
+        self.parser.add_argument("--get-private-folder", action="store_true",
+                                 help="get the path to hotdoc's private "
+                                 "folder")
+        self.parser.add_argument("--output-format", action="store",
+                                 dest="output_format", help="format for the "
+                                 "output")
+        self.parser.add_argument("-", action="store_true",
+                                 help="Separator to allow finishing a list"
+                                 " of arguments before a command",
+                                 dest="whatever")
 
-        args = parser.parse_args(args)
-        self.__load_config(parser, args)
-
-        if self.__conf_file is not None:
-            hash_obj = hashlib.md5(self.__conf_file)
-            priv_name = 'hotdoc-private-' + hash_obj.hexdigest()
-        else:
-            priv_name = 'hotdoc-private'
-
-        self.__private_folder = os.path.abspath(priv_name)
+    def load_command_line(self, args):
+        """
+        Loads the repo from command line arguments
+        """
+        args = self.parser.parse_args(args)
+        self.__load_config(args)
 
         cmd = args.command
 
         if cmd == 'help':
-            parser.print_help()
+            self.parser.print_help()
             sys.exit(0)
         elif cmd is None:
             self.__check_initial_args(args)
             sys.exit(0)
-
-        configured = set()
-        for subclass in configurable_classes:
-            if subclass.parse_config not in configured:
-                subclass.parse_config(self, self.config)
-                configured.add(subclass.parse_config)
 
         exit_now = False
         save_config = False
 
         if cmd == 'run':
             self.__dry = bool(args.dry)
-            self.__parse_config()
         elif cmd == 'conf':
             save_config = True
             exit_now = True
@@ -421,29 +420,53 @@ class DocRepo(object):
         if exit_now:
             sys.exit(0)
 
-    # pylint: disable=no-self-use
-    def __load_config(self, parser, args):
+    def load_conf_file(self, conf_file, overrides):
         """
-        Banana banana
+        Load the project from a configuration file and key-value
+        overides.
         """
-        cli = dict(vars(args))
+        self.__conf_file = conf_file
+
+        if conf_file and not os.path.exists(conf_file):
+            error('invalid-config',
+                  "No configuration file was found at %s" % conf_file)
 
         actual_args = {}
-        defaults = {}
+        defaults = {'conf_file': 'hotdoc.json',
+                    'output_format': 'html'}
 
-        self.__conf_file = args.conf_file
-
-        for key, value in cli.items():
+        for key, value in overrides.items():
             if key in ('cmd', 'conf_file', 'dry'):
                 continue
-            if value != parser.get_default(key):
+            if value != self.parser.get_default(key):
                 actual_args[key] = value
-            if parser.get_default(key) is not None:
+            if self.parser.get_default(key) is not None:
                 defaults[key] = value
 
         self.config = ConfigParser(command_line_args=actual_args,
                                    conf_file=self.__conf_file,
                                    defaults=defaults)
+
+        if self.__conf_file is not None:
+            hash_obj = hashlib.md5(self.__conf_file)
+            priv_name = 'hotdoc-private-' + hash_obj.hexdigest()
+        else:
+            priv_name = 'hotdoc-private'
+
+        self.__private_folder = os.path.abspath(priv_name)
+
+    def __load_extensions(self):
+        extension_classes = get_all_extension_classes(sort=True)
+        for subclass in extension_classes:
+            self.__extension_classes[subclass.extension_name] = subclass
+
+    # pylint: disable=no-self-use
+    def __load_config(self, args):
+        """
+        Banana banana
+        """
+        cli = dict(vars(args))
+        self.load_conf_file(args.conf_file, cli)
 
     def __setup_private_folder(self):
         folder = self.get_private_folder()
