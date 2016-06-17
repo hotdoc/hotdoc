@@ -43,6 +43,7 @@ from hotdoc.utils.setup_utils import (
 SOURCE_DIR = os.path.abspath('./')
 CMARK_DIR = os.path.join(SOURCE_DIR, 'cmark')
 CMARK_SRCDIR = os.path.join(CMARK_DIR, 'src')
+CMARK_EXTDIR = os.path.join(CMARK_DIR, 'extensions')
 CMARK_BUILD_DIR = os.path.join(SOURCE_DIR, 'build_cmark')
 CMARK_BUILT_SRCDIR = os.path.join(CMARK_BUILD_DIR, 'src')
 CMARK_INCLUDE_DIRS = [CMARK_SRCDIR, CMARK_BUILT_SRCDIR]
@@ -93,6 +94,10 @@ CMARK_SOURCES = [os.path.join('hotdoc', 'parsers', f) for f in
 for filename in os.listdir(CMARK_SRCDIR):
     if filename.endswith('.c'):
         CMARK_SOURCES.append(os.path.join(CMARK_SRCDIR, filename))
+
+for filename in os.listdir(CMARK_EXTDIR):
+    if filename.endswith('.c'):
+        CMARK_SOURCES.append(os.path.join(CMARK_EXTDIR, filename))
 
 CMARK_MODULE = CMarkExtension('hotdoc.parsers.cmark',
                               sources=CMARK_SOURCES,

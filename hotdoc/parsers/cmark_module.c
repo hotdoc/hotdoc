@@ -25,6 +25,8 @@
 #include "cmark_gtkdoc_extension.h"
 #include "cmark_include_extension.h"
 
+cmark_syntax_extension *cmark_table_extension_new();
+
 static cmark_parser *gtkdoc_parser = NULL;
 static cmark_syntax_extension *include_extension = NULL;
 static PyObject *include_resolver = NULL;
@@ -367,7 +369,7 @@ initcmark(void)
 {
   (void) Py_InitModule("cmark", ScannerMethods);
   cmark_init();
-  cmark_syntax_extension *ptables_ext = cmark_find_syntax_extension("piped-tables");
+  cmark_syntax_extension *ptables_ext = cmark_table_extension_new();
 
   include_extension = cmark_include_extension_new();
 
