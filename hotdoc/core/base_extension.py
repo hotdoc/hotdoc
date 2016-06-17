@@ -453,9 +453,15 @@ class BaseExtension(Configurable):
         if page.is_stale:
             page.languages = self._get_languages()
             debug('Formatting page %s' % page.link.ref, 'formatting')
-            actual_output = os.path.join(output, formatter.get_output_folder())
-            if not os.path.exists(actual_output):
-                os.makedirs(actual_output)
+
+            if output:
+                actual_output = os.path.join(output,
+                                             formatter.get_output_folder())
+                if not os.path.exists(actual_output):
+                    os.makedirs(actual_output)
+            else:
+                actual_output = None
+
             page.format(formatter, link_resolver, actual_output)
         else:
             debug('Not formatting page %s, up to date' % page.link.ref,

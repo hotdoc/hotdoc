@@ -425,15 +425,14 @@ class DocRepo(object):
         Load the project from a configuration file and key-value
         overides.
         """
-        self.__conf_file = conf_file
+        self.__conf_file = conf_file or 'hotdoc.json'
 
         if conf_file and not os.path.exists(conf_file):
             error('invalid-config',
                   "No configuration file was found at %s" % conf_file)
 
         actual_args = {}
-        defaults = {'conf_file': 'hotdoc.json',
-                    'output_format': 'html'}
+        defaults = {'output_format': 'html'}
 
         for key, value in overrides.items():
             if key in ('cmd', 'conf_file', 'dry'):

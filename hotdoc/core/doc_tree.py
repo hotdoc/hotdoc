@@ -99,7 +99,7 @@ class Page(object):
     resolving_symbol_signal = Signal()
     formatting_signal = Signal()
 
-    def __init__(self, source_file, ast, meta=None):
+    def __init__(self, source_file, ast, meta=None, raw_contents=None):
         "Banana banana"
         assert source_file
         name = os.path.splitext(os.path.basename(source_file))[0]
@@ -108,6 +108,7 @@ class Page(object):
         self.ast = ast
         self.extension_name = None
         self.source_file = source_file
+        self.raw_contents = raw_contents
         self.comment = None
         self.generated = False
         self.output_attrs = None
@@ -137,6 +138,7 @@ class Page(object):
     def __getstate__(self):
         return {'ast': None,
                 'title': self.title,
+                'raw_contents': self.raw_contents,
                 'short_description': self.short_description,
                 'extension_name': self.extension_name,
                 'link': self.link,
@@ -237,7 +239,9 @@ class Page(object):
         self.__format_symbols(formatter, link_resolver)
         self.detailed_description =\
             formatter.format_page(self)[0]
-        formatter.write_page(self, output)
+
+        if output:
+            formatter.write_page(self, output)
 
     # pylint: disable=no-self-use
     def get_title(self):
@@ -329,22 +333,7 @@ class DocTree(object):
         with io.open(source_file, 'r', encoding='utf-8') as _:
             contents = _.read()
 
-        meta = {}
-        if contents.startswith('---\n'):
-            split = contents.split('\n...\n', 1)
-            if len(split) == 2:
-                contents = split[1]
-                try:
-                    blocks = yaml.load_all(split[0])
-                    for block in blocks:
-                        meta.update(block)
-                except ConstructorError as exception:
-                    error('invalid-page-metadata',
-                          '%s: Invalid metadata: \n%s' % (source_file,
-                                                          str(exception)))
-
-        ast = cmark.hotdoc_to_ast(contents, self)
-        return Page(source_file, ast, meta=meta)
+        return self.page_from_raw_text(source_file, contents)
 
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches
@@ -538,7 +527,31 @@ class DocTree(object):
         Banana banana
         """
         self.__all_pages[pagename] = page
-        parent.subpages.add(pagename)
+        if parent:
+            parent.subpages.add(pagename)
+
+    def page_from_raw_text(self, source_file, contents):
+        """
+        Banana banana
+        """
+        raw_contents = contents
+
+        meta = {}
+        if contents.startswith('---\n'):
+            split = contents.split('\n...\n', 1)
+            if len(split) == 2:
+                contents = split[1]
+                try:
+                    blocks = yaml.load_all(split[0])
+                    for block in blocks:
+                        meta.update(block)
+                except ConstructorError as exception:
+                    error('invalid-page-metadata',
+                          '%s: Invalid metadata: \n%s' % (source_file,
+                                                          str(exception)))
+
+        ast = cmark.hotdoc_to_ast(contents, self)
+        return Page(source_file, ast, meta=meta, raw_contents=raw_contents)
 
     def stale_symbol_pages(self, symbols, new_page=None):
         """
@@ -610,6 +623,14 @@ class DocTree(object):
             cpage = self.__all_pages[pagename]
             self.resolve_symbols(doc_database, link_resolver, page=cpage)
 
+    def format_page(self, page, link_resolver, output, extensions):
+        """
+        Banana banana
+        """
+        info('formatting %s' % page.source_file, 'formatting')
+        extension = extensions[page.extension_name]
+        extension.format_page(page, link_resolver, output)
+
     def format(self, link_resolver, output, extensions):
         """Banana banana
         """
@@ -621,9 +642,7 @@ class DocTree(object):
         # Link.resolving_link_signal.connect(self.__link_referenced_cb)
 
         for page in self.walk():
-            info('formatting %s' % page.source_file, 'formatting')
-            extension = extensions[page.extension_name]
-            extension.format_page(page, link_resolver, output)
+            self.format_page(page, link_resolver, output, extensions)
 
         link_resolver.get_link_signal.disconnect(self.__get_link_cb)
         self.__create_navigation_script(output, extensions)
