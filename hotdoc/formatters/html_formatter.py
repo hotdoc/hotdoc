@@ -565,6 +565,7 @@ class HtmlFormatter(Formatter):
 
         out = template.render(
             {'page': page,
+             'source_file': os.path.basename(page.source_file),
              'scripts': scripts_basenames,
              'stylesheets': stylesheets_basenames,
              'toc': toc,

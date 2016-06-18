@@ -1,10 +1,10 @@
-@require(page, toc, symbols_details, extra_html, extra_footer_html)
+@require(page, source_file, toc, symbols_details, extra_html, extra_footer_html)
 @extends('base_page.html')
 
 @def content():
 
 @if page.formatted_contents:
-<div id="page-description">
+<div id="page-description" data-hotdoc-source="@source_file">
 @page.formatted_contents
 @for extra in extra_html:
 @extra
