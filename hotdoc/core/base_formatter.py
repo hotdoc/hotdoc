@@ -55,6 +55,7 @@ class Formatter(Configurable):
     formatting_page_signal = Signal()
     formatting_symbol_signal = Signal()
     writing_page_signal = Signal()
+    get_extra_files_signal = Signal()
     editing_server = None
     extra_assets = None
 
@@ -108,7 +109,12 @@ class Formatter(Configurable):
         if not os.path.exists(assets_path):
             os.mkdir(assets_path)
 
-        for src, dest in self._get_extra_files():
+        extra_files = self._get_extra_files()
+
+        for ex_files in self.get_extra_files_signal(self):
+            extra_files.extend(ex_files)
+
+        for src, dest in extra_files:
             dest = os.path.join(assets_path, dest)
 
             destdir = os.path.dirname(dest)
