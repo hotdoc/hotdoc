@@ -1,4 +1,4 @@
-@require(page, source_file, toc, symbols_details, extra_html, extra_footer_html)
+@require(page, source_file, symbols_details, extra_html, extra_footer_html)
 @extends('base_page.html')
 
 @def content():
@@ -11,8 +11,6 @@
 @end
 </div>
 @end
-
-@toc
 
 @for symbols_detail in symbols_details:
 @if symbols_detail.name:

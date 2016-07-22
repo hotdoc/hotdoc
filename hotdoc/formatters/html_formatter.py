@@ -131,21 +131,6 @@ class HtmlFormatter(Formatter):
             ClassSymbol: self._format_class_symbol,
         }
 
-        self._summary_formatters = {
-            FunctionSymbol: self._format_function_summary,
-            FunctionMacroSymbol: self._format_function_macro_summary,
-            CallbackSymbol: self._format_callback_summary,
-            ConstantSymbol: self._format_constant_summary,
-            ExportedVariableSymbol: self._format_exported_variable_summary,
-            AliasSymbol: self._format_alias_summary,
-            StructSymbol: self._format_struct_summary,
-            EnumSymbol: self._format_enum_summary,
-            SignalSymbol: self._format_signal_summary,
-            VFunctionSymbol: self._format_vfunction_summary,
-            PropertySymbol: self._format_property_summary,
-            ClassSymbol: self._format_class_summary,
-        }
-
         self._ordering = [ClassSymbol, FunctionSymbol,
                           FunctionMacroSymbol, SignalSymbol,
                           PropertySymbol, StructSymbol,
@@ -322,157 +307,23 @@ class HtmlFormatter(Formatter):
                                 'detail': detail,
                                 'extra': extra})
 
-    # pylint: disable=too-many-arguments
-    def _format_callable_summary(self, callable_, return_value, function_name,
-                                 is_callable, is_pointer):
-        template = self.engine.get_template('callable_summary.html')
-
-        return template.render({'symbol': callable_,
-                                'return_value': return_value,
-                                'function_name': function_name,
-                                'is_callable': is_callable,
-                                'is_pointer': is_pointer})
-
-    def _format_function_summary(self, func):
-        if func.return_value:
-            return_value = self._format_linked_symbol(func.return_value[0])
-        else:
-            return_value = None
-
-        return self._format_callable_summary(
-            func,
-            return_value,
-            self._format_linked_symbol(func),
-            True,
-            False)
-
-    def _format_callback_summary(self, callback):
-        if callback.return_value:
-            return_value = self._format_linked_symbol(callback.return_value[0])
-        else:
-            return_value = None
-
-        return self._format_callable_summary(
-            callback,
-            return_value,
-            self._format_linked_symbol(callback),
-            True,
-            True)
-
-    # FIXME : C-specific
-    def _format_function_macro_summary(self, func):
-        return self._format_callable_summary(
-            func,
-            "#define ",
-            self._format_linked_symbol(func),
-            True,
-            False)
-
-    def _format_constant_summary(self, constant):
-        template = self.engine.get_template('constant_summary.html')
-        constant_link = self._format_linked_symbol(constant)
-
-        return template.render({'symbol': constant,
-                                'constant': constant_link})
-
-    # pylint: disable=invalid-name
-    def _format_exported_variable_summary(self, extern):
-        template = self.engine.get_template('exported_variable_summary.html')
-        type_link = self._format_linked_symbol(extern.type_qs)
-        extern_link = self._format_linked_symbol(extern)
-
-        return template.render({'symbol': extern,
-                                'type_link': type_link,
-                                'extern': extern_link})
-
-    def _format_alias_summary(self, alias):
-        template = self.engine.get_template('alias_summary.html')
-        alias_link = self._format_linked_symbol(alias)
-
-        return template.render({'symbol': alias,
-                                'alias': alias_link})
-
-    def _format_struct_summary(self, struct):
-        template = self.engine.get_template('struct_summary.html')
-        struct_link = self._format_linked_symbol(struct)
-        return template.render({'symbol': struct,
-                                'struct': struct_link})
-
-    def _format_enum_summary(self, enum):
-        template = self.engine.get_template('enum_summary.html')
-        enum_link = self._format_linked_symbol(enum)
-        return template.render({'symbol': enum,
-                                'enum': enum_link})
-
-    def _format_signal_summary(self, signal):
-        return self._format_callable_summary(
-            signal,
-            self._format_linked_symbol(signal.return_value),
-            self._format_linked_symbol(signal),
-            True,
-            False)
-
-    def _format_vfunction_summary(self, vmethod):
-        return self._format_callable_summary(
-            vmethod,
-            self._format_linked_symbol(vmethod.return_value),
-            self._format_linked_symbol(vmethod),
-            True,
-            True)
-
-    def _format_property_summary(self, prop):
-        template = self.engine.get_template('property_summary.html')
-        property_type = self._format_linked_symbol(prop.prop_type)
-
-        prop_link = self._format_linked_symbol(prop)
-
-        return template.render({'symbol': prop,
-                                'property_type': property_type,
-                                'property_link': prop_link,
-                                'extra_contents': prop.extension_contents})
-
-    def _format_class_summary(self, klass):
-        if not klass.comment:
-            return ''
-
-        klass_link = self._format_link(klass.link.get_link(), klass.link.title)
-        template = self.engine.get_template('class_summary.html')
-        return template.render({'symbol': klass,
-                                'klass_link': klass_link})
-
-    def _format_summary(self, toc_sections):
-        template = self.engine.get_template('summary.html')
-
-        return template.render({'toc_sections': toc_sections})
-
-    def _format_symbols_toc_section(self, symbols_type, symbols_list):
-        summary_formatter = self._summary_formatters.get(symbols_type)
-
-        toc_section_summaries = []
+    def _format_symbol_descriptions(self, symbols_list):
         detailed_descriptions = []
 
         for element in symbols_list.symbols:
             if element.skip:
                 continue
-            if summary_formatter:
-                summary = summary_formatter(element)
-                if summary:
-                    toc_section_summaries.append(summary)
             if element.detailed_description:
                 detailed_descriptions.append(element.detailed_description)
 
         symbol_type = symbols_list.name
-
-        toc_section = None
-        if toc_section_summaries:
-            toc_section = TocSection(toc_section_summaries, symbol_type)
 
         symbol_descriptions = None
         if detailed_descriptions:
             symbol_descriptions = SymbolDescriptions(detailed_descriptions,
                                                      symbol_type)
 
-        return (toc_section, symbol_descriptions)
+        return symbol_descriptions
 
     def _format_editing_link(self, symbol):
         if not Formatter.editing_server:
@@ -532,7 +383,6 @@ class HtmlFormatter(Formatter):
 
     # pylint: disable=too-many-locals
     def _format_page(self, page):
-        toc_sections = []
         symbols_details = []
 
         for symbols_type in self._ordering:
@@ -540,18 +390,13 @@ class HtmlFormatter(Formatter):
             if not symbols_list:
                 continue
 
-            toc_section, symbols_descriptions = \
-                self._format_symbols_toc_section(symbols_type,
-                                                 symbols_list)
+            symbols_descriptions = self._format_symbol_descriptions(
+                symbols_list)
 
-            if toc_section:
-                toc_sections.append(toc_section)
             if symbols_descriptions:
                 symbols_details.append(symbols_descriptions)
 
         template = self.engine.get_template('page.html')
-
-        toc = self._format_summary(toc_sections)
 
         scripts = page.output_attrs['html']['scripts']
         stylesheets = page.output_attrs['html']['stylesheets']
@@ -568,7 +413,6 @@ class HtmlFormatter(Formatter):
              'source_file': os.path.basename(page.source_file),
              'scripts': scripts_basenames,
              'stylesheets': stylesheets_basenames,
-             'toc': toc,
              'assets_path': self._get_assets_path(),
              'extra_html': page.output_attrs['html']['extra_html'],
              'extra_footer_html':
@@ -673,10 +517,10 @@ class HtmlFormatter(Formatter):
     def _format_hierarchy(self, klass):
         hierarchy = []
         children = []
-        for p in klass.hierarchy:
-            hierarchy.append(self._format_linked_symbol(p))
-        for c in klass.children.itervalues():
-            children.append(self._format_linked_symbol(c))
+        for _ in klass.hierarchy:
+            hierarchy.append(self._format_linked_symbol(_))
+        for _ in klass.children.itervalues():
+            children.append(self._format_linked_symbol(_))
 
         if hierarchy or children:
             template = self.engine.get_template("hierarchy.html")
@@ -757,12 +601,12 @@ class HtmlFormatter(Formatter):
 
     def _format_object_hierarchy_symbol(self, symbol):
         dot_graph = _create_hierarchy_graph(symbol.hierarchy)
-        f = tempfile.NamedTemporaryFile(suffix='.svg', delete=False)
-        dot_graph.draw(f, prog='dot', format='svg', args="-Grankdir=LR")
-        f.close()
-        with open(f.name, 'r') as f:
-            contents = f.read()
-        os.unlink(f.name)
+        tmp_file = tempfile.NamedTemporaryFile(suffix='.svg', delete=False)
+        dot_graph.draw(tmp_file, prog='dot', format='svg', args="-Grankdir=LR")
+        tmp_file.close()
+        with open(tmp_file.name, 'r') as _:
+            contents = _.read()
+        os.unlink(_.name)
 
         pagename = 'object_hierarchy.html'
         template = self.engine.get_template(pagename)
