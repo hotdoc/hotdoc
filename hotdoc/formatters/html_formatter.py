@@ -251,7 +251,7 @@ class HtmlFormatter(Formatter):
         url_components = urlparse.urlparse(link)
         if not url_components.netloc and url_components.path ==\
                 self._current_page.link.get_link():
-            link = '#%s' % _id_from_text(url_components.fragment)
+            link = '#%s' % url_components.fragment
 
         template = self.engine.get_template('link.html')
         out += '%s' % template.render({'link': link,
