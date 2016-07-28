@@ -197,6 +197,8 @@ class DocRepo(object):
                     open(os.path.join(self.get_private_folder(),
                                       'change_tracker.p'), 'wb'))
 
+        self.__dump_deps_file()
+
     def finalize(self):
         """
         Banana banana
@@ -250,6 +252,31 @@ class DocRepo(object):
         self.doc_tree.format(self.link_resolver, self.output, self.extensions)
         self.formatted_signal(self)
 
+    def __dump_deps_file(self):
+        dest = self.config.get('deps_file_dest')
+        target = self.config.get('deps_file_target')
+
+        if dest is None:
+            info("Not dumping deps file")
+            return
+
+        info("Dumping deps file to %s with target %s" % (dest, target))
+        destdir = os.path.dirname(dest)
+        if not os.path.exists(destdir):
+            os.makedirs(destdir)
+
+        with io.open(dest, 'w', encoding='utf-8') as _:
+            _.write(u'%s: ' % target)
+
+            if self.config:
+                for dep in self.config.get_dependencies():
+                    _.write(u'%s ' % dep)
+
+            if self.doc_tree:
+                for page in self.doc_tree.get_pages().values():
+                    if not page.generated:
+                        _.write(u'%s ' % page.source_file)
+
     def __add_default_tags(self, _, comment):
         for validator in self.tag_validators.values():
             if validator.default and validator.name not in comment.tags:
@@ -296,7 +323,7 @@ class DocRepo(object):
             print VERSION
         elif args.makefile_path:
             here = os.path.dirname(__file__)
-            path = os.path.join(here, '..', 'utils', 'Makefile.hotdoc')
+            path = os.path.join(here, '..', 'utils', 'hotdoc.mk')
             print os.path.abspath(path)
         elif args.print_dependencies:
             self.config.print_make_dependencies()
@@ -343,6 +370,10 @@ class DocRepo(object):
                                  dest='dry', action='store_true')
         self.parser.add_argument('--conf-file', help='Path to the config file',
                                  dest='conf_file')
+        self.parser.add_argument('--output-conf-file',
+                                 help='Path where to save the updated conf'
+                                 ' file',
+                                 dest='output_conf_file')
         self.parser.add_argument('--version', help="Print version and exit",
                                  action="store_true")
         self.parser.add_argument('--makefile-path',
@@ -353,6 +384,11 @@ class DocRepo(object):
                                  help="Print the dependencies for a given "
                                  "conf",
                                  action="store_true")
+        self.parser.add_argument('--deps-file-dest',
+                                 help='Where to output the dependencies file')
+        self.parser.add_argument('--deps-file-target',
+                                 help='Name of the dependencies target',
+                                 default='doc.stamp.d')
         self.parser.add_argument("-i", "--index", action="store",
                                  dest="index", help="location of the "
                                  "index file")
@@ -415,7 +451,7 @@ class DocRepo(object):
             exit_now = True
 
         if save_config:
-            self.config.dump()
+            self.config.dump(args.output_conf_file)
 
         if exit_now:
             sys.exit(0)
@@ -443,11 +479,13 @@ class DocRepo(object):
                 defaults[key] = value
 
         self.config = ConfigParser(command_line_args=actual_args,
-                                   conf_file=self.__conf_file,
+                                   conf_file=conf_file,
                                    defaults=defaults)
 
-        if self.__conf_file is not None:
-            hash_obj = hashlib.md5(self.__conf_file)
+        index = self.config.get_index()
+
+        if index:
+            hash_obj = hashlib.md5(self.config.get_index())
             priv_name = 'hotdoc-private-' + hash_obj.hexdigest()
         else:
             priv_name = 'hotdoc-private'

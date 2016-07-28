@@ -438,7 +438,7 @@ class DocTree(object):
     # pylint: disable=no-self-use
     def __setup_folder(self, folder):
         if not os.path.exists(folder):
-            os.mkdir(folder)
+            os.makedirs(folder)
 
     def __dump_json_sitemap(self, page, node):
         node['title'] = page.title

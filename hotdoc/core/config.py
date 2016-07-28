@@ -29,6 +29,7 @@ from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.loggable import error
 
 
+# pylint: disable=too-many-instance-attributes
 class ConfigParser(object):
     """
     Helper class to help deal with common extension dependencies.
@@ -72,16 +73,21 @@ class ConfigParser(object):
                 `None`, `ConfigParser` will look for a file named
                 `hotdoc.json` in the current directory.
         """
-        conf_file = conf_file or 'hotdoc.json'
-        self.__conf_file = os.path.abspath(conf_file)
-        self.__conf_dir = os.path.dirname(self.__conf_file)
-        self.__invoke_dir = os.getcwd()
 
-        try:
-            with open(self.__conf_file, 'r') as _:
-                contents = _.read()
-        except IOError:
-            contents = '{}'
+        self.__conf_file = None
+        self._conf_dir = None
+        contents = '{}'
+
+        if conf_file:
+            self.__conf_file = os.path.abspath(conf_file)
+            self.__conf_dir = os.path.dirname(self.__conf_file)
+            try:
+                with open(self.__conf_file, 'r') as _:
+                    contents = _.read()
+            except IOError:
+                pass
+
+        self.__invoke_dir = os.getcwd()
 
         try:
             self.__config = json.loads(contents)
@@ -213,6 +219,9 @@ class ConfigParser(object):
             path = self.__config.get(key)
             from_conf = True
 
+        if path is None:
+            return ""
+
         res = self.__abspath(path, from_conf)
 
         if rel_to_cwd:
@@ -300,27 +309,21 @@ class ConfigParser(object):
                 tracked configuration.
         """
         all_deps = OrderedSet()
-        for key, value in self.__config.items():
+        for key, _ in self.__config.items():
             if key in self.__cli:
                 continue
 
-            if key == 'index':
-                path = self.__abspath(value, from_conf=True)
-                if path:
-                    all_deps |= self.get_markdown_files(os.path.dirname(path))
-            elif key.endswith('sources'):
+            if key.endswith('sources'):
                 all_deps |= self.get_sources(key[:len('sources') * -1])
 
-        for key, value in self.__cli.items():
-            if key == 'index':
-                path = self.__abspath(value, from_conf=True)
-                if path:
-                    all_deps |= self.get_markdown_files(os.path.dirname(path))
-            elif key.endswith('sources'):
+        for key, _ in self.__cli.items():
+            if key.endswith('sources'):
                 all_deps |= self.get_sources(key[:len('sources') * -1])
 
         if self.__conf_file is not None:
             all_deps.add(self.__conf_file)
+
+        all_deps.add(self.get_path("sitemap", rel_to_cwd=True))
 
         cwd = os.getcwd()
         return [os.path.relpath(fname, cwd) for fname in all_deps]
@@ -339,6 +342,14 @@ class ConfigParser(object):
             conf_file: str, the destination, or None to overwrite the
                 existing configuration.
         """
+
+        if conf_file:
+            conf_dir = os.path.dirname(conf_file)
+            if not os.path.exists(conf_dir):
+                os.makedirs(conf_dir)
+        else:
+            conf_dir = self.__conf_dir
+
         final_conf = {}
         for key, value in self.__config.items():
             if key in self.__cli:
@@ -346,21 +357,22 @@ class ConfigParser(object):
             final_conf[key] = value
 
         for key, value in self.__cli.items():
-            if key.endswith('index') and not key.endswith('smart_index'):
+            if (key.endswith('index') and not key.endswith('smart_index')) or \
+                    key in ['sitemap', 'output']:
                 path = self.__abspath(value, from_conf=False)
                 if path:
-                    relpath = os.path.relpath(path, self.__conf_dir)
+                    relpath = os.path.relpath(path, conf_dir)
                     final_conf[key] = relpath
             elif key.endswith('sources') or key.endswith('source_filters'):
                 new_list = []
                 for path in value:
                     path = self.__abspath(path, from_conf=False)
                     if path:
-                        relpath = os.path.relpath(path, self.__conf_dir)
+                        relpath = os.path.relpath(path, conf_dir)
                         new_list.append(relpath)
                 final_conf[key] = new_list
             elif key != 'command':
                 final_conf[key] = value
 
-        with open(conf_file or self.__conf_file, 'w') as _:
+        with open(conf_file or self.__conf_file or 'hotdoc.json', 'w') as _:
             _.write(json.dumps(final_conf, sort_keys=True, indent=4))
