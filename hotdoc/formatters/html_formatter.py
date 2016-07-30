@@ -24,7 +24,6 @@ import os
 import cgi
 import re
 import tempfile
-import urlparse
 
 from lxml import etree
 import lxml.html
@@ -232,11 +231,6 @@ class HtmlFormatter(Formatter):
         if not link:
             print "Issue here plz check", title
             return title
-
-        url_components = urlparse.urlparse(link)
-        if not url_components.netloc and url_components.path ==\
-                self._current_page.link.get_link():
-            link = '#%s' % url_components.fragment
 
         template = self.engine.get_template('link.html')
         out += '%s' % template.render({'link': link,
