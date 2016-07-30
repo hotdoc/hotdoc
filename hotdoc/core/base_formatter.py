@@ -167,7 +167,6 @@ class Formatter(Configurable):
         """
         Banana banana
         """
-        self._current_page = page
         Formatter.formatting_page_signal(self, page)
         return self._format_page(page)
 
@@ -220,7 +219,7 @@ class Formatter(Configurable):
         """
         Banana banana
         """
-        pass
+        self._current_page = page
 
     @staticmethod
     def add_arguments(parser):
