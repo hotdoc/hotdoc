@@ -185,12 +185,13 @@ class Page(object):
             "Virtual Methods", [])
         self.typed_symbols[ClassSymbol] = typed_symbols_list("Classes", [])
 
-        new_syms = []
+        all_syms = OrderedSet()
         for sym_name in self.symbol_names:
             sym = doc_database.get_symbol(sym_name)
-            self.__query_extra_symbols(sym, new_syms, link_resolver)
+            self.__query_extra_symbols(sym, all_syms, link_resolver)
 
-        for sym in new_syms:
+        for sym in all_syms:
+            self.__resolve_symbol(sym, link_resolver)
             self.symbol_names.add(sym.unique_name)
 
         if self.title is None:
@@ -264,16 +265,14 @@ class Page(object):
                 symbol.unique_name, self.source_file), 'formatting')
             symbol.skip = not formatter.format_symbol(symbol, link_resolver)
 
-    def __query_extra_symbols(self, sym, new_syms, link_resolver):
+    def __query_extra_symbols(self, sym, all_syms, link_resolver):
         if sym:
             new_symbols = sum(Page.resolving_symbol_signal(self, sym),
                               [])
-
-            self.__resolve_symbol(sym, link_resolver)
+            all_syms.add(sym)
 
             for symbol in new_symbols:
-                new_syms.append(symbol)
-                self.__query_extra_symbols(symbol, new_syms, link_resolver)
+                self.__query_extra_symbols(symbol, all_syms, link_resolver)
 
     def __resolve_symbol(self, symbol, link_resolver):
         symbol.resolve_links(link_resolver)
