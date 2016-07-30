@@ -34,8 +34,14 @@ class Link(MutableObject):
     resolving_title_signal = Signal()
 
     def __init__(self, ref, title, id_):
-        self._title = unicode(title)
-        self.ref = unicode(ref)
+        self.ref = None
+        self._title = None
+
+        if title:
+            self._title = unicode(title)
+        if ref:
+            self.ref = unicode(ref)
+
         self.id_ = id_
         MutableObject.__init__(self)
 
