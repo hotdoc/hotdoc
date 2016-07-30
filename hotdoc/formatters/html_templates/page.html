@@ -3,14 +3,14 @@
 
 @def content():
 
-@if page.formatted_contents:
 <div id="page-description" data-hotdoc-source="@source_file">
+@if page.formatted_contents:
 @page.formatted_contents
+@end
 @for extra in extra_html:
 @extra
 @end
 </div>
-@end
 
 @for symbols_detail in symbols_details:
 @if symbols_detail.name:
