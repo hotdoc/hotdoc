@@ -1,56 +1,104 @@
-dnl -*- mode: autoconf -*-
+# hotdoc.m4 - Macros to locate and utilise hotdoc.            -*- Autoconf -*-
+# serial 2 (hotdoc 0.7.10)
+#
+# Copyright © 2016 Mathieu Duponchelle <mathieu.duponchelle@opencreed.com>.
+# Copyright © 2016 Collabora Ltd.
+# Written by Mathieu Duponchelle
+#
+# Copying and distribution of this file, with or without modification,
+# is permitted in any medium without royalty provided the copyright
+# notice and this notice are preserved.
+#
+# The latest version of this file is maintained in hotdoc itself, at
+# <https://github.com/hotdoc/hotdoc/blob/master/hotdoc/utils/hotdoc.m4>
 
-# serial 1
-
-dnl Usage:
-dnl HOTDOC_CHECK(EXTENSION, action-if-found, action-if-not-found)
-AC_DEFUN([HOTDOC_CHECK_EXTENSION],
+m4_define([_HOTDOC_CHECK_INTERNAL],
 [
-  AS_IF([test "x$1" = "x"], [$2])
+	m4_if([$2], [require],
+	      [enable_documentation=yes],
+	      [AC_ARG_ENABLE(documentation,
+                  	     AS_HELP_STRING([--enable-documentation[=@<:@no/auto/yes@:>@]],
+                             		    [Enable documentation for this build]),, 
+                             		    [enable_documentation=auto])
+	      ])
 
-  AC_MSG_CHECKING(for python2 module: $1)
+	AS_IF([test "x$enable_documentation" = "xno"],
+	      [HOTDOC="no"],
+	      [AC_PATH_PROG([HOTDOC],
+	      		    [hotdoc],
+			    [no])])
 
-  python2 -c "import $1" 2>/dev/null
-  if test $? -eq 0;
-  then
-  	AC_MSG_RESULT(yes)
-  	$2
-  else
-	AC_MSG_RESULT(no)
-	$3
-  fi
+	AS_IF([test "x$HOTDOC" != "xno"],
+	      [AS_VERSION_COMPARE([`$HOTDOC --version`],[$1],
+	      	     [HOTDOC="no"])])
+
+
+	have_all_exts="yes"
+
+	AS_IF([test "x$HOTDOC" != "xno"],
+	      [m4_foreach([ext], [$3],
+	      		  AC_MSG_CHECKING([[for the hotdoc] ext [extension]])
+			  [AS_IF([test "x$([$HOTDOC --has-extension] ext[-extension])" = "xFalse"],
+			   	 [AC_MSG_RESULT([no])
+				  have_all_exts="no"],
+				 [AC_MSG_RESULT([yes])])
+			  ]
+  	      )]
+	      )
+
+	AS_IF([test "x$have_all_exts" = "xno"],
+	      [HOTDOC="no"])
+
+	AS_IF([test "x$HOTDOC" = "xno" && test "x$enable_documentation" = "xyes"],
+	      [AC_MSG_ERROR([check your hotdoc install, or disable documentation \
+with --disable-documentation.])])
+
+	AS_IF([test "x$HOTDOC" = "xno"],
+	      [enable_documentation=no],
+	      [enable_documentation=yes])
+
+	AS_IF([test "x$HOTDOC" != "xno"],
+	      [HOTDOC_MAKEFILE=`$HOTDOC --makefile-path`])
+
+	AC_SUBST(HOTDOC_MAKEFILE)
+
+	AM_CONDITIONAL([ENABLE_DOCUMENTATION], [test "x$enable_documentation" = "xyes"])
 ])
 
-dnl Usage:
-dnl HOTDOC_CHECK([EXTENSION, EXTENSION, ...])
+# HOTDOC_CHECK(VERSION, [EXTENSIONS])
+#
+# Check to see if hotdoc is available, is at least at the specified version,
+# and all the specified extensions are available.
+#
+# Also add a --enable-documentation argument to configure.
+#
+# EXTENSIONS is a comma-separated list of hotdoc extensions, for example:
+#
+# [c, gi, dbus]
+#
+# If all goes well:
+# HOTDOC is set to the absolute path to hotdoc
+# enable_documentation is set to yes, mostly for pretty-printing purposes
+# the automake conditional ENABLE_DOCUMENTATION will return true when tested.
+#
+# Otherwise:
+# HOTDOC is set to no
+# enable_documentation is set to no
+# the automake conditional ENABLE_DOCUMENTATION will return false when tested.
+# If yes was passed to enable-documentation, errors out with a message
+
 AC_DEFUN([HOTDOC_CHECK],
 [
-  all_exts_found=yes
-  AC_ARG_ENABLE([documentation],
-                [AS_HELP_STRING([--enable-documentation],
-                                [Enable documentation (default: yes)])],
-                [enable_documentation=$enableval],
-                [enable_documentation=yes])
-  AC_PATH_PROG([HOTDOC], [hotdoc], [no])
-  AS_IF([test "x$HOTDOC" = "xno" && test "x$enable_documentation" = "xyes"],
-        [AC_MSG_ERROR([Could not find the required hotdoc executable,
-         you can disable doc generation with --enable-documentation=no or with --disable-documentation])]
-  )
+  _HOTDOC_CHECK_INTERNAL([$1], [], [$2])
+])
 
-  AS_IF([test "x$@" != "x"],
-  	[m4_foreach([ext],
-		    [$@],
-		    [HOTDOC_CHECK_EXTENSION([ext],
-		    			    [],
-					    [all_exts_found=no])])])
-
-  AS_IF([test "x$all_exts_found" = "xno" && test "x$enable_documentation" = "xyes"],
-        [AC_MSG_ERROR([Could not find the required hotdoc extensions,
-         you can disable doc generation with --enable-documentation=no or with --disable-documentation])]
-  )
-
-  AS_IF([test "x$all_exts_found" = "xno" || test "x$HOTDOC" = "xno"],
-  	[enable_documentation=no])
-
-  AM_CONDITIONAL([ENABLE_DOCUMENTATION], [test "x$enable_documentation" != "xno"])
+# HOTDOC_REQUIRE(VERSION, [EXTENSIONS])
+#
+# Same as HOTDOC_CHECK with enable-documentation set to yes, and the
+# --enable-documentation argument isn't added.
+#
+# Use this if you want to make building of the documentation mandatory
+AC_DEFUN([HOTDOC_REQUIRE],
+[
+  _HOTDOC_CHECK_INTERNAL([$1], [require], [$2])
 ])
