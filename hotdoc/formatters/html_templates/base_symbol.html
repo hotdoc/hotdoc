@@ -1,4 +1,4 @@
-@require(symbol, editing_link)
+@require(symbol)
 
 @(
 tags = {}
@@ -19,9 +19,6 @@ tags.pop('returns', None)
 		@end
 		@header()
 		</li>
-		@if editing_link:
-		@editing_link
-		@end
 	</ul>
 @def content():
 @end

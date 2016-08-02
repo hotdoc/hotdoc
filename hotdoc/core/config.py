@@ -21,7 +21,6 @@ Implement a high-level config parser for hotdoc.
 """
 
 import os
-import sys
 import json
 import glob
 
@@ -326,13 +325,7 @@ class ConfigParser(object):
         all_deps.add(self.get_path("sitemap", rel_to_cwd=True))
 
         cwd = os.getcwd()
-        return [os.path.relpath(fname, cwd) for fname in all_deps]
-
-    def print_make_dependencies(self):
-        """
-        Convenience function for printing dependencies with a Makefile style.
-        """
-        sys.stdout.write(' '.join(self.get_dependencies()))
+        return [os.path.relpath(fname, cwd) for fname in all_deps if fname]
 
     def dump(self, conf_file=None):
         """

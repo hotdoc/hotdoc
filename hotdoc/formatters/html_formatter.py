@@ -319,14 +319,6 @@ class HtmlFormatter(Formatter):
 
         return symbol_descriptions
 
-    def _format_editing_link(self, symbol):
-        if not Formatter.editing_server:
-            return None
-
-        template = self.engine.get_template("editing_link.html")
-        return template.render({"symbol": symbol,
-                                "editing_server": Formatter.editing_server})
-
     def _format_struct(self, struct):
         raw_code = None
         if struct.raw_text is not None:
@@ -336,8 +328,6 @@ class HtmlFormatter(Formatter):
 
         template = self.engine.get_template("struct.html")
         out = template.render({"symbol": struct,
-                               "editing_link":
-                               self._format_editing_link(struct),
                                "struct": struct,
                                "raw_code": raw_code,
                                "members_list": members_list})
@@ -354,7 +344,6 @@ class HtmlFormatter(Formatter):
         members_list = self._format_members_list(enum.members, 'Members')
         template = self.engine.get_template("enum.html")
         out = template.render({"symbol": enum,
-                               "editing_link": self._format_editing_link(enum),
                                "enum": enum,
                                "members_list": members_list})
         return (out, False)
@@ -477,8 +466,6 @@ class HtmlFormatter(Formatter):
 
         out = template.render({'prototype': prototype,
                                'symbol': callable_,
-                               "editing_link":
-                               self._format_editing_link(callable_),
                                'return_value': return_value_detail,
                                'parameters': parameters,
                                'callable_type': callable_type,
@@ -502,7 +489,6 @@ class HtmlFormatter(Formatter):
                                      'property_type': type_link})
         template = self.engine.get_template('property.html')
         res = template.render({'symbol': prop,
-                               "editing_link": self._format_editing_link(prop),
                                'prototype': prototype,
                                'property': prop,
                                'extra': prop.extension_contents})
@@ -527,8 +513,6 @@ class HtmlFormatter(Formatter):
         hierarchy = self._format_hierarchy(klass)
         template = self.engine.get_template('class.html')
         return (template.render({'symbol': klass,
-                                 "editing_link":
-                                 self._format_editing_link(klass),
                                  'klass': klass,
                                  'hierarchy': hierarchy}),
                 False)
@@ -557,8 +541,6 @@ class HtmlFormatter(Formatter):
 
         out = template.render({'prototype': prototype,
                                'symbol': function_macro,
-                               "editing_link":
-                               self._format_editing_link(function_macro),
                                'return_value': return_value_detail,
                                'parameters': parameters,
                                'callable_type': "function macro",
@@ -572,8 +554,6 @@ class HtmlFormatter(Formatter):
         template = self.engine.get_template('alias.html')
         aliased_type = self._format_linked_symbol(alias.aliased_type)
         return (template.render({'symbol': alias,
-                                 "editing_link":
-                                 self._format_editing_link(alias),
                                  'alias': alias,
                                  'aliased_type': aliased_type}), False)
 
@@ -581,8 +561,6 @@ class HtmlFormatter(Formatter):
         template = self.engine.get_template('constant.html')
         definition = self._format_raw_code(constant.original_text)
         out = template.render({'symbol': constant,
-                               "editing_link":
-                               self._format_editing_link(constant),
                                'definition': definition,
                                'constant': constant})
         return (out, False)

@@ -30,7 +30,6 @@ import io
 
 from hotdoc.core import file_includer
 from hotdoc.core.base_extension import BaseExtension
-from hotdoc.core.base_formatter import Formatter
 from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.comment_block import Tag
 from hotdoc.core.config import ConfigParser
@@ -129,24 +128,11 @@ class DocRepo(object):
         """
         Banana banana
         """
-        # FIXME this will be API, raise meaningful errors
-        pages = self.doc_tree.get_pages_for_symbol(symbol_name)
-        if not pages:
-            return None
-
-        page = pages.values()[0]
-
-        formatter = self.__get_formatter(page.extension_name)
-
         sym = self.doc_database.get_symbol(symbol_name)
         if not sym:
             return None
 
         sym.update_children_comments()
-        old_server = Formatter.editing_server
-        Formatter.editing_server = None
-        formatter.format_symbol(sym, self.link_resolver)
-        Formatter.editing_server = old_server
 
         return sym.detailed_description
 
@@ -325,8 +311,6 @@ class DocRepo(object):
             here = os.path.dirname(__file__)
             path = os.path.join(here, '..', 'utils', 'hotdoc.mk')
             print os.path.abspath(path)
-        elif args.print_dependencies:
-            self.config.print_make_dependencies()
         elif args.get_conf_path:
             key = args.get_conf_path
             path = self.config.get_path(key, rel_to_cwd=True)
@@ -340,14 +324,13 @@ class DocRepo(object):
         elif args.get_private_folder:
             print os.path.relpath(self.__private_folder,
                                   self.config.get_invoke_dir())
-        elif args.get_markdown_files:
-            index = self.config.get_index()
-            if index:
-                path = os.path.dirname(index)
-                paths = self.config.get_markdown_files(path)
-                paths = [os.path.relpath(path, self.config.get_invoke_dir())
-                         for path in paths]
-                print ' '.join(paths)
+        elif args.has_extension:
+            ext_name = args.has_extension
+            print ext_name in self.__extension_classes
+
+        elif args.list_extensions:
+            for ext_name in self.__extension_classes:
+                print ext_name
 
     def __create_arg_parser(self):
         self.parser = \
@@ -380,10 +363,6 @@ class DocRepo(object):
                                  help="Print path to includable "
                                  "Makefile and exit",
                                  action="store_true")
-        self.parser.add_argument('--print-dependencies',
-                                 help="Print the dependencies for a given "
-                                 "conf",
-                                 action="store_true")
         self.parser.add_argument('--deps-file-dest',
                                  help='Where to output the dependencies file')
         self.parser.add_argument('--deps-file-target',
@@ -411,15 +390,18 @@ class DocRepo(object):
         self.parser.add_argument("--get-conf-path", action="store",
                                  help="print the value for a configuration "
                                  "path")
-        self.parser.add_argument("--get-markdown-files", action="store_true",
-                                 help="print the list of standalone markdown "
-                                 "files")
         self.parser.add_argument("--get-private-folder", action="store_true",
                                  help="get the path to hotdoc's private "
                                  "folder")
         self.parser.add_argument("--output-format", action="store",
                                  dest="output_format", help="format for the "
                                  "output")
+        self.parser.add_argument("--has-extension", action="store",
+                                 dest="has_extension", help="Check if a given "
+                                 "extension is available")
+        self.parser.add_argument("--list-extensions", action="store_true",
+                                 dest="list_extensions", help="Print "
+                                 "available extensions")
         self.parser.add_argument("-", action="store_true",
                                  help="Separator to allow finishing a list"
                                  " of arguments before a command",

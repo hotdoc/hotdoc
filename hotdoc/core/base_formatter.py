@@ -56,7 +56,6 @@ class Formatter(Configurable):
     formatting_symbol_signal = Signal()
     writing_page_signal = Signal()
     get_extra_files_signal = Signal()
-    editing_server = None
     extra_assets = None
 
     def __init__(self):
@@ -227,9 +226,6 @@ class Formatter(Configurable):
         """
         group = parser.add_argument_group(
             'Base formatter', 'base formatter options')
-        group.add_argument("--editing-server", action="store",
-                           dest="editing_server", help="Editing server url,"
-                           " if provided, an edit button will be added")
         group.add_argument(
             "--extra-assets",
             help="Extra asset folders to copy in the output",
@@ -239,5 +235,4 @@ class Formatter(Configurable):
     def parse_config(doc_repo, config):
         """Banana banana
         """
-        Formatter.editing_server = config.get('editing_server')
         Formatter.extra_assets = OrderedSet(config.get_paths('extra_assets'))
