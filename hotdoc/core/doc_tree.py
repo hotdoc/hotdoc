@@ -215,12 +215,16 @@ class Page(object):
                 ast = cmark.gtkdoc_to_ast(self.comment.short_description,
                                           link_resolver)
                 self.short_description =\
-                    cmark.ast_to_html(ast, link_resolver)
+                    cmark.ast_to_html(ast, link_resolver).strip()
+                if self.short_description.startswith('<p>'):
+                    self.short_description = self.short_description[3:-4]
             if self.comment.title:
                 ast = cmark.gtkdoc_to_ast(self.comment.title,
                                           link_resolver)
                 self.title =\
-                    cmark.ast_to_html(ast, link_resolver)
+                    cmark.ast_to_html(ast, link_resolver).strip()
+                if self.title.startswith('<p>'):
+                    self.title = self.title[3:-4]
                 description = u'# %s\n\n%s\n' % (self.comment.title,
                                                  self.comment.description)
             else:
