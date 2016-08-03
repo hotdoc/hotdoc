@@ -11,9 +11,17 @@
 # The latest version of this file is maintained in hotdoc itself, at
 # <https://github.com/hotdoc/hotdoc/blob/master/hotdoc/utils/hotdoc.mk>
 #
+# This Makefile fragment is intended to be used in conjunction with
+# <https://github.com/hotdoc/hotdoc/blob/master/hotdoc/utils/hotdoc.m4>.
 # It is advised not to check it in the project's sources but, if hotdoc
 # has been verified to be present, to include it through the
 # `--makefile-path` argument to hotdoc, like so:
+#
+# ```
+# if ENABLE_DOCUMENTATION
+# -include $(HOTDOC_MAKEFILE)
+# endif
+# ```
 #
 # An implementation of GNU make is required to take advantage of this
 # fragment, and automake should be inited with `-Wno-portability` in
@@ -21,41 +29,39 @@
 #
 # ## Parsed Variables
 #
-# `include $(shell $(HOTDOC) --makefile-path)`
-#
-# At the minimum, the `HOTDOC` variable must have been defined before
-# including this fragment,
-# <https://github.com/hotdoc/hotdoc/blob/master/hotdoc/utils/hotdoc.m4>
-# may be used for that purpose.
-#
 # The public variables used in this fragment are:
 #
 # * `HOTDOC_PROJECTS`, which must be a list of project names, for
-# example `HOTDOC_PROJECTS = lib1 lib2`. If only one name is listed
-# in that variable, the built documentation will be installed in
-# `$(DESTDIR)$(htmldir)`, otherwise each project will be installed in
-# `$(DESTDIR)$(htmldir)/$(project_name)`.
+#   example `HOTDOC_PROJECTS = lib1 lib2`. Each project's html documentation
+#   will be installed in `$(DESTDIR)$(htmldir)/$(project_name)`.
 #
-# `$(project_name)_HOTDOC_FLAGS`, which must list arguments that should
-# be used to invoke hotdoc for one project name, for example
-# `lib1_HOTDOC_FLAGS = --index index.markdown --sitemap sitemap.txt`.
-# For each project name listed in `HOTDOC_PROJECTS` there must be a
-# pending `$(project_name)_HOTDOC_FLAGS` variable set to a non-empty
-# string, otherwise this fragment will error out.
+# * `$(project_name)_HOTDOC_FLAGS`, which must list arguments that should
+#   be used to invoke hotdoc for one project name, for example
+#   `lib1_HOTDOC_FLAGS = --index index.markdown --sitemap sitemap.txt`.
+#   For each project name listed in `HOTDOC_PROJECTS` there must be a
+#   pending `$(project_name)_HOTDOC_FLAGS` variable set to a non-empty
+#   string, otherwise this fragment will error out.
 #
-# `HOTDOC_FLAGS`, which may list extra arguments passed by the user of
-# the calling Makefile, for example `make HOTDOC_FLAGS="-vv"` will make
-# the hotdoc invocation extra verbose. The user of the Makefile may use
-# this argument to override default values set by the maintainer of the
-# Makefile.
+# * `$(project_name)_HOTDOC_EXTRA_DEPS`, which may list additional
+#   dependencies for building the documentation, for example:
+#
+#   ```
+#   lib1_HOTDOC_EXTRA_DEPS = lib1.gir
+#   ```
+#
+# will ensure `lib1.gir` was generated before hotdoc is invoked for `lib1`.
+#
+# * `HOTDOC_FLAGS`, which may list extra arguments passed by the user of
+#   the calling Makefile, for example `make HOTDOC_FLAGS="-vv"` will make
+#   the hotdoc invocation extra verbose. The user of the Makefile may use
+#   this argument to override default values set by the maintainer of the
+#   Makefile.
 #
 # ## Exposed functions
 #
 # * `HOTDOC_TARGET $(project_name)` may be used in the calling Makefile
-# to specify extra dependencies required for building the documentation,
-# for example `$(call HOTDOC_TARGET, lib1): lib1.gir` will ensure hotdoc
-# is not invoked to build the documentation for `lib1` before `lib1.gir`
-# has been built.
+#   to retrieve the name of the built target, in order for example to
+#   add it to GITIGNOREFILES if the project uses git.mk.
 
 $(if $(HOTDOC),,$(error Need to define HOTDOC))
 
