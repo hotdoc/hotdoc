@@ -9,7 +9,7 @@ extensions to plug upon, along with some base objects (formatters, ...)
 Please check the packages listed at [https://github.com/hotdoc](https://github.com/hotdoc) to
 pick the extensions you are interested in.
 
-You can find the documentation for hotdoc, by hotdoc [here](https://people.collabora.com/~meh/hotdoc_hotdoc/html/index.html)
+You can find the documentation for hotdoc, by hotdoc [here](https://people.collabora.com/~meh/hotdoc/index.html)
 
 ### Licensing
 
