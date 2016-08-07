@@ -236,6 +236,7 @@ class DocRepo(object):
             return
 
         self.doc_tree.format(self.link_resolver, self.output, self.extensions)
+        self.config.dump(conf_file=os.path.join(self.output, 'hotdoc.json'))
         self.formatted_signal(self)
 
     def __dump_deps_file(self):
