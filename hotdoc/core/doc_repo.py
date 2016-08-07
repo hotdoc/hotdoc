@@ -444,7 +444,10 @@ class DocRepo(object):
         Load the project from a configuration file and key-value
         overides.
         """
-        self.__conf_file = conf_file or 'hotdoc.json'
+        if conf_file is None and os.path.exists('hotdoc.json'):
+            conf_file = 'hotdoc.json'
+
+        self.__conf_file = conf_file
 
         if conf_file and not os.path.exists(conf_file):
             error('invalid-config',
@@ -549,4 +552,5 @@ class DocRepo(object):
 
         self.__create_extensions()
 
-        self.change_tracker.add_hard_dependency(self.__conf_file)
+        if self.__conf_file:
+            self.change_tracker.add_hard_dependency(self.__conf_file)
