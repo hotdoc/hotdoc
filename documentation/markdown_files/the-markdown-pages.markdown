@@ -150,7 +150,8 @@ the `python_index.markdown` page will be rendered with the
 
 > Note: In that example, the "well-known-name" is `python-index` and the
 > command-line argument to let the extension know about the sub-index filename
-> is `python-index` too.
+> is `python-index` too. The path for the sub-index will be treated
+> as relative to the main index.
 
 ### Add symbols to pages
 
