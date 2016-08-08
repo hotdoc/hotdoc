@@ -218,7 +218,7 @@ class GtkDocParser(object):
             if not validator.validate(desc):
                 print "invalid value for tag %s : %s" % name, desc
                 return None
-            return Tag(name=name, description=desc)
+            return Tag(name=name, description=desc, value=desc)
 
     def __parse_description_and_tags(self, desc_and_tags):
         dts = self.tag_validation_regex.split(desc_and_tags)
