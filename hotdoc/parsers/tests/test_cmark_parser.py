@@ -166,7 +166,7 @@ class TestIncludeExtension(unittest.TestCase):
         return ast
 
     def test_basic(self):
-        inp = u'I include a {{simple_file.md}}!'
+        inp = u'   I include a {{simple_file.md}}!'
         self.assertOutputs(inp,
                            u'<p>I include a simple file!</p>\n')
 

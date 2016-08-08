@@ -379,6 +379,7 @@ initcmark(void)
 
   hotdoc_parser = cmark_parser_new(CMARK_OPT_NORMALIZE);
   cmark_parser_attach_syntax_extension(hotdoc_parser, include_extension);
+  cmark_parser_attach_syntax_extension(gtkdoc_parser, include_extension);
 
   /* Who doesn't want tables, seriously ? */
   if (ptables_ext) {
