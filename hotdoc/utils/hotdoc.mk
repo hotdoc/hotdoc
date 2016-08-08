@@ -135,6 +135,8 @@ clean-$(_HOTDOC_TARGET):
 
 clean: clean-$(_HOTDOC_TARGET)
 
+distclean: clean-$(_HOTDOC_TARGET)
+
 uninstall-hotdoc-$(_HOTDOC_TARGET)-devhelp:
 	for subdir in $(_HOTDOC_DEVHELP_SUBDIRS); do \
 	  rm -rf $(DESTDIR)$(prefix)/share/devhelp/books/`basename $$$$subdir` ; \
@@ -157,6 +159,8 @@ clean-hotdoc:
 	rm -rf hotdoc-private-*
 
 clean: clean-hotdoc
+
+distclean: clean-hotdoc
 
 .PHONY: clean-hotdoc
 
