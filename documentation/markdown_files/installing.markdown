@@ -23,13 +23,13 @@ For now, hotdoc bundles its own version of [libcmark](https://github.com/jgm/cma
 On Fedora you can install all these dependencies with:
 
 ```
-dnf install graphviz-devel python-devel libxml2-devel libxslt-devel cmake
+dnf install graphviz-devel python-devel libxml2-devel libxslt-devel cmake libyaml-devel
 ```
 
 And on ubuntu / debian:
 
 ```
-apt-get install libgraphviz-dev python-dev libxml2-dev libxslt1-dev cmake
+apt-get install libgraphviz-dev python-dev libxml2-dev libxslt1-dev cmake libyaml-dev
 ```
 
 I guess it should be similar on Ubuntu / debian, refer to <https://cmake.org/install/> for more info.
