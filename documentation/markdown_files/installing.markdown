@@ -42,7 +42,7 @@ care about installing hotdoc system-wide.
 > Assuming [pip](https://pip.pypa.io/en/stable/) is installed
 
 ```
-pip install virtualenv
+pip2 install virtualenv
 virtualenv hotdoc_env
 . hotdoc_env/bin/activate
 ```
@@ -55,21 +55,21 @@ Three main alternatives are available:
 
 * Using pip to get the last released version of hotdoc:
   ```
-  pip install hotdoc
+  pip2 install hotdoc
   ```
 
 * Installing a "read-only" version from a github clone:
   ```
   git clone https://github.com/hotdoc/hotdoc.git
   cd hotdoc
-  python setup.py install
+  python2 setup.py install
   ```
 
 * Installing an editable version from a github clone:
   ```
   git clone https://github.com/hotdoc/hotdoc.git
   cd hotdoc
-  pip install -e .[dev]
+  pip2 install -e .[dev]
   ```
 
 Congratulations, you have successfully installed hotdoc! You may now want to check the [list of available extensions](https://github.com/hotdoc).
