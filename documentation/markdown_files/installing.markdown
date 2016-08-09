@@ -43,7 +43,7 @@ care about installing hotdoc system-wide.
 
 ```
 pip2 install virtualenv
-virtualenv hotdoc_env
+virtualenv --python=python2.7 hotdoc_env
 . hotdoc_env/bin/activate
 ```
 
