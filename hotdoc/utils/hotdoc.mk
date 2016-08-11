@@ -49,7 +49,7 @@
 #   lib1_HOTDOC_EXTRA_DEPS = lib1.gir
 #   ```
 #
-# will ensure `lib1.gir` was generated before hotdoc is invoked for `lib1`.
+#   will ensure `lib1.gir` was generated before hotdoc is invoked for `lib1`.
 #
 # * `HOTDOC_FLAGS`, which may list extra arguments passed by the user of
 #   the calling Makefile, for example `make HOTDOC_FLAGS="-vv"` will make
@@ -62,10 +62,17 @@
 # * `HOTDOC_TARGET $(project_name)` may be used in the calling Makefile
 #   to retrieve the name of the built target, in order for example to
 #   add it to GITIGNOREFILES if the project uses git.mk.
+#
+# * `HOTDOC_PROJECT_COMMAND $(project_name)` may be used to obtain the
+#   command invoked by this fragment to build `$(project_name)`, in
+#   order for example to query hotdoc for the location of its private
+#   folder, or its output directory, for example:
+#   `$(call HOTDOC_PROJECT_COMMAND,lib1) --get-conf-path output`.
 
 $(if $(HOTDOC),,$(error Need to define HOTDOC))
 
-HOTDOC_TARGET = HOTDOC-$(addsuffix .stamp, $(1))
+HOTDOC_TARGET = HOTDOC-$(addsuffix .stamp, $(_HOTDOC_PROJECT_NAME))
+HOTDOC_PROJECT_COMMAND = $(HOTDOC) $($(_HOTDOC_PROJECT_NAME)_HOTDOC_FLAGS) $(HOTDOC_FLAGS)
 
 # Private constants
 
@@ -73,18 +80,19 @@ _HOTDOC_DEPDIR := $(top_builddir)/.hotdoc.d
 
 # Private functions
 
-_HOTDOC = $(HOTDOC) $($(1)_HOTDOC_FLAGS) $(HOTDOC_FLAGS)
-_HOTDOC_TARGET = $(call HOTDOC_TARGET, $(1))
+_HOTDOC_PROJECT_NAME = $(subst /,_,$(subst -,_,$(subst .,_,$(1))))
+_HOTDOC = $(call HOTDOC_PROJECT_COMMAND,$(1))
+_HOTDOC_TARGET = $(call HOTDOC_TARGET,$(1))
 _HOTDOC_DEPFILE = $(_HOTDOC_DEPDIR)/$(addsuffix .d, $(1))
 _HOTDOC_DEVHELP_DIR = $(shell $(_HOTDOC) --get-conf-path output)/devhelp
 _HOTDOC_DEVHELP_SUBDIRS = $(wildcard $(_HOTDOC_DEVHELP_DIR)/*)
 
 define hotdoc-rules
 
-$(if $($(1)_HOTDOC_FLAGS),,$(error Need to define $(1)_HOTDOC_FLAGS))
+$(if $($(_HOTDOC_PROJECT_NAME)_HOTDOC_FLAGS),,$(error Need to define $(_HOTDOC_PROJECT_NAME)_HOTDOC_FLAGS))
 
-$(_HOTDOC_TARGET): $($(1)_HOTDOC_EXTRA_DEPS)
-$(_HOTDOC_TARGET): $($(1)_HOTDOC_EXTRA_DEPS) $(_HOTDOC_DEPFILE)
+$(_HOTDOC_TARGET): $($(_HOTDOC_PROJECT_NAME)_HOTDOC_EXTRA_DEPS)
+$(_HOTDOC_TARGET): $($(_HOTDOC_PROJECT_NAME)_HOTDOC_EXTRA_DEPS) $(_HOTDOC_DEPFILE)
 	$(AM_V_GEN) \
 	set -e ; \
 	$(_HOTDOC) run \
