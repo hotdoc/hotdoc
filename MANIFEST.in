@@ -1,0 +1,2 @@
+recursive-include cmark *
+recursive-include hotdoc/parsers *.h

@@ -301,16 +301,6 @@ EXTRAS_REQUIRE = {
             'git-pep8-commit-hook']
 }
 
-CMARK_DIST_FILES = []
-
-for root, dirs, files in os.walk(CMARK_DIR):
-    for f in files:
-        if f == '.git':
-            continue
-        path = os.path.join(root, f)
-        path = os.path.relpath(path, CMARK_DIR)
-        CMARK_DIST_FILES.append(path)
-
 setup(name='hotdoc',
       version=VERSION,
       description='A documentation tool micro-framework',
@@ -319,7 +309,7 @@ setup(name='hotdoc',
       author='Mathieu Duponchelle',
       author_email='mathieu.duponchelle@opencreed.com',
       license='LGPLv2.1+',
-      packages=find_packages() + ['cmark'],
+      packages=find_packages(),
       ext_modules=[CMARK_MODULE],
 
       cmdclass={'build': CustomBuild,
@@ -340,11 +330,6 @@ setup(name='hotdoc',
                      'default_theme-%s/fonts/*' % THEME_VERSION,
                      'VERSION.txt'],
           'hotdoc.utils': ['hotdoc.m4', 'hotdoc.mk'],
-          'cmark': CMARK_DIST_FILES,
-          'hotdoc.parsers': ['cmark_gtkdoc_extension.h',
-                             'cmark_include_extension.h',
-                             'cmark_gtkdoc_scanner.h',
-                             'cmark_include_scanner.h'],
       },
       install_requires=INSTALL_REQUIRES,
       extras_require=EXTRAS_REQUIRE,
