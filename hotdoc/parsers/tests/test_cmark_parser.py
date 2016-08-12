@@ -119,7 +119,7 @@ class TestGtkDocExtension(unittest.TestCase):
         inp = u"function_link()"
         self.assertOutputs(
             inp,
-            u'<p><a href="function_link"></a></p>\n')
+            u'<p><a href="fixme-broken-link">function_link</a></p>\n')
 
     def test_qualified_links(self):
         inp = u' #Test::test is a link'

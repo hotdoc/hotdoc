@@ -151,6 +151,11 @@ static char *render_doc(CMarkDocument *doc, PyObject *link_resolver)
               continue;
             }
 
+            doc->empty_links = cmark_llist_append(doc->empty_links, cur);
+
+            cmark_node_set_user_data(cur, strdup(url));
+            cmark_node_set_user_data_free_func(cur, free);
+
             if (link != Py_None) {
               PyObject *ref = PyObject_CallMethod(link, "get_link", NULL);
               if (PyErr_Occurred()) {
@@ -164,11 +169,6 @@ static char *render_doc(CMarkDocument *doc, PyObject *link_resolver)
                 PyErr_Clear();
                 continue;
               }
-
-              doc->empty_links = cmark_llist_append(doc->empty_links, cur);
-
-              cmark_node_set_user_data(cur, strdup(url)); 
-              cmark_node_set_user_data_free_func(cur, free);
 
               if (ref != Py_None) {
                 utf8 = PyUnicode_AsUTF8String(ref);
@@ -186,6 +186,9 @@ static char *render_doc(CMarkDocument *doc, PyObject *link_resolver)
 
               Py_DECREF(title);
               Py_DECREF(ref);
+            } else {
+              cmark_node_set_literal(label, url);
+              cmark_node_set_url(cur, "fixme-broken-link");
             }
             Py_DECREF(link);
           } else if (url[0] != '\0') {
@@ -261,6 +264,7 @@ static char *render_doc(CMarkDocument *doc, PyObject *link_resolver)
         Py_DECREF(ref);
       } else {
         cmark_node_set_literal(label, id);
+        cmark_node_set_url(cur, "fixme-broken-link");
       }
       Py_DECREF(link);
     }
@@ -345,11 +349,8 @@ static PyObject *
 update_subpage_links(PyObject *self, PyObject *args) {
   PyObject *cap;
   PyObject *links;
-  CMarkDocument *doc;
 
   PyArg_ParseTuple(args, "O!O!", &PyCapsule_Type, &cap, &PySet_Type, &links);
-
-  doc = PyCapsule_GetPointer(cap, "cmark.document");
 
   Py_INCREF(Py_None);
   return Py_None;
