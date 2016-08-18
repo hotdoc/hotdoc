@@ -96,8 +96,8 @@ class LinkResolver(object):
         """
         name = str(name.encode('ascii'))
         url_components = urlparse.urlparse(name)
-        if bool(url_components.netloc):
-            return None
+        if bool(url_components.scheme) or bool(url_components.fragment):
+            return Link(name, name, None)
 
         if name in self.__links:
             return self.__links[name]
