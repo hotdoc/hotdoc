@@ -93,12 +93,12 @@ $(if $($(_HOTDOC_PROJECT_NAME)_HOTDOC_FLAGS),,$(error Need to define $(_HOTDOC_P
 
 $(_HOTDOC_TARGET): $($(_HOTDOC_PROJECT_NAME)_HOTDOC_EXTRA_DEPS)
 $(_HOTDOC_TARGET): $($(_HOTDOC_PROJECT_NAME)_HOTDOC_EXTRA_DEPS) $(_HOTDOC_DEPFILE)
-	$(AM_V_GEN) \
+	$$(AM_V_GEN) \
 	set -e ; \
 	$(_HOTDOC) run \
 		--deps-file-dest $(_HOTDOC_DEPFILE) \
-	        --deps-file-target $(_HOTDOC_TARGET); \
-	touch $(_HOTDOC_TARGET) ;
+	        --deps-file-target $$@; \
+	touch $$@ ;
 
 all: $(_HOTDOC_TARGET)
 
