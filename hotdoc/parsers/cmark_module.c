@@ -21,6 +21,7 @@
 
 #include <Python.h>
 
+#include "cmark_module_utils.h"
 #include "cmark.h"
 #include "cmark_gtkdoc_extension.h"
 #include "cmark_include_extension.h"
@@ -29,8 +30,19 @@ cmark_syntax_extension *cmark_table_extension_new();
 
 static cmark_parser *gtkdoc_parser = NULL;
 static cmark_syntax_extension *include_extension = NULL;
+static cmark_syntax_extension *gtkdoc_extension = NULL;
 static PyObject *include_resolver = NULL;
+static PyObject *link_resolver = NULL;
 static cmark_parser *hotdoc_parser = NULL;
+
+void free_named_link(NamedLink *link) {
+  if (link == NULL)
+    return;
+
+  free (link->title);
+  free (link->ref);
+  free (link);
+}
 
 typedef struct {
   cmark_llist *empty_links;
@@ -39,11 +51,63 @@ typedef struct {
   cmark_node *page_title;
 } CMarkDocument;
 
+static NamedLink *
+resolve_link(const char *id) {
+  PyObject *link = NULL;
+  PyObject *utf8 = NULL;
+  PyObject *ref = NULL;
+  PyObject *title = NULL;
+  NamedLink *res = NULL;
+
+  if (!link_resolver)
+    goto done;
+
+  link = PyObject_CallMethod(link_resolver, "get_named_link", "(s)", id);
+  if (PyErr_Occurred()) {
+    PyErr_Clear();
+    goto done;
+  }
+
+  if (link != Py_None) {
+    ref = PyObject_CallMethod(link, "get_link", NULL);
+
+    if (PyErr_Occurred()) {
+      PyErr_Clear();
+      goto done;
+    }
+
+    title = PyObject_CallMethod(link, "get_title", NULL);
+    if (PyErr_Occurred()) {
+      PyErr_Clear();
+      goto done;
+    }
+
+    res = calloc(1, sizeof(NamedLink));
+
+    if (ref != Py_None) {
+      utf8 = PyUnicode_AsUTF8String(ref);
+      res->ref = strdup(PyString_AsString(utf8));
+      Py_DECREF(utf8);
+    }
+
+    if (title != Py_None) {
+      utf8 = PyUnicode_AsUTF8String(title);
+      res->title = strdup(PyString_AsString(utf8));
+      Py_DECREF(utf8);
+    }
+  }
+
+done:
+  Py_XDECREF(link);
+  Py_XDECREF(ref);
+  Py_XDECREF(title);
+  return res;
+}
+
 static PyObject *
 gtkdoc_to_ast(PyObject *self, PyObject *args) {
   CMarkDocument *doc;
   PyObject *input;
-  PyObject *link_resolver;
   PyObject *utf8;
   PyObject *ret;
 
@@ -51,6 +115,8 @@ gtkdoc_to_ast(PyObject *self, PyObject *args) {
     return NULL;
 
   doc = calloc(1, sizeof(CMarkDocument));
+
+  cmark_gtkdoc_extension_set_link_resolve_function(gtkdoc_extension, resolve_link);
 
   utf8 = PyUnicode_AsUTF8String(input);
   cmark_parser_feed(gtkdoc_parser, PyString_AsString(utf8), PyObject_Length(utf8));
@@ -126,99 +192,47 @@ hotdoc_to_ast(PyObject *self, PyObject *args) {
   return ret;
 }
 
-static char *render_doc(CMarkDocument *doc, PyObject *link_resolver)
+static char *render_doc(CMarkDocument *doc)
 {
   cmark_event_type ev_type;
-  PyObject *utf8;
 
   if (doc->lazy_loaded == false) {
     cmark_iter *iter;
 
     iter = cmark_iter_new(doc->root);
     while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
-        cmark_node *cur = cmark_iter_get_node(iter);
-        if (ev_type == CMARK_EVENT_ENTER && cmark_node_get_type(cur) == CMARK_NODE_LINK) {
-          const char *url = cmark_node_get_url(cur);
+      cmark_node *cur = cmark_iter_get_node(iter);
+      if (ev_type == CMARK_EVENT_ENTER && cmark_node_get_type(cur) == CMARK_NODE_LINK) {
+        NamedLink *named_link;
+        const char *url = cmark_node_get_url(cur);
 
-          if (cmark_node_first_child(cur) == NULL && url[0] != '\0') {
-            PyObject *link;
-            cmark_node *label = cmark_node_new(CMARK_NODE_TEXT);
-            cmark_node_append_child(cur, label);
+        if (url[0] == '\0')
+          continue;
 
-            link = PyObject_CallMethod(link_resolver, "get_named_link", "(s)", url);
-            if (PyErr_Occurred()) {
-              PyErr_Clear();
-              continue;
-            }
+        named_link = resolve_link(url);
+        if (!named_link)
+          continue;
 
-            doc->empty_links = cmark_llist_append(doc->empty_links, cur);
+        if (cmark_node_first_child(cur) == NULL) {
+          cmark_node *label = cmark_node_new(CMARK_NODE_TEXT);
+          cmark_node_append_child(cur, label);
 
-            cmark_node_set_user_data(cur, strdup(url));
-            cmark_node_set_user_data_free_func(cur, free);
+          doc->empty_links = cmark_llist_append(doc->empty_links, cur);
 
-            if (link != Py_None) {
-              PyObject *ref = PyObject_CallMethod(link, "get_link", NULL);
-              if (PyErr_Occurred()) {
-                PyErr_Clear();
-                continue;
-              }
+          cmark_node_set_user_data(cur, strdup(url));
+          cmark_node_set_user_data_free_func(cur, free);
 
-              PyObject *title = PyObject_CallMethod(link, "get_title", NULL);
+          if (named_link->ref)
+            cmark_node_set_url(cur, named_link->ref);
 
-              if (PyErr_Occurred()) {
-                PyErr_Clear();
-                continue;
-              }
-
-              if (ref != Py_None) {
-                utf8 = PyUnicode_AsUTF8String(ref);
-                cmark_node_set_url(cur, PyString_AsString(utf8));
-                Py_DECREF(utf8);
-              }
-
-              if (title != Py_None) {
-                utf8 = PyUnicode_AsUTF8String(title);
-                cmark_node_set_literal(label, PyString_AsString(utf8));
-                Py_DECREF(utf8);
-              } else {
-                cmark_node_set_literal(label, url);
-              }
-
-              Py_DECREF(title);
-              Py_DECREF(ref);
-            } else {
-              cmark_node_set_literal(label, url);
-              cmark_node_set_url(cur, "fixme-broken-link");
-            }
-            Py_DECREF(link);
-          } else if (url[0] != '\0') {
-            PyObject *link;
-
-            link = PyObject_CallMethod(link_resolver, "get_named_link", "(s)", url);
-            if (PyErr_Occurred()) {
-              PyErr_Clear();
-              continue;
-            }
-
-            if (link != Py_None) {
-              PyObject *ref = PyObject_CallMethod(link, "get_link", NULL);
-
-              if (PyErr_Occurred()) {
-                PyErr_Clear();
-                continue;
-              }
-
-              if (ref != Py_None) {
-                utf8 = PyUnicode_AsUTF8String(ref);
-                cmark_node_set_url(cur, PyString_AsString(utf8));
-                Py_DECREF(utf8);
-              }
-
-              Py_DECREF(ref);
-            }
-            Py_DECREF(link);
-          }
+          if (named_link->title)
+            cmark_node_set_literal(label, named_link->title);
+        } else if (named_link->ref) {
+            cmark_node_set_url(cur, named_link->ref);
         }
+
+        free_named_link(named_link);
+      }
     }
 
     cmark_iter_free(iter);
@@ -230,43 +244,15 @@ static char *render_doc(CMarkDocument *doc, PyObject *link_resolver)
       cmark_node *cur = (cmark_node *) tmp->data;
       char *id = (char *) cmark_node_get_user_data(cur);
       cmark_node *label = cmark_node_first_child(cur);
-      PyObject *link;
+      NamedLink *named_link = resolve_link(id);
 
-      link = PyObject_CallMethod(link_resolver, "get_named_link", "(s)", id);
+     if (named_link->ref)
+       cmark_node_set_url(cur, named_link->ref);
 
-      if (link != Py_None) {
-        PyObject *ref = PyObject_CallMethod(link, "get_link", NULL);
-        if (PyErr_Occurred()) {
-          PyErr_Clear();
-          continue;
-        }
+     if (named_link->title)
+       cmark_node_set_literal(label, named_link->title);
 
-        PyObject *title = PyObject_CallMethod(link, "get_title", NULL);
-
-        if (PyErr_Occurred()) {
-          PyErr_Clear();
-          continue;
-        }
-
-        if (title != Py_None) {
-          utf8 = PyUnicode_AsUTF8String(title);
-          cmark_node_set_literal(label, PyString_AsString(utf8));
-          Py_DECREF(utf8);
-        }
-
-        if (ref != Py_None) {
-          utf8 = PyUnicode_AsUTF8String(ref);
-          cmark_node_set_url(cur, PyString_AsString(utf8));
-          Py_DECREF(utf8);
-        }
-
-        Py_DECREF(title);
-        Py_DECREF(ref);
-      } else {
-        cmark_node_set_literal(label, id);
-        cmark_node_set_url(cur, "fixme-broken-link");
-      }
-      Py_DECREF(link);
+     free_named_link(named_link);
     }
   }
 
@@ -277,7 +263,6 @@ static PyObject *
 ast_to_html(PyObject *self, PyObject *args) {
   PyObject *cap;
   PyObject *ret;
-  PyObject *link_resolver;
   CMarkDocument *doc;
   char *out;
 
@@ -285,7 +270,7 @@ ast_to_html(PyObject *self, PyObject *args) {
 
   doc = PyCapsule_GetPointer(cap, "cmark.document");
 
-  out = render_doc(doc, link_resolver);
+  out = render_doc(doc);
 
   ret = PyUnicode_FromString(out);
 
@@ -365,7 +350,7 @@ static PyMethodDef ScannerMethods[] = {
   {NULL, NULL, 0, NULL}
 };
 
-PyMODINIT_FUNC
+  PyMODINIT_FUNC
 initcmark(void)
 {
   (void) Py_InitModule("cmark", ScannerMethods);
@@ -373,10 +358,10 @@ initcmark(void)
   cmark_syntax_extension *ptables_ext = cmark_table_extension_new();
 
   include_extension = cmark_include_extension_new();
+  gtkdoc_extension = cmark_gtkdoc_extension_new();
 
   gtkdoc_parser = cmark_parser_new(0);
-  cmark_parser_attach_syntax_extension(gtkdoc_parser,
-      cmark_gtkdoc_extension_new());
+  cmark_parser_attach_syntax_extension(gtkdoc_parser, gtkdoc_extension);
 
   hotdoc_parser = cmark_parser_new(CMARK_OPT_NORMALIZE);
   cmark_parser_attach_syntax_extension(hotdoc_parser, include_extension);

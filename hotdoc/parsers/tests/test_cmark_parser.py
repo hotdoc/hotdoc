@@ -66,6 +66,7 @@ class TestGtkDocExtension(unittest.TestCase):
         self.link_resolver = LinkResolver(self.doc_database)
         self.link_resolver.add_link(Link("here.com", "foo", "foo"))
         self.link_resolver.add_link(Link("there.org", "there", "Test::test"))
+        self.link_resolver.add_link(Link("wherever.biz", "wherever", "bar"))
 
     def assertOutputs(self, inp, expected):
         ast = cmark.gtkdoc_to_ast(inp, self.link_resolver)
@@ -116,10 +117,10 @@ class TestGtkDocExtension(unittest.TestCase):
             u'<p>And <code>this #too</code></p>\n')
 
         # Boundaries should be acceptable here
-        inp = u"function_link()"
+        inp = u"bar()"
         self.assertOutputs(
             inp,
-            u'<p><a href="fixme-broken-link">function_link</a></p>\n')
+            u'<p><a href="wherever.biz">wherever</a></p>\n')
 
     def test_qualified_links(self):
         inp = u' #Test::test is a link'
@@ -138,6 +139,30 @@ class TestGtkDocExtension(unittest.TestCase):
         self.assertOutputs(
             inp,
             u'<p>Should <em>match</em> please</p>\n')
+
+    def test_preserve_links(self):
+        inp = u'Should preserve [](http://this_link.com)'
+        self.assertOutputs(
+            inp,
+            u'<p>Should preserve <a href="http://this_link.com"></a></p>\n')
+
+    def test_preserve_anchor_links(self):
+        inp = u'Should preserve [](#this-anchor-link)'
+        self.assertOutputs(
+            inp,
+            u'<p>Should preserve <a href="#this-anchor-link"></a></p>\n')
+
+    def test_wrong_link(self):
+        inp = u'#does_not_exist'
+        self.assertOutputs(
+            inp,
+            u'<p>does_not_exist</p>\n')
+
+    def test_wrong_function_link(self):
+        inp = u'does_not_exist()'
+        self.assertOutputs(
+            inp,
+            u'<p>does_not_exist</p>\n')
 
 
 class MockIncludeResolver(object):

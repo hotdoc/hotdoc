@@ -1,5 +1,5 @@
 /*
- * CMark syntax extension for gtk-doc
+ * Utilities for the cmark hotdoc module
  *
  * Copyright 2016 Mathieu Duponchelle <mathieu.duponchelle@opencredd.com>
  * Copyright 2016 Collabora Ltd.
@@ -19,17 +19,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#ifndef __CMARK_GTKDOC_EXTENSION_H
-#define __CMARK_GTKDOC_EXTENSION_H
+#ifndef __CMARK_MODULE_UTILS_H
+#define __CMARK_MODULE_UTILS_H
 
-#include "cmark.h"
-#include "cmark_module_utils.h"
+typedef struct {
+  char *ref;
+  char *title;
+} NamedLink;
 
-typedef NamedLink * (*CMarkGtkDocLinkResolveFunc) (const char *id);
-
-cmark_syntax_extension *cmark_gtkdoc_extension_new();
-void cmark_gtkdoc_extension_set_link_resolve_function(
-    cmark_syntax_extension *ext,
-    CMarkGtkDocLinkResolveFunc func);
+void free_named_link(NamedLink *link);
 
 #endif

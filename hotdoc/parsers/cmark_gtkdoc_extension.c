@@ -26,6 +26,13 @@
 #include "cmark_gtkdoc_extension.h"
 #include "cmark_gtkdoc_scanner.h"
 
+typedef struct
+{
+  CMarkGtkDocLinkResolveFunc link_resolve_func;
+} gtkdoc_private;
+
+#define PRIV(ext) ((gtkdoc_private *) ext->priv)
+
 static char *
 my_strndup (const char *s, size_t n)
 {
@@ -51,15 +58,17 @@ static int is_valid_symbol_name(int c) {
   return is_valid_c(c) || c == ':';
 }
 
-static cmark_node *fixup_nodes(cmark_inline_parser *inline_parser,
-                                  cmark_node *parent,
-                                  int size)
+static cmark_node *fixup_nodes(cmark_syntax_extension *self,
+                               cmark_inline_parser *inline_parser,
+                               cmark_node *parent,
+                               int size)
 {
   int node_text_len;
   cmark_node *prev = NULL;
   cmark_node *tmp;
   int name_size = size;
   cmark_strbuf *name;
+  NamedLink *named_link;
 
   for (prev = cmark_node_last_child(parent); prev; prev = cmark_node_previous(prev)) {
     if (cmark_node_get_type(prev) == CMARK_NODE_TEXT) {
@@ -100,6 +109,16 @@ static cmark_node *fixup_nodes(cmark_inline_parser *inline_parser,
       cmark_node_free(tmp);
     tmp = next;
   }
+
+  named_link = PRIV(self)->link_resolve_func(cmark_strbuf_get(name));
+
+  if (!named_link) {
+    cmark_node_set_literal(prev, cmark_strbuf_get(name));
+    cmark_strbuf_free(name);
+    return prev;
+  }
+
+  free_named_link(named_link);
 
   cmark_node_set_type(prev, CMARK_NODE_LINK);
   cmark_node_set_url(prev, cmark_strbuf_get(name));
@@ -142,7 +161,7 @@ static cmark_node *function_link_match(cmark_syntax_extension *self,
     }
   }
 
-  ret = fixup_nodes(inline_parser, parent, offset - start - 1);
+  ret = fixup_nodes(self, inline_parser, parent, offset - start - 1);
 
   if (!ret)
     goto done;
@@ -202,8 +221,9 @@ static cmark_node *symbol_link_match(cmark_syntax_extension *self,
                                 cmark_parser *parser,
                                 cmark_node *parent,
                                 cmark_inline_parser *inline_parser) {
-  cmark_node *link;
-  char *symbol_name;
+  cmark_node *link = NULL;
+  char *symbol_name = NULL;
+  NamedLink *named_link = NULL;
 
   if (cmark_inline_parser_get_offset(inline_parser) > 0) {
     char prev_char = cmark_inline_parser_peek_at(
@@ -220,12 +240,21 @@ static cmark_node *symbol_link_match(cmark_syntax_extension *self,
       (CMarkInlinePredicate) is_valid_symbol_name);
 
   if (!symbol_name)
-    return NULL;
+    goto done;
 
-  link = cmark_node_new(CMARK_NODE_LINK);
+  named_link = PRIV(self)->link_resolve_func(symbol_name);
+  if (!named_link) {
+    link = cmark_node_new (CMARK_NODE_TEXT);
+    cmark_node_set_literal (link, symbol_name);
+  } else {
+    link = cmark_node_new(CMARK_NODE_LINK);
+  }
 
   cmark_node_set_url(link, symbol_name);
+
+done:
   free(symbol_name);
+  free_named_link(named_link);
 
   return link;
 }
@@ -236,6 +265,9 @@ static cmark_node *gtkdoc_match(cmark_syntax_extension *self,
                                 unsigned char character,
                                 cmark_inline_parser *inline_parser)
 {
+  if (PRIV(self)->link_resolve_func == NULL)
+    return NULL;
+
   if (character == '(')
     return function_link_match(self, parser, parent, inline_parser);
   else if (character == '@')
@@ -322,8 +354,18 @@ static cmark_syntax_extension *create_gtkdoc_extension(void) {
   return ext;
 }
 
+void cmark_gtkdoc_extension_set_link_resolve_function(
+    cmark_syntax_extension *ext,
+    CMarkGtkDocLinkResolveFunc func)
+{
+  PRIV(ext)->link_resolve_func = func;
+}
+
 cmark_syntax_extension *cmark_gtkdoc_extension_new(void) {
-  return create_gtkdoc_extension();
+  cmark_syntax_extension *ext = create_gtkdoc_extension();
+
+  ext->priv = calloc(1, sizeof(gtkdoc_private));
+  return ext;
 }
 
 bool init_libgtkdocextension(cmark_plugin *plugin) {
