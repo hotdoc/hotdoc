@@ -218,13 +218,9 @@ class HtmlFormatter(Formatter):
         return os.path.join(super(HtmlFormatter, self).get_output_folder(),
                             'html')
 
-    def _format_docstring(self, docstring, link_resolver, to_native):
-        if to_native:
-            format_ = 'markdown'
-        else:
-            format_ = 'html'
+    def _format_docstring(self, docstring, link_resolver):
         return self._docstring_formatter.translate(
-            docstring, link_resolver, format_)
+            docstring, link_resolver, 'html')
 
     def _format_link(self, link, title):
         out = ''

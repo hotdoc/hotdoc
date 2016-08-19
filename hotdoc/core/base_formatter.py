@@ -137,7 +137,7 @@ class Formatter(Configurable):
         self.__copy_extra_files(os.path.join(output, 'assets'))
         self.__copy_extra_assets(output)
 
-    def format_docstring(self, docstring, link_resolver, to_native=False):
+    def format_docstring(self, docstring, link_resolver):
         """Formats a doc string.
 
         Args:
@@ -150,9 +150,9 @@ class Formatter(Configurable):
         if not docstring:
             return ""
 
-        return self._format_docstring(docstring, link_resolver, to_native)
+        return self._format_docstring(docstring, link_resolver)
 
-    def _format_docstring(self, docstring, link_resolver, to_native):
+    def _format_docstring(self, docstring, link_resolver):
         raise NotImplementedError
 
     def patch_page(self, page, symbol):
