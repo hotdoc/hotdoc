@@ -55,12 +55,43 @@ static int is_valid_c(int c) {
 }
 
 static int is_valid_symbol_name(int c) {
-  return is_valid_c(c) || c == ':';
+  return is_valid_c(c) || c == ':' || c == '-';
+}
+
+static void translate_sourcepos(cmark_node *parent, unsigned long col,
+                                int *actual_line, int *actual_col) {
+  const char *contents = cmark_node_get_string_content(parent);
+  *actual_line = cmark_node_get_start_line(parent);
+  *actual_col = cmark_node_get_start_column(parent);
+  unsigned long tmp_col = 0;
+
+  if (strlen(contents) < col)
+    return;
+
+  while (tmp_col++ < col) {
+    *actual_col += 1;
+    if (contents[tmp_col] == '\n') {
+      *actual_col = 0;
+      *actual_line += 1;
+    }
+  }
+}
+
+static cmark_node *get_first_parent_block(cmark_node *node) {
+  cmark_node *parent = node;
+
+  while (cmark_node_get_type(node) > CMARK_NODE_LAST_BLOCK) {
+    parent = cmark_node_parent(node);
+  }
+
+  return parent;
 }
 
 static cmark_node *fixup_nodes(cmark_syntax_extension *self,
+                               cmark_parser *parser,
                                cmark_inline_parser *inline_parser,
                                cmark_node *parent,
+                               int start_offset,
                                int size)
 {
   int node_text_len;
@@ -113,6 +144,18 @@ static cmark_node *fixup_nodes(cmark_syntax_extension *self,
   named_link = PRIV(self)->link_resolve_func(cmark_strbuf_get(name));
 
   if (!named_link) {
+    int actual_line, actual_col;
+
+    translate_sourcepos(get_first_parent_block(parent),
+        start_offset, &actual_line, &actual_col);
+
+    cmark_strbuf *message = cmark_strbuf_new(0);
+    cmark_strbuf_puts(message, "Trying to link to non-existing symbol ‘");
+    cmark_strbuf_puts(message, cmark_strbuf_get(name));
+    cmark_strbuf_puts(message, "’");
+    diagnose(cmark_strbuf_get(message), actual_line - 1,
+        actual_col - 1);
+    cmark_strbuf_free(message);
     cmark_node_set_literal(prev, cmark_strbuf_get(name));
     cmark_strbuf_free(name);
     return prev;
@@ -161,7 +204,7 @@ static cmark_node *function_link_match(cmark_syntax_extension *self,
     }
   }
 
-  ret = fixup_nodes(self, inline_parser, parent, offset - start - 1);
+  ret = fixup_nodes(self, parser, inline_parser, parent, start + 1, offset - start - 1);
 
   if (!ret)
     goto done;
@@ -224,11 +267,12 @@ static cmark_node *symbol_link_match(cmark_syntax_extension *self,
   cmark_node *link = NULL;
   char *symbol_name = NULL;
   NamedLink *named_link = NULL;
+  int start_offset = cmark_inline_parser_get_offset(inline_parser);
 
-  if (cmark_inline_parser_get_offset(inline_parser) > 0) {
+  if (start_offset > 0) {
     char prev_char = cmark_inline_parser_peek_at(
         inline_parser,
-        cmark_inline_parser_get_offset(inline_parser) - 1);
+        start_offset - 1);
 
     if (prev_char && prev_char != ' ' && prev_char != '\t' && prev_char != '\n')
       return NULL;
@@ -244,6 +288,16 @@ static cmark_node *symbol_link_match(cmark_syntax_extension *self,
 
   named_link = PRIV(self)->link_resolve_func(symbol_name);
   if (!named_link) {
+    int actual_line, actual_col;
+
+    translate_sourcepos(get_first_parent_block(parent),
+        start_offset, &actual_line, &actual_col);
+    cmark_strbuf *message = cmark_strbuf_new(0);
+    cmark_strbuf_puts(message, "Trying to link to non-existing symbol ‘");
+    cmark_strbuf_puts(message, symbol_name);
+    cmark_strbuf_puts(message, "’");
+    diagnose(cmark_strbuf_get(message), actual_line - 1, actual_col - 1);
+    cmark_strbuf_free(message);
     link = cmark_node_new (CMARK_NODE_TEXT);
     cmark_node_set_literal (link, symbol_name);
   } else {

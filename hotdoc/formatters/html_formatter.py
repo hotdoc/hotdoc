@@ -154,10 +154,33 @@ class HtmlFormatter(Formatter):
         self._docstring_formatter = GtkDocStringFormatter()
 
     def format_comment(self, comment, link_resolver):
-        if comment:
-            self._docstring_formatter.translate_tags(comment, link_resolver)
-        return super(HtmlFormatter, self).format_comment(
+        # FIXME: how can this happen?
+        if comment is None:
+            return ''
+
+        def __diagnostics_cb(docstring_formatter, diagnostics):
+            for diag in diagnostics:
+                warn(
+                    'comment-parsing-issue',
+                    message=diag.message,
+                    filename=comment.filename,
+                    lineno=(comment.lineno - 1 + comment.line_offset +
+                            diag.lineno),
+                    column=diag.column + comment.col_offset + 1)
+
+        # FIXME: less pragmatic approach
+        if comment.filename is not None:
+            GtkDocStringFormatter.diagnostics_signal.connect(__diagnostics_cb)
+
+        self._docstring_formatter.translate_tags(comment, link_resolver)
+        res = super(HtmlFormatter, self).format_comment(
             comment, link_resolver)
+
+        if comment.filename is not None:
+            GtkDocStringFormatter.diagnostics_signal.disconnect(
+                __diagnostics_cb)
+
+        return res
 
     # pylint: disable=too-many-locals
     def write_page(self, page, output):

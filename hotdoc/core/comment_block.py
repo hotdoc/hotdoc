@@ -59,9 +59,14 @@ class Comment(object):
         self.title = title
         self.params = params or {}
         self.topics = topics or {}
-        self.filename = os.path.abspath(filename)
+        if filename:
+            self.filename = os.path.abspath(filename)
+        else:
+            self.filename = None
         self.lineno = lineno
         self.endlineno = endlineno
+        self.line_offset = 0
+        self.col_offset = 0
         self.annotations = annotations or {}
         self.description = description
         self.short_description = short_description

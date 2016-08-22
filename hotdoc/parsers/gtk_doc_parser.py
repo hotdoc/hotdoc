@@ -32,6 +32,7 @@ from itertools import izip_longest
 from hotdoc.core.comment_block import Comment, Annotation, Tag
 from hotdoc.utils.configurable import Configurable
 from hotdoc.parsers import cmark
+from hotdoc.utils.simple_signals import Signal
 
 
 # http://stackoverflow.com/questions/434287/what-is-the-most-pythonic-way-to-iterate-over-a-list-in-chunks
@@ -159,7 +160,10 @@ class GtkDocParser(object):
         title, annotations = self.__parse_title(tps[0])
         parameters = []
         for name, desc in _grouper(tps[1:], 2):
-            parameters.append(self.__parse_parameter(name, desc))
+            n_chars = len(name.strip()) + len(desc)
+            param = self.__parse_parameter(name, desc)
+            parameters.append(param)
+            param.col_offset = n_chars - len(param.description)
         return title, parameters, annotations
 
     # pylint: disable=no-self-use
@@ -239,10 +243,12 @@ class GtkDocParser(object):
         return desc, tags
 
     def __strip_comment(self, comment):
+        n_lines = len(comment.split('\n'))
         comment = re.sub(r'^[\W]*\/[\*]+[\W]*', '', comment)
+        title_offset = n_lines - len(comment.split('\n'))
         comment = re.sub(r'\*\/[\W]*$', '', comment)
         comment = re.sub(r'\n[ \t]*\*', '\n', comment)
-        return comment.strip()
+        return comment.strip(), title_offset
 
     def __validate_c_comment(self, comment):
         return re.match(r'(/\*\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/)$',
@@ -261,20 +267,37 @@ class GtkDocParser(object):
 
         comment = unicode(comment.decode('utf8'))
 
+        title_offset = 0
+
+        column_offset = 0
+
         raw_comment = comment
         if not stripped:
-            comment = self.__strip_comment(comment)
+            while comment[column_offset * -1 - 1] != '\n':
+                column_offset += 1
+            comment, title_offset = self.__strip_comment(comment)
 
         split = re.split(r'\n[\W]*\n', comment, maxsplit=1)
+
         block_name, parameters, annotations = \
             self.__parse_title_and_parameters(split[0])
+
+        for i, param in enumerate(parameters):
+            param.filename = filename
+            param.lineno = lineno
+            param.line_offset = title_offset + i + 1
+            param.col_offset += column_offset
 
         if not block_name:
             return None
 
+        description_offset = 0
         description = ""
         tags = []
         if len(split) > 1:
+            n_lines = len(comment.split('\n'))
+            description_offset = (title_offset + n_lines -
+                                  len(split[1].split('\n')))
             description, tags = self.__parse_description_and_tags(split[1])
 
         title = None
@@ -298,6 +321,8 @@ class GtkDocParser(object):
                         description=description,
                         short_description=short_description,
                         title=title, tags=tags, raw_comment=raw_comment)
+        block.line_offset = description_offset
+        block.col_offset = column_offset
 
         return block
 
@@ -409,6 +434,7 @@ class GtkDocStringFormatter(Configurable):
 
     remove_xml_tags = False
     escape_html = False
+    diagnostics_signal = Signal()
 
     def __init__(self):
         self.funcs = {
@@ -569,11 +595,16 @@ class GtkDocStringFormatter(Configurable):
             capsule: A PyCapsule wrapping an opaque C pointer, which
                 can be passed to `ast_to_html`
                 afterwards.
+            diagnostics: A list of diagnostics as output by the gtk-doc cmark
+                extension
         """
         if GtkDocStringFormatter.escape_html:
             text = cgi.escape(text)
 
-        return cmark.gtkdoc_to_ast(text, link_resolver)
+        ast, diagnostics = cmark.gtkdoc_to_ast(text, link_resolver)
+        if diagnostics:
+            GtkDocStringFormatter.diagnostics_signal(self, diagnostics)
+        return ast
 
     def ast_to_html(self, ast, link_resolver):
         """

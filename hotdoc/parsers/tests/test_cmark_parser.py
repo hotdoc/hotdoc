@@ -23,6 +23,7 @@
 
 import unittest
 from hotdoc.parsers import cmark
+from hotdoc.parsers.gtk_doc_parser import GtkDocParser
 from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.links import LinkResolver, Link
 
@@ -35,7 +36,7 @@ class TestParser(unittest.TestCase):
         self.link_resolver.add_link(Link("here.com", "foo", "foo"))
 
     def assertOutputs(self, inp, expected):
-        ast = cmark.gtkdoc_to_ast(inp, self.link_resolver)
+        ast, _ = cmark.gtkdoc_to_ast(inp, self.link_resolver)
         out = cmark.ast_to_html(ast, self.link_resolver)
         self.assertEqual(out, expected)
 
@@ -50,13 +51,73 @@ class TestParser(unittest.TestCase):
     def test_input_none(self):
         inp = None
         with self.assertRaises(TypeError):
-            ast = cmark.gtkdoc_to_ast(inp, self.link_resolver)
+            ast, _ = cmark.gtkdoc_to_ast(inp, self.link_resolver)
             self.assertEqual(ast, None)
 
     def test_resolver_none(self):
         inp = u'a'
         self.link_resolver = None
         self.assertOutputs(inp, u"<p>a</p>\n")
+
+
+BASIC_GTKDOC_COMMENT = '''/**
+ * test_greeter_greet:
+ * @greeter: a random greeter
+ *
+ * This is just a function.
+ */'''
+
+LINENOS_GTKDOC_COMMENT = '''/**
+ *
+ *
+ *
+ * test_greeter_greet:
+ * @greeter: a random greeter
+ *
+ *
+ *
+ *
+ *
+ * @not_a_param: not a parameter
+ * This is just a function.
+ */'''
+
+
+class TestGtkDocParser(unittest.TestCase):
+    def setUp(self):
+        # Cruft, should be unnecessary soon
+        self.tag_validators = {}
+        self.parser = GtkDocParser(self)
+
+    def test_basic(self):
+        raw = BASIC_GTKDOC_COMMENT
+        lineno = 10
+        end_lineno = len(raw.split('\n')) + 10 - 1
+        comment = self.parser.parse_comment(
+            raw,
+            '/home/meh/test-greeter.c',
+            lineno,
+            end_lineno)
+
+        self.assertEqual(comment.name, u'test_greeter_greet')
+        self.assertEqual(len(comment.params), 1)
+        self.assertTrue('greeter' in comment.params)
+        param = comment.params['greeter']
+        self.assertEqual(param.description, 'a random greeter')
+
+    def test_linenos(self):
+        raw = LINENOS_GTKDOC_COMMENT
+        lineno = 10
+        end_lineno = len(raw.split('\n')) + 10 - 1
+        comment = self.parser.parse_comment(
+            raw,
+            '/home/meh/test-greeter.c',
+            lineno,
+            end_lineno)
+        self.assertEqual(comment.line_offset, 11)
+        param = comment.params['greeter']
+        self.assertEqual(param.line_offset, 5)
+        self.assertEqual(param.col_offset, 13)
 
 
 class TestGtkDocExtension(unittest.TestCase):
@@ -69,10 +130,10 @@ class TestGtkDocExtension(unittest.TestCase):
         self.link_resolver.add_link(Link("wherever.biz", "wherever", "bar"))
 
     def assertOutputs(self, inp, expected):
-        ast = cmark.gtkdoc_to_ast(inp, self.link_resolver)
+        ast, diagnostics = cmark.gtkdoc_to_ast(inp, self.link_resolver)
         out = cmark.ast_to_html(ast, self.link_resolver)
         self.assertEqual(out, expected)
-        return ast
+        return ast, diagnostics
 
     def test_existing_link(self):
         inp = u"this : #foo is a link !"
@@ -81,7 +142,7 @@ class TestGtkDocExtension(unittest.TestCase):
 
     def test_modified_link(self):
         inp = u"this : #foo is a link !"
-        ast = self.assertOutputs(
+        ast, _ = self.assertOutputs(
             inp, '<p>this : <a href="here.com">foo</a> is a link !</p>\n')
         self.link_resolver.upsert_link(
             Link("there.com", "ze_foo", "foo"),
@@ -153,16 +214,47 @@ class TestGtkDocExtension(unittest.TestCase):
             u'<p>Should preserve <a href="#this-anchor-link"></a></p>\n')
 
     def test_wrong_link(self):
-        inp = u'#does_not_exist'
-        self.assertOutputs(
+        inp = u'this #does_not_exist'
+        _, diagnostics = self.assertOutputs(
             inp,
-            u'<p>does_not_exist</p>\n')
+            u'<p>this does_not_exist</p>\n')
+        self.assertEqual(len(diagnostics), 1)
+        diag = diagnostics[0]
+        self.assertEqual(
+            diag.message,
+            (u'Trying to link to non-existing symbol ‘does_not_exist’'))
+        self.assertEqual(diag.lineno, 0)
+        self.assertEqual(diag.column, 5)
 
     def test_wrong_function_link(self):
         inp = u'does_not_exist()'
-        self.assertOutputs(
+        _, diagnostics = self.assertOutputs(
             inp,
             u'<p>does_not_exist</p>\n')
+
+        self.assertEqual(len(diagnostics), 1)
+        diag = diagnostics[0]
+        self.assertEqual(
+            diag.message,
+            (u'Trying to link to non-existing symbol ‘does_not_exist’'))
+        self.assertEqual(diag.lineno, 0)
+        self.assertEqual(diag.column, 0)
+
+    def test_wrong_multiline_link(self):
+        inp = (u'a #wrong_link\n\n'
+               'and #another_wrong_link\n'
+               'and then #yet_another_wrong_link')
+        _, diagnostics = cmark.gtkdoc_to_ast(inp, self.link_resolver)
+        self.assertEqual(len(diagnostics), 3)
+        diag = diagnostics[0]
+        self.assertEqual(diag.lineno, 0)
+        self.assertEqual(diag.column, 2)
+        diag = diagnostics[1]
+        self.assertEqual(diag.lineno, 2)
+        self.assertEqual(diag.column, 4)
+        diag = diagnostics[2]
+        self.assertEqual(diag.lineno, 3)
+        self.assertEqual(diag.column, 9)
 
 
 class MockIncludeResolver(object):

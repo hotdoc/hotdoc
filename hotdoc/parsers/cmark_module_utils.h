@@ -29,4 +29,6 @@ typedef struct {
 
 void free_named_link(NamedLink *link);
 
+void diagnose(const char *message, int lineno, int column);
+
 #endif

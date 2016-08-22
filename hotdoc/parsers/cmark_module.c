@@ -34,6 +34,8 @@ static cmark_syntax_extension *gtkdoc_extension = NULL;
 static PyObject *include_resolver = NULL;
 static PyObject *link_resolver = NULL;
 static cmark_parser *hotdoc_parser = NULL;
+static PyObject *diag_class = NULL;
+static PyObject *diagnostics = NULL;
 
 void free_named_link(NamedLink *link) {
   if (link == NULL)
@@ -104,15 +106,38 @@ done:
   return res;
 }
 
+void
+diagnose(const char *message, int lineno, int column) {
+  PyObject *args;
+  PyObject *diag;
+
+  if (diagnostics == NULL)
+    return;
+
+  args = Py_BuildValue("s#sii", message, strlen(message), NULL, lineno, column);
+  diag = PyObject_CallObject(diag_class, args);
+  if (PyErr_Occurred()) {
+    PyErr_Print();
+    PyErr_Clear();
+    return;
+  }
+  PyList_Append(diagnostics, diag);
+  Py_DECREF(args);
+  Py_DECREF(diag);
+}
+
 static PyObject *
 gtkdoc_to_ast(PyObject *self, PyObject *args) {
   CMarkDocument *doc;
   PyObject *input;
   PyObject *utf8;
-  PyObject *ret;
+  PyObject *cap;
 
   if (!PyArg_ParseTuple(args, "O!O", &PyUnicode_Type, &input, &link_resolver))
     return NULL;
+
+  Py_XDECREF(diagnostics);
+  diagnostics = PyList_New(0);
 
   doc = calloc(1, sizeof(CMarkDocument));
 
@@ -124,9 +149,9 @@ gtkdoc_to_ast(PyObject *self, PyObject *args) {
 
   doc->root = cmark_parser_finish(gtkdoc_parser);
 
-  ret = PyCapsule_New((void *)doc, "cmark.document", NULL);
+  cap = PyCapsule_New((void *)doc, "cmark.document", NULL);
 
-  return ret;
+  return Py_BuildValue("OO", cap, diagnostics);
 }
 
 static char *
@@ -270,6 +295,9 @@ ast_to_html(PyObject *self, PyObject *args) {
 
   doc = PyCapsule_GetPointer(cap, "cmark.document");
 
+  if (doc == NULL)
+    return NULL;
+
   out = render_doc(doc);
 
   ret = PyUnicode_FromString(out);
@@ -350,12 +378,15 @@ static PyMethodDef ScannerMethods[] = {
   {NULL, NULL, 0, NULL}
 };
 
-  PyMODINIT_FUNC
+PyMODINIT_FUNC
 initcmark(void)
 {
+  PyObject *exception_mod = PyImport_ImportModule("hotdoc.core.exceptions");
   (void) Py_InitModule("cmark", ScannerMethods);
   cmark_init();
   cmark_syntax_extension *ptables_ext = cmark_table_extension_new();
+
+  diag_class = PyObject_GetAttrString(exception_mod, "HotdocSourceException");
 
   include_extension = cmark_include_extension_new();
   gtkdoc_extension = cmark_gtkdoc_extension_new();
