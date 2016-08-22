@@ -27,8 +27,7 @@ import sys
 from collections import defaultdict, namedtuple
 
 from hotdoc.utils.configurable import Configurable
-from hotdoc.core.exceptions import (ConfigError, ParsingException,
-                                    HotdocSourceException)
+from hotdoc.core.exceptions import ConfigError, ParsingException
 
 
 # pylint: disable=too-few-public-methods
@@ -354,4 +353,3 @@ if ENV_VERBOSITY is not None:
 Logger.register_error_code('invalid-config', ConfigError)
 Logger.register_error_code('setup-issue', ConfigError)
 Logger.register_warning_code('parsing-issue', ParsingException)
-Logger.register_warning_code('comment-parsing-issue', HotdocSourceException)

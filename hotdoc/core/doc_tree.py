@@ -210,7 +210,7 @@ class Page(object):
             self.formatted_contents =\
                 cmark.ast_to_html(self.ast, link_resolver)
 
-        elif self.comment:
+        elif self.comment and False:
             if self.comment.short_description:
                 self.short_description = formatter.format_docstring(
                     self.comment.short_description, link_resolver).strip()

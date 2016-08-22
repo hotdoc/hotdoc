@@ -23,7 +23,7 @@
 
 import unittest
 from hotdoc.parsers import cmark
-from hotdoc.parsers.gtk_doc_parser import GtkDocParser
+from hotdoc.parsers.gtk_doc_parser import GtkDocParser, GtkDocStringFormatter
 from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.links import LinkResolver, Link
 
@@ -88,6 +88,9 @@ class TestGtkDocParser(unittest.TestCase):
         # Cruft, should be unnecessary soon
         self.tag_validators = {}
         self.parser = GtkDocParser(self)
+        self.doc_database = DocDatabase()
+        self.link_resolver = LinkResolver(self.doc_database)
+        self.formatter = GtkDocStringFormatter()
 
     def test_basic(self):
         raw = BASIC_GTKDOC_COMMENT

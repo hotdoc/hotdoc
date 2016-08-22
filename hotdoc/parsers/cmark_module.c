@@ -107,14 +107,14 @@ done:
 }
 
 void
-diagnose(const char *message, int lineno, int column) {
+diagnose(const char *code, const char *message, int lineno, int column) {
   PyObject *args;
   PyObject *diag;
 
   if (diagnostics == NULL)
     return;
 
-  args = Py_BuildValue("s#sii", message, strlen(message), NULL, lineno, column);
+  args = Py_BuildValue("ssii", code, message, lineno, column);
   diag = PyObject_CallObject(diag_class, args);
   if (PyErr_Occurred()) {
     PyErr_Print();
@@ -381,12 +381,12 @@ static PyMethodDef ScannerMethods[] = {
 PyMODINIT_FUNC
 initcmark(void)
 {
-  PyObject *exception_mod = PyImport_ImportModule("hotdoc.core.exceptions");
+  PyObject *exception_mod = PyImport_ImportModule("hotdoc.parsers.cmark_utils");
   (void) Py_InitModule("cmark", ScannerMethods);
   cmark_init();
   cmark_syntax_extension *ptables_ext = cmark_table_extension_new();
 
-  diag_class = PyObject_GetAttrString(exception_mod, "HotdocSourceException");
+  diag_class = PyObject_GetAttrString(exception_mod, "CMarkDiagnostic");
 
   include_extension = cmark_include_extension_new();
   gtkdoc_extension = cmark_gtkdoc_extension_new();

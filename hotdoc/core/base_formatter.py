@@ -137,24 +137,6 @@ class Formatter(Configurable):
         self.__copy_extra_files(os.path.join(output, 'assets'))
         self.__copy_extra_assets(output)
 
-    def format_docstring(self, docstring, link_resolver):
-        """Formats a doc string.
-
-        Args:
-            docstring: str, the code documentation string to format.
-                Can be none, in which case the empty string will be returned.
-
-        Returns:
-            str: the formatted docstring.
-        """
-        if not docstring:
-            return ""
-
-        return self._format_docstring(docstring, link_resolver)
-
-    def _format_docstring(self, docstring, link_resolver):
-        raise NotImplementedError
-
     def patch_page(self, page, symbol):
         """
         Subclasses should implement this in order to allow
@@ -191,18 +173,17 @@ class Formatter(Configurable):
         raise NotImplementedError
 
     def _format_comment(self, comment, link_resolver):
-        return self.format_docstring(comment.description,
-                                     link_resolver)
+        raise NotImplementedError
 
     def format_comment(self, comment, link_resolver):
-        """Convenience function wrapping `Formatter.format_docstring`.
+        """Format a comment
 
         Args:
             comment: hotdoc.core.comment_block.Comment, the code comment
-            to format.
-                Can be None, in which case the empty string will be returned.
+            to format. Can be None, in which case the empty string will
+            be returned.
         Returns:
-            str: The comment formatted to the chosen format.
+            str: The formatted comment.
         """
         if comment:
             return self._format_comment(comment, link_resolver)

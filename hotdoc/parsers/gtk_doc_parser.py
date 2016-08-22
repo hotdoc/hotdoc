@@ -24,15 +24,19 @@ gtk-doc comment format.
 """
 
 import re
-import sys
 import cgi
 from itertools import izip_longest
 
 
-from hotdoc.core.comment_block import Comment, Annotation, Tag
+from hotdoc.core.comment_block import (Comment, Annotation, Tag,
+                                       comment_from_tag)
+from hotdoc.core.exceptions import HotdocSourceException
 from hotdoc.utils.configurable import Configurable
 from hotdoc.parsers import cmark
-from hotdoc.utils.simple_signals import Signal
+from hotdoc.utils.loggable import Logger, warn
+
+
+Logger.register_warning_code('gtk-doc-bad-link', HotdocSourceException)
 
 
 # http://stackoverflow.com/questions/434287/what-is-the-most-pythonic-way-to-iterate-over-a-list-in-chunks
@@ -273,8 +277,11 @@ class GtkDocParser(object):
 
         raw_comment = comment
         if not stripped:
-            while comment[column_offset * -1 - 1] != '\n':
-                column_offset += 1
+            try:
+                while comment[column_offset * -1 - 1] != '\n':
+                    column_offset += 1
+            except IndexError:
+                column_offset = 0
             comment, title_offset = self.__strip_comment(comment)
 
         split = re.split(r'\n[\W]*\n', comment, maxsplit=1)
@@ -434,7 +441,6 @@ class GtkDocStringFormatter(Configurable):
 
     remove_xml_tags = False
     escape_html = False
-    diagnostics_signal = Signal()
 
     def __init__(self):
         self.funcs = {
@@ -572,7 +578,7 @@ class GtkDocStringFormatter(Configurable):
 
         return out
 
-    def to_ast(self, text, link_resolver):
+    def comment_to_ast(self, comment, link_resolver):
         """
         Given a gtk-doc comment string, returns an opaque PyCapsule
         containing the document root.
@@ -598,12 +604,28 @@ class GtkDocStringFormatter(Configurable):
             diagnostics: A list of diagnostics as output by the gtk-doc cmark
                 extension
         """
+        assert comment is not None
+
+        text = comment.description
+
+        if GtkDocStringFormatter.remove_xml_tags:
+            text = re.sub('<.*?>', '', text)
+
         if GtkDocStringFormatter.escape_html:
             text = cgi.escape(text)
 
         ast, diagnostics = cmark.gtkdoc_to_ast(text, link_resolver)
-        if diagnostics:
-            GtkDocStringFormatter.diagnostics_signal(self, diagnostics)
+
+        for diag in diagnostics:
+            if comment.filename:
+                warn(
+                    diag.code,
+                    message=diag.message,
+                    filename=comment.filename,
+                    lineno=(comment.lineno - 1 + comment.line_offset +
+                            diag.lineno),
+                    column=diag.column + comment.col_offset + 1)
+
         return ast
 
     def ast_to_html(self, ast, link_resolver):
@@ -618,24 +640,18 @@ class GtkDocStringFormatter(Configurable):
         """
         return cmark.ast_to_html(ast, link_resolver)
 
-    def translate(self, text, link_resolver, output_format):
+    def translate_comment(self, comment, link_resolver, output_format):
         """
         Given a gtk-doc comment string, returns the comment translated
         to the desired format.
         """
         out = u''
 
-        if not text:
+        if output_format == 'html':
+            self.translate_tags(comment, link_resolver)
+            ast = self.comment_to_ast(comment, link_resolver)
+            out += self.ast_to_html(ast, link_resolver)
             return out
-
-        if GtkDocStringFormatter.remove_xml_tags:
-            text = re.sub('<.*?>', '', text)
-
-        if output_format == 'markdown':
-            return self.__legacy_to_md(text, link_resolver)
-        elif output_format == 'html':
-            ast = self.to_ast(text, link_resolver)
-            return self.ast_to_html(ast, link_resolver)
 
         raise Exception("Unrecognized format %s" % output_format)
 
@@ -645,7 +661,8 @@ class GtkDocStringFormatter(Configurable):
         for tname in ('deprecated',):
             tag = comment.tags.get(tname)
             if tag is not None and tag.description:
-                ast = self.to_ast(tag.description, link_resolver)
+                comment = comment_from_tag(tag)
+                ast = self.comment_to_ast(comment, link_resolver)
                 tag.description = self.ast_to_html(ast, link_resolver) or ''
 
     @staticmethod
@@ -668,9 +685,3 @@ class GtkDocStringFormatter(Configurable):
             'gtk_doc_remove_xml')
         GtkDocStringFormatter.escape_html = config.get(
             'gtk_doc_escape_html')
-
-if __name__ == "__main__":
-    PARSER = GtkDocStringFormatter()
-    with open(sys.argv[1], 'r') as f:
-        CONTENTS = f.read()
-        print PARSER.translate(CONTENTS, None, 'html')

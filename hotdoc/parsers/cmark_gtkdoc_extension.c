@@ -153,7 +153,7 @@ static cmark_node *fixup_nodes(cmark_syntax_extension *self,
     cmark_strbuf_puts(message, "Trying to link to non-existing symbol ‘");
     cmark_strbuf_puts(message, cmark_strbuf_get(name));
     cmark_strbuf_puts(message, "’");
-    diagnose(cmark_strbuf_get(message), actual_line - 1,
+    diagnose("gtk-doc-bad-link", cmark_strbuf_get(message), actual_line - 1,
         actual_col - 1);
     cmark_strbuf_free(message);
     cmark_node_set_literal(prev, cmark_strbuf_get(name));
@@ -296,7 +296,7 @@ static cmark_node *symbol_link_match(cmark_syntax_extension *self,
     cmark_strbuf_puts(message, "Trying to link to non-existing symbol ‘");
     cmark_strbuf_puts(message, symbol_name);
     cmark_strbuf_puts(message, "’");
-    diagnose(cmark_strbuf_get(message), actual_line - 1, actual_col - 1);
+    diagnose("gtk-doc-bad-link", cmark_strbuf_get(message), actual_line - 1, actual_col - 1);
     cmark_strbuf_free(message);
     link = cmark_node_new (CMARK_NODE_TEXT);
     cmark_node_set_literal (link, symbol_name);
