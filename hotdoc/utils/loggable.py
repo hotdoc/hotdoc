@@ -27,7 +27,8 @@ import sys
 from collections import defaultdict, namedtuple
 
 from hotdoc.utils.configurable import Configurable
-from hotdoc.core.exceptions import ConfigError, ParsingException
+from hotdoc.core.exceptions import (ConfigError, ParsingException,
+                                    HotdocSourceException)
 
 
 # pylint: disable=too-few-public-methods
@@ -217,7 +218,7 @@ class Logger(Configurable):
         raise exc
 
     @staticmethod
-    def warn(code, message):
+    def warn(code, message, **kwargs):
         """
         Call this to store a warning in the journal.
 
@@ -237,10 +238,12 @@ class Logger(Configurable):
         if Logger.fatal_warnings:
             level = ERROR
 
-        Logger._log(code, message, level, domain)
+        exc = exc_type(message, **kwargs)
+
+        Logger._log(code, exc.message, level, domain)
 
         if Logger.fatal_warnings:
-            raise exc_type(message)
+            raise exc
 
     @staticmethod
     def debug(message, domain):
@@ -329,9 +332,9 @@ def info(message, domain='core'):
     Logger.info(message, domain)
 
 
-def warn(code, message):
+def warn(code, message, **kwargs):
     """Shortcut to `Logger.warn`"""
-    Logger.warn(code, message)
+    Logger.warn(code, message, **kwargs)
 
 
 def debug(message, domain='core'):
@@ -351,3 +354,4 @@ if ENV_VERBOSITY is not None:
 Logger.register_error_code('invalid-config', ConfigError)
 Logger.register_error_code('setup-issue', ConfigError)
 Logger.register_warning_code('parsing-issue', ParsingException)
+Logger.register_warning_code('comment-parsing-issue', HotdocSourceException)
