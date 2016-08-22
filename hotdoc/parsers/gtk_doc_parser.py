@@ -165,8 +165,9 @@ class GtkDocParser(object):
         for name, desc in _grouper(tps[1:], 2):
             n_chars = len(name.strip()) + len(desc)
             param = self.__parse_parameter(name, desc)
+            param.line_offset = len(desc.split('\n'))
             parameters.append(param)
-            param.col_offset = n_chars - len(param.description)
+            param.initial_col_offset = n_chars - len(param.description)
         return title, parameters, annotations
 
     # pylint: disable=no-self-use
@@ -288,11 +289,14 @@ class GtkDocParser(object):
         block_name, parameters, annotations = \
             self.__parse_title_and_parameters(split[0])
 
-        for i, param in enumerate(parameters):
+        params_offset = 0
+        for param in parameters:
             param.filename = filename
             param.lineno = lineno
-            param.line_offset = title_offset + i + 1
-            param.col_offset += column_offset
+            param_offset = param.line_offset
+            param.line_offset = title_offset + params_offset + 1
+            params_offset += param_offset
+            param.col_offset = column_offset
 
         if not block_name:
             return None
@@ -377,18 +381,32 @@ class GtkDocStringFormatter(Configurable):
 
         if GtkDocStringFormatter.escape_html:
             text = cgi.escape(text)
-
         ast, diagnostics = cmark.gtkdoc_to_ast(text, link_resolver)
 
         for diag in diagnostics:
             if comment.filename:
+                column = diag.column + comment.col_offset
+                if diag.lineno == 0:
+                    column += comment.initial_col_offset
+
+                lines = text.split('\n')
+                line = lines[diag.lineno]
+                i = 0
+                while line[i] == ' ':
+                    i += 1
+                column += i - 1
+
+                if diag.lineno > 0 and any([c != ' ' for c in
+                                            lines[diag.lineno - 1]]):
+                    column += 1
+
                 warn(
                     diag.code,
                     message=diag.message,
                     filename=comment.filename,
                     lineno=(comment.lineno - 1 + comment.line_offset +
                             diag.lineno),
-                    column=diag.column + comment.col_offset + 1)
+                    column=column)
 
         return ast
 

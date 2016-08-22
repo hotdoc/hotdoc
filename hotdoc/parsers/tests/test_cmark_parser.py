@@ -120,7 +120,8 @@ class TestGtkDocParser(unittest.TestCase):
         self.assertEqual(comment.line_offset, 11)
         param = comment.params['greeter']
         self.assertEqual(param.line_offset, 5)
-        self.assertEqual(param.col_offset, 13)
+        self.assertEqual(param.initial_col_offset, 10)
+        self.assertEqual(param.col_offset, 3)
 
 
 class TestGtkDocExtension(unittest.TestCase):

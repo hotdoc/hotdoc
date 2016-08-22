@@ -67,6 +67,7 @@ class Comment(object):
         self.endlineno = endlineno
         self.line_offset = 0
         self.col_offset = 0
+        self.initial_col_offset = 0
         self.annotations = annotations or {}
         self.description = description
         self.short_description = short_description
