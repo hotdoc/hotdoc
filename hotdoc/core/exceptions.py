@@ -59,17 +59,22 @@ def _format_source_exception(filename, message, lineno, column):
 
     diag = ''
     diag += TERMC.BOLD
-    diag += '%s:%d:%d: ' % (filename, lineno + 1, column + 1)
+    if lineno != -1:
+        diag += '%s:%d:%d: ' % (filename, lineno + 1, column + 1)
+    else:
+        diag += '%s: ' % (filename)
     diag += TERMC.NORMAL
     diag += message
 
     res.append(diag)
 
-    for i in range(max(0, lineno - CONTEXT_HEIGHT),
-                   min(len(lines), lineno + CONTEXT_HEIGHT + 1)):
-        res.append('%05d:%s' % (i + 1, lines[i]))
-        if i == lineno and column != -1:
-            res.append(' ' * (column + 5) + TERMC.GREEN + '^' + TERMC.NORMAL)
+    if lineno != -1:
+        for i in range(max(0, lineno - CONTEXT_HEIGHT),
+                       min(len(lines), lineno + CONTEXT_HEIGHT + 1)):
+            res.append('%05d:%s' % (i + 1, lines[i]))
+            if i == lineno and column != -1:
+                res.append(' ' * (column + 5) + TERMC.GREEN + '^' +
+                           TERMC.NORMAL)
 
     return '\n'.join(res)
 
@@ -85,7 +90,7 @@ class HotdocSourceException(HotdocException):
         self.filename = filename
         self.lineno = lineno
         self.column = column
-        if filename and lineno != -1:
+        if filename:
             message = _format_source_exception(filename, message,
                                                lineno, column)
         super(HotdocSourceException, self).__init__(message)
