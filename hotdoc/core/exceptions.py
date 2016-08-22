@@ -73,6 +73,8 @@ CONTEXT_HEIGHT = 2
 class HotdocSourceException(HotdocException):
     """Banana banana"""
     def __init__(self, message=None, filename=None, lineno=-1, column=-1):
+        if isinstance(message, str):
+            message = message.decode('utf-8')
         self.filename = filename
         self.lineno = lineno
         self.column = column
