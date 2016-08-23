@@ -344,6 +344,7 @@ class GtkDocStringFormatter(Configurable):
 
     remove_xml_tags = False
     escape_html = False
+    gdbus_codegen_sources = []
 
     # pylint: disable=no-self-use
     def comment_to_ast(self, comment, link_resolver):
@@ -376,7 +377,8 @@ class GtkDocStringFormatter(Configurable):
 
         text = comment.description
 
-        if GtkDocStringFormatter.remove_xml_tags:
+        if (GtkDocStringFormatter.remove_xml_tags or comment.filename in
+                GtkDocStringFormatter.gdbus_codegen_sources):
             text = re.sub('<.*?>', '', text)
 
         if GtkDocStringFormatter.escape_html:
@@ -384,7 +386,8 @@ class GtkDocStringFormatter(Configurable):
         ast, diagnostics = cmark.gtkdoc_to_ast(text, link_resolver)
 
         for diag in diagnostics:
-            if comment.filename:
+            if (comment.filename and comment.filename not in
+                    GtkDocStringFormatter.gdbus_codegen_sources):
                 column = diag.column + comment.col_offset
                 if diag.lineno == 0:
                     column += comment.initial_col_offset
@@ -455,10 +458,16 @@ class GtkDocStringFormatter(Configurable):
         group = parser.add_argument_group(
             'GtkDocStringFormatter', 'GtkDocStringFormatter options')
         group.add_argument("--gtk-doc-remove-xml", action="store_true",
-                           dest="gtk_doc_remove_xml", help="Remove xml?")
+                           dest="gtk_doc_remove_xml",
+                           help="deprecated, use gdbus-codegen-sources")
         group.add_argument("--gtk-doc-escape-html", action="store_true",
                            dest="gtk_doc_esape_html", help="Escape html "
                            "in gtk-doc comments")
+        group.add_argument("--gdbus-codegen-sources", action="store",
+                           nargs='+', dest="gdbus_codegen_sources",
+                           help=("files listed there will have all xml tags "
+                                 "removed in their comments, and warnings "
+                                 "will not be emitted for comment issues"))
 
     @staticmethod
     def parse_config(doc_repo, config):
@@ -468,3 +477,5 @@ class GtkDocStringFormatter(Configurable):
             'gtk_doc_remove_xml')
         GtkDocStringFormatter.escape_html = config.get(
             'gtk_doc_escape_html')
+        GtkDocStringFormatter.gdbus_codegen_sources = config.get_paths(
+            'gdbus_codegen_sources')
