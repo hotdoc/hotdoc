@@ -403,12 +403,15 @@ class GtkDocStringFormatter(Configurable):
                                             lines[diag.lineno - 1]]):
                     column += 1
 
+                lineno = -1
+                if comment.lineno != -1:
+                    lineno = (comment.lineno - 1 + comment.line_offset +
+                              diag.lineno)
                 warn(
                     diag.code,
                     message=diag.message,
                     filename=comment.filename,
-                    lineno=(comment.lineno - 1 + comment.line_offset +
-                            diag.lineno),
+                    lineno=lineno,
                     column=column)
 
         return ast
