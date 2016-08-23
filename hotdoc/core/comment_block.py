@@ -51,9 +51,9 @@ class Comment(object):
     # This constructor is convenient
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-arguments
-    def __init__(self, name=u'', title=u'', params=None, filename=u'',
+    def __init__(self, name=u'', title=None, params=None, filename=u'',
                  lineno=-1, endlineno=-1, annotations=None,
-                 description=u'', short_description='', tags=None,
+                 description=u'', short_description=None, tags=None,
                  raw_comment=u'', topics=None):
         self.name = name
         self.title = title

@@ -315,9 +315,9 @@ class GtkDocParser(object):
         actual_parameters = {}
         for param in parameters:
             if param.name.lower() == 'short_description':
-                short_description = param.description
+                short_description = param
             elif param.name.lower() == 'title':
-                title = param.description
+                title = param
             else:
                 actual_parameters[param.name] = param
 

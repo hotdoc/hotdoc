@@ -202,6 +202,28 @@ class Page(object):
             elif struct_syms:
                 self.title = struct_syms[0].display_name
 
+    def __format_page_comment(self, formatter, link_resolver):
+        if not self.comment:
+            return
+
+        if self.comment.short_description:
+            self.short_description = formatter.format_comment(
+                self.comment.short_description, link_resolver).strip()
+            if self.short_description.startswith('<p>'):
+                self.short_description = self.short_description[3:-4]
+        if self.comment.title:
+            self.title = formatter.format_comment(
+                self.comment.title, link_resolver).strip()
+            if self.title.startswith('<p>'):
+                self.title = self.title[3:-4]
+
+        self.formatted_contents = u''
+        if self.title:
+            self.formatted_contents += '<h1>%s</h1>' % self.title
+
+        self.formatted_contents += formatter.format_comment(
+            self.comment, link_resolver)
+
     def format(self, formatter, link_resolver, output):
         """
         Banana banana
@@ -210,28 +232,10 @@ class Page(object):
             self.formatted_contents =\
                 cmark.ast_to_html(self.ast, link_resolver)
 
-        elif self.comment and False:
-            if self.comment.short_description:
-                self.short_description = formatter.format_docstring(
-                    self.comment.short_description, link_resolver).strip()
-                if self.short_description.startswith('<p>'):
-                    self.short_description = self.short_description[3:-4]
-            if self.comment.title:
-                self.title = formatter.format_docstring(
-                    self.comment.title, link_resolver).strip()
-                if self.title.startswith('<p>'):
-                    self.title = self.title[3:-4]
-                description = u'# %s\n\n%s\n' % (self.comment.title,
-                                                 self.comment.description)
-            else:
-                description = self.comment.description
-                self.title = self.source_file
-
-            self.formatted_contents = formatter.format_docstring(
-                description, link_resolver)
-
         if not self.title and self.source_file:
             self.title = os.path.splitext(self.source_file)[0]
+
+        self.__format_page_comment(formatter, link_resolver)
 
         self.output_attrs = defaultdict(lambda: defaultdict(dict))
         formatter.prepare_page_attributes(self)
