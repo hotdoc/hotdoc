@@ -69,7 +69,7 @@ class Comment(object):
         self.col_offset = 0
         self.initial_col_offset = 0
         self.annotations = annotations or {}
-        self.description = description
+        self.description = unicode(description)
         self.short_description = short_description
         self.extension_attrs = defaultdict(lambda: defaultdict(dict))
         self.tags = tags or {}
