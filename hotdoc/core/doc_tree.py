@@ -102,7 +102,11 @@ class Page(object):
     def __init__(self, source_file, ast, meta=None, raw_contents=None):
         "Banana banana"
         assert source_file
-        name = os.path.splitext(os.path.basename(source_file))[0]
+        if os.path.isabs(source_file):
+            basename = os.path.basename(source_file)
+        else:
+            basename = source_file.replace('/', '-')
+        name = os.path.splitext(basename)[0]
         pagename = '%s.html' % name
 
         self.ast = ast
