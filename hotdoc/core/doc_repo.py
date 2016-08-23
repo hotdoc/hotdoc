@@ -252,17 +252,24 @@ class DocRepo(object):
         if not os.path.exists(destdir):
             os.makedirs(destdir)
 
+        empty_targets = []
+
         with io.open(dest, 'w', encoding='utf-8') as _:
             _.write(u'%s: ' % target)
 
             if self.config:
                 for dep in self.config.get_dependencies():
+                    empty_targets.append(dep)
                     _.write(u'%s ' % dep)
 
             if self.doc_tree:
                 for page in self.doc_tree.get_pages().values():
                     if not page.generated:
+                        empty_targets.append(page.source_file)
                         _.write(u'%s ' % page.source_file)
+
+            for empty_target in empty_targets:
+                _.write(u'\n\n%s:' % empty_target)
 
     def __add_default_tags(self, _, comment):
         for validator in self.tag_validators.values():
