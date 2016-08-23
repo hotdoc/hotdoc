@@ -335,10 +335,11 @@ class DocRepo(object):
         elif args.has_extension:
             ext_name = args.has_extension
             print ext_name in self.__extension_classes
-
         elif args.list_extensions:
             for ext_name in self.__extension_classes:
                 print ext_name
+        else:
+            self.parser.print_usage()
 
     def __create_arg_parser(self):
         self.parser = \
