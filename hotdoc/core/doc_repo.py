@@ -522,7 +522,7 @@ class DocRepo(object):
         """
         Banana banana
         """
-        output = self.config.get_path('output')
+        output = self.config.get_path('output') or None
         self.sitemap_path = self.config.get_path('sitemap')
 
         if self.sitemap_path is None:
