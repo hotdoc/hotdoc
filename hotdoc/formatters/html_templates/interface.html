@@ -1,0 +1,24 @@
+@require(symbol, hierarchy)
+@extends('base_symbol.html')
+
+@def header():
+<h3>
+	@symbol.link.title
+</h3>
+@end
+
+@def content():
+\
+@if hierarchy:
+<div class="hierarchy_container">
+	@hierarchy
+</div>
+@end
+
+@if symbol.formatted_doc:
+<div class="interface_details">
+	@symbol.formatted_doc
+</div>
+@end
+\
+@end

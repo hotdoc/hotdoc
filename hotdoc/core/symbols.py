@@ -357,9 +357,13 @@ class EnumSymbol(Symbol):
         'polymorphic_identity': 'enums',
     }
     members = Column(PickleType)
+    raw_text = Column(String)
+    anonymous = Column(Boolean)
 
     def __init__(self, **kwargs):
         self.members = {}
+        self.raw_text = ''
+        self.anonymous = False
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
@@ -383,9 +387,11 @@ class StructSymbol(Symbol):
     }
     members = Column(PickleType)
     raw_text = Column(String)
+    anonymous = Column(Boolean)
 
     def __init__(self, **kwargs):
         self.members = {}
+        self.anonymous = False
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
@@ -507,3 +513,24 @@ class ClassSymbol(Symbol):
 
     def get_children_symbols(self):
         return self.hierarchy + list(self.children.values())
+
+class InterfaceSymbol(ClassSymbol):
+    """
+    Banana banana
+    """
+    __tablename__ = 'interfaces'
+    id_ = Column(Integer, ForeignKey('classes.id_'), primary_key=True)
+    __mapper_args__ = {
+        'polymorphic_identity': 'interfaces',
+    }
+    prerequisites = Column(PickleType)
+
+    def __init__(self, **kwargs):
+        self.prerequisites = []
+        ClassSymbol.__init__(self, **kwargs)
+
+    def get_type_name(self):
+        return "Interface"
+
+    def get_children_symbols(self):
+        return self.prerequisites + ClassSymbol.get_children_symbols(self)

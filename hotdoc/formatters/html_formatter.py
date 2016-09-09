@@ -39,7 +39,7 @@ from hotdoc.core.symbols import\
      ReturnItemSymbol, FieldSymbol, QualifiedSymbol,
      FunctionMacroSymbol, ConstantSymbol, ExportedVariableSymbol,
      StructSymbol, EnumSymbol, AliasSymbol, SignalSymbol, PropertySymbol,
-     VFunctionSymbol, ClassSymbol)
+     VFunctionSymbol, ClassSymbol, InterfaceSymbol)
 
 from hotdoc.core.base_formatter import Formatter, _create_hierarchy_graph
 from hotdoc.core.links import Link
@@ -49,7 +49,7 @@ from hotdoc.parsers.gtk_doc_parser import GtkDocStringFormatter
 from hotdoc.utils.setup_utils import THEME_VERSION
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.core.exceptions import HotdocException
-from hotdoc.utils.loggable import Logger, warn
+from hotdoc.utils.loggable import Logger, warn, info
 
 
 class HtmlFormatterBadLinkException(HotdocException):
@@ -128,9 +128,10 @@ class HtmlFormatter(Formatter):
             VFunctionSymbol: self._format_vfunction_symbol,
             PropertySymbol: self._format_property_symbol,
             ClassSymbol: self._format_class_symbol,
+            InterfaceSymbol: self._format_interface_symbol,
         }
 
-        self._ordering = [ClassSymbol, FunctionSymbol,
+        self._ordering = [InterfaceSymbol, ClassSymbol, FunctionSymbol,
                           FunctionMacroSymbol, SignalSymbol,
                           PropertySymbol, StructSymbol,
                           VFunctionSymbol, EnumSymbol, ConstantSymbol,
@@ -327,10 +328,15 @@ class HtmlFormatter(Formatter):
                 'detail': member.formatted_doc,
                 'value': str(member.enum_value)})
 
+        raw_code = None
+        if enum.raw_text is not None:
+            raw_code = self._format_raw_code(enum.raw_text)
+
         members_list = self._format_members_list(enum.members, 'Members')
         template = self.engine.get_template("enum.html")
         out = template.render({"symbol": enum,
                                "enum": enum,
+                               "raw_code": raw_code,
                                "members_list": members_list})
         return (out, False)
 
@@ -503,6 +509,13 @@ class HtmlFormatter(Formatter):
                                  'hierarchy': hierarchy}),
                 False)
 
+    def _format_interface_symbol(self, interface):
+        hierarchy = self._format_hierarchy(interface)
+        template = self.engine.get_template('interface.html')
+        return (template.render({'symbol': interface,
+                                 'hierarchy': hierarchy}),
+                False)
+
     def _format_members_list(self, members, member_designation):
         template = self.engine.get_template('member_list.html')
         return template.render({'members': members,
@@ -617,8 +630,10 @@ class HtmlFormatter(Formatter):
             default_theme = os.path.join(HERE, '..',
                                          'default_theme-%s' % THEME_VERSION)
             html_theme = os.path.abspath(default_theme)
+            info("Using default theme")
         else:
             html_theme = config.get_path('html_theme')
+            info("Using theme located at %s" % html_theme)
 
         HtmlFormatter.theme_path = html_theme
 

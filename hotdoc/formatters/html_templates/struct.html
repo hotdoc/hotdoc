@@ -3,7 +3,11 @@
 
 @def header():
 <h3>
+	@if struct.anonymous:
+	@struct.link.title
+	@else:
 	struct @struct.link.title
+	@end
 </h3>
 @end
 @def content():

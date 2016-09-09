@@ -381,7 +381,7 @@ class BaseExtension(Configurable):
             return
 
         if not index.title:
-            index.title = '%s API' % self._get_languages()[0].capitalize()
+            index.title = self._get_smart_index_title()
 
         for sym_name in unlisted_sym_names:
             sym = self.doc_repo.doc_database.get_symbol(sym_name)
@@ -431,8 +431,8 @@ class BaseExtension(Configurable):
     def __get_rel_source_path(self, source_file):
         return os.path.relpath(source_file, self.__package_root)
 
-    def _get_languages(self):
-        return []
+    def _get_smart_index_title(self):
+        return 'Reference Manual'
 
     def _get_all_sources(self):
         return self.sources
@@ -451,7 +451,6 @@ class BaseExtension(Configurable):
         """
         formatter = self.get_formatter('html')
         if page.is_stale:
-            page.languages = self._get_languages()
             debug('Formatting page %s' % page.link.ref, 'formatting')
 
             if output:

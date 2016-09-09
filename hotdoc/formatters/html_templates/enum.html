@@ -1,12 +1,20 @@
-@require(enum, members_list)
+@require(enum, raw_code, members_list)
 @extends('base_symbol.html')
 
 @def header():
 <h3>
+	@if enum.anonymous:
 	@enum.link.title
+	@else:
+	enum @enum.link.title
+	@end
 </h3>
 @end
 @def content():
+\
+@if raw_code:
+@raw_code
+@end
 \
 @if enum.formatted_doc:
 @enum.formatted_doc

@@ -39,7 +39,7 @@ from hotdoc.core.symbols import\
     (Symbol, FunctionSymbol, CallbackSymbol,
      FunctionMacroSymbol, ConstantSymbol, ExportedVariableSymbol,
      StructSymbol, EnumSymbol, AliasSymbol, SignalSymbol, PropertySymbol,
-     VFunctionSymbol, ClassSymbol)
+     VFunctionSymbol, ClassSymbol, InterfaceSymbol)
 from hotdoc.core.links import Link
 from hotdoc.core.exceptions import HotdocSourceException, InvalidPageMetadata
 from hotdoc.core.doc_database import DocDatabase
@@ -188,6 +188,7 @@ class Page(object):
         self.typed_symbols[VFunctionSymbol] = typed_symbols_list(
             "Virtual Methods", [])
         self.typed_symbols[ClassSymbol] = typed_symbols_list("Classes", [])
+        self.typed_symbols[InterfaceSymbol] = typed_symbols_list("Interfaces", [])
 
         all_syms = OrderedSet()
         for sym_name in self.symbol_names:
@@ -198,13 +199,25 @@ class Page(object):
             self.__resolve_symbol(sym, link_resolver)
             self.symbol_names.add(sym.unique_name)
 
+        class_syms = self.typed_symbols[ClassSymbol].symbols
+        interface_syms = self.typed_symbols[InterfaceSymbol].symbols
+        struct_syms = self.typed_symbols[StructSymbol].symbols
+
         if self.title is None:
-            class_syms = self.typed_symbols[ClassSymbol].symbols
-            struct_syms = self.typed_symbols[StructSymbol].symbols
             if class_syms:
                 self.title = class_syms[0].display_name
+            elif interface_syms:
+                self.title = interface_syms[0].display_name
             elif struct_syms:
                 self.title = struct_syms[0].display_name
+
+        if self.comment is None:
+            if class_syms and class_syms[0].comment:
+                self.comment = class_syms[0].comment
+            elif interface_syms and interface_syms[0].comment:
+                self.comment = interface_syms[0].comment
+            elif struct_syms and struct_syms[0].comment:
+                self.comment = struct_syms[0].comment
 
     def __format_page_comment(self, formatter, link_resolver):
         if not self.comment:
@@ -315,7 +328,7 @@ class DocTree(object):
             self.__all_pages = {}
 
         self.__placeholders = {}
-        self.__root = None
+        self.root = None
         self.__dep_map = self.__create_dep_map()
         DocDatabase.comment_updated_signal.connect(self.__comment_updated_cb)
 
@@ -460,7 +473,7 @@ class DocTree(object):
 
     def __create_json_sitemap(self):
         node = OrderedDict()
-        self.__dump_json_sitemap(self.__root, node)
+        self.__dump_json_sitemap(self.root, node)
         return json.dumps(node)
 
     def __create_navigation_script(self, output, extensions):
@@ -519,8 +532,8 @@ class DocTree(object):
             hotdoc.core.doc_tree.Page: the next page
         """
         if parent is None:
-            yield self.__root
-            parent = self.__root
+            yield self.root
+            parent = self.root
 
         for cpage_name in parent.subpages:
             cpage = self.__all_pages[cpage_name]
@@ -576,7 +589,7 @@ class DocTree(object):
         Banana banana
         """
         unlisted_symbols = self.__parse_pages(change_tracker, sitemap)
-        self.__root = self.__all_pages[sitemap.index_file]
+        self.root = self.__all_pages[sitemap.index_file]
         self.__update_sitemap(sitemap)
         self.update_signal(self, unlisted_symbols)
 
@@ -616,7 +629,7 @@ class DocTree(object):
           will recurse on potential subpages.
         """
 
-        page = page or self.__root
+        page = page or self.root
 
         if page.is_stale:
             if page.ast is None and not page.generated:
