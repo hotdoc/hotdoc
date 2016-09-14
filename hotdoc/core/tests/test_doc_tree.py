@@ -635,3 +635,15 @@ class TestDocTree(unittest.TestCase):
             OrderedSet(['symbol_4']))
 
         doc_tree.persist()
+
+    def test_index_override_incremental(self):
+        doc_tree, sitemap = self.__create_test_layout()
+        doc_tree.persist()
+        index_page = doc_tree.get_pages()['test-index']
+        self.assertIn('source_b.test', index_page.subpages)
+
+        self.__touch_src_file('test-index.markdown')
+        doc_tree = self.__update_test_layout(doc_tree, sitemap)
+        index_page = doc_tree.get_pages()['test-index']
+        self.assertIn('source_b.test', index_page.subpages)
+        doc_tree.persist()

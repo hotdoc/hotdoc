@@ -409,6 +409,9 @@ class DocTree(object):
 
             self.stale_symbol_pages(newly_listed_symbols, page)
 
+            if prev_page:
+                page.subpages |= prev_page.subpages
+
             self.__all_pages[pagename] = page
 
         unlisted_pagenames = set()
