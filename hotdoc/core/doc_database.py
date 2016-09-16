@@ -164,10 +164,8 @@ class DocDatabase(object):
         return self.__session
 
     def __update_symbol_comment(self, comment):
-        self.__session.query(Symbol).filter(
-            Symbol.unique_name ==
-            comment.name).update({'comment': comment})
-        esym = self.__symbols.get(comment.name)
-        if esym:
-            esym.comment = comment
+        sym = self.get_symbol(comment.name)
+        if sym:
+            sym.comment = comment
+            sym.update_children_comments()
         self.comment_updated_signal(self, comment)
