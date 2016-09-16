@@ -21,7 +21,6 @@ Defines and tests ChangeTracker
 """
 
 import os
-import sys
 from collections import defaultdict
 
 from hotdoc.utils.utils import OrderedSet, get_mtime
@@ -35,6 +34,9 @@ class ChangeTracker(object):
     It provides with modification time tracking and some
     other utilities.
     """
+    all_stale_files = set()
+    all_unlisted_files = set()
+
     def __init__(self):
         self.exts_mtimes = {}
         self.hard_deps_mtimes = {}
@@ -59,23 +61,13 @@ class ChangeTracker(object):
             stale.add(filename)
 
         self.mtimes[fileset_name] = new_mtimes
-        return stale, set(previous_mtimes.keys())
 
-    def __track_code_changes(self):
-        modules = [m.__file__ for m in sys.modules.values()
-                   if m and '__file__' in m.__dict__]
+        unlisted = set(previous_mtimes.keys())
 
-        for filename in modules:
-            if filename.endswith('.pyc') or filename.endswith('.pyo'):
-                filename = filename[:-1]
+        ChangeTracker.all_stale_files |= stale
+        ChangeTracker.all_unlisted_files |= unlisted
 
-            self.add_hard_dependency(filename)
-
-    def track_core_dependencies(self):
-        """
-        Banana banana
-        """
-        self.__track_code_changes()
+        return stale, unlisted
 
     def add_hard_dependency(self, filename):
         """

@@ -532,8 +532,11 @@ class HtmlFormatter(Formatter):
         template = self.engine.get_template('callable.html')
         prototype = self._format_raw_code(function_macro.original_text)
 
-        parameters = [p.detailed_description for p in function_macro.parameters
-                      if p.detailed_description is not None]
+        parameters = []
+        for _ in function_macro.parameters:
+            if not _.detailed_description:
+                continue
+            parameters.append(_.detailed_description)
 
         return_value_detail = self._format_return_value_symbol(
             function_macro.return_value)

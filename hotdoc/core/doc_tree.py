@@ -41,8 +41,10 @@ from hotdoc.core.symbols import\
      StructSymbol, EnumSymbol, AliasSymbol, SignalSymbol, PropertySymbol,
      VFunctionSymbol, ClassSymbol, InterfaceSymbol)
 from hotdoc.core.links import Link
+from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.exceptions import HotdocSourceException, InvalidPageMetadata
 from hotdoc.core.doc_database import DocDatabase
+from hotdoc.core.comment_block import Comment
 from hotdoc.parsers import cmark
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.simple_signals import Signal
@@ -193,9 +195,10 @@ class Page(object):
         all_syms = OrderedSet()
         for sym_name in self.symbol_names:
             sym = doc_database.get_symbol(sym_name)
-            self.__query_extra_symbols(sym, all_syms, link_resolver)
+            self.__query_extra_symbols(sym, all_syms, link_resolver, doc_database)
 
         for sym in all_syms:
+            sym.update_children_comments()
             self.__resolve_symbol(sym, link_resolver)
             self.symbol_names.add(sym.unique_name)
 
@@ -219,6 +222,18 @@ class Page(object):
             elif struct_syms and struct_syms[0].comment:
                 self.comment = struct_syms[0].comment
 
+    def __fetch_comment(self, sym, doc_database):
+        old_comment = sym.comment
+        new_comment = doc_database.get_comment(sym.unique_name)
+        sym.comment = Comment(sym.unique_name)
+
+        if new_comment:
+            sym.comment = new_comment
+        elif old_comment:
+            if not old_comment.filename in (ChangeTracker.all_stale_files |
+                                            ChangeTracker.all_unlisted_files):
+                sym.comment = old_comment
+
     def __format_page_comment(self, formatter, link_resolver):
         if not self.comment:
             return
@@ -234,7 +249,6 @@ class Page(object):
             if self.title.startswith('<p>'):
                 self.title = self.title[3:-4]
 
-        self.formatted_contents = u''
         if self.title:
             self.formatted_contents += '<h1>%s</h1>' % self.title
 
@@ -245,14 +259,17 @@ class Page(object):
         """
         Banana banana
         """
-        if self.ast:
-            self.formatted_contents =\
-                cmark.ast_to_html(self.ast, link_resolver)
 
         if not self.title and self.source_file:
             self.title = os.path.splitext(self.source_file)[0]
 
-        self.__format_page_comment(formatter, link_resolver)
+        self.formatted_contents = u''
+
+        if self.ast:
+            self.formatted_contents +=\
+                cmark.ast_to_html(self.ast, link_resolver)
+        else:
+            self.__format_page_comment(formatter, link_resolver)
 
         self.output_attrs = defaultdict(lambda: defaultdict(dict))
         formatter.prepare_page_attributes(self)
@@ -285,14 +302,15 @@ class Page(object):
                 symbol.unique_name, self.source_file), 'formatting')
             symbol.skip = not formatter.format_symbol(symbol, link_resolver)
 
-    def __query_extra_symbols(self, sym, all_syms, link_resolver):
+    def __query_extra_symbols(self, sym, all_syms, link_resolver, doc_database):
         if sym:
+            self.__fetch_comment(sym, doc_database)
             new_symbols = sum(Page.resolving_symbol_signal(self, sym),
                               [])
             all_syms.add(sym)
 
             for symbol in new_symbols:
-                self.__query_extra_symbols(symbol, all_syms, link_resolver)
+                self.__query_extra_symbols(symbol, all_syms, link_resolver, doc_database)
 
     def __resolve_symbol(self, symbol, link_resolver):
         symbol.resolve_links(link_resolver)

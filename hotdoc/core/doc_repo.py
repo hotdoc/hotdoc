@@ -178,7 +178,6 @@ class DocRepo(object):
         info('Persisting database and private files', 'persisting')
         self.doc_tree.persist()
         self.doc_database.persist()
-        self.change_tracker.track_core_dependencies()
         pickle.dump(self.change_tracker,
                     open(os.path.join(self.get_private_folder(),
                                       'change_tracker.p'), 'wb'))

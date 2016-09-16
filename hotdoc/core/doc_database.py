@@ -24,7 +24,6 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from hotdoc.core.comment_block import Comment
 from hotdoc.core.symbols import Symbol
 
 from hotdoc.utils.alchemy_integration import Base
@@ -60,12 +59,7 @@ class DocDatabase(object):
         """
         Banana banana
         """
-        comment = self.__comments.get(name)
-        if not comment:
-            esym = self.get_symbol(name)
-            if esym:
-                comment = esym.comment
-        return comment
+        return self.__comments.get(name)
 
     def get_or_create_symbol(self, type_, **kwargs):
         """
@@ -94,10 +88,6 @@ class DocDatabase(object):
 
         for key, value in kwargs.items():
             setattr(symbol, key, value)
-
-        if not symbol.comment:
-            symbol.comment = Comment(symbol.unique_name)
-            self.add_comment(symbol.comment)
 
         if self.__incremental:
             self.symbol_updated_signal(self, symbol)
@@ -164,8 +154,4 @@ class DocDatabase(object):
         return self.__session
 
     def __update_symbol_comment(self, comment):
-        sym = self.get_symbol(comment.name)
-        if sym:
-            sym.comment = comment
-            sym.update_children_comments()
         self.comment_updated_signal(self, comment)
