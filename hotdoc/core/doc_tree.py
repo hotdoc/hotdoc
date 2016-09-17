@@ -350,6 +350,8 @@ class DocTree(object):
         self.__dep_map = self.__create_dep_map()
         DocDatabase.comment_updated_signal.connect(self.__comment_updated_cb)
 
+        cmark.hotdoc_to_ast(u'', self)
+
     def __create_dep_map(self):
         dep_map = {}
         for pagename, page in self.__all_pages.items():
