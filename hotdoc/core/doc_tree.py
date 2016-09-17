@@ -586,7 +586,8 @@ class DocTree(object):
                 try:
                     blocks = yaml.load_all(split[0])
                     for block in blocks:
-                        meta.update(block)
+                        if block:
+                            meta.update(block)
                 except ConstructorError as exception:
                     error('invalid-page-metadata',
                           '%s: Invalid metadata: \n%s' % (source_file,
