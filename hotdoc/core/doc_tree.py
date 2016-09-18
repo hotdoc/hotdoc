@@ -48,7 +48,7 @@ from hotdoc.core.comment_block import Comment
 from hotdoc.parsers import cmark
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.simple_signals import Signal
-from hotdoc.utils.loggable import info, debug, error, Logger
+from hotdoc.utils.loggable import info, debug, warn, error, Logger
 
 
 def _custom_str_constructor(loader, node):
@@ -87,8 +87,8 @@ class DocTreeNoSuchPageException(HotdocSourceException):
 
 Logger.register_error_code('no-such-subpage', DocTreeNoSuchPageException,
                            domain='doc-tree')
-Logger.register_error_code('invalid-page-metadata', InvalidPageMetadata,
-                           domain='doc-tree')
+Logger.register_warning_code('invalid-page-metadata', InvalidPageMetadata,
+                             domain='doc-tree')
 
 
 # pylint: disable=too-many-instance-attributes
@@ -130,9 +130,10 @@ class Page(object):
         try:
             self.meta = Schema(Page.meta_schema).validate(meta)
         except SchemaError as _:
-            error('invalid-page-metadata',
-                  '%s: Invalid metadata: \n%s' % (self.source_file,
-                                                  str(_)))
+            warn('invalid-page-metadata',
+                 '%s: Invalid metadata: \n%s' % (self.source_file,
+                                                 str(_)))
+            self.meta = meta
 
         self.symbol_names = OrderedSet(meta.get('symbols') or [])
         self.short_description = meta.get('short-description')
@@ -589,9 +590,9 @@ class DocTree(object):
                         if block:
                             meta.update(block)
                 except ConstructorError as exception:
-                    error('invalid-page-metadata',
-                          '%s: Invalid metadata: \n%s' % (source_file,
-                                                          str(exception)))
+                    warn('invalid-page-metadata',
+                         '%s: Invalid metadata: \n%s' % (source_file,
+                                                         str(exception)))
 
         ast = cmark.hotdoc_to_ast(contents, self)
         return Page(source_file, ast, meta=meta, raw_contents=raw_contents)
