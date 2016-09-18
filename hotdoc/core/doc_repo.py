@@ -53,6 +53,13 @@ Run hotdoc {subcommand} -h for more info
 """
 
 
+LANG_MAPPING = {
+    'xml': 'markup',
+    'html': 'markup',
+    'py': 'python'
+}
+
+
 class CoreExtension(BaseExtension):
     """
     Banana banana
@@ -71,7 +78,8 @@ class CoreExtension(BaseExtension):
         else:
             split = os.path.splitext(include_path)
             if len(split) == 2:
-                lang = split[1].strip('.')
+                ext = split[1].strip('.')
+                lang = LANG_MAPPING.get(ext) or ext
 
         with io.open(include_path, 'r', encoding='utf-8') as _:
             return _.read(), lang
