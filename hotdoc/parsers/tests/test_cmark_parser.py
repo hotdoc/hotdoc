@@ -284,7 +284,7 @@ class TestIncludeExtension(unittest.TestCase):
         ast = cmark.hotdoc_to_ast(inp, self.include_resolver)
         out = cmark.ast_to_html(ast, self.link_resolver)
         self.assertEqual(out, expected)
-        return ast
+        return out, ast
 
     def test_basic(self):
         inp = u'   I include a {{simple_file.md}}!'
@@ -328,3 +328,52 @@ class TestIncludeExtension(unittest.TestCase):
         self.assertOutputs(
             inp,
             u'<p>I include an empty file!</p>\n')
+
+
+class TestTableExtension(unittest.TestCase):
+    def setUp(self):
+        self.doc_database = DocDatabase()
+        self.link_resolver = LinkResolver(self.doc_database)
+        self.include_resolver = MockIncludeResolver()
+
+    def assertOutputs(self, inp, expected):
+        ast = cmark.hotdoc_to_ast(inp, self.include_resolver)
+        out = cmark.ast_to_html(ast, self.link_resolver)
+        self.assertEqual(out, expected)
+        return ast
+
+    def test_table_with_header(self):
+        inp = u'\n'.join(['| h1 | h2 |',
+                          '| -- | -- |',
+                          '| c1 | c2 |'])
+        expected = u'\n'.join(['<table>',
+                               '<thead>',
+                               '<tr>',
+                               '<th> h1</th>',
+                               '<th> h2</th>',
+                               '</tr>',
+                               '</thead>',
+                               '<tbody>',
+                               '<tr>',
+                               '<td> c1</td>',
+                               '<td> c2</td>',
+                               '</tr></tbody></table>'])
+        self.assertOutputs(inp, expected)
+
+    def test_invalid_table_no_marker_row(self):
+        inp = u'\n'.join(['| h1 | h2 |',
+                          'Hello you ..\n'])
+        expected = '\n'.join(['<p>| h1 | h2 |',
+                              'Hello you ..</p>',
+                              ''])
+        self.assertOutputs(inp, expected)
+
+    def test_table_no_header(self):
+        inp = u'\n'.join(['| -- | -- |',
+                          '| c1 | c2 |'])
+        expected = '\n'.join(['<table>',
+                              '<tr>',
+                              '<td> c1</td>',
+                              '<td> c2</td>',
+                              '</tr></table>'])
+        self.assertOutputs(inp, expected)
