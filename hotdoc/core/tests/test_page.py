@@ -34,6 +34,11 @@ from hotdoc.utils.loggable import Logger
 class TestPage(unittest.TestCase):
     def setUp(self):
         Logger.silent = True
+        Logger.fatal_warnings = True
+
+    def tearDown(self):
+        Logger.silent = False
+        Logger.fatal_warnings = False
 
     def test_meta_schema(self):
         meta = {'foo': u'bar'}
