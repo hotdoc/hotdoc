@@ -336,9 +336,13 @@ class TestTableExtension(unittest.TestCase):
         self.link_resolver = LinkResolver(self.doc_database)
         self.include_resolver = MockIncludeResolver()
 
-    def assertOutputs(self, inp, expected):
+    def render(self, inp):
         ast = cmark.hotdoc_to_ast(inp, self.include_resolver)
         out = cmark.ast_to_html(ast, self.link_resolver)
+        return ast, out
+
+    def assertOutputs(self, inp, expected):
+        ast, out = self.render(inp)
         self.assertEqual(out, expected)
         return ast
 
@@ -376,4 +380,23 @@ class TestTableExtension(unittest.TestCase):
                               '<td> c1</td>',
                               '<td> c2</td>',
                               '</tr></table>'])
+        self.assertOutputs(inp, expected)
+
+    def test_html_in_table(self):
+        inp = u'\n'.join(['| <b>bold</bold> | normal |',
+                          '| - | - |',
+                          '| <i>italic</i> | normal |'])
+
+        expected = u'\n'.join(['<table>',
+                               '<thead>',
+                               '<tr>',
+                               '<th> <b>bold</bold></th>',
+                               '<th> normal</th>',
+                               '</tr>',
+                               '</thead>',
+                               '<tbody>',
+                               '<tr>',
+                               '<td> <i>italic</i></td>',
+                               '<td> normal</td>',
+                               '</tr></tbody></table>'])
         self.assertOutputs(inp, expected)
