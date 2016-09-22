@@ -108,6 +108,7 @@ class HtmlFormatter(Formatter):
 
     theme_path = None
     add_anchors = False
+    number_headings = False
 
     def __init__(self, searchpath):
         Formatter.__init__(self)
@@ -154,17 +155,68 @@ class HtmlFormatter(Formatter):
         self.all_stylesheets = set()
         self._docstring_formatter = GtkDocStringFormatter()
 
+    # pylint: disable=no-self-use
+    def __init_section_numbers(self, root):
+        if not HtmlFormatter.number_headings:
+            return {}
+
+        targets = []
+
+        ctr = 0
+        while len(targets) <= 1:
+            ctr += 1
+            if ctr > 5:
+                return {}
+
+            targets = root.xpath('.//*[self::h%s]' % ctr)
+
+        section_numbers = {}
+        for i in range(ctr, 6):
+            section_numbers['h%d' % i] = 0
+
+        section_numbers['first'] = ctr
+
+        return section_numbers
+
+    # pylint: disable=no-self-use
+    def __update_section_number(self, target, section_numbers):
+        if target.tag not in section_numbers:
+            return None
+
+        prev = section_numbers.get('prev')
+        cur = int(target.tag[1])
+
+        if cur < prev:
+            for i in range(cur + 1, 6):
+                section_numbers['h%d' % i] = 0
+
+        section_numbers[target.tag] += 1
+        section_numbers['prev'] = cur
+
+        section_number = u''
+        for i in range(section_numbers['first'], cur + 1):
+            if section_number:
+                section_number += '.'
+            section_number += unicode(section_numbers['h%d' % i])
+
+        return section_number
+
     # pylint: disable=too-many-locals
     def write_page(self, page, output):
         root = etree.HTML(unicode(page.detailed_description))
         id_nodes = {n.attrib['id']: "".join([x for x in n.itertext()])
                     for n in root.xpath('.//*[@id]')}
 
+        section_numbers = self.__init_section_numbers(root)
+
         targets = root.xpath(
             './/*[self::h1 or self::h2 or self::h3 or '
             'self::h4 or self::h5 or self::img]')
 
         for target in targets:
+            section_number = self.__update_section_number(
+                target, section_numbers)
+
             if 'id' in target.attrib:
                 continue
 
@@ -183,6 +235,9 @@ class HtmlFormatter(Formatter):
             while id_ in id_nodes:
                 id_ = '%s%s' % (ref_id, index)
                 index += 1
+
+            if section_number:
+                target.text = '%s %s' % (section_number, target.text or '')
 
             target.attrib['id'] = id_
             id_nodes[id_] = text
@@ -623,6 +678,9 @@ class HtmlFormatter(Formatter):
                            dest="html_add_anchors",
                            help="Add anchors to html headers",
                            default='default')
+        group.add_argument("--html-number-headings", action="store_true",
+                           dest="html_number_headings",
+                           help="Enable html headings numbering")
 
     @staticmethod
     def parse_config(doc_repo, config):
@@ -641,3 +699,5 @@ class HtmlFormatter(Formatter):
         HtmlFormatter.theme_path = html_theme
 
         HtmlFormatter.add_anchors = bool(config.get("html_add_anchors"))
+        HtmlFormatter.number_headings = bool(
+            config.get("html_number_headings"))
