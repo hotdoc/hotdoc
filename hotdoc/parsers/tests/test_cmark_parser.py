@@ -132,6 +132,10 @@ class TestGtkDocExtension(unittest.TestCase):
         self.link_resolver.add_link(Link("here.com", "foo", "foo"))
         self.link_resolver.add_link(Link("there.org", "there", "Test::test"))
         self.link_resolver.add_link(Link("wherever.biz", "wherever", "bar"))
+        self.link_resolver.add_link(Link("whenever.net", "whenever", "Test"))
+        self.link_resolver.add_link(Link("somewhere.me",
+                                         "somewhere",
+                                         "Test.baz"))
 
     def assertOutputs(self, inp, expected):
         ast, diagnostics = cmark.gtkdoc_to_ast(inp, self.link_resolver)
@@ -186,6 +190,17 @@ class TestGtkDocExtension(unittest.TestCase):
         self.assertOutputs(
             inp,
             u'<p><a href="wherever.biz">wherever</a></p>\n')
+
+        inp = u"Linking to #Test: cool"
+        self.assertOutputs(
+            inp,
+            u'<p>Linking to <a href="whenever.net">whenever</a>: cool</p>\n')
+
+    def test_struct_field_link(self):
+        inp = u"Linking to #Test.baz yo"
+        self.assertOutputs(
+            inp,
+            u'<p>Linking to <a href="somewhere.me">somewhere</a> yo</p>\n')
 
     def test_qualified_links(self):
         inp = u' #Test::test is a link'

@@ -50,12 +50,20 @@ my_strndup (const char *s, size_t n)
   return (char *) memcpy (result, s, len);
 }
 
-static int is_valid_c(int c) {
+static int is_valid_c(cmark_inline_parser *parser, int c, int pos) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
 }
 
-static int is_valid_symbol_name(int c) {
-  return is_valid_c(c) || c == ':' || c == '-';
+static int is_valid_symbol_name(cmark_inline_parser *parser, int c, int pos) {
+  if (is_valid_c(parser, c, pos))
+    return 1;
+
+  if (c == ':' || c == '-' || c == '.') {
+    char nc = cmark_inline_parser_peek_at(parser, pos + 1);
+
+    return (nc && is_valid_symbol_name(parser, nc, pos + 1));
+  }
+  return 0;
 }
 
 static void translate_sourcepos(cmark_node *parent, unsigned long col,
@@ -191,13 +199,14 @@ static cmark_node *function_link_match(cmark_syntax_extension *self,
 
   start = offset - 1;
 
-  if (!is_valid_c(cmark_inline_parser_peek_at(inline_parser, start)))
+  if (!is_valid_c(inline_parser, cmark_inline_parser_peek_at(inline_parser, start),
+        cmark_inline_parser_get_offset(inline_parser)))
     goto done;
 
   while (start >= 0) {
     unsigned char c = cmark_inline_parser_peek_at(inline_parser, start);
 
-    if (is_valid_c(c)) {
+    if (is_valid_c(inline_parser, c, cmark_inline_parser_get_offset(inline_parser))) {
       start -= 1;
     } else {
       break;
