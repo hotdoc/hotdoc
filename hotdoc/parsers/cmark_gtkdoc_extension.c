@@ -80,8 +80,8 @@ static void translate_sourcepos(cmark_node *parent, unsigned long col,
 static cmark_node *get_first_parent_block(cmark_node *node) {
   cmark_node *parent = node;
 
-  while (cmark_node_get_type(node) > CMARK_NODE_LAST_BLOCK) {
-    parent = cmark_node_parent(node);
+  while (cmark_node_get_type(parent) > CMARK_NODE_LAST_BLOCK) {
+    parent = cmark_node_parent(parent);
   }
 
   return parent;

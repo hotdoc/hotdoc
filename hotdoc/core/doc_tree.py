@@ -89,6 +89,7 @@ Logger.register_error_code('no-such-subpage', DocTreeNoSuchPageException,
                            domain='doc-tree')
 Logger.register_warning_code('invalid-page-metadata', InvalidPageMetadata,
                              domain='doc-tree')
+Logger.register_warning_code('markdown-bad-link', HotdocSourceException)
 
 
 # pylint: disable=too-many-instance-attributes
@@ -223,6 +224,7 @@ class Page(object):
             elif struct_syms and struct_syms[0].comment:
                 self.comment = struct_syms[0].comment
 
+    # pylint: disable=no-self-use
     def __fetch_comment(self, sym, doc_database):
         old_comment = sym.comment
         new_comment = doc_database.get_comment(sym.unique_name)
@@ -267,8 +269,14 @@ class Page(object):
         self.formatted_contents = u''
 
         if self.ast:
-            self.formatted_contents +=\
-                cmark.ast_to_html(self.ast, link_resolver)
+            out, diags = cmark.ast_to_html(self.ast, link_resolver)
+            for diag in diags:
+                warn(
+                    diag.code,
+                    message=diag.message,
+                    filename=self.source_file)
+
+            self.formatted_contents += out
         else:
             self.__format_page_comment(formatter, link_resolver)
 
@@ -377,6 +385,7 @@ class DocTree(object):
 
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches
+    # pylint: disable=too-many-statements
     def __parse_pages(self, change_tracker, sitemap):
         source_files = []
         source_map = {}

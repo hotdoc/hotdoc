@@ -90,6 +90,7 @@ class LinkResolver(object):
         self.__links = {}
         self.__doc_db = doc_database
 
+    # pylint: disable=too-many-return-statements
     def get_named_link(self, name):
         """
         Banana banana
@@ -97,7 +98,7 @@ class LinkResolver(object):
         name = str(name.encode('ascii'))
         url_components = urlparse.urlparse(name)
         if bool(url_components.netloc):
-            return None
+            return Link(name, None, name)
 
         if name in self.__links:
             return self.__links[name]
@@ -114,6 +115,14 @@ class LinkResolver(object):
             self.__links[name] = link
             link.id_ = name
             return link
+
+        if url_components.scheme in ['man', 'mailto']:
+            return Link(name, None, name)
+
+        # Formatters should warn later about broken anchor links
+        if bool(url_components.fragment) and not bool(url_components.path):
+            return Link(name, None, name)
+
         return None
 
     def add_link(self, link):

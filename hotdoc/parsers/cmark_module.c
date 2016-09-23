@@ -235,8 +235,14 @@ static char *render_doc(CMarkDocument *doc)
           continue;
 
         named_link = resolve_link(url);
-        if (!named_link)
+        if (!named_link) {
+          cmark_strbuf *message = cmark_strbuf_new(0);
+          cmark_strbuf_puts(message, "Trying to link to non-existing identifier ‘");
+          cmark_strbuf_puts(message, url);
+          cmark_strbuf_puts(message, "’");
+          diagnose("markdown-bad-link", cmark_strbuf_get(message), -1, -1);
           continue;
+        }
 
         if (cmark_node_first_child(cur) == NULL) {
           cmark_node *label = cmark_node_new(CMARK_NODE_TEXT);
@@ -271,13 +277,17 @@ static char *render_doc(CMarkDocument *doc)
       cmark_node *label = cmark_node_first_child(cur);
       NamedLink *named_link = resolve_link(id);
 
-     if (named_link->ref)
-       cmark_node_set_url(cur, named_link->ref);
+      if (!named_link) {
+        continue;
+      }
 
-     if (named_link->title)
-       cmark_node_set_literal(label, named_link->title);
+      if (named_link->ref)
+        cmark_node_set_url(cur, named_link->ref);
 
-     free_named_link(named_link);
+      if (named_link->title)
+        cmark_node_set_literal(label, named_link->title);
+
+      free_named_link(named_link);
     }
   }
 
@@ -298,13 +308,16 @@ ast_to_html(PyObject *self, PyObject *args) {
   if (doc == NULL)
     return NULL;
 
+  Py_XDECREF(diagnostics);
+  diagnostics = PyList_New(0);
+
   out = render_doc(doc);
 
   ret = PyUnicode_FromString(out);
 
   free(out);
 
-  return ret;
+  return Py_BuildValue("OO", ret, diagnostics);
 }
 
 static PyObject *concatenate_title(cmark_node *title_node) {

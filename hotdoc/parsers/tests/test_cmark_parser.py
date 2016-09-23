@@ -37,7 +37,7 @@ class TestParser(unittest.TestCase):
 
     def assertOutputs(self, inp, expected):
         ast, _ = cmark.gtkdoc_to_ast(inp, self.link_resolver)
-        out = cmark.ast_to_html(ast, self.link_resolver)
+        out = cmark.ast_to_html(ast, self.link_resolver)[0]
         self.assertEqual(out, expected)
 
     def test_basic(self):
@@ -135,7 +135,7 @@ class TestGtkDocExtension(unittest.TestCase):
 
     def assertOutputs(self, inp, expected):
         ast, diagnostics = cmark.gtkdoc_to_ast(inp, self.link_resolver)
-        out = cmark.ast_to_html(ast, self.link_resolver)
+        out = cmark.ast_to_html(ast, self.link_resolver)[0]
         self.assertEqual(out, expected)
         return ast, diagnostics
 
@@ -151,7 +151,7 @@ class TestGtkDocExtension(unittest.TestCase):
         self.link_resolver.upsert_link(
             Link("there.com", "ze_foo", "foo"),
             overwrite_ref=True)
-        out = cmark.ast_to_html(ast, self.link_resolver)
+        out = cmark.ast_to_html(ast, self.link_resolver)[0]
         self.assertEqual(
             out,
             u'<p>this : <a href="there.com">ze_foo</a> is a link !</p>\n')
@@ -282,7 +282,7 @@ class TestIncludeExtension(unittest.TestCase):
 
     def assertOutputs(self, inp, expected):
         ast = cmark.hotdoc_to_ast(inp, self.include_resolver)
-        out = cmark.ast_to_html(ast, self.link_resolver)
+        out = cmark.ast_to_html(ast, self.link_resolver)[0]
         self.assertEqual(out, expected)
         return out, ast
 
@@ -338,7 +338,7 @@ class TestTableExtension(unittest.TestCase):
 
     def render(self, inp):
         ast = cmark.hotdoc_to_ast(inp, self.include_resolver)
-        out = cmark.ast_to_html(ast, self.link_resolver)
+        out = cmark.ast_to_html(ast, self.link_resolver)[0]
         return ast, out
 
     def assertOutputs(self, inp, expected):

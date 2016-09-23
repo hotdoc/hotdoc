@@ -341,8 +341,10 @@ class TestDocTree(unittest.TestCase):
             os.path.basename(page.source_file),
             'source_a.test.markdown')
 
+        out, _ = cmark.ast_to_html(page.ast, None)
+
         self.assertEqual(
-            cmark.ast_to_html(page.ast, None),
+            out,
             u'<h1>My override</h1>\n')
 
     def test_parse_yaml(self):
@@ -361,8 +363,11 @@ class TestDocTree(unittest.TestCase):
 
         pages = doc_tree.get_pages()
         page = pages.get('index.markdown')
+
+        out, _ = cmark.ast_to_html(page.ast, None)
+
         self.assertEqual(
-            cmark.ast_to_html(page.ast, None),
+            out,
             u'<h1>My documentation</h1>\n')
 
         self.assertEqual(page.title, u'A random title')

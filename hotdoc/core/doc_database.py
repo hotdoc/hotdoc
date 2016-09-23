@@ -21,7 +21,9 @@
 
 import os
 
+# pylint: disable=import-error
 from sqlalchemy import create_engine
+# pylint: disable=import-error
 from sqlalchemy.orm import sessionmaker
 
 from hotdoc.core.symbols import Symbol
@@ -49,6 +51,9 @@ class DocDatabase(object):
         """
         Banana banana
         """
+        if not comment:
+            return
+
         self.__comments[comment.name] = comment
         if self.__incremental:
             self.__update_symbol_comment(comment)

@@ -36,6 +36,7 @@ from hotdoc.utils.loggable import Logger, warn
 
 
 Logger.register_warning_code('gtk-doc-bad-link', HotdocSourceException)
+Logger.register_warning_code('gtk-doc-bad-syntax', HotdocSourceException)
 
 
 # http://stackoverflow.com/questions/434287/what-is-the-most-pythonic-way-to-iterate-over-a-list-in-chunks
@@ -88,8 +89,8 @@ class GtkDocParser(object):
         if len(split) > 1:
             annotations = self.__parse_annotations(split[1])
         elif not raw_title.strip().endswith(':'):
-            print "Missing colon in comment name :", raw_title
-            return None, []
+            raise HotdocSourceException(
+                message="Missing colon in comment name : %s" % raw_title)
         return title, annotations
 
     def __parse_key_value_annotation(self, name, string):
@@ -286,8 +287,15 @@ class GtkDocParser(object):
 
         split = re.split(r'\n[\W]*\n', comment, maxsplit=1)
 
-        block_name, parameters, annotations = \
-            self.__parse_title_and_parameters(split[0])
+        try:
+            block_name, parameters, annotations = \
+                self.__parse_title_and_parameters(split[0])
+        except HotdocSourceException as _:
+            warn('gtk-doc-bad-syntax',
+                 message=_.message,
+                 filename=filename,
+                 lineno=lineno + title_offset)
+            return None
 
         params_offset = 0
         for param in parameters:
@@ -427,7 +435,8 @@ class GtkDocStringFormatter(Configurable):
             link_resolver: hotdoc.core.links.LinkResolver, a link
                 resolver instance.
         """
-        return cmark.ast_to_html(ast, link_resolver)
+        out, _ = cmark.ast_to_html(ast, link_resolver)
+        return out
 
     def translate_comment(self, comment, link_resolver, output_format):
         """
