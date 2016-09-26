@@ -345,7 +345,10 @@ setup(name='hotdoc',
               '*.js',
               'stopwords.txt'],
           'hotdoc.extensions.devhelp': [
-              'devhelp.css']
+              'devhelp.css'],
+          'hotdoc.extensions.license': [
+              'data/*',
+              'html_templates/*']
       },
       install_requires=INSTALL_REQUIRES,
       extras_require=EXTRAS_REQUIRE,

@@ -1,0 +1,26 @@
+@require(copyrights)
+
+<div class="copyrights-description">
+	@for copyright in copyrights:
+	<p>
+		@if copyright.has_copyright:
+		© \
+		@if copyright.years:
+		\
+		@for year in copyright.years:
+		@year, 
+		@end
+		\
+		@end
+		\
+		@else:
+		Authored by
+		@end
+		\
+	       	@copyright.name \
+		@if copyright.email:
+		(<a href="mailto:@copyright.email">@copyright.email</a>)
+		@end
+	</p>
+	@end
+</div>
