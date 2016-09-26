@@ -23,10 +23,11 @@ A set of extensions with no external dependencies
 from hotdoc.extensions.syntax_highlighting.syntax_extension import (
     SyntaxHighlightingExtension)
 from hotdoc.extensions.search.search_extension import SearchExtension
+from hotdoc.extensions.tags.tag_extension import TagExtension
 
 
 def get_extension_classes():
     """
     Hotdoc's setuptools entry point
     """
-    return [SyntaxHighlightingExtension, SearchExtension]
+    return [SyntaxHighlightingExtension, SearchExtension, TagExtension]
