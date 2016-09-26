@@ -264,7 +264,8 @@ class Page(object):
         """
 
         if not self.title and self.source_file:
-            self.title = os.path.splitext(self.source_file)[0]
+            title = os.path.splitext(self.source_file)[0]
+            self.title = os.path.basename(title).replace('-', ' ')
 
         self.formatted_contents = u''
 
