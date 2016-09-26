@@ -340,11 +340,12 @@ setup(name='hotdoc',
               'prism/components/*',
               'prism/themes/*',
               'prism/plugins/autoloader/*',
-              'prism_autoloader_path_override.js',
-              ],
+              'prism_autoloader_path_override.js'],
           'hotdoc.extensions.search': [
               '*.js',
-              'stopwords.txt',
+              'stopwords.txt'],
+          'hotdoc.extensions.devhelp': [
+              'devhelp.css']
       },
       install_requires=INSTALL_REQUIRES,
       extras_require=EXTRAS_REQUIRE,
