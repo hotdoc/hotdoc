@@ -301,6 +301,11 @@ EXTRAS_REQUIRE = {
             'git-pep8-commit-hook']
 }
 
+# Extensions
+
+SYN_EXT_DIR = os.path.join(SOURCE_DIR, 'hotdoc', 'extensions', 'syntax_highlighting')
+require_clean_submodules(SYN_EXT_DIR, ['prism'])
+
 setup(name='hotdoc',
       version=VERSION,
       description='A documentation tool micro-framework',
@@ -330,7 +335,17 @@ setup(name='hotdoc',
                      'default_theme-%s/fonts/*' % THEME_VERSION,
                      'VERSION.txt'],
           'hotdoc.utils': ['hotdoc.m4', 'hotdoc.mk'],
+          'hotdoc.extensions.syntax_highlighting': [
+              'prism/*',
+              'prism/components/*',
+              'prism/themes/*',
+              'prism/plugins/autoloader/*',
+              'prism_autoloader_path_override.js',
+              ],
       },
       install_requires=INSTALL_REQUIRES,
       extras_require=EXTRAS_REQUIRE,
+      entry_points={
+          'hotdoc.extensions': ('get_extension_classes = '
+                                'hotdoc.extensions:get_extension_classes')},
       setup_requires=['requests'])
