@@ -26,6 +26,7 @@ import shutil
 import math
 import sys
 import subprocess
+import re
 
 from pkg_resources import iter_entry_points
 from toposort import toposort_flatten
@@ -233,3 +234,17 @@ def dequote(line):
     if (line[0] == line[-1]) and line.startswith(("'", '"')):
         return line[1:-1]
     return line
+
+
+def id_from_text(text, add_hash=False):
+    id_ = text.strip().lower().replace(' ', '-').replace(
+        '\t', '-').replace('\n', '-')
+    # We don't want no utf-8 in urls
+    id_ = str(re.sub(r'[^\x00-\x7F]+', '', id_))
+    if add_hash:
+        id_ = u'#%s' % id_.translate(
+            None, r"[!\"#$%&'\(\)\*\+,\.\/:;<=>\?\@\[\\\]\^`\{\|\}~]")
+    else:
+        id_ = id_.translate(
+            None, r"[!\"#$%&'\(\)\*\+,\.\/:;<=>\?\@\[\\\]\^`\{\|\}~]")
+    return id_

@@ -36,6 +36,7 @@ static PyObject *link_resolver = NULL;
 static cmark_parser *hotdoc_parser = NULL;
 static PyObject *diag_class = NULL;
 static PyObject *diagnostics = NULL;
+static PyObject *id_from_text_func = NULL;
 
 void free_named_link(NamedLink *link) {
   if (link == NULL)
@@ -189,6 +190,67 @@ static void collect_title(CMarkDocument *doc)
   }
 }
 
+static PyObject *concatenate_title(cmark_node *title_node) {
+  cmark_event_type ev_type;
+  cmark_iter *iter;
+  PyObject *tmp_ret;
+  PyObject *ret = PyUnicode_FromString("");
+
+  iter = cmark_iter_new(title_node);
+
+  while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
+    cmark_node *cur = cmark_iter_get_node(iter);
+    const char *content;
+    PyObject *tmp;
+
+    if (ev_type != CMARK_EVENT_ENTER)
+      continue;
+
+    content = cmark_node_get_string_content(cur);
+    if (content) {
+      tmp = PyUnicode_FromString(content);
+      if (PyErr_Occurred()) {
+        PyErr_Clear();
+        continue;
+      }
+      tmp_ret = PyUnicode_Concat(ret, tmp);
+      Py_DECREF(ret);
+      Py_DECREF(tmp);
+      ret = tmp_ret;
+    }
+  }
+
+  cmark_iter_free(iter);
+
+  return ret;
+}
+
+static void
+collect_autorefs(cmark_parser *parser) {
+  cmark_node *root = cmark_parser_get_root(parser);
+  cmark_node *tmp = cmark_node_first_child(root);
+
+  while (tmp) {
+    cmark_node *next = cmark_node_next(tmp);
+
+    if (cmark_node_get_type(tmp) == CMARK_NODE_HEADING) {
+      PyObject *translated;
+      PyObject *utf8 = concatenate_title(tmp);
+      char *title = PyString_AsString(utf8);
+
+      if (title != NULL) {
+        translated = PyObject_CallFunction(id_from_text_func, "(sb)", title, Py_True);
+        cmark_parser_add_reference(parser, title, PyString_AsString(translated), NULL);
+        Py_DECREF(translated);
+      }
+
+      Py_DECREF(utf8);
+    }
+
+    tmp = next;
+  }
+}
+
 static PyObject *
 hotdoc_to_ast(PyObject *self, PyObject *args) {
   CMarkDocument *doc;
@@ -207,6 +269,8 @@ hotdoc_to_ast(PyObject *self, PyObject *args) {
   utf8 = PyUnicode_AsUTF8String(input);
   cmark_parser_feed(hotdoc_parser, PyString_AsString(utf8), PyObject_Length(utf8));
   Py_DECREF(utf8);
+
+  collect_autorefs(hotdoc_parser);
 
   doc->root = cmark_parser_finish(hotdoc_parser);
 
@@ -320,37 +384,6 @@ ast_to_html(PyObject *self, PyObject *args) {
   return Py_BuildValue("OO", ret, diagnostics);
 }
 
-static PyObject *concatenate_title(cmark_node *title_node) {
-  cmark_event_type ev_type;
-  cmark_iter *iter;
-  PyObject *tmp_ret;
-  PyObject *ret = PyUnicode_FromString("");
-
-  iter = cmark_iter_new(title_node);
-
-  while ((ev_type = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
-    cmark_node *cur = cmark_iter_get_node(iter);
-    const char *content;
-    PyObject *tmp;
-
-    if (ev_type != CMARK_EVENT_ENTER)
-      continue;
-
-    content = cmark_node_get_string_content(cur);
-    if (content) {
-      tmp = PyUnicode_FromString(content);
-      tmp_ret = PyUnicode_Concat(ret, tmp);
-      Py_DECREF(ret);
-      Py_DECREF(tmp);
-      ret = tmp_ret;
-    }
-  }
-
-  cmark_iter_free(iter);
-
-  return ret;
-}
-
 static PyObject *
 ast_get_title(PyObject *self, PyObject *args) {
   PyObject *cap;
@@ -395,11 +428,13 @@ PyMODINIT_FUNC
 initcmark(void)
 {
   PyObject *exception_mod = PyImport_ImportModule("hotdoc.parsers.cmark_utils");
+  PyObject *utils_mod = PyImport_ImportModule("hotdoc.utils.utils");
   (void) Py_InitModule("cmark", ScannerMethods);
   cmark_init();
   cmark_syntax_extension *ptables_ext = cmark_table_extension_new();
 
   diag_class = PyObject_GetAttrString(exception_mod, "CMarkDiagnostic");
+  id_from_text_func = PyObject_GetAttrString(utils_mod, "id_from_text");
 
   include_extension = cmark_include_extension_new();
   gtkdoc_extension = cmark_gtkdoc_extension_new();

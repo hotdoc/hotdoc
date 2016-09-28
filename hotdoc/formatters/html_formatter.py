@@ -48,6 +48,7 @@ from hotdoc.parsers.gtk_doc_parser import GtkDocStringFormatter
 
 from hotdoc.utils.setup_utils import THEME_VERSION
 from hotdoc.utils.utils import OrderedSet
+from hotdoc.utils.utils import id_from_text
 from hotdoc.core.exceptions import HotdocException
 from hotdoc.utils.loggable import Logger, warn, info
 
@@ -65,16 +66,6 @@ Logger.register_warning_code('bad-local-link', HtmlFormatterBadLinkException,
 
 
 HERE = os.path.dirname(__file__)
-
-
-def _id_from_text(text):
-    id_ = text.strip().lower().replace(' ', '-').replace(
-        '\t', '-').replace('\n', '-')
-    # We don't want no utf-8 in urls
-    id_ = str(re.sub(r'[^\x00-\x7F]+', '', id_))
-    id_ = id_.translate(
-        None, r"[!\"#$%&'\(\)\*\+,\.\/:;<=>\?\@\[\\\]\^`\{\|\}~]")
-    return id_
 
 
 # pylint: disable=too-few-public-methods
@@ -228,7 +219,7 @@ class HtmlFormatter(Formatter):
             if not text:
                 continue
 
-            id_ = _id_from_text(text)
+            id_ = id_from_text(text)
             ref_id = id_
             index = 1
 

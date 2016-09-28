@@ -415,3 +415,23 @@ class TestTableExtension(unittest.TestCase):
                                '<td> normal</td>',
                                '</tr></tbody></table>'])
         self.assertOutputs(inp, expected)
+
+
+class TestAutoRefExtension(unittest.TestCase):
+    def render(self, inp):
+        ast = cmark.hotdoc_to_ast(inp, None)
+        out = cmark.ast_to_html(ast, None)[0]
+        return ast, out
+
+    def assertOutputs(self, inp, expected):
+        ast, out = self.render(inp)
+        self.assertEqual(out, expected)
+        return ast
+
+    def test_basic(self):
+        inp = (u'doing an [auto ref] yo\n'
+               '\n'
+               '# Auto ref\n')
+        exp = (u'<p>doing an <a href="#auto-ref">auto ref</a> yo</p>\n'
+               '<h1>Auto ref</h1>\n')
+        self.assertOutputs(inp, exp)
