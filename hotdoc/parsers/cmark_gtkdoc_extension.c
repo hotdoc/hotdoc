@@ -66,6 +66,28 @@ static int is_valid_symbol_name(cmark_inline_parser *parser, int c, int pos) {
   return 0;
 }
 
+static int is_valid_c_or_dbus(cmark_inline_parser *parser, int c, int pos) {
+  if (is_valid_c(parser, c, pos))
+    return 1;
+
+
+  if (c == '.') {
+    char nc = cmark_inline_parser_peek_at(parser, pos + 1);
+
+    if (!nc || is_valid_c(parser, nc, pos + 1))
+      return 0;
+
+    if (pos > 0) {
+      nc = cmark_inline_parser_peek_at(parser, pos - 1);
+      return is_valid_c(parser, nc, pos + 1);
+    }
+
+    return 1;
+  }
+
+  return 0;
+}
+
 static void translate_sourcepos(cmark_node *parent, unsigned long col,
                                 int *actual_line, int *actual_col) {
   const char *contents = cmark_node_get_string_content(parent);
@@ -199,14 +221,14 @@ static cmark_node *function_link_match(cmark_syntax_extension *self,
 
   start = offset - 1;
 
-  if (!is_valid_c(inline_parser, cmark_inline_parser_peek_at(inline_parser, start),
+  if (!is_valid_c_or_dbus(inline_parser, cmark_inline_parser_peek_at(inline_parser, start),
         cmark_inline_parser_get_offset(inline_parser)))
     goto done;
 
   while (start >= 0) {
     unsigned char c = cmark_inline_parser_peek_at(inline_parser, start);
 
-    if (is_valid_c(inline_parser, c, cmark_inline_parser_get_offset(inline_parser))) {
+    if (is_valid_c_or_dbus(inline_parser, c, cmark_inline_parser_get_offset(inline_parser))) {
       start -= 1;
     } else {
       break;

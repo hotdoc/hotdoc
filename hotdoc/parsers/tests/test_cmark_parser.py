@@ -136,6 +136,9 @@ class TestGtkDocExtension(unittest.TestCase):
         self.link_resolver.add_link(Link("somewhere.me",
                                          "somewhere",
                                          "Test.baz"))
+        self.link_resolver.add_link(Link("elsewhere.co",
+                                         "elsewhere",
+                                         "org.dbus.func"))
 
     def assertOutputs(self, inp, expected):
         ast, diagnostics = cmark.gtkdoc_to_ast(inp, self.link_resolver)
@@ -195,6 +198,12 @@ class TestGtkDocExtension(unittest.TestCase):
         self.assertOutputs(
             inp,
             u'<p>Linking to <a href="whenever.net">whenever</a>: cool</p>\n')
+
+    def test_dbus_function_link(self):
+        inp = u"org.dbus.func()\n"
+        self.assertOutputs(
+            inp,
+            u'<p><a href="elsewhere.co">elsewhere</a></p>\n')
 
     def test_struct_field_link(self):
         inp = u"Linking to #Test.baz yo"
