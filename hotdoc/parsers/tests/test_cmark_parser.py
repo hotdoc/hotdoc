@@ -254,6 +254,26 @@ class TestGtkDocExtension(unittest.TestCase):
         self.assertEqual(diag.lineno, 0)
         self.assertEqual(diag.column, 5)
 
+    def test_link_parsing_context(self):
+        inp = u'A %NULL-terminated thing'
+        _, diagnostics = self.assertOutputs(
+            inp,
+            u'<p>A NULL-terminated thing</p>\n')
+        self.assertEqual(len(diagnostics), 1)
+        diag = diagnostics[0]
+        self.assertEqual(
+            diag.message,
+            (u'Trying to link to non-existing symbol ‘NULL’'))
+        inp = u'A #Object::dashed-signal'
+        _, diagnostics = self.assertOutputs(
+            inp,
+            u'<p>A Object::dashed-signal</p>\n')
+        self.assertEqual(len(diagnostics), 1)
+        diag = diagnostics[0]
+        self.assertEqual(
+            diag.message,
+            (u'Trying to link to non-existing symbol ‘Object::dashed-signal’'))
+
     def test_wrong_function_link(self):
         inp = u'does_not_exist()'
         _, diagnostics = self.assertOutputs(

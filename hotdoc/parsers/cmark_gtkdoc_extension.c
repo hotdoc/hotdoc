@@ -50,36 +50,47 @@ my_strndup (const char *s, size_t n)
   return (char *) memcpy (result, s, len);
 }
 
-static int is_valid_c(cmark_inline_parser *parser, int c, int pos) {
+typedef struct
+{
+  cmark_inline_parser *parser;
+  int allow_dashes;
+} ParsingContext;
+
+static int is_valid_c(int c, int pos, ParsingContext *context) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
 }
 
-static int is_valid_symbol_name(cmark_inline_parser *parser, int c, int pos) {
-  if (is_valid_c(parser, c, pos))
+static int is_valid_symbol_name(int c, int pos, ParsingContext *context) {
+  if (is_valid_c(c, pos, context))
     return 1;
 
   if (c == ':' || c == '-' || c == '.') {
-    char nc = cmark_inline_parser_peek_at(parser, pos + 1);
+    char nc = cmark_inline_parser_peek_at(context->parser, pos + 1);
 
-    return (nc && is_valid_symbol_name(parser, nc, pos + 1));
+    if (c == ':')
+      context->allow_dashes = 1;
+    else if (c == '-' && !context->allow_dashes)
+      return 0;
+
+    return (nc && is_valid_symbol_name(nc, pos + 1, context));
   }
   return 0;
 }
 
-static int is_valid_c_or_dbus(cmark_inline_parser *parser, int c, int pos) {
-  if (is_valid_c(parser, c, pos))
+static int is_valid_c_or_dbus(ParsingContext *context, int c, int pos) {
+  if (is_valid_c(c, pos, context))
     return 1;
 
 
   if (c == '.') {
-    char nc = cmark_inline_parser_peek_at(parser, pos + 1);
+    char nc = cmark_inline_parser_peek_at(context->parser, pos + 1);
 
-    if (!nc || is_valid_c(parser, nc, pos + 1))
+    if (!nc || is_valid_c(nc, pos + 1, context))
       return 0;
 
     if (pos > 0) {
-      nc = cmark_inline_parser_peek_at(parser, pos - 1);
-      return is_valid_c(parser, nc, pos + 1);
+      nc = cmark_inline_parser_peek_at(context->parser, pos - 1);
+      return is_valid_c(nc, pos + 1, context);
     }
 
     return 1;
@@ -210,6 +221,10 @@ static cmark_node *function_link_match(cmark_syntax_extension *self,
   delimiter *tmp_delim;
   int offset;
   int start;
+  ParsingContext context;
+
+  context.parser = inline_parser;
+  context.allow_dashes = 0;
 
   offset = cmark_inline_parser_get_offset(inline_parser);
 
@@ -221,14 +236,14 @@ static cmark_node *function_link_match(cmark_syntax_extension *self,
 
   start = offset - 1;
 
-  if (!is_valid_c_or_dbus(inline_parser, cmark_inline_parser_peek_at(inline_parser, start),
+  if (!is_valid_c_or_dbus(&context, cmark_inline_parser_peek_at(inline_parser, start),
         cmark_inline_parser_get_offset(inline_parser)))
     goto done;
 
   while (start >= 0) {
     unsigned char c = cmark_inline_parser_peek_at(inline_parser, start);
 
-    if (is_valid_c_or_dbus(inline_parser, c, cmark_inline_parser_get_offset(inline_parser))) {
+    if (is_valid_c_or_dbus(&context, c, cmark_inline_parser_get_offset(inline_parser))) {
       start -= 1;
     } else {
       break;
@@ -267,6 +282,10 @@ static cmark_node *param_ref_match(cmark_syntax_extension *self,
   cmark_node *emph, *text_node;
   char *param_name;
   char prev_char;
+  ParsingContext context;
+
+  context.parser = inline_parser;
+  context.allow_dashes = 0;
 
   prev_char = cmark_inline_parser_peek_at(
       inline_parser,
@@ -277,7 +296,7 @@ static cmark_node *param_ref_match(cmark_syntax_extension *self,
 
   cmark_inline_parser_advance_offset(inline_parser);
   param_name = cmark_inline_parser_take_while(inline_parser,
-      (CMarkInlinePredicate) is_valid_c);
+      (CMarkInlinePredicate) is_valid_c, &context);
 
   if (!param_name)
     return NULL;
@@ -299,6 +318,10 @@ static cmark_node *symbol_link_match(cmark_syntax_extension *self,
   char *symbol_name = NULL;
   NamedLink *named_link = NULL;
   int start_offset = cmark_inline_parser_get_offset(inline_parser);
+  ParsingContext context;
+
+  context.parser = inline_parser;
+  context.allow_dashes = 0;
 
   if (start_offset > 0) {
     char prev_char = cmark_inline_parser_peek_at(
@@ -312,7 +335,7 @@ static cmark_node *symbol_link_match(cmark_syntax_extension *self,
   cmark_inline_parser_advance_offset(inline_parser);
 
   symbol_name = cmark_inline_parser_take_while(inline_parser,
-      (CMarkInlinePredicate) is_valid_symbol_name);
+      (CMarkInlinePredicate) is_valid_symbol_name, &context);
 
   if (!symbol_name)
     goto done;
