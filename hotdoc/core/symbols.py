@@ -99,6 +99,9 @@ class Symbol(Base):
         """
         Banana banana
         """
+        if self.comment is None:
+            return
+
         for sym in self.get_children_symbols():
             if type(sym) == ParameterSymbol:
                 sym.comment = self.comment.params.get(sym.argname)
@@ -226,19 +229,26 @@ class ParameterSymbol(QualifiedSymbol):
         self.comment = comment
 
 
-class FieldSymbol(QualifiedSymbol):
+class FieldSymbol(Symbol):
     """
     Banana banana
     """
-    def __init__(self, member_name='', is_function_pointer=False,
-                 comment=None, **kwargs):
-        QualifiedSymbol.__init__(self, **kwargs)
-        self.member_name = member_name
-        self.is_function_pointer = is_function_pointer
-        self.comment = comment
+    __tablename__ = 'fields'
+    id_ = Column(Integer, ForeignKey('symbols.id_'), primary_key=True)
+    __mapper_args__ = {
+        'polymorphic_identity': 'fields',
+    }
+    qtype = Column(PickleType)
+    is_function_pointer = Column(Boolean)
+    member_name = Column(String)
 
-    def _make_name(self):
-        return self.member_name
+    def __init__(self, **kwargs):
+        self.is_function_pointer = False
+        self.qtype = None
+        Symbol.__init__(self, **kwargs)
+
+    def get_children_symbols(self):
+        return [self.qtype]
 
     # pylint: disable=no-self-use
     def get_type_name(self):
@@ -396,6 +406,9 @@ class StructSymbol(Symbol):
 
     def get_children_symbols(self):
         return self.members
+
+    def get_extra_links(self):
+        return [m.link for m in self.members]
 
     def get_type_name(self):
         return "Structure"

@@ -262,6 +262,7 @@ class HtmlFormatter(Formatter):
     def _format_link(self, link, title):
         out = ''
         if not link:
+            assert link
             print "Issue here plz check", title
             return title
 
@@ -301,13 +302,14 @@ class HtmlFormatter(Formatter):
             out += self._format_type_tokens(symbol.type_tokens)
 
         # FIXME : ugly
-        elif hasattr(symbol, "link"):
+        elif hasattr(symbol, "link") and type(symbol) != FieldSymbol:
             out += self._format_link(symbol.link.get_link(), symbol.link.title)
 
         if type(symbol) == ParameterSymbol:
             out += ' ' + symbol.argname
 
         elif type(symbol) == FieldSymbol and symbol.member_name:
+            out += self._format_type_tokens(symbol.qtype.type_tokens)
             template = self.engine.get_template('inline_code.html')
             member_name = template.render({'code': symbol.member_name})
             if symbol.is_function_pointer:
@@ -469,8 +471,10 @@ class HtmlFormatter(Formatter):
 
     def _format_field_symbol(self, field):
         field_id = self._format_linked_symbol(field)
-        return (self.__format_parameter_detail(field_id,
-                                               field.formatted_doc), False)
+        template = self.engine.get_template('field_detail.html')
+        return (template.render({'symbol': field,
+                                 'name': field_id,
+                                 'detail': field.formatted_doc}), False)
 
     def _format_return_item_symbol(self, return_item):
         template = self.engine.get_template('return_item.html')
