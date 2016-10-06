@@ -23,10 +23,16 @@ This module defines a base Formatter class
 import os
 import shutil
 
+from schema import Schema, Optional
+from hotdoc.core.doc_tree import Page
+
 import pygraphviz as pg
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.utils import recursive_overwrite, OrderedSet
+
+
+Page.meta_schema[Optional('extra')] = Schema({unicode: object})
 
 
 def _create_hierarchy_graph(hierarchy):
