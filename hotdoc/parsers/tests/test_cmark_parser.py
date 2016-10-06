@@ -314,6 +314,8 @@ class MockIncludeResolver(object):
             return ""
         elif filename == 'opens_code_block.md':
             return "```"
+        elif filename == 'unicode_file.md':
+            return u"some Ünicode"
         return None
 
 
@@ -372,6 +374,12 @@ class TestIncludeExtension(unittest.TestCase):
         self.assertOutputs(
             inp,
             u'<p>I include an empty file!</p>\n')
+
+    def test_unicode(self):
+        inp = u'I include a file containing Unicode {{unicode_file.md}}!'
+        self.assertOutputs(
+            inp,
+            u'<p>I include a file containing Unicode some Ünicode!</p>\n')
 
 
 class TestTableExtension(unittest.TestCase):

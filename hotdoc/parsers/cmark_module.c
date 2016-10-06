@@ -166,6 +166,14 @@ resolve_include(const char *uri) {
 
   contents = PyObject_CallMethod(include_resolver, "resolve", "s", uri);
 
+  if (PyUnicode_Check(contents)) {
+    PyObject *old_contents;
+
+    old_contents = contents;
+    contents = PyUnicode_AsUTF8String(old_contents);
+    Py_DECREF(old_contents);
+  }
+
   if (contents != Py_None)
     res = strdup(PyString_AsString(contents));
 
