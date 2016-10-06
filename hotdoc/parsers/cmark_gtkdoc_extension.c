@@ -184,7 +184,7 @@ static cmark_node *fixup_nodes(cmark_syntax_extension *self,
 
   named_link = PRIV(self)->link_resolve_func(cmark_strbuf_get(name));
 
-  if (!named_link) {
+  if (!named_link || !named_link->ref) {
     int actual_line, actual_col;
 
     translate_sourcepos(get_first_parent_block(parent),
@@ -341,7 +341,7 @@ static cmark_node *symbol_link_match(cmark_syntax_extension *self,
     goto done;
 
   named_link = PRIV(self)->link_resolve_func(symbol_name);
-  if (!named_link) {
+  if (!named_link || !named_link->ref) {
     int actual_line, actual_col;
 
     translate_sourcepos(get_first_parent_block(parent),
