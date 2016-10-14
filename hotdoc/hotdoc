@@ -23,9 +23,17 @@
 import cProfile
 import os
 import sys
+import codecs
 
 # pylint: disable=no-name-in-module
 from hotdoc.run_hotdoc import run
+
+
+# https://pythonhosted.org/kitchen/unicode-frustrations.html#frustration-3-inconsistent-treatment-of-output
+def _setup_output_streams():
+    writer = codecs.getwriter('utf8')
+    sys.stdout = writer(sys.stdout)
+    sys.stderr = writer(sys.stderr)
 
 
 def _main():
@@ -42,4 +50,5 @@ def _main():
     return res
 
 if __name__ == "__main__":
+    _setup_output_streams()
     sys.exit(_main())
