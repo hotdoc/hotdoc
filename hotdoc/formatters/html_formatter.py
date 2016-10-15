@@ -131,11 +131,11 @@ class HtmlFormatter(Formatter):
                           ExportedVariableSymbol, AliasSymbol, CallbackSymbol]
 
         if HtmlFormatter.theme_path:
-            theme_templates_path = os.path.join(
-                HtmlFormatter.theme_path, 'templates')
-
-            if os.path.exists(theme_templates_path):
-                searchpath.insert(0, theme_templates_path)
+            self.__load_theme_templates(searchpath,
+                                        HtmlFormatter.theme_path)
+        if HtmlFormatter.extra_theme_path:
+            self.__load_theme_templates(searchpath,
+                                        HtmlFormatter.extra_theme_path)
 
         searchpath.append(os.path.join(HERE, "html_templates"))
         self.engine = Engine(
@@ -146,6 +146,13 @@ class HtmlFormatter(Formatter):
         self.all_scripts = set()
         self.all_stylesheets = set()
         self._docstring_formatter = GtkDocStringFormatter()
+
+    # pylint: disable=no-self-use
+    def __load_theme_templates(self, searchpath, path):
+        theme_templates_path = os.path.join(path, 'templates')
+
+        if os.path.exists(theme_templates_path):
+            searchpath.insert(0, theme_templates_path)
 
     # pylint: disable=no-self-use
     def __init_section_numbers(self, root):
