@@ -98,6 +98,7 @@ class HtmlFormatter(Formatter):
     """
 
     theme_path = None
+    extra_theme_path = None
     add_anchors = False
     number_headings = False
 
@@ -421,8 +422,26 @@ class HtmlFormatter(Formatter):
 
         template = self.engine.get_template('page.html')
 
-        scripts = page.output_attrs['html']['scripts']
-        stylesheets = page.output_attrs['html']['stylesheets']
+        scripts = []
+        stylesheets = []
+
+        if HtmlFormatter.extra_theme_path:
+            js_dir = os.path.join(HtmlFormatter.extra_theme_path, 'js')
+            try:
+                for _ in os.listdir(js_dir):
+                    scripts.append(os.path.join(js_dir, _))
+            except OSError:
+                pass
+
+            css_dir = os.path.join(HtmlFormatter.extra_theme_path, 'css')
+            try:
+                for _ in os.listdir(css_dir):
+                    stylesheets.append(os.path.join(css_dir, _))
+            except OSError:
+                pass
+
+        scripts.extend(page.output_attrs['html']['scripts'])
+        stylesheets.extend(page.output_attrs['html']['stylesheets'])
         scripts_basenames = [os.path.basename(script)
                              for script in scripts]
         stylesheets_basenames = [os.path.basename(stylesheet)
@@ -638,17 +657,24 @@ class HtmlFormatter(Formatter):
                                'assets_path': self._get_assets_path()})
         return (res, False)
 
+    def __get_theme_files(self, path):
+        res = []
+        theme_files = os.listdir(path)
+        for file_ in theme_files:
+            if file_ == 'templates':
+                pass
+            src = os.path.join(path, file_)
+            dest = os.path.basename(src)
+            res.append((src, dest))
+        return res
+
     def _get_extra_files(self):
         res = []
 
         if HtmlFormatter.theme_path:
-            theme_files = os.listdir(HtmlFormatter.theme_path)
-            for file_ in theme_files:
-                if file_ == 'templates':
-                    pass
-                src = os.path.join(HtmlFormatter.theme_path, file_)
-                dest = os.path.basename(src)
-                res.append((src, dest))
+            res.extend(self.__get_theme_files(HtmlFormatter.theme_path))
+        if HtmlFormatter.extra_theme_path:
+            res.extend(self.__get_theme_files(HtmlFormatter.extra_theme_path))
 
         for script_path in self.all_scripts:
             dest = os.path.join('js', os.path.basename(script_path))
@@ -669,6 +695,9 @@ class HtmlFormatter(Formatter):
         group.add_argument("--html-theme", action="store",
                            dest="html_theme", help="html theme to use",
                            default='default')
+        group.add_argument("--html-extra-theme", action="store",
+                           dest="html_extra_theme",
+                           help="Extra stylesheets and scripts")
         group.add_argument("--html-add-anchors", action="store_true",
                            dest="html_add_anchors",
                            help="Add anchors to html headers",
@@ -692,6 +721,8 @@ class HtmlFormatter(Formatter):
             info("Using theme located at %s" % html_theme)
 
         HtmlFormatter.theme_path = html_theme
+
+        HtmlFormatter.extra_theme_path = config.get_path('html_extra_theme')
 
         HtmlFormatter.add_anchors = bool(config.get("html_add_anchors"))
         HtmlFormatter.number_headings = bool(
