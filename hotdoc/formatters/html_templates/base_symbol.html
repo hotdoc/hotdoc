@@ -13,14 +13,10 @@ tags.pop('returns', None)
 @tag.name.lower():@tag.value;\
 @end
 " id="@symbol.link.id_">
-	<ul class="base_symbol_header">
-		<li class="base_symbol_name">
-		@def header():
-		@end
-		@header()
-		</li>
-	</ul>
-@def content():
-@end
-@content()
+	@def header():
+	@end
+	@header()
+	@def content():
+	@end
+	@content()
 </div>
