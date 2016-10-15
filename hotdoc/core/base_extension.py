@@ -184,7 +184,7 @@ class BaseExtension(Configurable):
         """
         pass
 
-    def get_stale_files(self, all_files):
+    def get_stale_files(self, all_files, prefix=None):
         """
         Shortcut function to `change_tracker.ChangeTracker.get_stale_files`
         for the tracker of this instance's `BaseExtension.doc_repo`
@@ -192,9 +192,10 @@ class BaseExtension(Configurable):
         Args:
             all_files: see `change_tracker.ChangeTracker.get_stale_files`
         """
+        prefix = prefix or self.extension_name
         return self.doc_repo.change_tracker.get_stale_files(
             all_files,
-            self.extension_name)
+            prefix)
 
     @staticmethod
     def get_dependencies():
