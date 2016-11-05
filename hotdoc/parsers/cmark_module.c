@@ -378,7 +378,8 @@ ast_to_html(PyObject *self, PyObject *args) {
   CMarkDocument *doc;
   char *out;
 
-  PyArg_ParseTuple(args, "O!O", &PyCapsule_Type, &cap, &link_resolver);
+  if (!PyArg_ParseTuple(args, "O!O", &PyCapsule_Type, &cap, &link_resolver))
+    return NULL;
 
   doc = PyCapsule_GetPointer(cap, "cmark.document");
 
@@ -403,7 +404,8 @@ ast_get_title(PyObject *self, PyObject *args) {
   CMarkDocument *doc;
   PyObject *ret;
 
-  PyArg_ParseTuple(args, "O!", &PyCapsule_Type, &cap);
+  if (!PyArg_ParseTuple(args, "O!", &PyCapsule_Type, &cap))
+    return NULL;
 
   doc = PyCapsule_GetPointer(cap, "cmark.document");
 
@@ -422,7 +424,8 @@ update_subpage_links(PyObject *self, PyObject *args) {
   PyObject *cap;
   PyObject *links;
 
-  PyArg_ParseTuple(args, "O!O!", &PyCapsule_Type, &cap, &PySet_Type, &links);
+  if (!PyArg_ParseTuple(args, "O!O!", &PyCapsule_Type, &cap, &PySet_Type, &links))
+    return NULL;
 
   Py_INCREF(Py_None);
   return Py_None;
