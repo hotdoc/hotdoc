@@ -36,11 +36,28 @@ from hotdoc.core.exceptions import HotdocSourceException
 WIN32 = (sys.platform == 'win32')
 
 
+def splitall(path):
+    """
+    Splits path in its components:
+    foo/bar, /foo/bar and /foo/bar/ will all return
+    ['foo', 'bar']
+    """
+    head, tail = os.path.split(os.path.normpath(path))
+    components = []
+    while len(tail) > 0:
+        components.insert(0, tail)
+        head, tail = os.path.split(head)
+    return components
+
+
 def recursive_overwrite(src, dest, ignore=None):
     """
     Banana banana
     """
-    if os.path.isdir(src):
+    if os.path.islink(src):
+        linkto = os.readlink(src)
+        symlink(linkto, dest)
+    elif os.path.isdir(src):
         if not os.path.isdir(dest):
             os.makedirs(dest)
         files = os.listdir(src)
@@ -55,6 +72,15 @@ def recursive_overwrite(src, dest, ignore=None):
                                     ignore)
     else:
         shutil.copyfile(src, dest)
+
+
+def count_folders(path):
+    """
+    Returns the number of folders in a path string, excluding
+    the filename.
+    Note: 'foo/bar/' will return 1
+    """
+    return max(0, len(splitall(path)) - 1)
 
 
 def all_subclasses(cls):
@@ -133,6 +159,7 @@ class OrderedSet(collections.MutableSet):
     """
     Banana banana
     """
+
     def __init__(self, iterable=None):
         self.end = end = []
         end += [None, end, end]         # sentinel node for doubly linked list
@@ -237,6 +264,9 @@ def dequote(line):
 
 
 def id_from_text(text, add_hash=False):
+    """
+    Banana banana
+    """
     id_ = text.strip().lower().replace(' ', '-').replace(
         '\t', '-').replace('\n', '-')
     # We don't want no utf-8 in urls
@@ -248,3 +278,20 @@ def id_from_text(text, add_hash=False):
         id_ = id_.translate(
             None, r"[!\"#$%&'\(\)\*\+,\.\/:;<=>\?\@\[\\\]\^`\{\|\}~]")
     return id_
+
+
+def symlink(source, link_name):
+    """
+    Method to allow creating symlinks on Windows
+    """
+    os_symlink = getattr(os, "symlink", None)
+    if callable(os_symlink):
+        os_symlink(source, link_name)
+    else:
+        import ctypes
+        csl = ctypes.windll.kernel32.CreateSymbolicLinkW
+        csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
+        csl.restype = ctypes.c_ubyte
+        flags = 1 if os.path.isdir(source) else 0
+        if csl(link_name, source, flags) == 0:
+            raise ctypes.WinError()
