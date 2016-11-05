@@ -32,6 +32,7 @@ class Link(MutableObject):
     """
     resolving_link_signal = Signal()
     resolving_title_signal = Signal()
+    relativize_link_signal = Signal(optimized=True)
 
     def __init__(self, ref, title, id_):
         self.ref = None
@@ -75,9 +76,14 @@ class Link(MutableObject):
         """
         resolved_ref = Link.resolving_link_signal(self)
         resolved_ref = [elem for elem in resolved_ref if elem is not None]
+
+        res = self.ref
         if resolved_ref:
-            return unicode(resolved_ref[0])
-        return self.ref
+            res = unicode(resolved_ref[0])
+
+        res = Link.relativize_link_signal(res) or res
+
+        return res
 
 
 class LinkResolver(object):

@@ -43,7 +43,7 @@ class TestPage(unittest.TestCase):
     def test_meta_schema(self):
         meta = {'foo': u'bar'}
         with self.assertRaises(InvalidPageMetadata):
-            page = Page('some-page', None, meta)
+            page = Page('some-page', None, '.', meta)
         Page.meta_schema[Optional('foo')] = And(unicode, len)
-        page = Page('some-page', None, meta)
+        page = Page('some-page', None, '.', meta=meta)
         self.assertEqual(page.meta.get('foo'), u'bar')

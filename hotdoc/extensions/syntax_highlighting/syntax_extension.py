@@ -60,8 +60,7 @@ class SyntaxHighlightingExtension(BaseExtension):
         page.output_attrs['html']['scripts'].add(
             os.path.join(HERE, 'prism_autoloader_path_override.js'))
 
-        folder = os.path.join(formatter.get_output_folder(), 'assets',
-                              'prism_components')
+        folder = os.path.join('html', 'assets', 'prism_components')
         self.__asset_folders.add(folder)
 
     def __formatted_cb(self, doc_repo):

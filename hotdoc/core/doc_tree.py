@@ -46,7 +46,7 @@ from hotdoc.core.exceptions import HotdocSourceException, InvalidPageMetadata
 from hotdoc.core.doc_database import DocDatabase
 from hotdoc.core.comment_block import Comment
 from hotdoc.parsers import cmark
-from hotdoc.utils.utils import OrderedSet
+from hotdoc.utils.utils import OrderedSet, count_folders
 from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.loggable import info, debug, warn, error, Logger
 
@@ -102,15 +102,15 @@ class Page(object):
     resolving_symbol_signal = Signal()
     formatting_signal = Signal()
 
-    def __init__(self, source_file, ast, meta=None, raw_contents=None):
+    # pylint: disable=too-many-arguments
+    def __init__(self, source_file, ast, output_path, meta=None,
+                 raw_contents=None):
         "Banana banana"
         assert source_file
-        if os.path.isabs(source_file):
-            basename = os.path.basename(source_file)
-        else:
-            basename = source_file.replace('/', '-')
+        basename = os.path.basename(source_file)
         name = os.path.splitext(basename)[0]
-        pagename = '%s.html' % name
+        ref = os.path.join(output_path, basename)
+        pagename = '%s.html' % os.path.splitext(ref)[0]
 
         self.ast = ast
         self.extension_name = None
@@ -125,6 +125,7 @@ class Page(object):
         self.is_stale = True
         self.formatted_contents = None
         self.detailed_description = None
+        self.build_path = None
 
         meta = meta or {}
 
@@ -141,10 +142,11 @@ class Page(object):
 
         self.title = None
         self.__discover_title(meta)
-        self.link = Link(pagename, self.title or name, name)
+        self.link = Link(pagename, self.title or name, ref)
 
     def __getstate__(self):
         return {'ast': None,
+                'build_path': None,
                 'title': self.title,
                 'raw_contents': self.raw_contents,
                 'short_description': self.short_description,
@@ -192,12 +194,14 @@ class Page(object):
         self.typed_symbols[VFunctionSymbol] = typed_symbols_list(
             "Virtual Methods", [])
         self.typed_symbols[ClassSymbol] = typed_symbols_list("Classes", [])
-        self.typed_symbols[InterfaceSymbol] = typed_symbols_list("Interfaces", [])
+        self.typed_symbols[InterfaceSymbol] = typed_symbols_list(
+            "Interfaces", [])
 
         all_syms = OrderedSet()
         for sym_name in self.symbol_names:
             sym = doc_database.get_symbol(sym_name)
-            self.__query_extra_symbols(sym, all_syms, link_resolver, doc_database)
+            self.__query_extra_symbols(
+                sym, all_syms, link_resolver, doc_database)
 
         for sym in all_syms:
             sym.update_children_comments()
@@ -233,7 +237,7 @@ class Page(object):
         if new_comment:
             sym.comment = new_comment
         elif old_comment:
-            if not old_comment.filename in (ChangeTracker.all_stale_files |
+            if old_comment.filename not in (ChangeTracker.all_stale_files |
                                             ChangeTracker.all_unlisted_files):
                 sym.comment = old_comment
 
@@ -258,7 +262,19 @@ class Page(object):
         self.formatted_contents += formatter.format_comment(
             self.comment, link_resolver)
 
-    def format(self, formatter, link_resolver, output):
+    def __relativize_link_cb(self, ref):
+        if not ref:
+            return ref
+
+        url_components = urlparse.urlparse(ref)
+        cnt = count_folders(self.build_path)
+        if cnt > 0 and not bool(url_components.scheme):
+            prefix = os.path.join(*([os.path.pardir] * cnt))
+            ref = os.path.join(prefix, ref)
+
+        return ref
+
+    def format(self, formatter, link_resolver, root, output):
         """
         Banana banana
         """
@@ -268,6 +284,12 @@ class Page(object):
             self.title = os.path.basename(title).replace('-', ' ')
 
         self.formatted_contents = u''
+
+        self.build_path = os.path.join(
+            os.path.relpath(formatter.get_output_folder(),
+                            'html').lstrip('./'),
+            self.link.ref)
+        Link.relativize_link_signal.connect(self.__relativize_link_cb)
 
         if self.ast:
             out, diags = cmark.ast_to_html(self.ast, link_resolver)
@@ -288,8 +310,10 @@ class Page(object):
         self.detailed_description =\
             formatter.format_page(self)[0]
 
+        Link.relativize_link_signal.disconnect(self.__relativize_link_cb)
+
         if output:
-            formatter.write_page(self, output)
+            formatter.write_page(self, root, output)
 
     # pylint: disable=no-self-use
     def get_title(self):
@@ -312,7 +336,8 @@ class Page(object):
                 symbol.unique_name, self.source_file), 'formatting')
             symbol.skip = not formatter.format_symbol(symbol, link_resolver)
 
-    def __query_extra_symbols(self, sym, all_syms, link_resolver, doc_database):
+    def __query_extra_symbols(self, sym, all_syms, link_resolver,
+                              doc_database):
         if sym:
             self.__fetch_comment(sym, doc_database)
             new_symbols = sum(Page.resolving_symbol_signal(self, sym),
@@ -320,7 +345,8 @@ class Page(object):
             all_syms.add(sym)
 
             for symbol in new_symbols:
-                self.__query_extra_symbols(symbol, all_syms, link_resolver, doc_database)
+                self.__query_extra_symbols(
+                    symbol, all_syms, link_resolver, doc_database)
 
     def __resolve_symbol(self, symbol, link_resolver):
         symbol.resolve_links(link_resolver)
@@ -361,6 +387,7 @@ class DocTree(object):
         DocDatabase.comment_updated_signal.connect(self.__comment_updated_cb)
 
         cmark.hotdoc_to_ast(u'', self)
+        self.__extensions = {}
 
     def __create_dep_map(self):
         dep_map = {}
@@ -414,7 +441,7 @@ class DocTree(object):
                     source_map[resolved] = fname
                 else:
                     if fname not in self.__all_pages:
-                        page = Page(fname, None)
+                        page = Page(fname, None, '')
                         page.generated = True
                         self.__all_pages[fname] = page
 
@@ -537,10 +564,14 @@ class DocTree(object):
 
         page = self.__all_pages.get(url_components.path)
         if page:
-            ref = page.link.get_link()
+            ext = self.__extensions[page.extension_name]
+            formatter = ext.get_formatter('html')
+            prefix = os.path.relpath(
+                formatter.get_output_folder(), 'html').lstrip('./')
+            ref = page.link.ref
             if url_components.fragment:
                 ref += '#%s' % url_components.fragment
-            return Link(ref, page.link.get_title(), None)
+            return Link(os.path.join(prefix, ref), page.link.get_title(), None)
         return None
 
     def __comment_updated_cb(self, doc_db, comment):
@@ -604,8 +635,12 @@ class DocTree(object):
                          '%s: Invalid metadata: \n%s' % (source_file,
                                                          str(exception)))
 
+        output_path = os.path.dirname(os.path.relpath(
+            source_file, iter(self.__include_paths).next()))
+
         ast = cmark.hotdoc_to_ast(contents, self)
-        return Page(source_file, ast, meta=meta, raw_contents=raw_contents)
+        return Page(source_file, ast, output_path, meta=meta,
+                    raw_contents=raw_contents)
 
     def stale_symbol_pages(self, symbols, new_page=None):
         """
@@ -695,9 +730,12 @@ class DocTree(object):
         # Page.formatting_signal.connect(self.__formatting_page_cb)
         # Link.resolving_link_signal.connect(self.__link_referenced_cb)
 
+        self.__extensions = extensions
+
         for page in self.walk():
             self.format_page(page, link_resolver, output, extensions)
 
+        self.__extensions = None
         link_resolver.get_link_signal.disconnect(self.__get_link_cb)
         self.__create_navigation_script(output, extensions)
 

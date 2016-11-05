@@ -413,7 +413,7 @@ class BaseExtension(Configurable):
         page = doc_tree.get_pages().get(page_name)
 
         if not page:
-            page = Page(page_name, None)
+            page = Page(page_name, None, os.path.dirname(page_name))
             page.extension_name = self.extension_name
             page.generated = True
             page.comment = self.doc_repo.doc_database.get_comment(page_name)
@@ -462,7 +462,7 @@ class BaseExtension(Configurable):
             else:
                 actual_output = None
 
-            page.format(formatter, link_resolver, actual_output)
+            page.format(formatter, link_resolver, output, actual_output)
         else:
             debug('Not formatting page %s, up to date' % page.link.ref,
                   'formatting')

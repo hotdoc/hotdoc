@@ -27,6 +27,7 @@ from collections import defaultdict
 
 from schema import Schema, Optional
 from hotdoc.core.doc_tree import Page
+from hotdoc.utils.utils import symlink
 
 import pygraphviz as pg
 from hotdoc.utils.configurable import Configurable
@@ -35,7 +36,7 @@ from hotdoc.utils.utils import recursive_overwrite, OrderedSet
 
 
 Page.meta_schema[Optional('extra', default=defaultdict())] = \
-        Schema({unicode: object})
+    Schema({unicode: object})
 
 
 def _create_hierarchy_graph(hierarchy):
@@ -101,6 +102,7 @@ class Formatter(Configurable):
         return symbol.detailed_description
 
     def __copy_extra_assets(self, output):
+        paths = []
         for src in self.extra_assets or []:
             dest = os.path.join(output, os.path.basename(src))
 
@@ -112,8 +114,11 @@ class Formatter(Configurable):
                 recursive_overwrite(src, dest)
             elif os.path.isfile(src):
                 shutil.copyfile(src, dest)
+            paths.append(dest)
 
-    def __copy_extra_files(self, assets_path):
+        return paths
+
+    def __copy_assets(self, assets_path):
         if not os.path.exists(assets_path):
             os.mkdir(assets_path)
 
@@ -128,23 +133,45 @@ class Formatter(Configurable):
             destdir = os.path.dirname(dest)
             if not os.path.exists(destdir):
                 os.makedirs(destdir)
-
             if os.path.isfile(src):
                 shutil.copy(src, dest)
             elif os.path.isdir(src):
                 recursive_overwrite(src, dest)
 
-    def write_page(self, page, output):
+    def __copy_extra_files(self, root, page_folder):
+        self.__copy_assets(os.path.join(root, 'html', 'assets'))
+        extra_assets_paths = self.__copy_extra_assets(
+            os.path.join(root, 'html'))
+
+        root = os.path.join(root, 'html')
+        if root != page_folder:
+            relpath = os.path.relpath(root, page_folder)
+            for path in ['assets'] + extra_assets_paths:
+                try:
+                    basename = os.path.basename(path)
+                    symlink(os.path.join(relpath, basename),
+                            os.path.join(page_folder, basename))
+                except OSError:
+                    pass
+
+    def write_page(self, page, root, output):
         """
         Banana banana
         """
         path = os.path.join(output, page.link.ref)
+
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
+
         self.writing_page_signal(self, page, path)
+
         with open(path, 'w') as _:
             out = page.detailed_description
             _.write(out.encode('utf-8'))
-        self.__copy_extra_files(os.path.join(output, 'assets'))
-        self.__copy_extra_assets(output)
+
+        self.__copy_extra_files(root, os.path.dirname(path))
+
+        return path
 
     def patch_page(self, page, symbol):
         """

@@ -24,6 +24,7 @@ import os
 import cgi
 import re
 import tempfile
+import urlparse
 
 from lxml import etree
 import lxml.html
@@ -62,6 +63,10 @@ class HtmlFormatterBadLinkException(HotdocException):
 
 
 Logger.register_warning_code('bad-local-link', HtmlFormatterBadLinkException,
+                             domain='html-formatter')
+Logger.register_warning_code('no-image-src', HtmlFormatterBadLinkException,
+                             domain='html-formatter')
+Logger.register_warning_code('bad-image-src', HtmlFormatterBadLinkException,
                              domain='html-formatter')
 
 
@@ -201,7 +206,8 @@ class HtmlFormatter(Formatter):
         return section_number
 
     # pylint: disable=too-many-locals
-    def write_page(self, page, output):
+    # pylint: disable=too-many-branches
+    def write_page(self, page, build_root, output):
         root = etree.HTML(unicode(page.detailed_description))
         id_nodes = {n.attrib['id']: "".join([x for x in n.itertext()])
                     for n in root.xpath('.//*[@id]')}
@@ -257,7 +263,30 @@ class HtmlFormatter(Formatter):
         page.detailed_description = lxml.html.tostring(
             root, doctype="<!DOCTYPE html>", encoding='unicode',
             include_meta_content_type=True)
-        return Formatter.write_page(self, page, output)
+        full_path = Formatter.write_page(self, page, build_root, output)
+
+        images = root.xpath('.//img')
+        # All required assets should now be in place
+        for img in images:
+            src = img.attrib.get('src')
+            if not src:
+                warn('no-image-src',
+                     'Empty image source in %s' % page.source_file)
+                continue
+
+            comps = urlparse.urlparse(src)
+            if comps.scheme:
+                continue
+
+            path = os.path.abspath(os.path.join(
+                os.path.dirname(full_path), src))
+            if not os.path.exists(path):
+                warn('bad-image-src',
+                     ('In %s, a local image refers to an unknown source (%s). '
+                      'It should be available in the build folder, at %s') %
+                     (page.source_file, src, path))
+                continue
+        return full_path
 
     # pylint: disable=no-self-use
     def _get_extension(self):
