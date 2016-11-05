@@ -23,6 +23,8 @@ This module defines a base Formatter class
 import os
 import shutil
 
+from collections import defaultdict
+
 from schema import Schema, Optional
 from hotdoc.core.doc_tree import Page
 
@@ -32,7 +34,8 @@ from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.utils import recursive_overwrite, OrderedSet
 
 
-Page.meta_schema[Optional('extra')] = Schema({unicode: object})
+Page.meta_schema[Optional('extra', default=defaultdict())] = \
+        Schema({unicode: object})
 
 
 def _create_hierarchy_graph(hierarchy):
