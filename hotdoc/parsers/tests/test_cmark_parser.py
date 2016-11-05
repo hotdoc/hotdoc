@@ -472,3 +472,11 @@ class TestAutoRefExtension(unittest.TestCase):
         exp = (u'<p>doing an <a href="#auto-ref">auto ref</a> yo</p>\n'
                '<h1>Auto ref</h1>\n')
         self.assertOutputs(inp, exp)
+
+    def test_unicode(self):
+        inp = (u'doing a [Ünicode] auto ref yo\n'
+               u'\n'
+               u'# Ünicode\n')
+        exp = (u'<p>doing a <a href="#nicode">Ünicode</a> auto ref yo</p>\n'
+               u'<h1>Ünicode</h1>\n')
+        self.assertOutputs(inp, exp)

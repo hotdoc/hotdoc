@@ -85,7 +85,7 @@ resolve_link(const char *id) {
       goto done;
     }
 
-    res = calloc(1, sizeof(NamedLink));
+    res = (NamedLink *) calloc(1, sizeof(NamedLink));
 
     if (ref != Py_None) {
       utf8 = PyUnicode_AsUTF8String(ref);
@@ -215,12 +215,9 @@ static PyObject *concatenate_title(cmark_node *title_node) {
       continue;
 
     content = cmark_node_get_string_content(cur);
+
     if (content) {
       tmp = PyUnicode_FromString(content);
-      if (PyErr_Occurred()) {
-        PyErr_Clear();
-        continue;
-      }
       tmp_ret = PyUnicode_Concat(ret, tmp);
       Py_DECREF(ret);
       Py_DECREF(tmp);
@@ -229,6 +226,14 @@ static PyObject *concatenate_title(cmark_node *title_node) {
   }
 
   cmark_iter_free(iter);
+
+  if (PyUnicode_Check(ret)) {
+    PyObject *old_ret;
+
+    old_ret = ret;
+    ret = PyUnicode_AsUTF8String(old_ret);
+    Py_DECREF(old_ret);
+  }
 
   return ret;
 }
