@@ -32,6 +32,7 @@ from pkg_resources import iter_entry_points
 from toposort import toposort_flatten
 
 from hotdoc.core.exceptions import HotdocSourceException
+from hotdoc.utils.setup_utils import symlink
 
 WIN32 = (sys.platform == 'win32')
 
@@ -278,20 +279,3 @@ def id_from_text(text, add_hash=False):
         id_ = id_.translate(
             None, r"[!\"#$%&'\(\)\*\+,\.\/:;<=>\?\@\[\\\]\^`\{\|\}~]")
     return id_
-
-
-def symlink(source, link_name):
-    """
-    Method to allow creating symlinks on Windows
-    """
-    os_symlink = getattr(os, "symlink", None)
-    if callable(os_symlink):
-        os_symlink(source, link_name)
-    else:
-        import ctypes
-        csl = ctypes.windll.kernel32.CreateSymbolicLinkW
-        csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
-        csl.restype = ctypes.c_ubyte
-        flags = 1 if os.path.isdir(source) else 0
-        if csl(link_name, source, flags) == 0:
-            raise ctypes.WinError()

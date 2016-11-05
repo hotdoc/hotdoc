@@ -1,2 +1,3 @@
 recursive-include cmark *
 recursive-include hotdoc/parsers *.h
+recursive-include hotdoc/extensions/syntax_highlighting/prism *

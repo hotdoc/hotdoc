@@ -38,9 +38,9 @@ from setuptools.command.sdist import sdist
 from setuptools.command.test import test
 
 from hotdoc.utils.setup_utils import (
-    VERSION, THEME_VERSION, require_clean_submodules)
+    VERSION, THEME_VERSION, require_clean_submodules, symlink)
 
-SOURCE_DIR = os.path.abspath('./')
+SOURCE_DIR = os.path.abspath(os.path.dirname(__file__))
 CMARK_DIR = os.path.join(SOURCE_DIR, 'cmark')
 CMARK_SRCDIR = os.path.join(CMARK_DIR, 'src')
 CMARK_EXTDIR = os.path.join(CMARK_DIR, 'extensions')
@@ -156,23 +156,6 @@ class DownloadDefaultTemplate(Command):
         shutil.move(extract_path, theme_path)
 
         os.unlink('default_theme.tgz')
-
-
-def symlink(source, link_name):
-    """
-    Method to allow creating symlinks on Windows
-    """
-    os_symlink = getattr(os, "symlink", None)
-    if callable(os_symlink):
-        os_symlink(source, link_name)
-    else:
-        import ctypes
-        csl = ctypes.windll.kernel32.CreateSymbolicLinkW
-        csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
-        csl.restype = ctypes.c_ubyte
-        flags = 1 if os.path.isdir(source) else 0
-        if csl(link_name, source, flags) == 0:
-            raise ctypes.WinError()
 
 
 class LinkPreCommitHook(Command):
@@ -303,7 +286,8 @@ EXTRAS_REQUIRE = {
 
 # Extensions
 
-SYN_EXT_DIR = os.path.join(SOURCE_DIR, 'hotdoc', 'extensions', 'syntax_highlighting')
+SYN_EXT_DIR = os.path.join(SOURCE_DIR, 'hotdoc', 'extensions',
+                           'syntax_highlighting')
 require_clean_submodules(SYN_EXT_DIR, ['prism'])
 
 setup(name='hotdoc',
@@ -332,14 +316,14 @@ setup(name='hotdoc',
           'hotdoc': ['default_theme-%s/templates/*' % THEME_VERSION,
                      'default_theme-%s/js/*' % THEME_VERSION,
                      'default_theme-%s/css/*' % THEME_VERSION,
+                     'default_theme-%s/images/*' % THEME_VERSION,
                      'default_theme-%s/fonts/*' % THEME_VERSION,
                      'VERSION.txt'],
           'hotdoc.utils': ['hotdoc.m4', 'hotdoc.mk'],
           'hotdoc.extensions.syntax_highlighting': [
-              'prism/*',
               'prism/components/*',
               'prism/themes/*',
-              'prism/plugins/autoloader/*',
+              'prism/plugins/autoloader/prism-autoloader.js',
               'prism_autoloader_path_override.js'],
           'hotdoc.extensions.search': [
               '*.js',
