@@ -39,7 +39,8 @@ from hotdoc.core.links import LinkResolver
 from hotdoc.utils.setup_utils import VERSION
 from hotdoc.utils.loggable import info, error
 from hotdoc.utils.configurable import Configurable
-from hotdoc.utils.utils import get_all_extension_classes, all_subclasses
+from hotdoc.utils.utils import (get_installed_extension_classes,
+                                all_subclasses, get_extra_extension_classes)
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.simple_signals import Signal
 from hotdoc.parsers.standalone_parser import SitemapParser
@@ -400,6 +401,9 @@ class DocRepo(object):
                                  dest="output",
                                  help="where to output the rendered "
                                  "documentation")
+        self.parser.add_argument("--extra-extensions-paths", action="append",
+                                 dest="extra_extension_paths", default=[],
+                                 help="Extra paths to lookup extensions in")
         self.parser.add_argument("--get-conf-key", action="store",
                                  help="print the value for a configuration "
                                  "key")
@@ -418,6 +422,10 @@ class DocRepo(object):
         self.parser.add_argument("--list-extensions", action="store_true",
                                  dest="list_extensions", help="Print "
                                  "available extensions")
+        self.parser.add_argument('--include-paths',
+                                 help='paths to look up included files in',
+                                 dest='include_paths', action='append',
+                                 default=[])
         self.parser.add_argument("-", action="store_true",
                                  help="Separator to allow finishing a list"
                                  " of arguments before a command",
@@ -494,7 +502,7 @@ class DocRepo(object):
         self.__private_folder = os.path.abspath(priv_name)
 
     def __load_extensions(self):
-        extension_classes = get_all_extension_classes(sort=True)
+        extension_classes = get_installed_extension_classes(True)
         for subclass in extension_classes:
             self.__extension_classes[subclass.extension_name] = subclass
 
@@ -515,8 +523,15 @@ class DocRepo(object):
         else:
             os.mkdir(folder)
 
-    def __create_extensions(self):
+    def __create_extensions(self, extra_paths):
         for ext_class in self.__extension_classes.values():
+            ext = ext_class(self)
+            self.extensions[ext.extension_name] = ext
+
+        extra_classes = get_extra_extension_classes(extra_paths)
+        self.__extension_classes.update(extra_classes)
+
+        for ext_class in extra_classes.values():
             ext = ext_class(self)
             self.extensions[ext.extension_name] = ext
 
@@ -565,7 +580,8 @@ class DocRepo(object):
         self.__setup_private_folder()
         self.__setup_database()
 
-        self.__create_extensions()
+        self.__create_extensions(
+            self.config.get_paths('extra_extension_paths'))
 
         if self.__conf_file:
             self.change_tracker.add_hard_dependency(self.__conf_file)

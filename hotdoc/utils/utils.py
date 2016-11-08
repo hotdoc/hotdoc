@@ -28,7 +28,7 @@ import sys
 import subprocess
 import re
 
-from pkg_resources import iter_entry_points
+import pkg_resources
 from toposort import toposort_flatten
 
 from hotdoc.core.exceptions import HotdocSourceException
@@ -109,15 +109,43 @@ def get_mtime(filename):
     return mtime
 
 
-def get_all_extension_classes(sort):
+def get_extra_extension_classes(paths):
+    """
+    Banana banana
+    """
+    extra_classes = {}
+    wset = pkg_resources.WorkingSet([])
+    distributions, _ = wset.find_plugins(pkg_resources.Environment(paths))
+
+    for dist in distributions:
+        sys.path.append(dist.location)
+        wset.add(dist)
+
+    for entry_point in wset.iter_entry_points(group='hotdoc.extensions',
+                                              name='get_extension_classes'):
+        try:
+            activation_function = entry_point.load()
+            classes = activation_function()
+        # pylint: disable=broad-except
+        except Exception as _:
+            print "Failed to load %s" % entry_point.module_name, _
+            continue
+
+        for klass in classes:
+            extra_classes[klass.extension_name] = klass
+
+    return extra_classes
+
+
+def get_installed_extension_classes(sort):
     """
     Banana banana
     """
     all_classes = {}
     deps_map = {}
 
-    for entry_point in iter_entry_points(group='hotdoc.extensions',
-                                         name='get_extension_classes'):
+    for entry_point in pkg_resources.iter_entry_points(
+            group='hotdoc.extensions', name='get_extension_classes'):
         try:
             activation_function = entry_point.load()
             classes = activation_function()
