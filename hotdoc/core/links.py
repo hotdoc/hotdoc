@@ -152,6 +152,11 @@ class LinkResolver(object):
                 # pylint: disable=protected-access
                 elink.title = link._title
             return elink
+        elif not overwrite_ref:
+            sym = self.__doc_db.get_symbol(link.id_)
+            if sym and sym.link:
+                self.__links[link.id_] = sym.link
+                return sym.link
 
         self.add_link(link)
         return link
