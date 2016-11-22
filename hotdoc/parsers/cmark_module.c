@@ -20,6 +20,7 @@
  */
 
 #include <Python.h>
+#include <bytesobject.h>
 
 #include "cmark_module_utils.h"
 #include "cmark.h"
@@ -27,6 +28,12 @@
 #include "cmark_include_extension.h"
 
 cmark_syntax_extension *cmark_table_extension_new();
+
+struct module_state {
+  PyObject *error;
+};
+
+#define GETSTATE(m) ((struct module_state*)PyModule_GetState(m))
 
 static cmark_parser *gtkdoc_parser = NULL;
 static cmark_syntax_extension *include_extension = NULL;
@@ -57,19 +64,24 @@ typedef struct {
 static NamedLink *
 resolve_link(const char *id) {
   PyObject *link = NULL;
-  PyObject *utf8 = NULL;
   PyObject *ref = NULL;
   PyObject *title = NULL;
   NamedLink *res = NULL;
+  PyObject *utf8;
 
   if (!link_resolver)
     goto done;
 
-  link = PyObject_CallMethod(link_resolver, "get_named_link", "(s)", id);
+  utf8 = PyUnicode_FromString(id);
+
+  link = PyObject_CallMethod(link_resolver, "get_named_link", "(O)", utf8);
+
   if (PyErr_Occurred()) {
     PyErr_Clear();
     goto done;
   }
+
+  Py_DECREF(utf8);
 
   if (link != Py_None) {
     ref = PyObject_CallMethod(link, "get_link", NULL);
@@ -88,15 +100,11 @@ resolve_link(const char *id) {
     res = (NamedLink *) calloc(1, sizeof(NamedLink));
 
     if (ref != Py_None) {
-      utf8 = PyUnicode_AsUTF8String(ref);
-      res->ref = strdup(PyString_AsString(utf8));
-      Py_DECREF(utf8);
+      res->ref = strdup(PyUnicode_AsUTF8(ref));
     }
 
     if (title != Py_None) {
-      utf8 = PyUnicode_AsUTF8String(title);
-      res->title = strdup(PyString_AsString(utf8));
-      Py_DECREF(utf8);
+      res->title = strdup(PyUnicode_AsUTF8(title));
     }
   }
 
@@ -131,8 +139,9 @@ static PyObject *
 gtkdoc_to_ast(PyObject *self, PyObject *args) {
   CMarkDocument *doc;
   PyObject *input;
-  PyObject *utf8;
   PyObject *cap;
+  char *utf8;
+  Py_ssize_t size;
 
   if (!PyArg_ParseTuple(args, "O!O", &PyUnicode_Type, &input, &link_resolver))
     return NULL;
@@ -144,9 +153,8 @@ gtkdoc_to_ast(PyObject *self, PyObject *args) {
 
   cmark_gtkdoc_extension_set_link_resolve_function(gtkdoc_extension, resolve_link);
 
-  utf8 = PyUnicode_AsUTF8String(input);
-  cmark_parser_feed(gtkdoc_parser, PyString_AsString(utf8), PyObject_Length(utf8));
-  Py_DECREF(utf8);
+  utf8 = PyUnicode_AsUTF8AndSize(input, &size);
+  cmark_parser_feed(gtkdoc_parser, utf8, size);
 
   doc->root = cmark_parser_finish(gtkdoc_parser);
 
@@ -166,16 +174,8 @@ resolve_include(const char *uri) {
 
   contents = PyObject_CallMethod(include_resolver, "resolve", "s", uri);
 
-  if (PyUnicode_Check(contents)) {
-    PyObject *old_contents;
-
-    old_contents = contents;
-    contents = PyUnicode_AsUTF8String(old_contents);
-    Py_DECREF(old_contents);
-  }
-
   if (contents != Py_None)
-    res = strdup(PyString_AsString(contents));
+    res = strdup(PyUnicode_AsUTF8(contents));
 
   Py_DECREF(contents);
 
@@ -227,18 +227,10 @@ static PyObject *concatenate_title(cmark_node *title_node) {
 
   cmark_iter_free(iter);
 
-  if (PyUnicode_Check(ret)) {
-    PyObject *old_ret;
-
-    old_ret = ret;
-    ret = PyUnicode_AsUTF8String(old_ret);
-    Py_DECREF(old_ret);
-  }
-
   return ret;
 }
 
-static void
+static bool
 collect_autorefs(cmark_parser *parser) {
   cmark_node *root = cmark_parser_get_root(parser);
   cmark_node *tmp = cmark_node_first_child(root);
@@ -248,28 +240,41 @@ collect_autorefs(cmark_parser *parser) {
 
     if (cmark_node_get_type(tmp) == CMARK_NODE_HEADING) {
       PyObject *translated;
-      PyObject *utf8 = concatenate_title(tmp);
-      char *title = PyString_AsString(utf8);
+      PyObject *utf8;
+      char *title;
 
-      if (title != NULL) {
-        translated = PyObject_CallFunction(id_from_text_func, "(sb)", title, Py_True);
-        cmark_parser_add_reference(parser, title, PyString_AsString(translated), NULL);
-        Py_DECREF(translated);
+      utf8 = concatenate_title(tmp);
+
+      title = PyUnicode_AsUTF8(utf8);
+
+      if (!title && PyErr_Occurred()) {
+        return false;
       }
+
+      translated = PyObject_CallFunction(id_from_text_func, "(Ob)", utf8, Py_True);
+      if (!translated && PyErr_Occurred()) {
+        return false;
+      }
+
+      cmark_parser_add_reference(parser, title, PyUnicode_AsUTF8(translated), NULL);
+      Py_DECREF(translated);
 
       Py_DECREF(utf8);
     }
 
     tmp = next;
   }
+
+  return true;
 }
 
 static PyObject *
 hotdoc_to_ast(PyObject *self, PyObject *args) {
   CMarkDocument *doc;
   PyObject *input;
-  PyObject *utf8;
   PyObject *ret;
+  char *utf8;
+  Py_ssize_t size;
 
   if (!PyArg_ParseTuple(args, "O!O", &PyUnicode_Type, &input, &include_resolver))
     return NULL;
@@ -279,11 +284,11 @@ hotdoc_to_ast(PyObject *self, PyObject *args) {
   cmark_include_extension_set_resolve_function(include_extension,
       resolve_include);
 
-  utf8 = PyUnicode_AsUTF8String(input);
-  cmark_parser_feed(hotdoc_parser, PyString_AsString(utf8), PyObject_Length(utf8));
-  Py_DECREF(utf8);
+  utf8 = PyUnicode_AsUTF8AndSize(input, &size);
+  cmark_parser_feed(hotdoc_parser, utf8, size);
 
-  collect_autorefs(hotdoc_parser);
+  if (!collect_autorefs(hotdoc_parser))
+    return NULL;
 
   doc->root = cmark_parser_finish(hotdoc_parser);
 
@@ -431,7 +436,7 @@ update_subpage_links(PyObject *self, PyObject *args) {
   return Py_None;
 }
 
-static PyMethodDef ScannerMethods[] = {
+static PyMethodDef cmark_methods[] = {
   {"gtkdoc_to_ast",  gtkdoc_to_ast, METH_VARARGS, "Translate gtk-doc syntax to an opaque AST"},
   {"hotdoc_to_ast", hotdoc_to_ast, METH_VARARGS, "Translate hotdoc syntax to an opaque AST"},
   {"title_from_ast", ast_get_title, METH_VARARGS, "Get the first title in an opaque AST"},
@@ -440,12 +445,39 @@ static PyMethodDef ScannerMethods[] = {
   {NULL, NULL, 0, NULL}
 };
 
+static int cmark_traverse(PyObject *m, visitproc visit, void *arg) {
+    Py_VISIT(GETSTATE(m)->error);
+    return 0;
+}
+
+static int cmark_clear(PyObject *m) {
+    Py_CLEAR(GETSTATE(m)->error);
+    return 0;
+}
+
+
+static struct PyModuleDef moduledef = {
+        PyModuleDef_HEAD_INIT,
+        "cmark",
+        NULL,
+        sizeof(struct module_state),
+        cmark_methods,
+        NULL,
+        cmark_traverse,
+        cmark_clear,
+        NULL
+};
+
 PyMODINIT_FUNC
-initcmark(void)
+PyInit_cmark(void)
 {
   PyObject *exception_mod = PyImport_ImportModule("hotdoc.parsers.cmark_utils");
   PyObject *utils_mod = PyImport_ImportModule("hotdoc.utils.utils");
-  (void) Py_InitModule("cmark", ScannerMethods);
+  PyObject *module = PyModule_Create(&moduledef);
+
+	if (module == NULL)
+    return NULL;
+
   cmark_init();
   cmark_syntax_extension *ptables_ext = cmark_table_extension_new();
 
@@ -467,4 +499,6 @@ initcmark(void)
     cmark_parser_attach_syntax_extension(gtkdoc_parser, ptables_ext);
     cmark_parser_attach_syntax_extension(hotdoc_parser, ptables_ext);
   }
+
+  return module;
 }

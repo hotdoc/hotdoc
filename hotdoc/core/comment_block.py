@@ -20,7 +20,6 @@
 This module implements a Comment class, to be used
 by code-parsing extensions.
 """
-
 import linecache
 import os
 from collections import defaultdict
@@ -69,7 +68,7 @@ class Comment(object):
         self.col_offset = 0
         self.initial_col_offset = 0
         self.annotations = annotations or {}
-        self.description = unicode(description)
+        self.description = str(description)
         self.short_description = short_description
         self.extension_attrs = defaultdict(lambda: defaultdict(dict))
         self.tags = tags or {}

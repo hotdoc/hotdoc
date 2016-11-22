@@ -19,24 +19,24 @@
 """
 This module defines a base Formatter class
 """
-
 import os
 import shutil
 
 from collections import defaultdict
 
 from schema import Schema, Optional
+import pygraphviz as pg
+
 from hotdoc.core.doc_tree import Page
 from hotdoc.utils.utils import symlink
 
-import pygraphviz as pg
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.utils import recursive_overwrite, OrderedSet
 
 
 Page.meta_schema[Optional('extra', default=defaultdict())] = \
-    Schema({unicode: object})
+    Schema({str: object})
 
 
 def _create_hierarchy_graph(hierarchy):
@@ -166,8 +166,7 @@ class Formatter(Configurable):
         self.writing_page_signal(self, page, path)
 
         with open(path, 'w') as _:
-            out = page.detailed_description
-            _.write(out.encode('utf-8'))
+            _.write(page.detailed_description)
 
         self.__copy_extra_files(root, os.path.dirname(path))
 

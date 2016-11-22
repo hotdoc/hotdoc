@@ -21,12 +21,11 @@
 """
 Implements standalone markdown files parsing.
 """
-
 import io
 import os
 import json
-import urlparse
-import cPickle as pickle
+import urllib.parse
+import pickle as pickle
 from collections import namedtuple, defaultdict, OrderedDict
 
 # pylint: disable=import-error
@@ -51,10 +50,6 @@ from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.loggable import info, debug, warn, error, Logger
 
 
-def _custom_str_constructor(loader, node):
-    return unicode(loader.construct_scalar(node).encode('utf-8'))
-
-
 def _no_duplicates_constructor(loader, node, deep=False):
     """Check for duplicate keys."""
 
@@ -73,8 +68,6 @@ def _no_duplicates_constructor(loader, node, deep=False):
 
 yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
                      _no_duplicates_constructor)
-yaml.add_constructor(u'tag:yaml.org,2002:str',
-                     _custom_str_constructor)
 
 
 class DocTreeNoSuchPageException(HotdocSourceException):
@@ -95,9 +88,9 @@ Logger.register_warning_code('markdown-bad-link', HotdocSourceException)
 # pylint: disable=too-many-instance-attributes
 class Page(object):
     "Banana banana"
-    meta_schema = {Optional('title'): And(unicode, len),
-                   Optional('symbols'): Schema([And(unicode, len)]),
-                   Optional('short-description'): And(unicode, len)}
+    meta_schema = {Optional('title'): And(str, len),
+                   Optional('symbols'): Schema([And(str, len)]),
+                   Optional('short-description'): And(str, len)}
 
     resolving_symbol_signal = Signal()
     formatting_signal = Signal()
@@ -266,7 +259,7 @@ class Page(object):
         if not ref:
             return ref
 
-        url_components = urlparse.urlparse(ref)
+        url_components = urllib.parse.urlparse(ref)
         cnt = count_folders(self.build_path)
         if cnt > 0 and not bool(url_components.scheme):
             prefix = os.path.join(*([os.path.pardir] * cnt))
@@ -356,8 +349,9 @@ class Page(object):
         for link in symbol.get_extra_links():
             link.ref = "%s#%s" % (self.link.ref, link.id_)
 
-        tsl = self.typed_symbols[type(symbol)]
-        tsl.symbols.append(symbol)
+        tsl = self.typed_symbols.get(type(symbol))
+        if tsl:
+            tsl.symbols.append(symbol)
         self.symbols.append(symbol)
 
         debug('Resolved symbol %s to page %s' %
@@ -391,18 +385,20 @@ class DocTree(object):
 
     def __create_dep_map(self):
         dep_map = {}
-        for pagename, page in self.__all_pages.items():
+        for pagename, page in list(self.__all_pages.items()):
             for sym_name in page.symbol_names:
                 dep_map[sym_name] = pagename
         return dep_map
 
     def __load_private(self, name):
         path = os.path.join(self.__priv_dir, name)
-        return pickle.load(open(path, 'rb'))
+        with open(path, 'rb') as _:
+            return pickle.loads(_.read())
 
     def __save_private(self, obj, name):
         path = os.path.join(self.__priv_dir, name)
-        pickle.dump(obj, open(path, 'wb'))
+        with open(path, 'wb') as _:
+            _.write(pickle.dumps(obj))
 
     # pylint: disable=no-self-use
     def __parse_page(self, source_file):
@@ -557,10 +553,10 @@ class DocTree(object):
         path = os.path.join(dirname, 'sitemap.js')
 
         with open(path, 'w') as _:
-            _.write(js_wrapper.encode('utf-8'))
+            _.write(js_wrapper)
 
     def __get_link_cb(self, link_resolver, name):
-        url_components = urlparse.urlparse(name)
+        url_components = urllib.parse.urlparse(name)
 
         page = self.__all_pages.get(url_components.path)
         if page:
@@ -636,7 +632,7 @@ class DocTree(object):
                                                          str(exception)))
 
         output_path = os.path.dirname(os.path.relpath(
-            source_file, iter(self.__include_paths).next()))
+            source_file, next(iter(self.__include_paths))))
 
         ast = cmark.hotdoc_to_ast(contents, self)
         return Page(source_file, ast, output_path, meta=meta,
@@ -668,7 +664,7 @@ class DocTree(object):
         Banana banana
         """
         stale = {}
-        for pagename, page in self.__all_pages.items():
+        for pagename, page in list(self.__all_pages.items()):
             if page.is_stale:
                 stale[pagename] = page
         return stale
@@ -679,18 +675,21 @@ class DocTree(object):
         """
         return self.__all_pages
 
-    def get_pages_for_symbol(self, unique_name):
+    def get_page_for_symbol(self, unique_name):
         """
         Banana banana
         """
         pagename = self.__dep_map.get(unique_name)
         if pagename is None:
             return {}
-        page = self.__all_pages.get(pagename)
-        if page is None:
-            return {}
+        return self.__all_pages.get(pagename)
 
-        return {pagename: page}
+    def __update_dep_map(self, page, symbols):
+        for sym in symbols:
+            if not isinstance(sym, Symbol):
+                continue
+            self.__dep_map[sym.unique_name] = page.source_file
+            self.__update_dep_map(page, sym.get_children_symbols())
 
     def resolve_symbols(self, doc_database, link_resolver, page=None):
         """Will call resolve_symbols on all the stale subpages of the tree.
@@ -707,6 +706,7 @@ class DocTree(object):
                     page.ast = cmark.hotdoc_to_ast(_.read(), self)
 
             page.resolve_symbols(doc_database, link_resolver)
+            self.__update_dep_map(page, page.symbols)
 
         for pagename in page.subpages:
             cpage = self.__all_pages[pagename]

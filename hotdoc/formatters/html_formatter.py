@@ -21,10 +21,10 @@ Banana banana
 """
 
 import os
-import cgi
+import html
 import re
 import tempfile
-import urlparse
+import urllib.parse
 
 from lxml import etree
 import lxml.html
@@ -201,14 +201,14 @@ class HtmlFormatter(Formatter):
         for i in range(section_numbers['first'], cur + 1):
             if section_number:
                 section_number += '.'
-            section_number += unicode(section_numbers['h%d' % i])
+            section_number += str(section_numbers['h%d' % i])
 
         return section_number
 
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches
     def write_page(self, page, build_root, output):
-        root = etree.HTML(unicode(page.detailed_description))
+        root = etree.HTML(str(page.detailed_description))
         id_nodes = {n.attrib['id']: "".join([x for x in n.itertext()])
                     for n in root.xpath('.//*[@id]')}
 
@@ -274,7 +274,7 @@ class HtmlFormatter(Formatter):
                      'Empty image source in %s' % page.source_file)
                 continue
 
-            comps = urlparse.urlparse(src)
+            comps = urllib.parse.urlparse(src)
             if comps.scheme:
                 continue
 
@@ -300,7 +300,7 @@ class HtmlFormatter(Formatter):
         out = ''
         if not link:
             assert link
-            print "Issue here plz check", title
+            print("Issue here plz check", title)
             return title
 
         template = self.engine.get_template('link.html')
@@ -513,7 +513,7 @@ class HtmlFormatter(Formatter):
                                                title, parameters, is_pointer)
 
     def _format_raw_code(self, code):
-        code = cgi.escape(code)
+        code = html.escape(code)
         template = self.engine.get_template('raw_code.html')
         return template.render({'code': code})
 
@@ -596,7 +596,7 @@ class HtmlFormatter(Formatter):
         children = []
         for _ in klass.hierarchy:
             hierarchy.append(self._format_linked_symbol(_))
-        for _ in klass.children.itervalues():
+        for _ in klass.children.values():
             children.append(self._format_linked_symbol(_))
 
         if hierarchy or children:

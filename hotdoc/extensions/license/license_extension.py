@@ -16,8 +16,11 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+# pylint: disable=missing-docstring
+
 import os
-import argparse
+
+from collections import namedtuple
 
 from schema import Schema, SchemaError, And, Use, Optional
 
@@ -25,7 +28,7 @@ from hotdoc.core.base_extension import BaseExtension
 from hotdoc.core.base_formatter import Formatter
 from hotdoc.core.doc_tree import Page
 from hotdoc.core.exceptions import HotdocException
-from hotdoc.utils.loggable import error, warn, Logger
+from hotdoc.utils.loggable import error, Logger
 
 
 class NoSuchLicenseException(HotdocException):
@@ -39,8 +42,8 @@ Logger.register_error_code('no-such-license', NoSuchLicenseException,
                            domain='license-extension')
 
 
-DESCRIPTION=\
-"""
+DESCRIPTION =\
+    """
 This extension helps licensing your hotdoc project
 """
 
@@ -49,24 +52,25 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(HERE, 'data')
 
 
-base_copyright_schema = {'name': And(unicode, len),
-                         Optional('email'): And(unicode, len),
-                         Optional('years'): Schema([Use(int)])}
+BASE_COPYRIGHT_SCHEMA = {'name': And(str, len),
+                         Optional('email'): And(str, len),
+                         Optional('years', default=[]): Schema([Use(int)])}
 
-author_schema = base_copyright_schema.copy()
-author_schema[Optional('has-copyright')] = And(bool)
+AUTHOR_SCHEMA = BASE_COPYRIGHT_SCHEMA.copy()
+AUTHOR_SCHEMA[Optional('has-copyright')] = And(bool)
 
 Page.meta_schema[Optional('extra-copyrights')] =\
-        Schema([base_copyright_schema])
+    Schema([BASE_COPYRIGHT_SCHEMA])
 
 Page.meta_schema[Optional('authors')] =\
-        Schema([author_schema])
+    Schema([AUTHOR_SCHEMA])
 
 Page.meta_schema[Optional('license')] =\
-        Schema(And(unicode, len))
+    Schema(And(str, len))
 
 
 class License(object):
+
     def __init__(self, short_name, full_name, url):
         self.short_name = short_name
         self.full_name = full_name
@@ -82,38 +86,25 @@ class License(object):
     @property
     def plain_text_path(self):
         path = os.path.join(DATA_DIR, '%s.txt' % self.short_name)
-        assert(os.path.exists(path))
+        assert os.path.exists(path)
         return path
 
 
-class CopyrightHolder(object):
-    def __init__(self, name, email, years):
-        self.name = name
-        self.email = email
-        self.years = [str(year) for year in years or []]
-        self.has_copyright = True
-
-
-class Author(CopyrightHolder):
-    def __init__(self, name, email, years, has_copyright):
-        CopyrightHolder.__init__(self, name, email, years)
-        self.has_copyright = has_copyright
+CopyrightHolder = namedtuple('CopyrightHolder',
+                             ['name', 'email', 'years', 'has_copyright'])
 
 
 CCBYSA_4_0_LICENSE = License("CC-BY-SAv4.0",
-                         "Creative Commons Attribution-ShareAlike 4.0 International",
-                         "https://creativecommons.org/licenses/by-sa/4.0/")
+                             "Creative Commons Attribution-ShareAlike "
+                             "4.0 International",
+                             "https://creativecommons.org/licenses/by-sa/4.0/")
 
 
 ALL_LICENSES = {
-        "CC-BY-SAv4.0": CCBYSA_4_0_LICENSE,
-        "CC-BY-SA": CCBYSA_4_0_LICENSE,
+    "CC-BY-SAv4.0": CCBYSA_4_0_LICENSE,
+    "CC-BY-SA": CCBYSA_4_0_LICENSE,
 }
 
-def _copyright_holder_from_data(data):
-    return CopyrightHolder(data.get('name'),
-                           data.get('email'),
-                           data.get('years'))
 
 class LicenseExtension(BaseExtension):
     extension_name = 'license-extension'
@@ -126,39 +117,49 @@ class LicenseExtension(BaseExtension):
         BaseExtension.__init__(self, doc_repo)
         self.__installed_assets = set()
 
-    def __license_for_page(self, page):
+    @staticmethod
+    def __license_for_page(page):
         if 'license' in page.meta:
             short_name = page.meta['license']
             try:
-                license = ALL_LICENSES[short_name]
+                license_ = ALL_LICENSES[short_name]
             except KeyError:
                 error('no-such-license',
                       'In %s: no such license %s' % (page.source_file,
                                                      short_name))
         else:
-            license = LicenseExtension.default_license
+            license_ = LicenseExtension.default_license
 
-        return license
+        return license_
 
-    def __authors_for_page(self, page):
+    @staticmethod
+    def __authors_for_page(page):
         authors = []
         for data in page.meta.get('authors') or []:
-            authors.append(Author(data.get('name'),
-                                  data.get('email'),
-                                  data.get('years'),
-                                  data.get('has-copyright',
-                                      LicenseExtension.authors_hold_copyright)))
+            authors.append(
+                CopyrightHolder(data.get('name'),
+                                data.get('email'),
+                                [str(year) for year in data.get('years')],
+                                data.get('has-copyright',
+                                         LicenseExtension.
+                                         authors_hold_copyright)))
         return authors
 
-    def __extra_copyrights_for_page(self, page):
+    @staticmethod
+    def __extra_copyrights_for_page(page):
         extra_copyrights = []
         for data in page.meta.get('extra-copyrights') or []:
-            extra_copyrights.append(_copyright_holder_from_data(data))
+            extra_copyrights.append(
+                CopyrightHolder(data.get('name'),
+                                data.get('email'),
+                                [str(year) for year in data.get('years')],
+                                True))
 
         return extra_copyrights or LicenseExtension.default_copyright_holders
 
     def __copyrights_for_page(self, page):
-        return self.__authors_for_page(page) + self.__extra_copyrights_for_page(page)
+        return (self.__authors_for_page(page) +
+                self.__extra_copyrights_for_page(page))
 
     def __formatting_page_cb(self, formatter, page):
         # hotdoc doesn't claim a copyright
@@ -171,20 +172,22 @@ class LicenseExtension(BaseExtension):
             formatted = template.render({'copyrights': copyrights})
             page.output_attrs['html']['extra_footer_html'].insert(0, formatted)
 
-        license = self.__license_for_page(page)
-        if license:
+        license_ = self.__license_for_page(page)
+        if license_:
             template = formatter.engine.get_template('license.html')
-            if license.logo_path:
-                logo_path = os.path.join('assets', os.path.basename(license.logo_path))
+            if license_.logo_path:
+                logo_path = os.path.join(
+                    'assets', os.path.basename(license_.logo_path))
             else:
                 logo_path = None
 
-            formatted = template.render({'license': license, 'logo_path': logo_path})
+            formatted = template.render(
+                {'license': license_, 'logo_path': logo_path})
             page.output_attrs['html']['extra_footer_html'].insert(0, formatted)
 
-            self.__installed_assets.add(license.plain_text_path)
-            if license.logo_path:
-                self.__installed_assets.add(license.logo_path)
+            self.__installed_assets.add(license_.plain_text_path)
+            if license_.logo_path:
+                self.__installed_assets.add(license_.logo_path)
 
     def __get_extra_files_cb(self, formatter):
         res = []
@@ -198,7 +201,7 @@ class LicenseExtension(BaseExtension):
         Formatter.formatting_page_signal.connect(self.__formatting_page_cb)
         Formatter.get_extra_files_signal.connect(self.__get_extra_files_cb)
 
-        for ext in self.doc_repo.extensions.values():
+        for ext in list(self.doc_repo.extensions.values()):
             formatter = ext.formatters.get('html')
             template_path = os.path.join(HERE, 'html_templates')
             formatter.engine.loader.searchpath.append(template_path)
@@ -206,14 +209,16 @@ class LicenseExtension(BaseExtension):
     @staticmethod
     def add_arguments(parser):
         group = parser.add_argument_group('License extension',
-                DESCRIPTION)
+                                          DESCRIPTION)
         group.add_argument("--default-license",
-            help="Default license",
-            dest="default_license", action='store', default=None)
+                           help="Default license",
+                           dest="default_license",
+                           action='store',
+                           default=None)
         group.add_argument("--authors-hold-copyright",
-            help="Whether authors hold a copyright by default."
-                 "This can be overriden on a per-page basis",
-            dest="authors_hold_copyright", action='store')
+                           help="Whether authors hold a copyright by default."
+                           "This can be overriden on a per-page basis",
+                           dest="authors_hold_copyright", action='store')
 
     @staticmethod
     def parse_config(doc_repo, config):
@@ -226,13 +231,17 @@ class LicenseExtension(BaseExtension):
         data = config.get("default-copyright-holders")
         if data:
             try:
-                data = Schema([base_copyright_schema]).validate(data)
+                data = Schema([BASE_COPYRIGHT_SCHEMA]).validate(data)
             except SchemaError:
                 error('invalid-config',
-                        'Invalid default copyright holders metadata : %s' % str(data))
-            for _ in data:
+                      'Invalid default copyright holders metadata : %s' %
+                      str(data))
+            for datum in data:
                 LicenseExtension.default_copyright_holders.append(
-                    _copyright_holder_from_data(_))
+                    CopyrightHolder(datum.get('name'),
+                                    datum.get('email'),
+                                    [str(year) for year in datum.get('years')],
+                                    True))
         LicenseExtension.authors_hold_copyright = config.get(
             "authors_hold_copyright", True)
 

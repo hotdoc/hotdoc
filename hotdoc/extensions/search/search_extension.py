@@ -16,38 +16,42 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, shutil, json
+# pylint: disable=missing-docstring
 
+import os
+import shutil
 from hotdoc.core.base_extension import BaseExtension
 from hotdoc.core.doc_tree import Page
 from hotdoc.extensions.search.create_index import SearchIndex
 
-DESCRIPTION=\
-"""
+DESCRIPTION =\
+    """
 This extension enables client-side full-text search
 for html documentation produced by hotdoc.
 """
 
-here = os.path.dirname(__file__)
+HERE = os.path.dirname(__file__)
+
 
 def list_html_files(root_dir, exclude_dirs):
     html_files = []
     for root, dirs, files in os.walk(root_dir, topdown=True):
         dirs[:] = [d for d in dirs if d not in exclude_dirs]
-        for f in files:
-            if f.endswith(".html"):
-                html_files.append(os.path.join(root, f))
+        for _ in files:
+            if _.endswith(".html"):
+                html_files.append(os.path.join(root, _))
 
     return html_files
 
+
 class SearchExtension(BaseExtension):
-    extension_name='search'
+    extension_name = 'search'
 
     def __init__(self, doc_repo):
         BaseExtension.__init__(self, doc_repo)
         doc_repo.formatted_signal.connect(self.__build_index)
         self.enabled = False
-        self.script = os.path.abspath(os.path.join(here, 'trie.js'))
+        self.script = os.path.abspath(os.path.join(HERE, 'trie.js'))
 
     def setup(self):
         self.enabled = self.doc_repo.output_format == 'html'
@@ -79,16 +83,17 @@ class SearchExtension(BaseExtension):
             return
 
         index = SearchIndex(output, dest,
-                self.doc_repo.get_private_folder())
+                            self.doc_repo.get_private_folder())
         index.scan(stale)
 
         for subdir in subdirs:
             if subdir == 'assets':
                 continue
-            shutil.copyfile(os.path.join(self.doc_repo.get_private_folder(), 'search.trie'),
-                    os.path.join(topdir, subdir, 'dumped.trie'))
+            shutil.copyfile(os.path.join(self.doc_repo.get_private_folder(),
+                                         'search.trie'),
+                            os.path.join(topdir, subdir, 'dumped.trie'))
 
-    def __formatting_page(self, page, formatter):
+    def __formatting_page(self, page, _):
         page.output_attrs['html']['scripts'].add(self.script)
 
 

@@ -19,7 +19,6 @@
 """
 Utilities and baseclasses for extensions
 """
-
 import os
 from collections import defaultdict
 
@@ -101,7 +100,7 @@ class BaseExtension(Configurable):
         if not hasattr(self, 'formatters'):
             self.formatters = {"html": HtmlFormatter([])}
 
-        self.__created_symbols = defaultdict(OrderedSet)
+        self._created_symbols = defaultdict(OrderedSet)
         self.__package_root = None
 
     # pylint: disable=no-self-use
@@ -168,7 +167,7 @@ class BaseExtension(Configurable):
         This function is only useful for testing purposes, at least
         for now.
         """
-        self.__created_symbols = defaultdict(OrderedSet)
+        self._created_symbols = defaultdict(OrderedSet)
         self.__package_root = None
 
     def setup(self):
@@ -224,11 +223,11 @@ class BaseExtension(Configurable):
         cls.smart_index = bool(config.get('%s_smart_index' %
                                           cls.argument_prefix))
 
-        for arg, dest in cls.paths_arguments.items():
+        for arg, dest in list(cls.paths_arguments.items()):
             val = config.get_paths(arg)
             setattr(cls, dest, val)
 
-        for arg, dest in cls.path_arguments.items():
+        for arg, dest in list(cls.path_arguments.items()):
             val = config.get_path(arg)
             setattr(cls, dest, val)
 
@@ -349,11 +348,9 @@ class BaseExtension(Configurable):
             symbols.Symbol: the created symbol, or `None`.
         """
         sym = self.doc_repo.doc_database.get_or_create_symbol(*args, **kwargs)
-
         # pylint: disable=unidiomatic-typecheck
         if sym and type(sym) != Symbol and sym.filename:
-            # assert sym.filename is not None
-            self.__created_symbols[sym.filename].add(sym.unique_name)
+            self._created_symbols[sym.filename].add(sym.unique_name)
 
         return sym
 
@@ -387,12 +384,12 @@ class BaseExtension(Configurable):
         for sym_name in unlisted_sym_names:
             sym = self.doc_repo.doc_database.get_symbol(sym_name)
             if sym and sym.filename in self._get_all_sources():
-                self.__created_symbols[sym.filename].add(sym_name)
+                self._created_symbols[sym.filename].add(sym_name)
 
         user_pages = [p for p in doc_tree.walk(index) if not p.generated]
         user_symbols = self.__get_user_symbols(user_pages)
 
-        for source_file, symbols in self.__created_symbols.items():
+        for source_file, symbols in list(self._created_symbols.items()):
             gen_symbols = symbols - user_symbols
             self.__add_subpage(doc_tree, index, source_file, gen_symbols)
             doc_tree.stale_symbol_pages(symbols)

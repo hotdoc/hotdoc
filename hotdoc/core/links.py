@@ -19,8 +19,7 @@
 """
 Banana banana
 """
-
-import urlparse
+import urllib.parse
 
 from hotdoc.utils.alchemy_integration import MutableObject
 from hotdoc.utils.simple_signals import Signal
@@ -39,9 +38,9 @@ class Link(MutableObject):
         self._title = None
 
         if title:
-            self._title = unicode(title)
+            self._title = str(title)
         if ref:
-            self.ref = unicode(ref)
+            self.ref = str(ref)
 
         self.id_ = id_
         MutableObject.__init__(self)
@@ -55,12 +54,12 @@ class Link(MutableObject):
         resolved_title = [elem for elem in resolved_title if elem is not
                           None]
         if resolved_title:
-            return unicode(resolved_title[0])
+            return str(resolved_title[0])
         return self._title
 
     @title.setter
     def title(self, value):
-        self._title = unicode(value)
+        self._title = str(value)
 
     def get_title(self):
         """
@@ -79,7 +78,7 @@ class Link(MutableObject):
 
         res = self.ref
         if resolved_ref:
-            res = unicode(resolved_ref[0])
+            res = str(resolved_ref[0])
 
         res = Link.relativize_link_signal(res) or res
 
@@ -101,8 +100,7 @@ class LinkResolver(object):
         """
         Banana banana
         """
-        name = str(name.encode('ascii'))
-        url_components = urlparse.urlparse(name)
+        url_components = urllib.parse.urlparse(name)
         if bool(url_components.netloc):
             return Link(name, None, name)
 

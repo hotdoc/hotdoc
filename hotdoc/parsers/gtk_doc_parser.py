@@ -24,7 +24,7 @@ gtk-doc comment format.
 
 import re
 import cgi
-from itertools import izip_longest
+from itertools import zip_longest
 
 
 from hotdoc.core.comment_block import (Comment, Annotation, Tag,
@@ -45,7 +45,7 @@ def _grouper(iterable, n_args, fillvalue=None):
     Banana banana
     """
     args = [iter(iterable)] * n_args
-    return izip_longest(*args, fillvalue=fillvalue)
+    return zip_longest(*args, fillvalue=fillvalue)
 
 
 # pylint: disable=too-few-public-methods
@@ -71,7 +71,7 @@ class GtkDocParser(object):
         tag_validation_regex = r'((?:^|\n)[ \t]*('
         tag_validation_regex += 'returns|Returns|since|Since|deprecated'\
             '|Deprecated|stability|Stability|Return value|topic|Topic'
-        for validator in doc_repo.tag_validators.values():
+        for validator in list(doc_repo.tag_validators.values()):
             tag_validation_regex += '|%s|%s' % (validator.name,
                                                 validator.name.lower())
         tag_validation_regex += '):)'
@@ -222,10 +222,10 @@ class GtkDocParser(object):
         else:
             validator = self.doc_repo.tag_validators.get(name)
             if not validator:
-                print "FIXME no tag validator"
+                print("FIXME no tag validator")
                 return None
             if not validator.validate(desc):
-                print "invalid value for tag %s : %s" % name, desc
+                print("invalid value for tag %s : %s" % name, desc)
                 return None
             return Tag(name=name, description=desc, value=desc)
 
@@ -269,8 +269,6 @@ class GtkDocParser(object):
         """
         if not stripped and not self.__validate_c_comment(comment.strip()):
             return None
-
-        comment = unicode(comment.decode('utf8'))
 
         title_offset = 0
 

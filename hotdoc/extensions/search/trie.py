@@ -20,7 +20,6 @@
 This class represents a node in the trie. It
 has a list of edges to other nodes.
 """
-
 import base64
 import struct
 import os
@@ -134,16 +133,18 @@ class Trie(object):
         common_prefix = 0
         node = self.root
         for letter in word:
+            # pylint: disable=unsupported-membership-test
             if letter in node.edges:
+                # pylint: disable=unsubscriptable-object
                 node = node.edges[letter]
             else:
                 break
             common_prefix += 1
 
         for letter in word[common_prefix:]:
-            nextNode = TrieNode(self, letter)
-            node.edges[letter] = nextNode
-            node = nextNode
+            next_node = TrieNode(self, letter)
+            node.edges[letter] = next_node
+            node = next_node
 
         node.final = True
 
@@ -177,8 +178,10 @@ class Trie(object):
         node = self.root
         for letter in word:
             edges = node.edges
+            # pylint: disable=unsupported-membership-test
             if letter not in edges:
                 return None
+            # pylint: disable=unsubscriptable-object
             node = edges[letter]
 
         return node
@@ -195,48 +198,54 @@ class Trie(object):
         Search for a word in the trie, with the levensthein algorithm
         """
         # build first row
-        current_row = range(len(word) + 1)
+        current_row = list(range(len(word) + 1))
 
         results = []
 
         # recursively search each branch of the trie
+        # pylint: disable=not-an-iterable
         for letter in self.root.edges:
-            self._search_recursive(self.root.edges[letter], letter, word, current_row,
+            # pylint: disable=unsubscriptable-object
+            self._search_recursive(self.root.edges[letter],
+                                   letter, word, current_row,
                                    results, max_cost, letter)
 
         return results
 
-    # This recursive helper is used by the search function above. It assumes that
-    # the previous_row has been filled in already.
-    def _search_recursive(self, node, letter, word, previous_row, results, max_cost,
-                          currentWord):
+    # This recursive helper is used by the search function above.
+    # It assumes that the previous_row has been filled in already.
+    # pylint: disable=too-many-arguments
+    def _search_recursive(self, node, letter, word, previous_row, results,
+                          max_cost, current_word):
         columns = len(word) + 1
         current_row = [previous_row[0] + 1]
 
-        # Build one row for the letter, with a column for each letter in the target
-        # word, plus one for the empty string at column 0
+        # Build one row for the letter, with a column for each letter in
+        # the target word, plus one for the empty string at column 0
         for column in range(1, columns):
-            insertCost = current_row[column - 1] + 1
-            deleteCost = previous_row[column] + 1
+            insert_cost = current_row[column - 1] + 1
+            delete_cost = previous_row[column] + 1
 
             if word[column - 1] != letter:
-                replaceCost = previous_row[column - 1] + 1
+                replace_cost = previous_row[column - 1] + 1
             else:
-                replaceCost = previous_row[column - 1]
+                replace_cost = previous_row[column - 1]
 
-            current_row.append(min(insertCost, deleteCost, replaceCost))
+            current_row.append(min(insert_cost, delete_cost, replace_cost))
 
-        # if the last entry in the row indicates the optimal cost is less than the
-        # maximum cost, and there is a word in this trie node, then add it.
+        # if the last entry in the row indicates the optimal cost is less
+        # than the maximum cost, and there is a word in this trie node,
+        # then add it.
         if current_row[-1] <= max_cost and node.final:
-            results.append((currentWord, current_row[-1]))
+            results.append((current_word, current_row[-1]))
 
         # if any entries in the row are less than the maximum cost, then
         # recursively search each branch of the trie
         if min(current_row) <= max_cost:
             for letter in node.edges:
-                self._search_recursive(node.edges[letter], letter, word, current_row,
-                                       results, max_cost, currentWord + letter)
+                self._search_recursive(node.edges[letter], letter, word,
+                                       current_row, results, max_cost,
+                                       current_word + letter)
 
     def get_node_by_index(self, index):
         """
@@ -265,7 +274,7 @@ class Trie(object):
             self._encode_node(node, data)
         format_string = ">%dI" % len(data)
         res = struct.pack(format_string, *data)
-        b64data = base64.b64encode(str(res))
+        b64data = base64.b64encode(res)
         return res, b64data
 
     def to_file(self, raw_filename, js_filename=None):
@@ -273,16 +282,17 @@ class Trie(object):
         Dump the trie
         """
         data, b64_data = self.encode()
-        with open(raw_filename, 'wb') as f:
-            f.write(data)
+        with open(raw_filename, 'wb') as _:
+            _.write(data)
 
         if js_filename is not None:
-            with open(js_filename, 'wb') as f:
-                f.write(bytes(b"var trie_data=\""))
-                f.write(b64_data)
-                f.write(bytes(b"\";"))
+            with open(js_filename, 'wb') as _:
+                _.write(bytes(b"var trie_data=\""))
+                _.write(b64_data)
+                _.write(bytes(b"\";"))
 
-    def _unroll(self, node):
+    @staticmethod
+    def _unroll(node):
         unrolled = []
         node.letter = None
         queue = [[node]]
@@ -293,14 +303,14 @@ class Trie(object):
             vertex = path[-1]
             i = 0
             cnodes = sorted(vertex.edges.items())
-            l = len(cnodes)
-            for letter, node in cnodes:
+            length = len(cnodes)
+            for _, node in cnodes:
                 i += 1
                 bft_id += 1
 
                 node.bft_id = bft_id
                 node.bft_last = False
-                if i == l:
+                if i == length:
                     node.bft_last = True
 
                 new_path = list(path)
@@ -310,6 +320,7 @@ class Trie(object):
 
         return unrolled
 
-    def _encode_node(self, node, data):
+    @staticmethod
+    def _encode_node(node, data):
         bin_node = node.to_binary()
         data.append(bin_node)

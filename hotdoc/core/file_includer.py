@@ -18,7 +18,6 @@
 """
 The markdown file including system
 """
-
 import re
 import os
 

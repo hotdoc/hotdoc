@@ -17,12 +17,14 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 """Base Hotdoc Exceptions"""
-
 import io
 
 
 class HotdocException(Exception):
     """Base Hotdoc exception"""
+    def __init__(self, message):
+        self.message = message
+        super(HotdocException, self).__init__(message)
 
 
 class InvalidPageMetadata(HotdocException):
@@ -85,8 +87,6 @@ CONTEXT_HEIGHT = 2
 class HotdocSourceException(HotdocException):
     """Banana banana"""
     def __init__(self, message=None, filename=None, lineno=-1, column=-1):
-        if isinstance(message, str):
-            message = message.decode('utf-8')
         self.filename = filename
         self.lineno = lineno
         self.column = column

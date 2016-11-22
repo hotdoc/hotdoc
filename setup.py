@@ -60,12 +60,12 @@ class CMarkExtension(Extension):
     # pylint: disable=no-self-use
     def __run_cmake(self):
         if spawn.find_executable('cmake') is None:
-            print "cmake  is required"
-            print "Please install cmake and re-run setup"
+            print("cmake  is required")
+            print("Please install cmake and re-run setup")
             sys.exit(-1)
         if spawn.find_executable('make') is None:
-            print "make  is required"
-            print "please get a version of make and re-run setup"
+            print("make  is required")
+            print("please get a version of make and re-run setup")
             sys.exit(-1)
 
         cwd = os.getcwd()
@@ -76,7 +76,7 @@ class CMarkExtension(Extension):
             spawn.spawn(['cmake', CMARK_DIR])
             spawn.spawn(['make', 'cmarkextensions'])
         except spawn.DistutilsExecError:
-            print "Error while running cmake"
+            print("Error while running cmake")
             sys.exit(-1)
         os.chdir(cwd)
 
@@ -277,7 +277,8 @@ INSTALL_REQUIRES = [
     'wheezy.template==0.1.167',
     'pygraphviz>=1.3.rc2',
     'sqlalchemy>=1.0.8',
-    'toposort==1.4']
+    'toposort==1.4',
+    'future']
 
 EXTRAS_REQUIRE = {
     'dev': ['git-pylint-commit-hook',
@@ -290,53 +291,59 @@ SYN_EXT_DIR = os.path.join(SOURCE_DIR, 'hotdoc', 'extensions',
                            'syntax_highlighting')
 require_clean_submodules(SYN_EXT_DIR, ['prism'])
 
-setup(name='hotdoc',
-      version=VERSION,
-      description='A documentation tool micro-framework',
-      keywords='documentation',
-      url='https://github.com/hotdoc/hotdoc',
-      author='Mathieu Duponchelle',
-      author_email='mathieu.duponchelle@opencreed.com',
-      license='LGPLv2.1+',
-      packages=find_packages(),
-      ext_modules=[CMARK_MODULE],
+if __name__ == '__main__':
+    setup(
+        name='hotdoc',
+        version=VERSION,
+        description='A documentation tool micro-framework',
+        keywords='documentation',
+        url='https://github.com/hotdoc/hotdoc',
+        author='Mathieu Duponchelle',
+        author_email='mathieu.duponchelle@opencreed.com',
+        license='LGPLv2.1+',
+        packages=find_packages(),
+        ext_modules=[CMARK_MODULE],
 
-      cmdclass={'build': CustomBuild,
-                'build_ext': CustomBuildExt,
-                'sdist': CustomSDist,
-                'develop': CustomDevelop,
-                'bdist_egg': CustomBDistEgg,
-                'test': DiscoverTest,
-                'link_pre_commit_hook': LinkPreCommitHook,
-                'download_default_template': DownloadDefaultTemplate},
-      scripts=['hotdoc/hotdoc',
-               'hotdoc/hotdoc_dep_printer'],
-      package_data={
-          'hotdoc.formatters': ['html_templates/*', 'html_assets/*'],
-          'hotdoc': ['default_theme-%s/templates/*' % THEME_VERSION,
-                     'default_theme-%s/js/*' % THEME_VERSION,
-                     'default_theme-%s/css/*' % THEME_VERSION,
-                     'default_theme-%s/images/*' % THEME_VERSION,
-                     'default_theme-%s/fonts/*' % THEME_VERSION,
-                     'VERSION.txt'],
-          'hotdoc.utils': ['hotdoc.m4', 'hotdoc.mk'],
-          'hotdoc.extensions.syntax_highlighting': [
-              'prism/components/*',
-              'prism/themes/*',
-              'prism/plugins/autoloader/prism-autoloader.js',
-              'prism_autoloader_path_override.js'],
-          'hotdoc.extensions.search': [
-              '*.js',
-              'stopwords.txt'],
-          'hotdoc.extensions.devhelp': [
-              'devhelp.css'],
-          'hotdoc.extensions.license': [
-              'data/*',
-              'html_templates/*']
-      },
-      install_requires=INSTALL_REQUIRES,
-      extras_require=EXTRAS_REQUIRE,
-      entry_points={
-          'hotdoc.extensions': ('get_extension_classes = '
-                                'hotdoc.extensions:get_extension_classes')},
-      setup_requires=['requests'])
+        cmdclass={'build': CustomBuild,
+                  'build_ext': CustomBuildExt,
+                  'sdist': CustomSDist,
+                  'develop': CustomDevelop,
+                  'bdist_egg': CustomBDistEgg,
+                  'test': DiscoverTest,
+                  'link_pre_commit_hook': LinkPreCommitHook,
+                  'download_default_template': DownloadDefaultTemplate},
+        scripts=['hotdoc/hotdoc',
+                 'hotdoc/hotdoc_dep_printer'],
+        package_data={
+            'hotdoc.formatters': ['html_templates/*', 'html_assets/*'],
+            'hotdoc': ['default_theme-%s/templates/*' % THEME_VERSION,
+                       'default_theme-%s/js/*' % THEME_VERSION,
+                       'default_theme-%s/css/*' % THEME_VERSION,
+                       'default_theme-%s/images/*' % THEME_VERSION,
+                       'default_theme-%s/fonts/*' % THEME_VERSION,
+                       'VERSION.txt'],
+            'hotdoc.utils': ['hotdoc.m4', 'hotdoc.mk'],
+            'hotdoc.extensions.syntax_highlighting': [
+                'prism/components/*',
+                'prism/themes/*',
+                'prism/plugins/autoloader/prism-autoloader.js',
+                'prism_autoloader_path_override.js'],
+            'hotdoc.extensions.search': [
+                '*.js',
+                'stopwords.txt'],
+            'hotdoc.extensions.devhelp': [
+                'devhelp.css'],
+            'hotdoc.extensions.license': [
+                'data/*',
+                'html_templates/*']
+        },
+        install_requires=INSTALL_REQUIRES,
+        extras_require=EXTRAS_REQUIRE,
+        entry_points={
+            'hotdoc.extensions': ('get_extension_classes = '
+                                  'hotdoc.extensions:get_extension_classes')},
+        classifiers=[
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3.4",
+            "Programming Language :: Python :: 3.5"],
+        setup_requires=['requests'])

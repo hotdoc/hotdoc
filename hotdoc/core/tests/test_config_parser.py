@@ -18,7 +18,6 @@
 
 # pylint: disable=missing-docstring
 # pylint: disable=invalid-name
-
 import unittest
 import shutil
 import os

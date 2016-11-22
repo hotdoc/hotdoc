@@ -16,7 +16,6 @@
 Simple signalling system
 """
 
-from __future__ import print_function
 import inspect
 from weakref import WeakSet, WeakKeyDictionary
 
@@ -42,7 +41,7 @@ class Signal(object):
             res_list.append(res)
 
         # Call handler methods
-        for obj, funcs in self._methods.items():
+        for obj, funcs in list(self._methods.items()):
             for func in funcs:
                 res = func(obj, *args, **kargs)
                 if res and self._optimized:
@@ -56,7 +55,7 @@ class Signal(object):
             res_list.append(res)
 
         # Call handler methods
-        for obj, funcs in self._after_methods.items():
+        for obj, funcs in list(self._after_methods.items()):
             for func in funcs:
                 res = func(obj, *args, **kargs)
                 if res and self._optimized:

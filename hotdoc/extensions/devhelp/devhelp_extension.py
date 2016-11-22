@@ -16,27 +16,30 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+# pylint: disable=missing-docstring
+
 import os
 import re
-import shutil
 
-from collections import defaultdict
-from collections import OrderedDict
+from collections import defaultdict, namedtuple
 from lxml import etree
 
+from hotdoc.core.symbols import (
+    FunctionSymbol, ClassSymbol, StructSymbol, EnumSymbol, PropertySymbol,
+    SignalSymbol, ConstantSymbol, FunctionMacroSymbol, CallbackSymbol,
+    InterfaceSymbol, AliasSymbol, VFunctionSymbol, ExportedVariableSymbol)
 from hotdoc.core.base_extension import BaseExtension
 from hotdoc.core.base_formatter import Formatter
-from hotdoc.core.symbols import *
 from hotdoc.utils.loggable import error
 from hotdoc.utils.utils import recursive_overwrite
 
 DESCRIPTION =\
-"""
+    """
 An extension to generate devhelp indexes.
 """
 
-BOILERPLATE=\
-u"""<?xml version="1.0"?>
+BOILERPLATE =\
+    u"""<?xml version="1.0"?>
 <!DOCTYPE book PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "">
 <book xmlns="http://www.devhelp.net/book" title="%s" link="%s" \
 author="hotdoc" name="%s" version="2" language="%s"/>
@@ -44,11 +47,10 @@ author="hotdoc" name="%s" version="2" language="%s"/>
 
 HERE = os.path.dirname(__file__)
 
-class FormattedSymbol(object):
-    def __init__(self, sym, subfolder):
-        self.type_ = TYPE_MAP.get(type(sym))
-        self.ref = os.path.join(subfolder, sym.link.ref)
-        self.display_name = sym.link.title
+
+FormattedSymbol = namedtuple('FormattedSymbol',
+                             ['type_', 'ref', 'display_name'])
+
 
 TYPE_MAP = {
     FunctionSymbol: 'function',
@@ -68,8 +70,8 @@ TYPE_MAP = {
 
 
 class DevhelpExtension(BaseExtension):
-    extension_name='devhelp-extension'
-    argument_prefix='devhelp'
+    extension_name = 'devhelp-extension'
+    argument_prefix = 'devhelp'
     activated = False
 
     def __init__(self, doc_repo):
@@ -82,7 +84,11 @@ class DevhelpExtension(BaseExtension):
         relpath = os.path.relpath(path, html_path)
 
         dirname = os.path.dirname(relpath)
-        self.__resolved_symbols_map[relpath] = [FormattedSymbol(sym, dirname) for sym in page.symbols]
+        self.__resolved_symbols_map[relpath] = [
+            FormattedSymbol(TYPE_MAP.get(type(sym)),
+                            os.path.join(dirname, sym.link.ref),
+                            sym.link.title)
+            for sym in page.symbols]
 
     def __format_subs(self, doc_tree, pnode, page):
         for name in page.subpages:
@@ -93,14 +99,14 @@ class DevhelpExtension(BaseExtension):
                 ref = cpage.link.ref
 
             node = etree.Element('sub',
-                attrib = {'name': cpage.title,
-                          'link': ref})
+                                 attrib={'name': cpage.title,
+                                         'link': ref})
             pnode.append(node)
             self.__format_subs(doc_tree, node, cpage)
 
     def __format(self, doc_repo):
         oname = doc_repo.project_name
-        oname = re.sub('\W+', '-', oname)
+        oname = re.sub(r'\W+', '-', oname)
         title = doc_repo.project_name
         if doc_repo.project_version:
             oname += '-%s' % doc_repo.project_version
@@ -117,18 +123,19 @@ class DevhelpExtension(BaseExtension):
         root = etree.fromstring(boilerplate)
 
         chapter_node = etree.Element('chapters')
-        self.__format_subs(doc_repo.doc_tree, chapter_node, doc_repo.doc_tree.root)
+        self.__format_subs(doc_repo.doc_tree, chapter_node,
+                           doc_repo.doc_tree.root)
         root.append(chapter_node)
 
         funcs_node = etree.Element('functions')
-        for page, symbols in self.__resolved_symbols_map.iteritems():
+        for _, symbols in self.__resolved_symbols_map.items():
             for sym in symbols:
                 if sym.type_ is None:
                     continue
                 node = etree.Element('keyword',
-                    attrib={'type': sym.type_,
-                            'name': sym.display_name,
-                            'link': sym.ref})
+                                     attrib={'type': sym.type_,
+                                             'name': sym.display_name,
+                                             'link': sym.ref})
                 funcs_node.append(node)
 
         root.append(funcs_node)
@@ -140,7 +147,7 @@ class DevhelpExtension(BaseExtension):
 
         tree = etree.ElementTree(root)
         tree.write(index_path, pretty_print=True,
-            encoding='utf-8', xml_declaration=True)
+                   encoding='utf-8', xml_declaration=True)
 
         return opath
 
@@ -148,16 +155,17 @@ class DevhelpExtension(BaseExtension):
         dh_html_path = self.__format(doc_repo)
         formatter = self.doc_repo.extensions['core'].get_formatter('html')
         html_path = os.path.join(self.doc_repo.output,
-                formatter.get_output_folder())
+                                 formatter.get_output_folder())
 
         recursive_overwrite(html_path, dh_html_path)
 
         # Remove some stuff not relevant in devhelp
         with open(os.path.join(dh_html_path, 'assets', 'css',
-            'devhelp.css'), 'w') as _:
+                               'devhelp.css'), 'w') as _:
             _.write('[data-hotdoc-role="navigation"] {display: none;}\n')
 
-    def __formatting_page_cb(self, formatter, page):
+    @staticmethod
+    def __formatting_page_cb(formatter, page):
         page.output_attrs['html']['stylesheets'].add(
             os.path.join(HERE, 'devhelp.css'))
 
@@ -176,17 +184,21 @@ class DevhelpExtension(BaseExtension):
     @staticmethod
     def add_arguments(parser):
         group = parser.add_argument_group('Devhelp extension',
-                DESCRIPTION)
-        group.add_argument('--devhelp-activate', action="store_true",
-                help="Activate the devhelp extension", dest='devhelp_activate')
+                                          DESCRIPTION)
+        group.add_argument('--devhelp-activate',
+                           action="store_true",
+                           help="Activate the devhelp extension",
+                           dest='devhelp_activate')
 
     @staticmethod
     def parse_config(doc_repo, config):
-        DevhelpExtension.activated = bool(config.get('devhelp_activate', False))
-        if DevhelpExtension.activated and config.get('project_name', None) is None:
+        DevhelpExtension.activated = bool(
+            config.get('devhelp_activate', False))
+        if (DevhelpExtension.activated and
+                config.get('project_name', None) is None):
             error('invalid-config',
-                'To activate the devhelp extension, --project-name has to be '
-                'specified.')
+                  'To activate the devhelp extension,'
+                  '--project-name has to be specified.')
 
 
 def get_extension_classes():

@@ -20,14 +20,15 @@
 # pylint: disable=invalid-name
 
 import unittest
+from hotdoc.core.exceptions import HotdocException
 from hotdoc.utils.loggable import Logger, ERROR, WARNING, LogEntry
 
 
-class FooError(Exception):
+class FooError(HotdocException):
     pass
 
 
-class BazError(Exception):
+class BazError(HotdocException):
     pass
 
 

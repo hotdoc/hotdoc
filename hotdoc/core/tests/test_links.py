@@ -21,7 +21,6 @@
 # pylint: disable=no-self-use
 # pylint: disable=too-few-public-methods
 # pylint: disable=too-many-instance-attributes
-
 import unittest
 import os
 import shutil

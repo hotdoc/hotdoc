@@ -19,14 +19,15 @@
 """
 Core of the core.
 """
-
 import argparse
 import hashlib
-import cPickle as pickle
+import pickle as pickle
 import os
 import shutil
 import sys
 import io
+
+from collections import OrderedDict
 
 from hotdoc.core import file_includer
 from hotdoc.core.base_extension import BaseExtension
@@ -117,8 +118,8 @@ class DocRepo(object):
             self.datadir = "/usr/share"
 
         self.__conf_file = None
-        self.__extension_classes = {
-            CoreExtension.extension_name: CoreExtension}
+        self.__extension_classes = OrderedDict({
+            CoreExtension.extension_name: CoreExtension})
         self.__index_file = None
         self.__root_page = None
         self.__base_doc_folder = None
@@ -149,8 +150,8 @@ class DocRepo(object):
         """
         Banana banana
         """
-        pages = self.doc_tree.get_pages_for_symbol(symbol.unique_name)
-        if not pages:
+        page = self.doc_tree.get_page_for_symbol(symbol.unique_name)
+        if not page:
             return False
 
         old_comment = symbol.comment
@@ -168,11 +169,9 @@ class DocRepo(object):
         if new_comment.name != symbol.unique_name:
             return False
 
-        pages = pages.values()
         symbol.comment = new_comment
-        for page in pages:
-            formatter = self.__get_formatter(page.extension_name)
-            formatter.patch_page(page, symbol, self.output)
+        formatter = self.__get_formatter(page.extension_name)
+        formatter.patch_page(page, symbol, self.output)
 
         return True
 
@@ -224,7 +223,7 @@ class DocRepo(object):
 
         self.doc_tree = DocTree(self.get_private_folder(), self.include_paths)
 
-        for extension in self.extensions.values():
+        for extension in list(self.extensions.values()):
             info('Setting up %s' % extension.extension_name)
             extension.setup()
             self.doc_database.flush()
@@ -271,7 +270,7 @@ class DocRepo(object):
                     _.write(u'%s ' % dep)
 
             if self.doc_tree:
-                for page in self.doc_tree.get_pages().values():
+                for page in list(self.doc_tree.get_pages().values()):
                     if not page.generated:
                         empty_targets.append(page.source_file)
                         _.write(u'%s ' % page.source_file)
@@ -280,7 +279,7 @@ class DocRepo(object):
                 _.write(u'\n\n%s:' % empty_target)
 
     def __add_default_tags(self, _, comment):
-        for validator in self.tag_validators.values():
+        for validator in list(self.tag_validators.values()):
             if validator.default and validator.name not in comment.tags:
                 comment.tags[validator.name] = \
                     Tag(name=validator.name,
@@ -322,30 +321,30 @@ class DocRepo(object):
 
     def __check_initial_args(self, args):
         if args.version:
-            print VERSION
+            print(VERSION)
         elif args.makefile_path:
             here = os.path.dirname(__file__)
             path = os.path.join(here, '..', 'utils', 'hotdoc.mk')
-            print os.path.abspath(path)
+            print(os.path.abspath(path))
         elif args.get_conf_path:
             key = args.get_conf_path
             path = self.config.get_path(key, rel_to_cwd=True)
             if path is not None:
-                print path
+                print(path)
         elif args.get_conf_key:
             key = args.get_conf_key
             value = self.config.get(args.get_conf_key, None)
             if value is not None:
-                print value
+                print(value)
         elif args.get_private_folder:
-            print os.path.relpath(self.__private_folder,
-                                  self.config.get_invoke_dir())
+            print(os.path.relpath(self.__private_folder,
+                                  self.config.get_invoke_dir()))
         elif args.has_extension:
             ext_name = args.has_extension
-            print ext_name in self.__extension_classes
+            print(ext_name in self.__extension_classes)
         elif args.list_extensions:
             for ext_name in self.__extension_classes:
-                print ext_name
+                print(ext_name)
         else:
             self.parser.print_usage()
 
@@ -479,7 +478,7 @@ class DocRepo(object):
         actual_args = {}
         defaults = {'output_format': 'html'}
 
-        for key, value in overrides.items():
+        for key, value in list(overrides.items()):
             if key in ('cmd', 'conf_file', 'dry'):
                 continue
             if value != self.parser.get_default(key):
@@ -494,7 +493,7 @@ class DocRepo(object):
         index = self.config.get_index()
 
         if index:
-            hash_obj = hashlib.md5(self.config.get_index())
+            hash_obj = hashlib.md5(self.config.get_index().encode('utf-8'))
             priv_name = 'hotdoc-private-' + hash_obj.hexdigest()
         else:
             priv_name = 'hotdoc-private'
@@ -524,14 +523,14 @@ class DocRepo(object):
             os.mkdir(folder)
 
     def __create_extensions(self, extra_paths):
-        for ext_class in self.__extension_classes.values():
+        for ext_class in list(self.__extension_classes.values()):
             ext = ext_class(self)
             self.extensions[ext.extension_name] = ext
 
         extra_classes = get_extra_extension_classes(extra_paths)
         self.__extension_classes.update(extra_classes)
 
-        for ext_class in extra_classes.values():
+        for ext_class in list(extra_classes.values()):
             ext = ext_class(self)
             self.extensions[ext.extension_name] = ext
 

@@ -20,7 +20,7 @@
 Banana banana
 """
 import codecs
-import commands
+import subprocess
 
 
 # pylint: disable=too-few-public-methods
@@ -33,8 +33,8 @@ class Patcher(object):
         """
         Banana banana
         """
-        file_encoding = commands.getoutput('file -b --mime-encoding %s' %
-                                           filename)
+        file_encoding = subprocess.getoutput('file -b --mime-encoding %s' %
+                                             filename)
         with codecs.open(filename, 'r', file_encoding) as _:
             lines = _.readlines()
 

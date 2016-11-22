@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-git-pylint-commit-hook --suppress-report --pylint-params="--disable=locally-disabled --disable=fixme --disable=import-error" --limit=10.0 && git_pep8_commit_hook
+git-pylint-commit-hook --suppress-report --pylint-params="--disable=locally-disabled --disable=fixme --disable=import-error --unsafe-load-any-extension=y" --limit=10.0 && git_pep8_commit_hook

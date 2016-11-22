@@ -19,7 +19,6 @@
 """
 Defines and tests ChangeTracker
 """
-
 import os
 from collections import defaultdict
 
@@ -82,7 +81,7 @@ class ChangeTracker(object):
         """
         Banana banana
         """
-        for filename, last_mtime in self.hard_deps_mtimes.items():
+        for filename, last_mtime in list(self.hard_deps_mtimes.items()):
             mtime = get_mtime(filename)
 
             if mtime == -1 or mtime != last_mtime:
@@ -95,31 +94,31 @@ if __name__ == '__main__':
 
     # Initial build
     os.system('touch a b c d')
-    print "Should be ([a, b, c, d], [])"
-    print CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
+    print("Should be ([a, b, c, d], [])")
+    print(CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing'))
 
     # Build where nothing changed
-    print "Should be ([], [])"
-    print CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
+    print("Should be ([], [])")
+    print(CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing'))
 
     # Build with two files changed
     os.system('touch b d')
-    print "Should be ([b, d], [])"
-    print CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
+    print("Should be ([b, d], [])")
+    print(CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing'))
 
     # Build where one file was removed
     os.system('rm -f b')
-    print "Should be ([b], [])"
-    print CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
-    print "Should be ([], [])"
-    print CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
+    print("Should be ([b], [])")
+    print(CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing'))
+    print("Should be ([], [])")
+    print(CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing'))
 
     # Build where one file was unlisted
-    print "Should be ([], [a])"
-    print CTRACKER.get_stale_files(['b', 'c', 'd'], 'testing')
+    print("Should be ([], [a])")
+    print(CTRACKER.get_stale_files(['b', 'c', 'd'], 'testing'))
 
     # Build with file listed again
-    print "Should be ([a], [])"
-    print CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing')
+    print("Should be ([a], [])")
+    print(CTRACKER.get_stale_files(['a', 'b', 'c', 'd'], 'testing'))
 
     os.system('rm -f a b c d')

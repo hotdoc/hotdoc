@@ -19,7 +19,6 @@
 """
 A syntax highlighting module
 """
-
 import os
 
 from hotdoc.core.base_extension import BaseExtension

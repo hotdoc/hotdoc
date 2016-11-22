@@ -18,7 +18,6 @@
 
 """Banana banana
 """
-
 import os
 
 # pylint: disable=import-error
@@ -91,7 +90,7 @@ class DocDatabase(object):
             debug('Created symbol with unique name %s' % unique_name,
                   'symbols')
 
-        for key, value in kwargs.items():
+        for key, value in list(kwargs.items()):
             setattr(symbol, key, value)
 
         if self.__incremental:

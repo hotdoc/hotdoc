@@ -23,7 +23,6 @@ Code-parsing extensions should only create symbols defined
 here for the while, subclassing will be formalized in the
 future.
 """
-
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, PickleType, String
 
 from hotdoc.core.comment_block import comment_from_tag
@@ -526,6 +525,7 @@ class ClassSymbol(Symbol):
 
     def get_children_symbols(self):
         return self.hierarchy + list(self.children.values())
+
 
 class InterfaceSymbol(ClassSymbol):
     """

@@ -128,7 +128,7 @@ def get_extra_extension_classes(paths):
             classes = activation_function()
         # pylint: disable=broad-except
         except Exception as _:
-            print "Failed to load %s" % entry_point.module_name, _
+            print("Failed to load %s" % entry_point.module_name, _)
             continue
 
         for klass in classes:
@@ -151,7 +151,7 @@ def get_installed_extension_classes(sort):
             classes = activation_function()
         # pylint: disable=broad-except
         except Exception as _:
-            print "Failed to load %s" % entry_point.module_name, _
+            print("Failed to load %s" % entry_point.module_name, _)
             continue
 
         for klass in classes:
@@ -160,25 +160,24 @@ def get_installed_extension_classes(sort):
     if not sort:
         return all_classes
 
-    for klass in all_classes.values():
+    klass_list = list(all_classes.values())
+
+    for i, klass in enumerate(klass_list):
         deps = klass.get_dependencies()
-        satisfied = True
         topodeps = set()
         for dep in deps:
             if dep.dependency_name not in all_classes:
-                print "Missing dependency %s for %s" % (dep.dependency_name,
-                                                        klass.extension_name)
-                satisfied = False
-                break
+                print("Missing dependency %s for %s" % (dep.dependency_name,
+                                                        klass.extension_name))
+                continue
             if dep.is_upstream:
-                topodeps.add(all_classes[dep.dependency_name])
+                topodeps.add(
+                    klass_list.index(all_classes[dep.dependency_name]))
 
-        if not satisfied:
-            continue
+        deps_map[i] = topodeps
 
-        deps_map[klass] = topodeps
-
-    sorted_classes = toposort_flatten(deps_map)
+    sorted_class_indices = toposort_flatten(deps_map)
+    sorted_classes = [klass_list[i] for i in sorted_class_indices]
     return sorted_classes
 
 # Recipe from http://code.activestate.com/recipes/576694/
@@ -280,7 +279,7 @@ def dedent(line):
     if indentation % 8 != 0:
         raise IndentError(column=indentation)
 
-    return indentation / 8, line.strip()
+    return indentation // 8, line.strip()
 
 
 def dequote(line):
@@ -296,14 +295,14 @@ def id_from_text(text, add_hash=False):
     """
     Banana banana
     """
-    id_ = text.strip().lower().replace(' ', '-').replace(
-        '\t', '-').replace('\n', '-')
-    # We don't want no utf-8 in urls
-    id_ = str(re.sub(r'[^\x00-\x7F]+', '', id_))
+    id_ = text.strip().lower()
+
+    # No unicode in urls
+    id_ = id_.encode('ascii', errors='ignore').decode()
+
+    id_ = re.sub(r"[^\w\s]", '', id_)
+    id_ = re.sub(r"\s+", '-', id_)
     if add_hash:
-        id_ = u'#%s' % id_.translate(
-            None, r"[!\"#$%&'\(\)\*\+,\.\/:;<=>\?\@\[\\\]\^`\{\|\}~]")
+        return '#%s' % id_
     else:
-        id_ = id_.translate(
-            None, r"[!\"#$%&'\(\)\*\+,\.\/:;<=>\?\@\[\\\]\^`\{\|\}~]")
-    return id_
+        return id_

@@ -19,7 +19,6 @@
 """
 Implement a high-level config parser for hotdoc.
 """
-
 import os
 import json
 import glob
@@ -308,14 +307,14 @@ class ConfigParser(object):
                 tracked configuration.
         """
         all_deps = OrderedSet()
-        for key, _ in self.__config.items():
+        for key, _ in list(self.__config.items()):
             if key in self.__cli:
                 continue
 
             if key.endswith('sources'):
                 all_deps |= self.get_sources(key[:len('sources') * -1])
 
-        for key, _ in self.__cli.items():
+        for key, _ in list(self.__cli.items()):
             if key.endswith('sources'):
                 all_deps |= self.get_sources(key[:len('sources') * -1])
 
@@ -344,12 +343,12 @@ class ConfigParser(object):
             conf_dir = self.__conf_dir
 
         final_conf = {}
-        for key, value in self.__config.items():
+        for key, value in list(self.__config.items()):
             if key in self.__cli:
                 continue
             final_conf[key] = value
 
-        for key, value in self.__cli.items():
+        for key, value in list(self.__cli.items()):
             if (key.endswith('index') and not key.endswith('smart_index')) or \
                     key in ['sitemap', 'output']:
                 path = self.__abspath(value, from_conf=False)

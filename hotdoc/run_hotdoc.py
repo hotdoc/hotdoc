@@ -43,10 +43,10 @@ def run(args):
     except HotdocException:
         res = len(Logger.get_issues())
     except Exception:
-        print ("An unknown error happened while building the documentation"
-               " and hotdoc cannot recover from it. Please report "
-               "a bug with this error message and the steps to "
-               "reproduce it")
+        print("An unknown error happened while building the documentation"
+              " and hotdoc cannot recover from it. Please report "
+              "a bug with this error message and the steps to "
+              "reproduce it")
         traceback.print_exc()
         res = 1
     finally:

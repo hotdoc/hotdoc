@@ -22,7 +22,6 @@
 # pylint: disable=no-self-use
 # pylint: disable=too-few-public-methods
 # pylint: disable=too-many-instance-attributes
-
 import unittest
 
 from schema import Optional, And
@@ -44,6 +43,6 @@ class TestPage(unittest.TestCase):
         meta = {'foo': u'bar'}
         with self.assertRaises(InvalidPageMetadata):
             page = Page('some-page', None, '.', meta)
-        Page.meta_schema[Optional('foo')] = And(unicode, len)
+        Page.meta_schema[Optional('foo')] = And(str, len)
         page = Page('some-page', None, '.', meta=meta)
         self.assertEqual(page.meta.get('foo'), u'bar')

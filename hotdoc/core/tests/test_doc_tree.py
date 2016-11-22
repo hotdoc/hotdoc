@@ -21,7 +21,6 @@
 # pylint: disable=no-self-use
 # pylint: disable=too-few-public-methods
 # pylint: disable=too-many-instance-attributes
-
 import unittest
 import shutil
 import io
@@ -230,7 +229,7 @@ class TestDocTree(unittest.TestCase):
 
     def __assert_extension_names(self, doc_tree, name_map):
         pages = doc_tree.get_pages()
-        for name, ext_name in name_map.items():
+        for name, ext_name in list(name_map.items()):
             page = pages[name]
             self.assertEqual(ext_name, page.extension_name)
 

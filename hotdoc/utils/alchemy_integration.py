@@ -72,13 +72,13 @@ class MutableList(Mutable, list):
     def __setitem__(self, key, value):
         old_value = list.__getitem__(self, key)
         # pylint: disable=no-member
-        for obj, key in self._parents.items():
+        for obj, key in list(self._parents.items()):
             # pylint: disable=protected-access
             old_value._parents.pop(obj, None)
 
         list.__setitem__(self, key, value)
         # pylint: disable=protected-access
-        for obj, key in self._parents.items():
+        for obj, key in list(self._parents.items()):
             value._parents[obj] = key
 
         self.changed()
@@ -117,7 +117,7 @@ class MutableList(Mutable, list):
             if not isinstance(item, Mutable):
                 continue
             # pylint: disable=no-member
-            for obj, key in self._parents.items():
+            for obj, key in list(self._parents.items()):
                 # pylint: disable=protected-access
                 item._parents[obj] = key
         return list(self)

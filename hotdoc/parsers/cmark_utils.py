@@ -27,10 +27,8 @@ class CMarkDiagnostic(object):
     """
     A simple diagnostic class to be instantiated by the cmark C module
     """
-    def __init__(self, code, message, lineno, column):
-        if isinstance(message, str):
-            message = message.decode('utf-8')
 
+    def __init__(self, code, message, lineno, column):
         self.code = code
         self.message = message
         self.lineno = lineno

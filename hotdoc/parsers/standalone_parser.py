@@ -66,6 +66,7 @@ class Sitemap(object):
     Attributes:
         index_file: str, the path to the index file.
     """
+
     def __init__(self, root, source_file, index_file):
         self.__root = root
         self.source_file = source_file
@@ -108,14 +109,14 @@ class Sitemap(object):
         return self.get_all_sources()[source_file]
 
     def __add_one(self, source_file, subpages, _):
-        self.__all_sources[source_file] = subpages.keys()
+        self.__all_sources[source_file] = list(subpages.keys())
 
     # pylint: disable=no-self-use
     def __dump_one(self, source_file, _, level):
-        print level * '\t' + source_file
+        print(level * '\t' + source_file)
 
     def __do_walk(self, parent, level, action):
-        for source_file, subpages in parent.items():
+        for source_file, subpages in list(parent.items()):
             action(source_file, subpages, level)
             self.__do_walk(subpages, level + 1, action)
 
@@ -126,6 +127,7 @@ class SitemapParser(object):
     """
     # pylint: disable=too-many-locals
     # pylint: disable=no-self-use
+
     def parse(self, filename):
         """
         Parse a sitemap file.

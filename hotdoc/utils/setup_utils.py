@@ -110,10 +110,10 @@ def require_clean_submodules(repo_root, submodules):
     status = _check_submodule_status(repo_root, submodules)
 
     if status == "missing":
-        print "checking out submodules for the first time"
+        print("checking out submodules for the first time")
         _update_submodules(repo_root)
     elif status == "unclean":
-        print UNCLEAN_SUBMODULES_MSG
+        print(UNCLEAN_SUBMODULES_MSG)
 
 
 def symlink(source, link_name):
