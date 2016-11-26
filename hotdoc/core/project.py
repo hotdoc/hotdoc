@@ -44,7 +44,7 @@ from hotdoc.utils.utils import (get_installed_extension_classes,
                                 all_subclasses, get_extra_extension_classes)
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.signals import Signal
-from hotdoc.parsers.sitemap_parser import SitemapParser
+from hotdoc.parsers.sitemap import SitemapParser
 
 
 SUBCOMMAND_DESCRIPTION = """

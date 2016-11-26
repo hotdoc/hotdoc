@@ -31,7 +31,7 @@ from hotdoc.core.database import Database
 from hotdoc.core.project import CoreExtension
 from hotdoc.core.symbols import FunctionSymbol
 from hotdoc.core.links import LinkResolver
-from hotdoc.parsers.sitemap_parser import SitemapParser
+from hotdoc.parsers.sitemap import SitemapParser
 from hotdoc.parsers import cmark
 from hotdoc.core.tree import Tree
 from hotdoc.core.extension import Extension

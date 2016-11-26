@@ -30,7 +30,7 @@ import os
 from hotdoc.core.database import Database
 from hotdoc.core.links import LinkResolver
 from hotdoc.parsers import cmark
-from hotdoc.parsers.sitemap_parser import (
+from hotdoc.parsers.sitemap import (
     SitemapParser, SitemapDuplicateError,
     SitemapError)
 from hotdoc.utils.utils import IndentError
