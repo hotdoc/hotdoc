@@ -162,13 +162,13 @@ class TagExtension(Extension):
                            nargs='+', dest='choices_blacklist')
 
     @staticmethod
-    def parse_config(doc_repo, config):
+    def parse_config(project, config):
         tag_prototypes = config.get('tag_prototypes', [])
 
         for prototype in tag_prototypes:
             validator = validator_from_prototype(prototype)
             if validator:
-                doc_repo.register_tag_validator(validator)
+                project.register_tag_validator(validator)
 
         blacklist_prototypes = config.get('choices_blacklist', [])
 
@@ -177,7 +177,7 @@ class TagExtension(Extension):
             if not blacklist:
                 continue
 
-            validator = doc_repo.tag_validators.get(blacklist.name)
+            validator = project.tag_validators.get(blacklist.name)
             if not validator:
                 continue
 

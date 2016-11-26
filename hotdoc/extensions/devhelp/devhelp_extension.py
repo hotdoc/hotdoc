@@ -74,13 +74,13 @@ class DevhelpExtension(Extension):
     argument_prefix = 'devhelp'
     activated = False
 
-    def __init__(self, doc_repo):
-        Extension.__init__(self, doc_repo)
+    def __init__(self, project):
+        Extension.__init__(self, project)
         self.__ext_languages = defaultdict(set)
         self.__resolved_symbols_map = {}
 
     def __writing_page_cb(self, formatter, page, path):
-        html_path = os.path.join(self.doc_repo.output, 'html')
+        html_path = os.path.join(self.project.output, 'html')
         relpath = os.path.relpath(path, html_path)
 
         dirname = os.path.dirname(relpath)
@@ -104,27 +104,27 @@ class DevhelpExtension(Extension):
             pnode.append(node)
             self.__format_subs(doc_tree, node, cpage)
 
-    def __format(self, doc_repo):
-        oname = doc_repo.project_name
+    def __format(self, project):
+        oname = project.project_name
         oname = re.sub(r'\W+', '-', oname)
-        title = doc_repo.project_name
-        if doc_repo.project_version:
-            oname += '-%s' % doc_repo.project_version
-            title += ' %s' % doc_repo.project_version
+        title = project.project_name
+        if project.project_version:
+            oname += '-%s' % project.project_version
+            title += ' %s' % project.project_version
 
-        opath = os.path.join(self.doc_repo.output, 'devhelp', oname)
+        opath = os.path.join(self.project.output, 'devhelp', oname)
 
         boilerplate = BOILERPLATE % (
             title,
-            doc_repo.doc_tree.root.link.ref,
+            project.doc_tree.root.link.ref,
             oname,
             'C')
 
         root = etree.fromstring(boilerplate)
 
         chapter_node = etree.Element('chapters')
-        self.__format_subs(doc_repo.doc_tree, chapter_node,
-                           doc_repo.doc_tree.root)
+        self.__format_subs(project.doc_tree, chapter_node,
+                           project.doc_tree.root)
         root.append(chapter_node)
 
         funcs_node = etree.Element('functions')
@@ -151,10 +151,10 @@ class DevhelpExtension(Extension):
 
         return opath
 
-    def __formatted_cb(self, doc_repo):
-        dh_html_path = self.__format(doc_repo)
-        formatter = self.doc_repo.extensions['core'].get_formatter('html')
-        html_path = os.path.join(self.doc_repo.output,
+    def __formatted_cb(self, project):
+        dh_html_path = self.__format(project)
+        formatter = self.project.extensions['core'].get_formatter('html')
+        html_path = os.path.join(self.project.output,
                                  formatter.get_output_folder())
 
         recursive_overwrite(html_path, dh_html_path)
@@ -174,12 +174,12 @@ class DevhelpExtension(Extension):
             return
 
         # FIXME update the index someday.
-        if self.doc_repo.incremental:
+        if self.project.incremental:
             return
 
         Formatter.writing_page_signal.connect(self.__writing_page_cb)
         Formatter.formatting_page_signal.connect(self.__formatting_page_cb)
-        self.doc_repo.formatted_signal.connect_after(self.__formatted_cb)
+        self.project.formatted_signal.connect_after(self.__formatted_cb)
 
     @staticmethod
     def add_arguments(parser):
@@ -191,7 +191,7 @@ class DevhelpExtension(Extension):
                            dest='devhelp_activate')
 
     @staticmethod
-    def parse_config(doc_repo, config):
+    def parse_config(project, config):
         DevhelpExtension.activated = bool(
             config.get('devhelp_activate', False))
         if (DevhelpExtension.activated and

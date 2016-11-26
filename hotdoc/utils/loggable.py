@@ -322,7 +322,7 @@ class Logger(Configurable):
         debug("Verbosity set to %d" % (WARNING - Logger._verbosity), 'logging')
 
     @staticmethod
-    def parse_config(doc_repo, config):
+    def parse_config(project, config):
         Logger._verbosity = max(0, Logger._verbosity - (
             config.get('verbose') or 0))
 

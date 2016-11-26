@@ -43,8 +43,8 @@ class SyntaxHighlightingExtension(Extension):
     argument_prefix = 'syntax-highlighting'
     activated = False
 
-    def __init__(self, doc_repo):
-        Extension.__init__(self, doc_repo)
+    def __init__(self, project):
+        Extension.__init__(self, project)
         self.__asset_folders = set()
 
     def __formatting_page_cb(self, formatter, page):
@@ -62,10 +62,10 @@ class SyntaxHighlightingExtension(Extension):
         folder = os.path.join('html', 'assets', 'prism_components')
         self.__asset_folders.add(folder)
 
-    def __formatted_cb(self, doc_repo):
+    def __formatted_cb(self, project):
         ipath = os.path.join(HERE, 'prism', 'components')
         for folder in self.__asset_folders:
-            opath = os.path.join(doc_repo.output, folder)
+            opath = os.path.join(project.output, folder)
             recursive_overwrite(ipath, opath)
 
     def setup(self):
@@ -73,7 +73,7 @@ class SyntaxHighlightingExtension(Extension):
             return
 
         Formatter.formatting_page_signal.connect(self.__formatting_page_cb)
-        self.doc_repo.formatted_signal.connect(self.__formatted_cb)
+        self.project.formatted_signal.connect(self.__formatted_cb)
 
     @staticmethod
     def add_arguments(parser):
@@ -85,6 +85,6 @@ class SyntaxHighlightingExtension(Extension):
                            dest='syntax_highlighting_activate')
 
     @staticmethod
-    def parse_config(doc_repo, config):
+    def parse_config(project, config):
         SyntaxHighlightingExtension.activated = \
             bool(config.get('syntax_highlighting_activate', False))

@@ -22,7 +22,7 @@
 
 import traceback
 
-from hotdoc.core.doc_repo import DocRepo
+from hotdoc.core.project import Project
 from hotdoc.core.exceptions import HotdocException
 from hotdoc.utils.loggable import Logger
 
@@ -32,14 +32,14 @@ def run(args):
     Banana banana
     """
     res = 0
-    doc_repo = DocRepo()
+    project = Project()
 
     # pylint: disable=broad-except
     try:
-        doc_repo.load_command_line(args)
-        doc_repo.setup()
-        doc_repo.format()
-        doc_repo.persist()
+        project.load_command_line(args)
+        project.setup()
+        project.format()
+        project.persist()
     except HotdocException:
         res = len(Logger.get_issues())
     except Exception:
@@ -50,6 +50,6 @@ def run(args):
         traceback.print_exc()
         res = 1
     finally:
-        doc_repo.finalize()
+        project.finalize()
 
     return res

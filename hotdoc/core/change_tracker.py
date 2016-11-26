@@ -28,7 +28,7 @@ from hotdoc.utils.utils import OrderedSet, get_mtime
 class ChangeTracker(object):
     """
     This class should only be instantiated and used through
-    the main `DocRepo` instance.
+    the main `Project` instance.
 
     It provides with modification time tracking and some
     other utilities.

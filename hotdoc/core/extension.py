@@ -68,7 +68,7 @@ class Extension(Configurable):
     Attributes:
         extension_name: str, the unique name of this extension, should
             be overriden and namespaced appropriately.
-        doc_repo: doc_repo.DocRepo, the DocRepo instance which documentation
+        project: project.Project, the Project instance which documentation
             hotdoc is working on.
         formatters: dict, a mapping of format -> `formatter.Formatter`
             subclass instances.
@@ -83,16 +83,16 @@ class Extension(Configurable):
     path_arguments = {}
     smart_index = False
 
-    def __init__(self, doc_repo):
+    def __init__(self, project):
         """Constructor for `Extension`.
 
         This should never get called directly.
 
         Args:
-            doc_repo: The `doc_repo.DocRepo` instance which documentation
+            project: The `project.Project` instance which documentation
                 is being generated.
         """
-        self.doc_repo = doc_repo
+        self.project = project
         DocTree.resolve_placeholder_signal.connect(
             self.__resolve_placeholder_cb)
         DocTree.update_signal.connect(self.__update_doc_tree_cb)
@@ -177,7 +177,7 @@ class Extension(Configurable):
         signals they have to connect to.
 
         Note that this will be called *after* the `doc_tree.DocTree`
-        of this instance's `Extension.doc_repo` has been fully
+        of this instance's `Extension.project` has been fully
         constructed, but before its `doc_tree.DocTree.resolve_symbols`
         method has been called.
         """
@@ -186,13 +186,13 @@ class Extension(Configurable):
     def get_stale_files(self, all_files, prefix=None):
         """
         Shortcut function to `change_tracker.ChangeTracker.get_stale_files`
-        for the tracker of this instance's `Extension.doc_repo`
+        for the tracker of this instance's `Extension.project`
 
         Args:
             all_files: see `change_tracker.ChangeTracker.get_stale_files`
         """
         prefix = prefix or self.extension_name
-        return self.doc_repo.change_tracker.get_stale_files(
+        return self.project.change_tracker.get_stale_files(
             all_files,
             prefix)
 
@@ -347,7 +347,7 @@ class Extension(Configurable):
         Returns:
             symbols.Symbol: the created symbol, or `None`.
         """
-        sym = self.doc_repo.database.get_or_create_symbol(*args, **kwargs)
+        sym = self.project.database.get_or_create_symbol(*args, **kwargs)
         # pylint: disable=unidiomatic-typecheck
         if sym and type(sym) != Symbol and sym.filename:
             self._created_symbols[sym.filename].add(sym.unique_name)
@@ -382,7 +382,7 @@ class Extension(Configurable):
             index.title = self._get_smart_index_title()
 
         for sym_name in unlisted_sym_names:
-            sym = self.doc_repo.database.get_symbol(sym_name)
+            sym = self.project.database.get_symbol(sym_name)
             if sym and sym.filename in self._get_all_sources():
                 self._created_symbols[sym.filename].add(sym_name)
 
@@ -413,7 +413,7 @@ class Extension(Configurable):
             page = Page(page_name, None, os.path.dirname(page_name))
             page.extension_name = self.extension_name
             page.generated = True
-            page.comment = self.doc_repo.database.get_comment(page_name)
+            page.comment = self.project.database.get_comment(page_name)
             doc_tree.add_page(index, page_name, page)
         else:
             page.is_stale = True
@@ -437,7 +437,7 @@ class Extension(Configurable):
 
     def format_page(self, page, link_resolver, output):
         """
-        Called by `doc_repo.DocRepo.format_page`, to leave full control
+        Called by `project.Project.format_page`, to leave full control
         to extensions over the formatting of the pages they are
         responsible of.
 

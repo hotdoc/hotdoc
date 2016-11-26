@@ -30,6 +30,6 @@ class Configurable(object):
         pass
 
     @staticmethod
-    def parse_config(doc_repo, config):
+    def parse_config(project, config):
         """Banana banana"""
         pass

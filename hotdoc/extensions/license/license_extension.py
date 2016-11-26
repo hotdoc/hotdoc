@@ -113,8 +113,8 @@ class LicenseExtension(Extension):
     default_copyright_holders = []
     authors_hold_copyright = True
 
-    def __init__(self, doc_repo):
-        Extension.__init__(self, doc_repo)
+    def __init__(self, project):
+        Extension.__init__(self, project)
         self.__installed_assets = set()
 
     @staticmethod
@@ -201,7 +201,7 @@ class LicenseExtension(Extension):
         Formatter.formatting_page_signal.connect(self.__formatting_page_cb)
         Formatter.get_extra_files_signal.connect(self.__get_extra_files_cb)
 
-        for ext in list(self.doc_repo.extensions.values()):
+        for ext in list(self.project.extensions.values()):
             formatter = ext.formatters.get('html')
             template_path = os.path.join(HERE, 'html_templates')
             formatter.engine.loader.searchpath.append(template_path)
@@ -221,7 +221,7 @@ class LicenseExtension(Extension):
                            dest="authors_hold_copyright", action='store')
 
     @staticmethod
-    def parse_config(doc_repo, config):
+    def parse_config(project, config):
         short_name = config.get("default-license")
         if short_name is not None:
             try:

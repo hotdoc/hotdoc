@@ -47,23 +47,23 @@ def list_html_files(root_dir, exclude_dirs):
 class SearchExtension(Extension):
     extension_name = 'search'
 
-    def __init__(self, doc_repo):
-        Extension.__init__(self, doc_repo)
-        doc_repo.formatted_signal.connect(self.__build_index)
+    def __init__(self, project):
+        Extension.__init__(self, project)
+        project.formatted_signal.connect(self.__build_index)
         self.enabled = False
         self.script = os.path.abspath(os.path.join(HERE, 'trie.js'))
 
     def setup(self):
-        self.enabled = self.doc_repo.output_format == 'html'
+        self.enabled = self.project.output_format == 'html'
         Page.formatting_signal.connect(self.__formatting_page)
 
-    def __build_index(self, doc_repo):
+    def __build_index(self, project):
         # FIXME
-        if self.doc_repo.incremental:
+        if self.project.incremental:
             return
 
-        formatter = doc_repo.extensions['core'].get_formatter('html')
-        output = os.path.join(doc_repo.output, formatter.get_output_folder())
+        formatter = project.extensions['core'].get_formatter('html')
+        output = os.path.join(project.output, formatter.get_output_folder())
 
         assets_path = os.path.join(output, 'assets')
         dest = os.path.join(assets_path, 'js')
@@ -83,13 +83,13 @@ class SearchExtension(Extension):
             return
 
         index = SearchIndex(output, dest,
-                            self.doc_repo.get_private_folder())
+                            self.project.get_private_folder())
         index.scan(stale)
 
         for subdir in subdirs:
             if subdir == 'assets':
                 continue
-            shutil.copyfile(os.path.join(self.doc_repo.get_private_folder(),
+            shutil.copyfile(os.path.join(self.project.get_private_folder(),
                                          'search.trie'),
                             os.path.join(topdir, subdir, 'dumped.trie'))
 

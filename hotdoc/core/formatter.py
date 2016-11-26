@@ -908,7 +908,7 @@ class Formatter(Configurable):
                            help="Enable html headings numbering")
 
     @staticmethod
-    def parse_config(doc_repo, config):
+    def parse_config(project, config):
         """Banana banana
         """
         html_theme = config.get('html_theme', 'default')

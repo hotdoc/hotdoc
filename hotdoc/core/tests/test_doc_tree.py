@@ -28,7 +28,7 @@ import os
 
 from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.database import Database
-from hotdoc.core.doc_repo import CoreExtension
+from hotdoc.core.project import CoreExtension
 from hotdoc.core.symbols import FunctionSymbol
 from hotdoc.core.links import LinkResolver
 from hotdoc.parsers.sitemap_parser import SitemapParser
@@ -42,10 +42,10 @@ class TestExtension(Extension):
     extension_name = 'test-extension'
     argument_prefix = 'test'
 
-    def __init__(self, doc_repo):
+    def __init__(self, project):
         self.formatters = {'html': None}
         self.smart_index = True
-        super(TestExtension, self).__init__(doc_repo)
+        super(TestExtension, self).__init__(project)
 
     def setup(self):
         stale, _ = self.get_stale_files(self.sources)

@@ -54,7 +54,7 @@ class GtkDocParser(object):
     Banana banana
     """
 
-    def __init__(self, doc_repo):
+    def __init__(self, project):
         """
         Lifted from
         http://stackoverflow.com/questions/5323703/regex-how-to-match-sequence-of-key-value-pairs-at-end-of-string
@@ -66,12 +66,12 @@ class GtkDocParser(object):
                                    (?!\S+=)\S+
                                    )+
                                    ''', re.VERBOSE)
-        self.doc_repo = doc_repo
+        self.project = project
 
         tag_validation_regex = r'((?:^|\n)[ \t]*('
         tag_validation_regex += 'returns|Returns|since|Since|deprecated'\
             '|Deprecated|stability|Stability|Return value|topic|Topic'
-        for validator in list(doc_repo.tag_validators.values()):
+        for validator in list(project.tag_validators.values()):
             tag_validation_regex += '|%s|%s' % (validator.name,
                                                 validator.name.lower())
         tag_validation_regex += '):)'
@@ -220,7 +220,7 @@ class GtkDocParser(object):
         elif name.lower() == "topic":
             return self.__parse_topic_tag("topic", desc)
         else:
-            validator = self.doc_repo.tag_validators.get(name)
+            validator = self.project.tag_validators.get(name)
             if not validator:
                 print("FIXME no tag validator")
                 return None
@@ -480,7 +480,7 @@ class GtkDocStringFormatter(Configurable):
                                  "will not be emitted for comment issues"))
 
     @staticmethod
-    def parse_config(doc_repo, config):
+    def parse_config(project, config):
         """Banana banana
         """
         GtkDocStringFormatter.remove_xml_tags = config.get(

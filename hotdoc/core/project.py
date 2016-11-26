@@ -68,8 +68,8 @@ class CoreExtension(Extension):
     """
     extension_name = 'core'
 
-    def __init__(self, doc_repo):
-        super(CoreExtension, self).__init__(doc_repo)
+    def __init__(self, project):
+        super(CoreExtension, self).__init__(project)
         file_includer.include_signal.connect_after(self.__include_file_cb)
 
     # pylint: disable=no-self-use
@@ -88,7 +88,7 @@ class CoreExtension(Extension):
 
 
 # pylint: disable=too-many-instance-attributes
-class DocRepo(object):
+class Project(object):
     """
     Banana banana
     """
