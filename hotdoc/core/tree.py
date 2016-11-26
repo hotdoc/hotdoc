@@ -46,7 +46,7 @@ from hotdoc.core.database import Database
 from hotdoc.core.comment_block import Comment
 from hotdoc.parsers import cmark
 from hotdoc.utils.utils import OrderedSet, count_folders
-from hotdoc.utils.simple_signals import Signal
+from hotdoc.utils.signals import Signal
 from hotdoc.utils.loggable import info, debug, warn, error, Logger
 
 
@@ -70,7 +70,7 @@ yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
                      _no_duplicates_constructor)
 
 
-class DocTreeNoSuchPageException(HotdocSourceException):
+class TreeNoSuchPageException(HotdocSourceException):
     """
     Raised when a subpage listed in the sitemap file could not be found
     in any of the include paths.
@@ -78,7 +78,7 @@ class DocTreeNoSuchPageException(HotdocSourceException):
     pass
 
 
-Logger.register_error_code('no-such-subpage', DocTreeNoSuchPageException,
+Logger.register_error_code('no-such-subpage', TreeNoSuchPageException,
                            domain='doc-tree')
 Logger.register_warning_code('invalid-page-metadata', InvalidPageMetadata,
                              domain='doc-tree')
@@ -359,7 +359,7 @@ class Page(object):
 
 
 # pylint: disable=too-many-instance-attributes
-class DocTree(object):
+class Tree(object):
     "Banana banana"
     resolve_placeholder_signal = Signal(optimized=True)
     update_signal = Signal()
@@ -586,11 +586,11 @@ class DocTree(object):
         """Generator that yields pages in infix order
 
         Args:
-            parent: hotdoc.core.doc_tree.Page, optional, the page to start
-                traversal from. If None, defaults to the root of the doc_tree.
+            parent: hotdoc.core.tree.Page, optional, the page to start
+                traversal from. If None, defaults to the root of the tree.
 
         Yields:
-            hotdoc.core.doc_tree.Page: the next page
+            hotdoc.core.tree.Page: the next page
         """
         if parent is None:
             yield self.root
@@ -694,7 +694,7 @@ class DocTree(object):
     def resolve_symbols(self, database, link_resolver, page=None):
         """Will call resolve_symbols on all the stale subpages of the tree.
         Args:
-          page: hotdoc.core.doc_tree.Page, the page to resolve symbols in,
+          page: hotdoc.core.tree.Page, the page to resolve symbols in,
           will recurse on potential subpages.
         """
 

@@ -26,7 +26,7 @@ from schema import Schema, SchemaError, And, Use, Optional
 
 from hotdoc.core.extension import Extension
 from hotdoc.core.formatter import Formatter
-from hotdoc.core.doc_tree import Page
+from hotdoc.core.tree import Page
 from hotdoc.core.exceptions import HotdocException
 from hotdoc.utils.loggable import error, Logger
 

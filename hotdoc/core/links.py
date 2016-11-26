@@ -22,7 +22,7 @@ Banana banana
 import urllib.parse
 
 from hotdoc.utils.alchemy_integration import MutableObject
-from hotdoc.utils.simple_signals import Signal
+from hotdoc.utils.signals import Signal
 
 
 class Link(MutableObject):

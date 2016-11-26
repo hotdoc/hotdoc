@@ -43,7 +43,7 @@ from wheezy.template.ext.code import CodeExtension
 from wheezy.template.loader import FileLoader
 from schema import Schema, Optional
 
-from hotdoc.core.doc_tree import Page
+from hotdoc.core.tree import Page
 from hotdoc.core.symbols import\
     (FunctionSymbol, CallbackSymbol, ParameterSymbol,
      ReturnItemSymbol, FieldSymbol, QualifiedSymbol,
@@ -58,7 +58,7 @@ from hotdoc.utils.utils import (
 from hotdoc.core.exceptions import HotdocException
 from hotdoc.utils.loggable import Logger, warn, info
 from hotdoc.utils.configurable import Configurable
-from hotdoc.utils.simple_signals import Signal
+from hotdoc.utils.signals import Signal
 
 
 Page.meta_schema[Optional('extra', default=defaultdict())] = \

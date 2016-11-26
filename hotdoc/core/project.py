@@ -35,7 +35,7 @@ from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.comment_block import Tag
 from hotdoc.core.config import ConfigParser
 from hotdoc.core.database import Database
-from hotdoc.core.doc_tree import DocTree
+from hotdoc.core.tree import Tree
 from hotdoc.core.links import LinkResolver
 from hotdoc.utils.setup_utils import VERSION
 from hotdoc.utils.loggable import info, error
@@ -43,7 +43,7 @@ from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.utils import (get_installed_extension_classes,
                                 all_subclasses, get_extra_extension_classes)
 from hotdoc.utils.utils import OrderedSet
-from hotdoc.utils.simple_signals import Signal
+from hotdoc.utils.signals import Signal
 from hotdoc.parsers.sitemap_parser import SitemapParser
 
 
@@ -97,7 +97,7 @@ class Project(object):
 
     def __init__(self):
         self.output = None
-        self.doc_tree = None
+        self.tree = None
         self.change_tracker = None
         self.output_format = None
         self.include_paths = None
@@ -150,7 +150,7 @@ class Project(object):
         """
         Banana banana
         """
-        page = self.doc_tree.get_page_for_symbol(symbol.unique_name)
+        page = self.tree.get_page_for_symbol(symbol.unique_name)
         if not page:
             return False
 
@@ -184,7 +184,7 @@ class Project(object):
             return
 
         info('Persisting database and private files', 'persisting')
-        self.doc_tree.persist()
+        self.tree.persist()
         self.database.persist()
         with open(os.path.join(self.get_private_folder(),
                                'change_tracker.p'), 'wb') as _:
@@ -221,7 +221,7 @@ class Project(object):
                 configured.add(subclass.parse_config)
         self.__parse_config()
 
-        self.doc_tree = DocTree(self.get_private_folder(), self.include_paths)
+        self.tree = Tree(self.get_private_folder(), self.include_paths)
 
         for extension in list(self.extensions.values()):
             info('Setting up %s' % extension.extension_name)
@@ -229,10 +229,10 @@ class Project(object):
             self.database.flush()
 
         sitemap = SitemapParser().parse(self.sitemap_path)
-        self.doc_tree.parse_sitemap(self.change_tracker, sitemap)
+        self.tree.parse_sitemap(self.change_tracker, sitemap)
 
         info("Resolving symbols", 'resolution')
-        self.doc_tree.resolve_symbols(self.database, self.link_resolver)
+        self.tree.resolve_symbols(self.database, self.link_resolver)
         self.database.flush()
 
     def format(self):
@@ -242,7 +242,7 @@ class Project(object):
         if not self.output:
             return
 
-        self.doc_tree.format(self.link_resolver, self.output, self.extensions)
+        self.tree.format(self.link_resolver, self.output, self.extensions)
         self.config.dump(conf_file=os.path.join(self.output, 'hotdoc.json'))
         self.formatted_signal(self)
 
@@ -269,8 +269,8 @@ class Project(object):
                     empty_targets.append(dep)
                     _.write(u'%s ' % dep)
 
-            if self.doc_tree:
-                for page in list(self.doc_tree.get_pages().values()):
+            if self.tree:
+                for page in list(self.tree.get_pages().values()):
                     if not page.generated:
                         empty_targets.append(page.source_file)
                         _.write(u'%s ' % page.source_file)

@@ -21,7 +21,7 @@ The markdown file including system
 import re
 import os
 
-from hotdoc.utils.simple_signals import Signal
+from hotdoc.utils.signals import Signal
 
 # pylint: disable=invalid-name
 # pylint: disable=pointless-string-statement

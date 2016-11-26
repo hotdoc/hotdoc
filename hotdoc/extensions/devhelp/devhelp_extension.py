@@ -90,9 +90,9 @@ class DevhelpExtension(Extension):
                             sym.link.title)
             for sym in page.symbols]
 
-    def __format_subs(self, doc_tree, pnode, page):
+    def __format_subs(self, tree, pnode, page):
         for name in page.subpages:
-            cpage = doc_tree.get_pages()[name]
+            cpage = tree.get_pages()[name]
             if cpage.extension_name == 'gi-extension':
                 ref = 'c/%s' % cpage.link.ref
             else:
@@ -102,7 +102,7 @@ class DevhelpExtension(Extension):
                                  attrib={'name': cpage.title,
                                          'link': ref})
             pnode.append(node)
-            self.__format_subs(doc_tree, node, cpage)
+            self.__format_subs(tree, node, cpage)
 
     def __format(self, project):
         oname = project.project_name
@@ -116,15 +116,15 @@ class DevhelpExtension(Extension):
 
         boilerplate = BOILERPLATE % (
             title,
-            project.doc_tree.root.link.ref,
+            project.tree.root.link.ref,
             oname,
             'C')
 
         root = etree.fromstring(boilerplate)
 
         chapter_node = etree.Element('chapters')
-        self.__format_subs(project.doc_tree, chapter_node,
-                           project.doc_tree.root)
+        self.__format_subs(project.tree, chapter_node,
+                           project.tree.root)
         root.append(chapter_node)
 
         funcs_node = etree.Element('functions')

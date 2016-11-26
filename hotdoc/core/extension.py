@@ -24,7 +24,7 @@ from collections import defaultdict
 
 from hotdoc.core.file_includer import find_md_file
 from hotdoc.core.symbols import Symbol
-from hotdoc.core.doc_tree import DocTree, Page
+from hotdoc.core.tree import Tree, Page
 from hotdoc.core.formatter import Formatter
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.loggable import debug, info, warn, error
@@ -93,9 +93,9 @@ class Extension(Configurable):
                 is being generated.
         """
         self.project = project
-        DocTree.resolve_placeholder_signal.connect(
+        Tree.resolve_placeholder_signal.connect(
             self.__resolve_placeholder_cb)
-        DocTree.update_signal.connect(self.__update_doc_tree_cb)
+        Tree.update_signal.connect(self.__update_tree_cb)
 
         if not hasattr(self, 'formatters'):
             self.formatters = {"html": Formatter([])}
@@ -176,9 +176,9 @@ class Extension(Configurable):
         source files they have to scan, and connect to the various
         signals they have to connect to.
 
-        Note that this will be called *after* the `doc_tree.DocTree`
+        Note that this will be called *after* the `tree.Tree`
         of this instance's `Extension.project` has been fully
-        constructed, but before its `doc_tree.DocTree.resolve_symbols`
+        constructed, but before its `tree.Tree.resolve_symbols`
         method has been called.
         """
         pass
@@ -354,7 +354,7 @@ class Extension(Configurable):
 
         return sym
 
-    def __resolve_placeholder_cb(self, doc_tree, name, include_paths):
+    def __resolve_placeholder_cb(self, tree, name, include_paths):
         self.__find_package_root()
 
         override_path = os.path.join(self.__package_root, name)
@@ -369,12 +369,12 @@ class Extension(Configurable):
             return path or True, None
         return None
 
-    def __update_doc_tree_cb(self, doc_tree, unlisted_sym_names):
+    def __update_tree_cb(self, tree, unlisted_sym_names):
         if not self.smart_index:
             return
 
         self.__find_package_root()
-        index = self.__get_index_page(doc_tree)
+        index = self.__get_index_page(tree)
         if index is None:
             return
 
@@ -386,13 +386,13 @@ class Extension(Configurable):
             if sym and sym.filename in self._get_all_sources():
                 self._created_symbols[sym.filename].add(sym_name)
 
-        user_pages = [p for p in doc_tree.walk(index) if not p.generated]
+        user_pages = [p for p in tree.walk(index) if not p.generated]
         user_symbols = self.__get_user_symbols(user_pages)
 
         for source_file, symbols in list(self._created_symbols.items()):
             gen_symbols = symbols - user_symbols
-            self.__add_subpage(doc_tree, index, source_file, gen_symbols)
-            doc_tree.stale_symbol_pages(symbols)
+            self.__add_subpage(tree, index, source_file, gen_symbols)
+            tree.stale_symbol_pages(symbols)
 
     def __find_package_root(self):
         if self.__package_root:
@@ -401,20 +401,20 @@ class Extension(Configurable):
         commonprefix = os.path.commonprefix(self._get_all_sources())
         self.__package_root = os.path.dirname(commonprefix)
 
-    def __get_index_page(self, doc_tree):
+    def __get_index_page(self, tree):
         placeholder = '%s-index' % self.argument_prefix
-        return doc_tree.get_pages().get(placeholder)
+        return tree.get_pages().get(placeholder)
 
-    def __add_subpage(self, doc_tree, index, source_file, symbols):
+    def __add_subpage(self, tree, index, source_file, symbols):
         page_name = self.__get_rel_source_path(source_file)
-        page = doc_tree.get_pages().get(page_name)
+        page = tree.get_pages().get(page_name)
 
         if not page:
             page = Page(page_name, None, os.path.dirname(page_name))
             page.extension_name = self.extension_name
             page.generated = True
             page.comment = self.project.database.get_comment(page_name)
-            doc_tree.add_page(index, page_name, page)
+            tree.add_page(index, page_name, page)
         else:
             page.is_stale = True
 
@@ -442,7 +442,7 @@ class Extension(Configurable):
         responsible of.
 
         Args:
-            page: doc_tree.Page, the page to format.
+            page: tree.Page, the page to format.
             link_resolver: links.LinkResolver, object responsible
                 for resolving links potentially mentioned in `page`
             output: str, path to the output directory.

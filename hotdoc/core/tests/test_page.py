@@ -26,7 +26,7 @@ import unittest
 
 from schema import Optional, And
 
-from hotdoc.core.doc_tree import Page, InvalidPageMetadata
+from hotdoc.core.tree import Page, InvalidPageMetadata
 from hotdoc.utils.loggable import Logger
 
 

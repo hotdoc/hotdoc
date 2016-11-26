@@ -21,7 +21,7 @@
 import os
 import shutil
 from hotdoc.core.extension import Extension
-from hotdoc.core.doc_tree import Page
+from hotdoc.core.tree import Page
 from hotdoc.extensions.search.create_index import SearchIndex
 
 DESCRIPTION =\
