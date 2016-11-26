@@ -40,7 +40,7 @@ from hotdoc.core.symbols import\
      StructSymbol, EnumSymbol, AliasSymbol, SignalSymbol, PropertySymbol,
      VFunctionSymbol, ClassSymbol, InterfaceSymbol)
 from hotdoc.core.links import Link
-from hotdoc.core.change_tracker import ChangeTracker
+from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.exceptions import HotdocSourceException, InvalidPageMetadata
 from hotdoc.core.database import Database
 from hotdoc.core.comment import Comment

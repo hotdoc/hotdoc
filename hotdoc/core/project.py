@@ -31,7 +31,7 @@ from collections import OrderedDict
 
 from hotdoc.core import inclusions
 from hotdoc.core.extension import Extension
-from hotdoc.core.change_tracker import ChangeTracker
+from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.comment import Tag
 from hotdoc.core.config import ConfigParser
 from hotdoc.core.database import Database

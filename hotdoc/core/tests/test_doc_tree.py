@@ -26,7 +26,7 @@ import shutil
 import io
 import os
 
-from hotdoc.core.change_tracker import ChangeTracker
+from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.database import Database
 from hotdoc.core.project import CoreExtension
 from hotdoc.core.symbols import FunctionSymbol
