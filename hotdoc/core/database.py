@@ -27,7 +27,7 @@ from sqlalchemy.orm import sessionmaker
 
 from hotdoc.core.symbols import Symbol
 
-from hotdoc.utils.alchemy_integration import Base
+from hotdoc.utils.alchemy import Base
 from hotdoc.utils.signals import Signal
 from hotdoc.utils.loggable import debug
 

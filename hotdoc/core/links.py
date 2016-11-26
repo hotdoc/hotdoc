@@ -21,7 +21,7 @@ Banana banana
 """
 import urllib.parse
 
-from hotdoc.utils.alchemy_integration import MutableObject
+from hotdoc.utils.alchemy import MutableObject
 from hotdoc.utils.signals import Signal
 
 
