@@ -25,7 +25,7 @@ from collections import defaultdict
 from hotdoc.core.file_includer import find_md_file
 from hotdoc.core.symbols import Symbol
 from hotdoc.core.doc_tree import DocTree, Page
-from hotdoc.core.base_formatter import Formatter
+from hotdoc.core.formatter import Formatter
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.loggable import debug, info, warn, error
 from hotdoc.utils.utils import OrderedSet
@@ -70,7 +70,7 @@ class Extension(Configurable):
             be overriden and namespaced appropriately.
         doc_repo: doc_repo.DocRepo, the DocRepo instance which documentation
             hotdoc is working on.
-        formatters: dict, a mapping of format -> `base_formatter.Formatter`
+        formatters: dict, a mapping of format -> `formatter.Formatter`
             subclass instances.
     """
     # pylint: disable=unused-argument
@@ -151,13 +151,13 @@ class Extension(Configurable):
 
     def get_formatter(self, output_format):
         """
-        Get the `base_formatter.Formatter` instance of this extension
+        Get the `formatter.Formatter` instance of this extension
         for a given output format.
 
         Args:
             output_format: str, the output format, for example `html`
         Returns:
-            base_formatter.Formatter: the formatter for this format,
+            formatter.Formatter: the formatter for this format,
                 or `None`.
         """
         return self.formatters.get(output_format)

@@ -29,7 +29,7 @@ from hotdoc.core.symbols import (
     SignalSymbol, ConstantSymbol, FunctionMacroSymbol, CallbackSymbol,
     InterfaceSymbol, AliasSymbol, VFunctionSymbol, ExportedVariableSymbol)
 from hotdoc.core.extension import Extension
-from hotdoc.core.base_formatter import Formatter
+from hotdoc.core.formatter import Formatter
 from hotdoc.utils.loggable import error
 from hotdoc.utils.utils import recursive_overwrite
 

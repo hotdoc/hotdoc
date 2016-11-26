@@ -16,6 +16,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+The base formatter module.
+
+By design, hotdoc only supports html output.
+"""
+
 import os
 import html
 import re
@@ -23,8 +29,12 @@ import tempfile
 import urllib.parse
 import shutil
 
+from collections import defaultdict
+
 from lxml import etree
 import lxml.html
+
+import pygraphviz as pg
 
 # pylint: disable=import-error
 from wheezy.template.engine import Engine
@@ -32,7 +42,6 @@ from wheezy.template.ext.core import CoreExtension
 from wheezy.template.ext.code import CodeExtension
 from wheezy.template.loader import FileLoader
 from schema import Schema, Optional
-from collections import defaultdict
 
 from hotdoc.core.doc_tree import Page
 from hotdoc.core.symbols import\
@@ -72,6 +81,7 @@ def _create_hierarchy_graph(hierarchy):
         graph.add_edge(parent_link.title, child_link.title)
 
     return graph
+
 
 class FormatterBadLinkException(HotdocException):
     """
@@ -207,6 +217,7 @@ class Formatter(Configurable):
 
         return symbol.detailed_description
 
+    # pylint: disable=too-many-function-args
     def format_comment(self, comment, link_resolver):
         """Format a comment
 
@@ -343,7 +354,11 @@ class Formatter(Configurable):
 
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches
+    # pylint: disable=too-many-statements
     def write_page(self, page, build_root, output):
+        """
+        Banana banana
+        """
         root = etree.HTML(str(page.detailed_description))
         id_nodes = {n.attrib['id']: "".join([x for x in n.itertext()])
                     for n in root.xpath('.//*[@id]')}
@@ -441,6 +456,9 @@ class Formatter(Configurable):
         return "html"
 
     def get_output_folder(self):
+        """
+        Banana banana
+        """
         return 'html'
 
     def _format_link(self, link, title):
@@ -836,6 +854,9 @@ class Formatter(Configurable):
         res = template.render({'graph': contents,
                                'assets_path': self._get_assets_path()})
         return (res, False)
+
+    def _format_comment(self, comment):
+        raise NotImplementedError
 
     def __get_theme_files(self, path):
         res = []

@@ -22,7 +22,7 @@ A syntax highlighting module
 import os
 
 from hotdoc.core.extension import Extension
-from hotdoc.core.base_formatter import Formatter
+from hotdoc.core.formatter import Formatter
 
 from hotdoc.utils.utils import recursive_overwrite
 

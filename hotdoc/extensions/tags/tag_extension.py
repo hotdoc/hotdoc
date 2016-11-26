@@ -21,7 +21,7 @@
 from collections import namedtuple
 
 from hotdoc.core.extension import Extension
-from hotdoc.core.base_formatter import Formatter
+from hotdoc.core.formatter import Formatter
 from hotdoc.core.comment_block import TagValidator
 from hotdoc.core.symbols import QualifiedSymbol
 
