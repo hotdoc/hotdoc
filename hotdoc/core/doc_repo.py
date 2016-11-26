@@ -30,7 +30,7 @@ import io
 from collections import OrderedDict
 
 from hotdoc.core import file_includer
-from hotdoc.core.base_extension import BaseExtension
+from hotdoc.core.extension import Extension
 from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.comment_block import Tag
 from hotdoc.core.config import ConfigParser
@@ -62,7 +62,7 @@ LANG_MAPPING = {
 }
 
 
-class CoreExtension(BaseExtension):
+class CoreExtension(Extension):
     """
     Banana banana
     """

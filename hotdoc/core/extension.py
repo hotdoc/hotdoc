@@ -38,20 +38,20 @@ class ExtDependency(object):
 
     If not satisfied, the extension will not be instantiated.
 
-    See the `BaseExtension.get_dependencies` static method documentation
+    See the `Extension.get_dependencies` static method documentation
     for more information.
 
     Attributes:
         dependency_name: str, the name of the extension depended on.
         is_upstream: bool, if set to true hotdoc will arrange for
-            the extension depended on to have its `BaseExtension.setup`
+            the extension depended on to have its `Extension.setup`
             implementation called first. Circular dependencies will
             generate an error.
     """
 
     def __init__(self, dependency_name, is_upstream=False):
         """
-        Constructor for `BaseExtension`.
+        Constructor for `Extension`.
 
         Args:
             dependency_name: str, see `ExtDependency.dependency_name`
@@ -61,7 +61,7 @@ class ExtDependency(object):
         self.is_upstream = is_upstream
 
 
-class BaseExtension(Configurable):
+class Extension(Configurable):
     """
     All extensions should inherit from this base class
 
@@ -84,7 +84,7 @@ class BaseExtension(Configurable):
     smart_index = False
 
     def __init__(self, doc_repo):
-        """Constructor for `BaseExtension`.
+        """Constructor for `Extension`.
 
         This should never get called directly.
 
@@ -177,7 +177,7 @@ class BaseExtension(Configurable):
         signals they have to connect to.
 
         Note that this will be called *after* the `doc_tree.DocTree`
-        of this instance's `BaseExtension.doc_repo` has been fully
+        of this instance's `Extension.doc_repo` has been fully
         constructed, but before its `doc_tree.DocTree.resolve_symbols`
         method has been called.
         """
@@ -186,7 +186,7 @@ class BaseExtension(Configurable):
     def get_stale_files(self, all_files, prefix=None):
         """
         Shortcut function to `change_tracker.ChangeTracker.get_stale_files`
-        for the tracker of this instance's `BaseExtension.doc_repo`
+        for the tracker of this instance's `Extension.doc_repo`
 
         Args:
             all_files: see `change_tracker.ChangeTracker.get_stale_files`

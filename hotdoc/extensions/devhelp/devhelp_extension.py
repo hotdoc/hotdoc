@@ -28,7 +28,7 @@ from hotdoc.core.symbols import (
     FunctionSymbol, ClassSymbol, StructSymbol, EnumSymbol, PropertySymbol,
     SignalSymbol, ConstantSymbol, FunctionMacroSymbol, CallbackSymbol,
     InterfaceSymbol, AliasSymbol, VFunctionSymbol, ExportedVariableSymbol)
-from hotdoc.core.base_extension import BaseExtension
+from hotdoc.core.extension import Extension
 from hotdoc.core.base_formatter import Formatter
 from hotdoc.utils.loggable import error
 from hotdoc.utils.utils import recursive_overwrite
@@ -69,13 +69,13 @@ TYPE_MAP = {
 }
 
 
-class DevhelpExtension(BaseExtension):
+class DevhelpExtension(Extension):
     extension_name = 'devhelp-extension'
     argument_prefix = 'devhelp'
     activated = False
 
     def __init__(self, doc_repo):
-        BaseExtension.__init__(self, doc_repo)
+        Extension.__init__(self, doc_repo)
         self.__ext_languages = defaultdict(set)
         self.__resolved_symbols_map = {}
 

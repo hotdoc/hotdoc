@@ -20,7 +20,7 @@
 
 from collections import namedtuple
 
-from hotdoc.core.base_extension import BaseExtension
+from hotdoc.core.extension import Extension
 from hotdoc.core.base_formatter import Formatter
 from hotdoc.core.comment_block import TagValidator
 from hotdoc.core.symbols import QualifiedSymbol
@@ -129,7 +129,7 @@ def parse_choice_blacklist(blacklist):
     return MultipleChoiceTagBlackList(name, choices)
 
 
-class TagExtension(BaseExtension):
+class TagExtension(Extension):
     extension_name = 'core-tags'
     blacklists = []
 

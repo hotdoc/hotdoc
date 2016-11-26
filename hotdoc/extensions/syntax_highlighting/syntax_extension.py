@@ -21,7 +21,7 @@ A syntax highlighting module
 """
 import os
 
-from hotdoc.core.base_extension import BaseExtension
+from hotdoc.core.extension import Extension
 from hotdoc.core.base_formatter import Formatter
 
 from hotdoc.utils.utils import recursive_overwrite
@@ -35,7 +35,7 @@ snippets.
 HERE = os.path.dirname(__file__)
 
 
-class SyntaxHighlightingExtension(BaseExtension):
+class SyntaxHighlightingExtension(Extension):
     """
     The actual syntax highlighting implementation
     """
@@ -44,7 +44,7 @@ class SyntaxHighlightingExtension(BaseExtension):
     activated = False
 
     def __init__(self, doc_repo):
-        BaseExtension.__init__(self, doc_repo)
+        Extension.__init__(self, doc_repo)
         self.__asset_folders = set()
 
     def __formatting_page_cb(self, formatter, page):

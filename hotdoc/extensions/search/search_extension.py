@@ -20,7 +20,7 @@
 
 import os
 import shutil
-from hotdoc.core.base_extension import BaseExtension
+from hotdoc.core.extension import Extension
 from hotdoc.core.doc_tree import Page
 from hotdoc.extensions.search.create_index import SearchIndex
 
@@ -44,11 +44,11 @@ def list_html_files(root_dir, exclude_dirs):
     return html_files
 
 
-class SearchExtension(BaseExtension):
+class SearchExtension(Extension):
     extension_name = 'search'
 
     def __init__(self, doc_repo):
-        BaseExtension.__init__(self, doc_repo)
+        Extension.__init__(self, doc_repo)
         doc_repo.formatted_signal.connect(self.__build_index)
         self.enabled = False
         self.script = os.path.abspath(os.path.join(HERE, 'trie.js'))

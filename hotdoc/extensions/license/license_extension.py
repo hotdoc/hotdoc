@@ -24,7 +24,7 @@ from collections import namedtuple
 
 from schema import Schema, SchemaError, And, Use, Optional
 
-from hotdoc.core.base_extension import BaseExtension
+from hotdoc.core.extension import Extension
 from hotdoc.core.base_formatter import Formatter
 from hotdoc.core.doc_tree import Page
 from hotdoc.core.exceptions import HotdocException
@@ -106,7 +106,7 @@ ALL_LICENSES = {
 }
 
 
-class LicenseExtension(BaseExtension):
+class LicenseExtension(Extension):
     extension_name = 'license-extension'
     argument_prefix = 'license'
     default_license = None
@@ -114,7 +114,7 @@ class LicenseExtension(BaseExtension):
     authors_hold_copyright = True
 
     def __init__(self, doc_repo):
-        BaseExtension.__init__(self, doc_repo)
+        Extension.__init__(self, doc_repo)
         self.__installed_assets = set()
 
     @staticmethod

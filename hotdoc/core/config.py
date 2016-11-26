@@ -54,7 +54,7 @@ class ConfigParser(object):
       done, `ConfigParser` will automatically provide wildcard
       expansion and filtering.
 
-    Note that `base_extension.BaseExtension` provides helper methods
+    Note that `extension.Extension` provides helper methods
     to register index and sources options, this documentation should
     only be interesting for 'advanced' use cases.
     """

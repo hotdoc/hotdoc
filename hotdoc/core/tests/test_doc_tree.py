@@ -34,11 +34,11 @@ from hotdoc.core.links import LinkResolver
 from hotdoc.parsers.sitemap_parser import SitemapParser
 from hotdoc.parsers import cmark
 from hotdoc.core.doc_tree import DocTree
-from hotdoc.core.base_extension import BaseExtension
+from hotdoc.core.extension import Extension
 from hotdoc.utils.utils import OrderedSet, touch
 
 
-class TestExtension(BaseExtension):
+class TestExtension(Extension):
     extension_name = 'test-extension'
     argument_prefix = 'test'
 
