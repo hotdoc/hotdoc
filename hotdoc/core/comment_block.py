@@ -45,7 +45,7 @@ class TagValidator(object):
 class Comment(object):
     """
     Code-parsing extensions should add instances of this class to
-    DocDatabase.
+    Database.
     """
     # This constructor is convenient
     # pylint: disable=too-many-instance-attributes

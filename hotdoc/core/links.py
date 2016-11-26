@@ -91,9 +91,9 @@ class LinkResolver(object):
     """
     get_link_signal = Signal()
 
-    def __init__(self, doc_database):
+    def __init__(self, database):
         self.__links = {}
-        self.__doc_db = doc_database
+        self.__doc_db = database
 
     # pylint: disable=too-many-return-statements
     def get_named_link(self, name):

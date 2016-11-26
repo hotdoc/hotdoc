@@ -24,15 +24,15 @@
 import unittest
 from hotdoc.parsers import cmark
 from hotdoc.parsers.gtk_doc_parser import GtkDocParser, GtkDocStringFormatter
-from hotdoc.core.doc_database import DocDatabase
+from hotdoc.core.database import Database
 from hotdoc.core.links import LinkResolver, Link
 
 
 class TestParser(unittest.TestCase):
 
     def setUp(self):
-        self.doc_database = DocDatabase()
-        self.link_resolver = LinkResolver(self.doc_database)
+        self.database = Database()
+        self.link_resolver = LinkResolver(self.database)
         self.link_resolver.add_link(Link("here.com", "foo", "foo"))
 
     def assertOutputs(self, inp, expected):
@@ -88,8 +88,8 @@ class TestGtkDocParser(unittest.TestCase):
         # Cruft, should be unnecessary soon
         self.tag_validators = {}
         self.parser = GtkDocParser(self)
-        self.doc_database = DocDatabase()
-        self.link_resolver = LinkResolver(self.doc_database)
+        self.database = Database()
+        self.link_resolver = LinkResolver(self.database)
         self.formatter = GtkDocStringFormatter()
 
     def test_basic(self):
@@ -127,8 +127,8 @@ class TestGtkDocParser(unittest.TestCase):
 class TestGtkDocExtension(unittest.TestCase):
 
     def setUp(self):
-        self.doc_database = DocDatabase()
-        self.link_resolver = LinkResolver(self.doc_database)
+        self.database = Database()
+        self.link_resolver = LinkResolver(self.database)
         self.link_resolver.add_link(Link("here.com", "foo", "foo"))
         self.link_resolver.add_link(Link("there.org", "there", "Test::test"))
         self.link_resolver.add_link(Link("wherever.biz", "wherever", "bar"))
@@ -322,8 +322,8 @@ class MockIncludeResolver(object):
 class TestIncludeExtension(unittest.TestCase):
 
     def setUp(self):
-        self.doc_database = DocDatabase()
-        self.link_resolver = LinkResolver(self.doc_database)
+        self.database = Database()
+        self.link_resolver = LinkResolver(self.database)
         self.include_resolver = MockIncludeResolver()
 
     def assertOutputs(self, inp, expected):
@@ -384,8 +384,8 @@ class TestIncludeExtension(unittest.TestCase):
 
 class TestTableExtension(unittest.TestCase):
     def setUp(self):
-        self.doc_database = DocDatabase()
-        self.link_resolver = LinkResolver(self.doc_database)
+        self.database = Database()
+        self.link_resolver = LinkResolver(self.database)
         self.include_resolver = MockIncludeResolver()
 
     def render(self, inp):

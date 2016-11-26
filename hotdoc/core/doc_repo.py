@@ -34,7 +34,7 @@ from hotdoc.core.extension import Extension
 from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.comment_block import Tag
 from hotdoc.core.config import ConfigParser
-from hotdoc.core.doc_database import DocDatabase
+from hotdoc.core.database import Database
 from hotdoc.core.doc_tree import DocTree
 from hotdoc.core.links import LinkResolver
 from hotdoc.utils.setup_utils import VERSION
@@ -105,7 +105,7 @@ class DocRepo(object):
         self.tag_validators = {}
         self.link_resolver = None
         self.incremental = False
-        self.doc_database = None
+        self.database = None
         self.config = None
         self.project_name = None
         self.project_version = None
@@ -138,7 +138,7 @@ class DocRepo(object):
         """
         Banana banana
         """
-        sym = self.doc_database.get_symbol(symbol_name)
+        sym = self.database.get_symbol(symbol_name)
         if not sym:
             return None
 
@@ -185,7 +185,7 @@ class DocRepo(object):
 
         info('Persisting database and private files', 'persisting')
         self.doc_tree.persist()
-        self.doc_database.persist()
+        self.database.persist()
         with open(os.path.join(self.get_private_folder(),
                                'change_tracker.p'), 'wb') as _:
             _.write(pickle.dumps(self.change_tracker))
@@ -197,9 +197,9 @@ class DocRepo(object):
         Banana banana
         """
         self.formatted_signal.clear()
-        if self.doc_database is not None:
+        if self.database is not None:
             info('Closing database')
-            self.doc_database.close()
+            self.database.close()
 
     # pylint: disable=no-self-use
     def get_private_folder(self):
@@ -226,14 +226,14 @@ class DocRepo(object):
         for extension in list(self.extensions.values()):
             info('Setting up %s' % extension.extension_name)
             extension.setup()
-            self.doc_database.flush()
+            self.database.flush()
 
         sitemap = SitemapParser().parse(self.sitemap_path)
         self.doc_tree.parse_sitemap(self.change_tracker, sitemap)
 
         info("Resolving symbols", 'resolution')
-        self.doc_tree.resolve_symbols(self.doc_database, self.link_resolver)
-        self.doc_database.flush()
+        self.doc_tree.resolve_symbols(self.database, self.link_resolver)
+        self.database.flush()
 
     def format(self):
         """
@@ -286,12 +286,12 @@ class DocRepo(object):
                         description=validator.default)
 
     def __setup_database(self):
-        self.doc_database = DocDatabase()
-        self.doc_database.comment_added_signal.connect(self.__add_default_tags)
-        self.doc_database.comment_updated_signal.connect(
+        self.database = Database()
+        self.database.comment_added_signal.connect(self.__add_default_tags)
+        self.database.comment_updated_signal.connect(
             self.__add_default_tags)
-        self.doc_database.setup(self.get_private_folder())
-        self.link_resolver = LinkResolver(self.doc_database)
+        self.database.setup(self.get_private_folder())
+        self.link_resolver = LinkResolver(self.database)
 
     def __create_change_tracker(self):
         try:

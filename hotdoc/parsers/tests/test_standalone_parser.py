@@ -27,7 +27,7 @@ import shutil
 import io
 import os
 
-from hotdoc.core.doc_database import DocDatabase
+from hotdoc.core.database import Database
 from hotdoc.core.links import LinkResolver
 from hotdoc.parsers import cmark
 from hotdoc.parsers.sitemap_parser import (
@@ -148,8 +148,8 @@ class TestSitemapParser(unittest.TestCase):
 class TestStandaloneParser(unittest.TestCase):
 
     def setUp(self):
-        self.doc_database = DocDatabase()
-        self.link_resolver = LinkResolver(self.doc_database)
+        self.database = Database()
+        self.link_resolver = LinkResolver(self.database)
 
     def test_page_title(self):
         inp = (u'### A title *please* a title\n')

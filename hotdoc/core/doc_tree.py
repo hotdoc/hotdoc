@@ -42,7 +42,7 @@ from hotdoc.core.symbols import\
 from hotdoc.core.links import Link
 from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.exceptions import HotdocSourceException, InvalidPageMetadata
-from hotdoc.core.doc_database import DocDatabase
+from hotdoc.core.database import Database
 from hotdoc.core.comment_block import Comment
 from hotdoc.parsers import cmark
 from hotdoc.utils.utils import OrderedSet, count_folders
@@ -158,10 +158,10 @@ class Page(object):
                 'subpages': self.subpages,
                 'symbol_names': self.symbol_names}
 
-    def resolve_symbols(self, doc_database, link_resolver):
+    def resolve_symbols(self, database, link_resolver):
         """
         When this method is called, the page's symbol names are queried
-        from `doc_database`, and added to lists of actual symbols, sorted
+        from `database`, and added to lists of actual symbols, sorted
         by symbol class.
         """
         typed_symbols_list = namedtuple(
@@ -192,9 +192,9 @@ class Page(object):
 
         all_syms = OrderedSet()
         for sym_name in self.symbol_names:
-            sym = doc_database.get_symbol(sym_name)
+            sym = database.get_symbol(sym_name)
             self.__query_extra_symbols(
-                sym, all_syms, link_resolver, doc_database)
+                sym, all_syms, link_resolver, database)
 
         for sym in all_syms:
             sym.update_children_comments()
@@ -222,9 +222,9 @@ class Page(object):
                 self.comment = struct_syms[0].comment
 
     # pylint: disable=no-self-use
-    def __fetch_comment(self, sym, doc_database):
+    def __fetch_comment(self, sym, database):
         old_comment = sym.comment
-        new_comment = doc_database.get_comment(sym.unique_name)
+        new_comment = database.get_comment(sym.unique_name)
         sym.comment = Comment(sym.unique_name)
 
         if new_comment:
@@ -330,16 +330,16 @@ class Page(object):
             symbol.skip = not formatter.format_symbol(symbol, link_resolver)
 
     def __query_extra_symbols(self, sym, all_syms, link_resolver,
-                              doc_database):
+                              database):
         if sym:
-            self.__fetch_comment(sym, doc_database)
+            self.__fetch_comment(sym, database)
             new_symbols = sum(Page.resolving_symbol_signal(self, sym),
                               [])
             all_syms.add(sym)
 
             for symbol in new_symbols:
                 self.__query_extra_symbols(
-                    symbol, all_syms, link_resolver, doc_database)
+                    symbol, all_syms, link_resolver, database)
 
     def __resolve_symbol(self, symbol, link_resolver):
         symbol.resolve_links(link_resolver)
@@ -378,7 +378,7 @@ class DocTree(object):
         self.__placeholders = {}
         self.root = None
         self.__dep_map = self.__create_dep_map()
-        DocDatabase.comment_updated_signal.connect(self.__comment_updated_cb)
+        Database.comment_updated_signal.connect(self.__comment_updated_cb)
 
         cmark.hotdoc_to_ast(u'', self)
         self.__extensions = {}
@@ -691,7 +691,7 @@ class DocTree(object):
             self.__dep_map[sym.unique_name] = page.source_file
             self.__update_dep_map(page, sym.get_children_symbols())
 
-    def resolve_symbols(self, doc_database, link_resolver, page=None):
+    def resolve_symbols(self, database, link_resolver, page=None):
         """Will call resolve_symbols on all the stale subpages of the tree.
         Args:
           page: hotdoc.core.doc_tree.Page, the page to resolve symbols in,
@@ -705,12 +705,12 @@ class DocTree(object):
                 with io.open(page.source_file, 'r', encoding='utf-8') as _:
                     page.ast = cmark.hotdoc_to_ast(_.read(), self)
 
-            page.resolve_symbols(doc_database, link_resolver)
+            page.resolve_symbols(database, link_resolver)
             self.__update_dep_map(page, page.symbols)
 
         for pagename in page.subpages:
             cpage = self.__all_pages[pagename]
-            self.resolve_symbols(doc_database, link_resolver, page=cpage)
+            self.resolve_symbols(database, link_resolver, page=cpage)
 
     def format_page(self, page, link_resolver, output, extensions):
         """

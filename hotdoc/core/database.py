@@ -32,7 +32,7 @@ from hotdoc.utils.simple_signals import Signal
 from hotdoc.utils.loggable import debug
 
 
-class DocDatabase(object):
+class Database(object):
     """Banana banana
     """
     comment_added_signal = Signal()

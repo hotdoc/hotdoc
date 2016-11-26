@@ -27,7 +27,7 @@ import io
 import os
 
 from hotdoc.core.change_tracker import ChangeTracker
-from hotdoc.core.doc_database import DocDatabase
+from hotdoc.core.database import Database
 from hotdoc.core.doc_repo import CoreExtension
 from hotdoc.core.symbols import FunctionSymbol
 from hotdoc.core.links import LinkResolver
@@ -82,9 +82,9 @@ class TestDocTree(unittest.TestCase):
 
         # Using the real doc database is too costly, tests should be lightning
         # fast (and they are)
-        self.doc_database = DocDatabase()
-        self.doc_database.setup(self.__priv_dir)
-        self.link_resolver = LinkResolver(self.doc_database)
+        self.database = Database()
+        self.database.setup(self.__priv_dir)
+        self.link_resolver = LinkResolver(self.database)
 
         self.change_tracker = ChangeTracker()
 
@@ -391,7 +391,7 @@ class TestDocTree(unittest.TestCase):
 
         doc_tree = DocTree(self.__priv_dir, self.include_paths)
         doc_tree.parse_sitemap(self.change_tracker, sitemap)
-        doc_tree.resolve_symbols(self.doc_database, self.link_resolver)
+        doc_tree.resolve_symbols(self.database, self.link_resolver)
         doc_tree.format(
             self.link_resolver, self.__output_dir,
             {self.core_ext.extension_name: self.core_ext})
@@ -418,7 +418,7 @@ class TestDocTree(unittest.TestCase):
 
         doc_tree = DocTree(self.__priv_dir, self.include_paths)
         doc_tree.parse_sitemap(self.change_tracker, sitemap)
-        doc_tree.resolve_symbols(self.doc_database, self.link_resolver)
+        doc_tree.resolve_symbols(self.database, self.link_resolver)
         doc_tree.format(
             self.link_resolver, self.__output_dir,
             {self.core_ext.extension_name: self.core_ext})
@@ -445,7 +445,7 @@ class TestDocTree(unittest.TestCase):
 
         doc_tree = DocTree(self.__priv_dir, self.include_paths)
         doc_tree.parse_sitemap(self.change_tracker, sitemap)
-        doc_tree.resolve_symbols(self.doc_database, self.link_resolver)
+        doc_tree.resolve_symbols(self.database, self.link_resolver)
         doc_tree.format(
             self.link_resolver, self.__output_dir,
             {self.core_ext.extension_name: self.core_ext})

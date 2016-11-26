@@ -337,17 +337,17 @@ class Extension(Configurable):
         should do this through this method, as it will keep an index
         of these which can be used when generating a "naive index".
 
-        See `doc_database.DocDatabase.get_or_create_symbol` for more
+        See `database.Database.get_or_create_symbol` for more
         information.
 
         Args:
-            args: see `doc_database.DocDatabase.get_or_create_symbol`
-            kwargs: see `doc_database.DocDatabase.get_or_create_symbol`
+            args: see `database.Database.get_or_create_symbol`
+            kwargs: see `database.Database.get_or_create_symbol`
 
         Returns:
             symbols.Symbol: the created symbol, or `None`.
         """
-        sym = self.doc_repo.doc_database.get_or_create_symbol(*args, **kwargs)
+        sym = self.doc_repo.database.get_or_create_symbol(*args, **kwargs)
         # pylint: disable=unidiomatic-typecheck
         if sym and type(sym) != Symbol and sym.filename:
             self._created_symbols[sym.filename].add(sym.unique_name)
@@ -382,7 +382,7 @@ class Extension(Configurable):
             index.title = self._get_smart_index_title()
 
         for sym_name in unlisted_sym_names:
-            sym = self.doc_repo.doc_database.get_symbol(sym_name)
+            sym = self.doc_repo.database.get_symbol(sym_name)
             if sym and sym.filename in self._get_all_sources():
                 self._created_symbols[sym.filename].add(sym_name)
 
@@ -413,7 +413,7 @@ class Extension(Configurable):
             page = Page(page_name, None, os.path.dirname(page_name))
             page.extension_name = self.extension_name
             page.generated = True
-            page.comment = self.doc_repo.doc_database.get_comment(page_name)
+            page.comment = self.doc_repo.database.get_comment(page_name)
             doc_tree.add_page(index, page_name, page)
         else:
             page.is_stale = True

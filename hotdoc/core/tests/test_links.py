@@ -25,7 +25,7 @@ import unittest
 import os
 import shutil
 
-from hotdoc.core.doc_database import DocDatabase
+from hotdoc.core.database import Database
 from hotdoc.core.links import LinkResolver, Link
 from hotdoc.core.symbols import (FunctionSymbol, ParameterSymbol, StructSymbol)
 
@@ -38,9 +38,9 @@ class TestLinkResolver(unittest.TestCase):
         self.__remove_tmp_dirs()
         os.mkdir(self.__priv_dir)
 
-        self.doc_database = DocDatabase()
-        self.doc_database.setup(self.__priv_dir)
-        self.link_resolver = LinkResolver(self.doc_database)
+        self.database = Database()
+        self.database.setup(self.__priv_dir)
+        self.link_resolver = LinkResolver(self.database)
 
     def __remove_tmp_dirs(self):
         shutil.rmtree(self.__priv_dir, ignore_errors=True)
@@ -48,7 +48,7 @@ class TestLinkResolver(unittest.TestCase):
     def test_incremental(self):
         param = ParameterSymbol(
             type_tokens=[Link(None, 'test-struct', 'test-struct')])
-        func = self.doc_database.get_or_create_symbol(
+        func = self.database.get_or_create_symbol(
             FunctionSymbol, unique_name='test-symbol', filename='text_b.x',
             parameters=[param])
 
@@ -56,7 +56,7 @@ class TestLinkResolver(unittest.TestCase):
 
         self.assertEqual(param.get_type_link().get_link(), None)
 
-        struct = self.doc_database.get_or_create_symbol(
+        struct = self.database.get_or_create_symbol(
             StructSymbol, unique_name='test-struct', filename='test_a.x')
 
         struct.resolve_links(self.link_resolver)
@@ -65,16 +65,16 @@ class TestLinkResolver(unittest.TestCase):
         # Not in a page but still
         self.assertEqual(param.get_type_link().get_link(), 'test-struct')
 
-        self.doc_database.persist()
-        self.doc_database.close()
+        self.database.persist()
+        self.database.close()
 
-        self.doc_database = DocDatabase()
-        self.doc_database.setup(self.__priv_dir)
-        self.link_resolver = LinkResolver(self.doc_database)
+        self.database = Database()
+        self.database.setup(self.__priv_dir)
+        self.link_resolver = LinkResolver(self.database)
 
         param = ParameterSymbol(
             type_tokens=[Link(None, 'test-struct', 'test-struct')])
-        func = self.doc_database.get_or_create_symbol(
+        func = self.database.get_or_create_symbol(
             FunctionSymbol, unique_name='test-symbol',
             filename='text_b.x', parameters=[param])
 
