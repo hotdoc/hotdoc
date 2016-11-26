@@ -25,7 +25,7 @@ from collections import defaultdict
 from hotdoc.core.file_includer import find_md_file
 from hotdoc.core.symbols import Symbol
 from hotdoc.core.doc_tree import DocTree, Page
-from hotdoc.formatters.html_formatter import HtmlFormatter
+from hotdoc.core.base_formatter import Formatter
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.loggable import debug, info, warn, error
 from hotdoc.utils.utils import OrderedSet
@@ -98,7 +98,7 @@ class BaseExtension(Configurable):
         DocTree.update_signal.connect(self.__update_doc_tree_cb)
 
         if not hasattr(self, 'formatters'):
-            self.formatters = {"html": HtmlFormatter([])}
+            self.formatters = {"html": Formatter([])}
 
         self._created_symbols = defaultdict(OrderedSet)
         self.__package_root = None

@@ -186,9 +186,9 @@ class DocRepo(object):
         info('Persisting database and private files', 'persisting')
         self.doc_tree.persist()
         self.doc_database.persist()
-        pickle.dump(self.change_tracker,
-                    open(os.path.join(self.get_private_folder(),
-                                      'change_tracker.p'), 'wb'))
+        with open(os.path.join(self.get_private_folder(),
+                  'change_tracker.p'), 'wb') as _:
+            _.write(pickle.dumps(self.change_tracker))
 
         self.__dump_deps_file()
 
@@ -295,9 +295,10 @@ class DocRepo(object):
 
     def __create_change_tracker(self):
         try:
-            self.change_tracker = \
-                pickle.load(open(os.path.join(self.get_private_folder(),
-                                              'change_tracker.p'), 'rb'))
+            with open(os.path.join(self.get_private_folder(),
+                                   'change_tracker.p'), 'rb') as _:
+                self.change_tracker = pickle.loads(_.read())
+
             if self.change_tracker.hard_dependencies_are_stale():
                 raise IOError
             self.incremental = True
