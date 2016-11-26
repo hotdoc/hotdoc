@@ -315,7 +315,7 @@ if __name__ == '__main__':
         scripts=['hotdoc/hotdoc',
                  'hotdoc/hotdoc_dep_printer'],
         package_data={
-            'hotdoc.formatters': ['html_templates/*', 'html_assets/*'],
+            'hotdoc.core': ['templates/*', 'assets/*'],
             'hotdoc': ['default_theme-%s/templates/*' % THEME_VERSION,
                        'default_theme-%s/js/*' % THEME_VERSION,
                        'default_theme-%s/css/*' % THEME_VERSION,
