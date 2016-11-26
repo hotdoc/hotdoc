@@ -44,7 +44,7 @@ from hotdoc.utils.utils import (get_installed_extension_classes,
                                 all_subclasses, get_extra_extension_classes)
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.simple_signals import Signal
-from hotdoc.parsers.standalone_parser import SitemapParser
+from hotdoc.parsers.sitemap_parser import SitemapParser
 
 
 SUBCOMMAND_DESCRIPTION = """
@@ -187,7 +187,7 @@ class DocRepo(object):
         self.doc_tree.persist()
         self.doc_database.persist()
         with open(os.path.join(self.get_private_folder(),
-                  'change_tracker.p'), 'wb') as _:
+                               'change_tracker.p'), 'wb') as _:
             _.write(pickle.dumps(self.change_tracker))
 
         self.__dump_deps_file()
