@@ -23,7 +23,7 @@
 
 import unittest
 from hotdoc.parsers import cmark
-from hotdoc.parsers.gtk_doc_parser import GtkDocParser, GtkDocStringFormatter
+from hotdoc.parsers.gtk_doc import GtkDocParser, GtkDocStringFormatter
 from hotdoc.core.database import Database
 from hotdoc.core.links import LinkResolver, Link
 

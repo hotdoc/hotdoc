@@ -51,7 +51,7 @@ from hotdoc.core.symbols import\
      StructSymbol, EnumSymbol, AliasSymbol, SignalSymbol, PropertySymbol,
      VFunctionSymbol, ClassSymbol, InterfaceSymbol)
 from hotdoc.core.links import Link
-from hotdoc.parsers.gtk_doc_parser import GtkDocStringFormatter
+from hotdoc.parsers.gtk_doc import GtkDocStringFormatter
 from hotdoc.utils.setup_utils import THEME_VERSION
 from hotdoc.utils.utils import (
     OrderedSet, id_from_text, recursive_overwrite, symlink)
