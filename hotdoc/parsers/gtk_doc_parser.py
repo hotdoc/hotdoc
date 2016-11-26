@@ -27,7 +27,7 @@ import cgi
 from itertools import zip_longest
 
 
-from hotdoc.core.comment_block import (Comment, Annotation, Tag,
+from hotdoc.core.comment import (Comment, Annotation, Tag,
                                        comment_from_tag)
 from hotdoc.core.exceptions import HotdocSourceException
 from hotdoc.utils.configurable import Configurable

@@ -22,7 +22,7 @@ Utilities and baseclasses for extensions
 import os
 from collections import defaultdict
 
-from hotdoc.core.file_includer import find_md_file
+from hotdoc.core.inclusions import find_md_file
 from hotdoc.core.symbols import Symbol
 from hotdoc.core.tree import Tree, Page
 from hotdoc.core.formatter import Formatter

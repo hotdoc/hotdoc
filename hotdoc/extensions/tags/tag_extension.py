@@ -22,7 +22,7 @@ from collections import namedtuple
 
 from hotdoc.core.extension import Extension
 from hotdoc.core.formatter import Formatter
-from hotdoc.core.comment_block import TagValidator
+from hotdoc.core.comment import TagValidator
 from hotdoc.core.symbols import QualifiedSymbol
 
 MULTIPLE_CHOICE_DESCRIPTION =\

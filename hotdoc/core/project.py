@@ -29,10 +29,10 @@ import io
 
 from collections import OrderedDict
 
-from hotdoc.core import file_includer
+from hotdoc.core import inclusions
 from hotdoc.core.extension import Extension
 from hotdoc.core.change_tracker import ChangeTracker
-from hotdoc.core.comment_block import Tag
+from hotdoc.core.comment import Tag
 from hotdoc.core.config import ConfigParser
 from hotdoc.core.database import Database
 from hotdoc.core.tree import Tree
@@ -70,7 +70,7 @@ class CoreExtension(Extension):
 
     def __init__(self, project):
         super(CoreExtension, self).__init__(project)
-        file_includer.include_signal.connect_after(self.__include_file_cb)
+        inclusions.include_signal.connect_after(self.__include_file_cb)
 
     # pylint: disable=no-self-use
     def __include_file_cb(self, include_path, line_ranges, symbol):

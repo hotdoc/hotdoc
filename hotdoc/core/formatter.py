@@ -222,7 +222,7 @@ class Formatter(Configurable):
         """Format a comment
 
         Args:
-            comment: hotdoc.core.comment_block.Comment, the code comment
+            comment: hotdoc.core.comment.Comment, the code comment
             to format. Can be None, in which case the empty string will
             be returned.
         Returns:

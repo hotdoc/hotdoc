@@ -33,7 +33,7 @@ import yaml
 from yaml.constructor import ConstructorError
 from schema import Schema, SchemaError, Optional, And
 
-from hotdoc.core.file_includer import find_md_file, resolve
+from hotdoc.core.inclusions import find_md_file, resolve
 from hotdoc.core.symbols import\
     (Symbol, FunctionSymbol, CallbackSymbol,
      FunctionMacroSymbol, ConstantSymbol, ExportedVariableSymbol,
@@ -43,7 +43,7 @@ from hotdoc.core.links import Link
 from hotdoc.core.change_tracker import ChangeTracker
 from hotdoc.core.exceptions import HotdocSourceException, InvalidPageMetadata
 from hotdoc.core.database import Database
-from hotdoc.core.comment_block import Comment
+from hotdoc.core.comment import Comment
 from hotdoc.parsers import cmark
 from hotdoc.utils.utils import OrderedSet, count_folders
 from hotdoc.utils.signals import Signal
