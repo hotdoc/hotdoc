@@ -274,10 +274,10 @@ INSTALL_REQUIRES = [
     'pyyaml',
     'lxml',
     'schema',
-    'wheezy.template==0.1.167',
+    'wheezy.template>=0.1.167',
     'pygraphviz>=1.3.rc2',
     'sqlalchemy>=1.0.8',
-    'toposort==1.4']
+    'toposort>=1.4']
 
 EXTRAS_REQUIRE = {
     'dev': ['git-pylint-commit-hook',
