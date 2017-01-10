@@ -73,7 +73,7 @@ class ConfigParser(object):
         """
 
         self.__conf_file = None
-        self._conf_dir = None
+        self.__conf_dir = None
         contents = '{}'
 
         if conf_file:
