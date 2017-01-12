@@ -20,7 +20,6 @@
 This module implements a Comment class, to be used
 by code-parsing extensions.
 """
-import linecache
 import os
 from collections import defaultdict
 
@@ -72,14 +71,7 @@ class Comment(object):
         self.short_description = short_description
         self.extension_attrs = defaultdict(lambda: defaultdict(dict))
         self.tags = tags or {}
-
-        # FIXME : would be nicer to have the scanner do that ^^
-        leading_ws = ''
-        if lineno != -1:
-            orig = linecache.getline(filename, lineno)
-            leading_ws = (len(orig) - len(orig.lstrip(' '))) * ' '
-
-        self.raw_comment = leading_ws + raw_comment
+        self.raw_comment = raw_comment
 
     def __getstate__(self):
         # Return a copy
