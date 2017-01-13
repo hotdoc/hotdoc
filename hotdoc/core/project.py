@@ -412,9 +412,6 @@ class Project(object):
                                  dest="output",
                                  help="where to output the rendered "
                                  "documentation")
-        self.parser.add_argument("--extra-extensions-paths", action="append",
-                                 dest="extra_extension_paths", default=[],
-                                 help="Extra paths to lookup extensions in")
         self.parser.add_argument("--get-conf-key", action="store",
                                  help="print the value for a configuration "
                                  "key")
@@ -516,6 +513,9 @@ class Project(object):
         extension_classes = get_installed_extension_classes(True)
         for subclass in extension_classes:
             self.__extension_classes[subclass.extension_name] = subclass
+        extra_classes = get_extra_extension_classes(
+            os.environ.get('HOTDOC_EXTENSION_PATH', '').split(':'))
+        self.__extension_classes.update(extra_classes)
 
     # pylint: disable=no-self-use
     def __load_config(self, args):
@@ -534,15 +534,8 @@ class Project(object):
         else:
             os.mkdir(folder)
 
-    def __create_extensions(self, extra_paths):
+    def __create_extensions(self):
         for ext_class in list(self.__extension_classes.values()):
-            ext = ext_class(self)
-            self.extensions[ext.extension_name] = ext
-
-        extra_classes = get_extra_extension_classes(extra_paths)
-        self.__extension_classes.update(extra_classes)
-
-        for ext_class in list(extra_classes.values()):
             ext = ext_class(self)
             self.extensions[ext.extension_name] = ext
 
@@ -591,8 +584,7 @@ class Project(object):
         self.__setup_private_folder()
         self.__setup_database()
 
-        self.__create_extensions(
-            self.config.get_paths('extra_extension_paths'))
+        self.__create_extensions()
 
         if self.__conf_file:
             self.change_tracker.add_hard_dependency(self.__conf_file)
