@@ -131,6 +131,8 @@ class Project(object):
         self.__conf_file = None
         self.__extension_classes = OrderedDict({
             CoreExtension.extension_name: CoreExtension})
+        extra_extension_paths = os.environ.get('HOTDOC_EXTENSION_PATH', '')
+        self.__create_extensions(extra_extension_paths.split(os.pathsep))
         self.__index_file = None
         self.__root_page = None
         self.__base_doc_folder = None
@@ -412,9 +414,6 @@ class Project(object):
                                  dest="output",
                                  help="where to output the rendered "
                                  "documentation")
-        self.parser.add_argument("--extra-extensions-paths", action="append",
-                                 dest="extra_extension_paths", default=[],
-                                 help="Extra paths to lookup extensions in")
         self.parser.add_argument("--get-conf-key", action="store",
                                  help="print the value for a configuration "
                                  "key")
@@ -590,9 +589,6 @@ class Project(object):
         self.__create_change_tracker()
         self.__setup_private_folder()
         self.__setup_database()
-
-        self.__create_extensions(
-            self.config.get_paths('extra_extension_paths'))
 
         if self.__conf_file:
             self.change_tracker.add_hard_dependency(self.__conf_file)
