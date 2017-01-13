@@ -20,26 +20,9 @@
 """The main hotdoc application
 """
 
-import cProfile
-import os
 import sys
+import hotdoc
 
-# pylint: disable=no-name-in-module
-from hotdoc.run_hotdoc import run
-
-
-def _main():
-    run_profile = os.environ.get('HOTDOC_PROFILING', False)
-    res = 0
-
-    if run_profile:
-        prof = cProfile.Profile()
-        res = prof.runcall(run, sys.argv[1:])
-        prof.dump_stats('hotdoc-runstats')
-    else:
-        res = run(sys.argv[1:])
-
-    return res
 
 if __name__ == "__main__":
-    sys.exit(_main())
+    sys.exit(hotdoc.main())
