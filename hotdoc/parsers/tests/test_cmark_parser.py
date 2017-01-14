@@ -197,6 +197,11 @@ class TestGtkDocExtension(unittest.TestCase):
             out,
             u'<p>this : <a href="there.com">ze_foo</a> is a link !</p>\n')
 
+    def test_code_block(self):
+        inp = u"|[\nfoo\n]|"
+        self.assertOutputs(
+            inp, '<pre><code>foo\n</code></pre>\n')
+
     def test_syntax_boundaries(self):
         # Make sure we don't parse type links inside words
         inp = u"this : yo#foo is a link !"
