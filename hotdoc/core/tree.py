@@ -187,7 +187,9 @@ class Page(object):
             if self.title is None:
                 self.title = syms[0].display_name
             if self.comment is None:
-                self.comment = syms[0].comment
+                self.comment = Comment(name=self.source_file)
+                self.comment.short_description = syms[0].comment.short_description
+                self.comment.title = syms[0].comment.title
             break
 
     # pylint: disable=no-self-use
