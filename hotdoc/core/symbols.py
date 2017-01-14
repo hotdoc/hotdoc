@@ -29,7 +29,7 @@ from hotdoc.core.comment import comment_from_tag
 from hotdoc.core.links import Link
 
 from hotdoc.utils.alchemy import (Base, MutableDict, MutableList,
-                                              MutableObject)
+                                  MutableObject)
 
 
 class Symbol(Base):
@@ -47,8 +47,8 @@ class Symbol(Base):
     lineno = Column(Integer)
     extent_start = Column(Integer)
     extent_end = Column(Integer)
-    location = Column(PickleType)
     language = Column(String)
+    extra = Column(MutableDict.as_mutable(PickleType))
     _type_ = Column(String)
     extension_contents = Column(MutableDict.as_mutable(PickleType))
     extension_attributes = Column(MutableDict.as_mutable(PickleType))

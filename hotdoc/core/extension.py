@@ -349,8 +349,9 @@ class Extension(Configurable):
         """
         sym = self.project.database.get_or_create_symbol(*args, **kwargs)
         # pylint: disable=unidiomatic-typecheck
-        if sym and type(sym) != Symbol and sym.filename:
-            self._created_symbols[sym.filename].add(sym.unique_name)
+        smart_key = self._get_smart_key(sym)
+        if sym and type(sym) != Symbol and smart_key:
+            self._created_symbols[smart_key].add(sym.unique_name)
 
         return sym
 
@@ -384,7 +385,7 @@ class Extension(Configurable):
         for sym_name in unlisted_sym_names:
             sym = self.project.database.get_symbol(sym_name)
             if sym and sym.filename in self._get_all_sources():
-                self._created_symbols[sym.filename].add(sym_name)
+                self._created_symbols[self._get_smart_key(sym)].add(sym_name)
 
         user_pages = [p for p in tree.walk(index) if not p.generated]
         user_symbols = self.__get_user_symbols(user_pages)
@@ -434,6 +435,9 @@ class Extension(Configurable):
 
     def _get_all_sources(self):
         return self.sources
+
+    def _get_smart_key(self, symbol):
+        return symbol.filename
 
     def format_page(self, page, link_resolver, output):
         """

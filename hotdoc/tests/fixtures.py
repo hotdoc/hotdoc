@@ -23,9 +23,12 @@ import os
 import shutil
 
 from hotdoc.core.project import CoreExtension
+from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.utils.utils import touch
+from hotdoc.core.database import Database
 
 
+# pylint: disable=too-many-instance-attributes
 class HotdocTest(unittest.TestCase):
     def setUp(self):
         self._here = os.path.dirname(__file__)
@@ -42,6 +45,9 @@ class HotdocTest(unittest.TestCase):
         os.mkdir(self._priv_dir)
         os.mkdir(self._src_dir)
         self._core_ext = CoreExtension(self)
+        self.change_tracker = ChangeTracker()
+        self.database = Database()
+        self.database.setup(self._priv_dir)
 
     def tearDown(self):
         self._remove_tmp_dirs()
