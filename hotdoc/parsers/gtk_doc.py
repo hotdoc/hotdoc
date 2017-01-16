@@ -24,11 +24,12 @@ gtk-doc comment format.
 
 import re
 import cgi
+from collections import OrderedDict
 from itertools import zip_longest
 
 
 from hotdoc.core.comment import (Comment, Annotation, Tag,
-                                       comment_from_tag)
+                                 comment_from_tag)
 from hotdoc.core.exceptions import HotdocSourceException
 from hotdoc.utils.configurable import Configurable
 from hotdoc.parsers import cmark
@@ -318,7 +319,7 @@ class GtkDocParser(object):
 
         title = None
         short_description = None
-        actual_parameters = {}
+        actual_parameters = OrderedDict({})
         for param in parameters:
             if param.name.lower() == 'short_description':
                 short_description = param
