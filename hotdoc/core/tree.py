@@ -34,18 +34,15 @@ from yaml.constructor import ConstructorError
 from schema import Schema, SchemaError, Optional, And
 
 from hotdoc.core.inclusions import find_md_file, resolve
-from hotdoc.core.symbols import\
-    (Symbol, FunctionSymbol, CallbackSymbol,
-     FunctionMacroSymbol, ConstantSymbol, ExportedVariableSymbol,
-     StructSymbol, EnumSymbol, AliasSymbol, SignalSymbol, PropertySymbol,
-     VFunctionSymbol, ClassSymbol, InterfaceSymbol)
+from hotdoc.core.symbols import Symbol, StructSymbol, ClassSymbol, InterfaceSymbol
 from hotdoc.core.links import Link
 from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.exceptions import HotdocSourceException, InvalidPageMetadata
 from hotdoc.core.database import Database
 from hotdoc.core.comment import Comment
+# pylint: disable=no-name-in-module
 from hotdoc.parsers import cmark
-from hotdoc.utils.utils import OrderedSet, count_folders
+from hotdoc.utils.utils import OrderedSet, count_folders, all_subclasses
 from hotdoc.utils.signals import Signal
 from hotdoc.utils.loggable import info, debug, warn, error, Logger
 
@@ -166,29 +163,9 @@ class Page(object):
         """
         typed_symbols_list = namedtuple(
             'TypedSymbolsList', ['name', 'symbols'])
-        self.typed_symbols[Symbol] = typed_symbols_list('FIXME symbols', [])
-        self.typed_symbols[FunctionSymbol] = typed_symbols_list(
-            "Functions", [])
-        self.typed_symbols[CallbackSymbol] = typed_symbols_list(
-            "Callback Functions", [])
-        self.typed_symbols[FunctionMacroSymbol] = typed_symbols_list(
-            "Function Macros", [])
-        self.typed_symbols[ConstantSymbol] = typed_symbols_list(
-            "Constants", [])
-        self.typed_symbols[ExportedVariableSymbol] = typed_symbols_list(
-            "Exported Variables", [])
-        self.typed_symbols[StructSymbol] = typed_symbols_list(
-            "Data Structures", [])
-        self.typed_symbols[EnumSymbol] = typed_symbols_list("Enumerations", [])
-        self.typed_symbols[AliasSymbol] = typed_symbols_list("Aliases", [])
-        self.typed_symbols[SignalSymbol] = typed_symbols_list("Signals", [])
-        self.typed_symbols[PropertySymbol] = typed_symbols_list(
-            "Properties", [])
-        self.typed_symbols[VFunctionSymbol] = typed_symbols_list(
-            "Virtual Methods", [])
-        self.typed_symbols[ClassSymbol] = typed_symbols_list("Classes", [])
-        self.typed_symbols[InterfaceSymbol] = typed_symbols_list(
-            "Interfaces", [])
+
+        for subclass in all_subclasses(Symbol):
+            self.typed_symbols[subclass] = typed_symbols_list(subclass.get_plural_name(), [])
 
         all_syms = OrderedSet()
         for sym_name in self.symbol_names:

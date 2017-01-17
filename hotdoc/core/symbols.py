@@ -67,6 +67,12 @@ class Symbol(Base):
 
         Base.__init__(self, **kwargs)
 
+    @classmethod
+    def get_plural_name(cls):
+        """Default implementation of the vmethod
+        to retrieve Plurial form of the symbol name."""
+        return cls.__tablename__.replace("_", " ").title()
+
     # FIXME: this is a bit awkward to use.
     def add_extension_attribute(self, ext_name, key, value):
         """
@@ -312,7 +318,7 @@ class VFunctionSymbol(FunctionSymbol):
     """
     Banana banana
     """
-    __tablename__ = 'vfunctions'
+    __tablename__ = 'virtual_methods'
     id_ = Column(Integer, ForeignKey('functions.id_'), primary_key=True)
     __mapper_args__ = {
         'polymorphic_identity': 'vfunctions',
@@ -360,7 +366,7 @@ class EnumSymbol(Symbol):
     """
     Banana banana
     """
-    __tablename__ = 'enums'
+    __tablename__ = 'enumerations'
     id_ = Column(Integer, ForeignKey('symbols.id_'), primary_key=True)
     __mapper_args__ = {
         'polymorphic_identity': 'enums',
@@ -389,7 +395,7 @@ class StructSymbol(Symbol):
     """
     Banana banana
     """
-    __tablename__ = 'structs'
+    __tablename__ = 'structures'
     id_ = Column(Integer, ForeignKey('symbols.id_'), primary_key=True)
     __mapper_args__ = {
         'polymorphic_identity': 'structs',
