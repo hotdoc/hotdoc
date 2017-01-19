@@ -384,6 +384,7 @@ class Tree(object):
     def __parse_pages(self, change_tracker, sitemap):
         source_files = []
         source_map = {}
+        placeholders = []
 
         for i, fname in enumerate(sitemap.get_all_sources().keys()):
             resolved = self.resolve_placeholder_signal(
@@ -411,6 +412,7 @@ class Tree(object):
                         page = Page(fname, None, '')
                         page.generated = True
                         self.__all_pages[fname] = page
+                        placeholders.append(fname)
 
         stale, unlisted = change_tracker.get_stale_files(
             source_files, 'user-pages')
@@ -461,6 +463,11 @@ class Tree(object):
         for source_file in source_files:
             page = self.__all_pages[source_map[source_file]]
             page.subpages |= sitemap.get_subpages(source_map[source_file])
+            page.subpages -= unlisted_pagenames
+
+        for placeholder in placeholders:
+            page = self.__all_pages[placeholder]
+            page.subpages |= sitemap.get_subpages(placeholder)
             page.subpages -= unlisted_pagenames
 
         return old_user_symbols - new_user_symbols

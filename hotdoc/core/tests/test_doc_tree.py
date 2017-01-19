@@ -240,7 +240,7 @@ class TestTree(unittest.TestCase):
             stale_pages.pop(pagename)
         self.assertEqual(len(stale_pages), 0)
 
-    def __create_test_layout(self):
+    def __create_test_layout(self, with_ext_index=True):
         inp = (u'index.markdown\n'
                '\ttest-index\n'
                '\t\ttest-section.markdown\n'
@@ -261,7 +261,9 @@ class TestTree(unittest.TestCase):
             ['symbol_3',
              'symbol_4']))
 
-        self.test_ext.index = 'test-index.markdown'
+        if with_ext_index:
+            self.test_ext.index = 'test-index.markdown'
+
         self.test_ext.sources = sources
         self.test_ext.setup()
 
@@ -273,9 +275,10 @@ class TestTree(unittest.TestCase):
         self.__create_md_file(
             'core_page.markdown',
             (u'# My non-extension page\n'))
-        self.__create_md_file(
-            'test-index.markdown',
-            (u'# My test index\n'))
+        if with_ext_index:
+            self.__create_md_file(
+                'test-index.markdown',
+                (u'# My test index\n'))
         self.__create_md_file(
             'test-section.markdown',
             (u'# My test section\n'
@@ -345,6 +348,12 @@ class TestTree(unittest.TestCase):
         self.assertEqual(
             out,
             u'<h1>My override</h1>\n')
+
+    def test_no_extension_index_override(self):
+        tree, _ = self.__create_test_layout(with_ext_index=False)
+        ext_index = tree.get_pages()['test-index']
+        self.assertEqual(ext_index.generated, True)
+        self.assertEqual(len(ext_index.subpages), 4)
 
     def test_parse_yaml(self):
         inp = (u'index.markdown\n')
