@@ -29,7 +29,13 @@ from hotdoc.run_hotdoc import run
 
 class TestHotdoc(unittest.TestCase):
     def setUp(self):
-        here = os.path.dirname(__file__)
+        here = os.path.join(os.path.dirname(__file__), 'tmptestdir')
+        try:
+            shutil.rmtree(here)
+        except FileNotFoundError:
+            pass
+        os.mkdir(here)
+        os.chdir(here)
         Logger.reset()
         self.__md_dir = os.path.abspath(os.path.join(
             here, 'tmp-markdown-files'))
