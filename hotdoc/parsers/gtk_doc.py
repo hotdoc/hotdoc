@@ -22,6 +22,7 @@ This module implements parsing utilities for the legacy
 gtk-doc comment format.
 """
 
+import os
 import re
 import cgi
 from collections import OrderedDict
@@ -79,10 +80,16 @@ class GtkDocParser(object):
 
         self.tag_validation_regex = re.compile(tag_validation_regex)
 
-    def __parse_title(self, raw_title):
+    def __parse_title(self, source_filename, raw_title):
         if raw_title.startswith('SECTION'):
-            filename = raw_title.split('SECTION:')[1].strip()
-            return filename, []
+            rel_filename = raw_title.split('SECTION:')[1].strip()
+            section_name = os.path.abspath(os.path.join(
+                os.path.dirname(source_filename), rel_filename))
+
+            if not os.path.exists(section_name):
+                section_name = rel_filename
+
+            return section_name, []
 
         split = raw_title.split(': ', 1)
         title = split[0].rstrip(':')
@@ -160,9 +167,9 @@ class GtkDocParser(object):
         return Comment(name=name, annotations=annotations,
                        description=desc)
 
-    def __parse_title_and_parameters(self, title_and_params):
+    def __parse_title_and_parameters(self, filename, title_and_params):
         tps = re.split(r'(\n[ \t]*@[\S]+[ \t]*:)', title_and_params)
-        title, annotations = self.__parse_title(tps[0])
+        title, annotations = self.__parse_title(filename, tps[0])
         parameters = []
         for name, desc in _grouper(tps[1:], 2):
             n_chars = len(name.strip()) + len(desc)
@@ -288,7 +295,7 @@ class GtkDocParser(object):
 
         try:
             block_name, parameters, annotations = \
-                self.__parse_title_and_parameters(split[0])
+                self.__parse_title_and_parameters(filename, split[0])
         except HotdocSourceException as _:
             warn('gtk-doc-bad-syntax',
                  message=_.message,

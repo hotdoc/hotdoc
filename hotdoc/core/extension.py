@@ -414,7 +414,11 @@ class Extension(Configurable):
             page = Page(page_name, None, os.path.dirname(page_name))
             page.extension_name = self.extension_name
             page.generated = True
-            page.comment = self.project.database.get_comment(page_name)
+            source_abs = os.path.abspath(source_file)
+            if os.path.exists(source_abs):
+                page.comment = self.project.database.get_comment(source_abs)
+            else:
+                page.comment = self.project.database.get_comment(page_name)
             tree.add_page(index, page_name, page)
         else:
             page.is_stale = True

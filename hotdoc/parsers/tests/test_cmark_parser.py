@@ -21,6 +21,8 @@
 # pylint: disable=no-self-use
 # pylint: disable=too-few-public-methods
 
+import os
+import tempfile
 import unittest
 from hotdoc.parsers import cmark
 from hotdoc.parsers.gtk_doc import GtkDocParser, GtkDocStringFormatter
@@ -82,6 +84,11 @@ LINENOS_GTKDOC_COMMENT = '''/**
  * This is just a function.
  */'''
 
+SECTION_GTKDOC_COMMENT = '''/**
+ * SECTION: notafile
+ * @title: This page is not comming from a file.
+ */'''
+
 
 class TestGtkDocParser(unittest.TestCase):
     def setUp(self):
@@ -107,6 +114,33 @@ class TestGtkDocParser(unittest.TestCase):
         self.assertTrue('greeter' in comment.params)
         param = comment.params['greeter']
         self.assertEqual(param.description, 'a random greeter')
+
+    def test_page_name_not_a_file(self):
+        raw = SECTION_GTKDOC_COMMENT
+        lineno = 10
+        end_lineno = len(raw.split('\n')) + 10 - 1
+        comment = self.parser.parse_comment(
+            raw,
+            'some-file.c',
+            lineno,
+            end_lineno)
+        self.assertEqual(comment.name, "notafile")
+
+    def test_page_name_filename(self):
+        raw_lines = SECTION_GTKDOC_COMMENT.split("\n")
+        tmpfile = tempfile.NamedTemporaryFile()
+
+        raw_lines[1] = " * SECTION: %s" % (
+            os.path.relpath(tmpfile.name, '.'))
+        raw = '\n'.join(raw_lines)
+        lineno = 10
+        end_lineno = len(raw.split('\n')) + 10 - 1
+        comment = self.parser.parse_comment(
+            raw,
+            'some-file.c',
+            lineno,
+            end_lineno)
+        self.assertEqual(comment.name, tmpfile.name)
 
     def test_linenos(self):
         raw = LINENOS_GTKDOC_COMMENT
