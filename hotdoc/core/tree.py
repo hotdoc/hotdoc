@@ -34,7 +34,7 @@ from yaml.constructor import ConstructorError
 from schema import Schema, SchemaError, Optional, And
 
 from hotdoc.core.inclusions import find_md_file, resolve
-from hotdoc.core.symbols import Symbol, StructSymbol, ClassSymbol, InterfaceSymbol
+from hotdoc.core.symbols import Symbol, StructSymbol, ClassSymbol, InterfaceSymbol, AliasSymbol
 from hotdoc.core.links import Link
 from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.exceptions import HotdocSourceException, InvalidPageMetadata
@@ -178,25 +178,17 @@ class Page(object):
             self.__resolve_symbol(sym, link_resolver)
             self.symbol_names.add(sym.unique_name)
 
-        class_syms = self.typed_symbols[ClassSymbol].symbols
-        interface_syms = self.typed_symbols[InterfaceSymbol].symbols
-        struct_syms = self.typed_symbols[StructSymbol].symbols
+        for sym_type in [ClassSymbol, AliasSymbol, InterfaceSymbol, StructSymbol]:
+            syms = self.typed_symbols[sym_type].symbols
 
-        if self.title is None:
-            if class_syms:
-                self.title = class_syms[0].display_name
-            elif interface_syms:
-                self.title = interface_syms[0].display_name
-            elif struct_syms:
-                self.title = struct_syms[0].display_name
+            if not syms:
+                continue
 
-        if self.comment is None:
-            if class_syms and class_syms[0].comment:
-                self.comment = class_syms[0].comment
-            elif interface_syms and interface_syms[0].comment:
-                self.comment = interface_syms[0].comment
-            elif struct_syms and struct_syms[0].comment:
-                self.comment = struct_syms[0].comment
+            if self.title is None:
+                self.title = syms[0].display_name
+            if self.comment is None:
+                self.comment = syms[0].comment
+            break
 
     # pylint: disable=no-self-use
     def __fetch_comment(self, sym, database):
