@@ -392,6 +392,8 @@ class Extension(Configurable):
 
         for source_file, symbols in list(self._created_symbols.items()):
             gen_symbols = symbols - user_symbols
+            if not gen_symbols:
+                continue
             self.__add_subpage(tree, index, source_file, gen_symbols)
             tree.stale_symbol_pages(symbols)
 
