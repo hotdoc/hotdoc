@@ -399,7 +399,7 @@ class Extension(Configurable):
         if self.__package_root:
             return
 
-        commonprefix = os.path.commonprefix(self._get_all_sources())
+        commonprefix = os.path.commonprefix(list(self._get_all_sources()))
         self.__package_root = os.path.dirname(commonprefix)
 
     def __get_index_page(self, tree):
