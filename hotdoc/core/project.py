@@ -304,18 +304,22 @@ class Project(object):
         self.database.setup(self.get_private_folder())
         self.link_resolver = LinkResolver(self.database)
 
-    def __create_change_tracker(self):
-        try:
-            with open(os.path.join(self.get_private_folder(),
-                                   'change_tracker.p'), 'rb') as _:
-                self.change_tracker = pickle.loads(_.read())
+    def __create_change_tracker(self, disable_incremental):
+        if not disable_incremental:
+            try:
+                with open(os.path.join(self.get_private_folder(),
+                                       'change_tracker.p'), 'rb') as _:
+                    self.change_tracker = pickle.loads(_.read())
 
-            if self.change_tracker.hard_dependencies_are_stale():
-                raise IOError
-            self.incremental = True
-            info("Building incrementally")
-        # pylint: disable=broad-except
-        except Exception:
+                if self.change_tracker.hard_dependencies_are_stale():
+                    raise IOError
+                self.incremental = True
+                info("Building incrementally")
+            # pylint: disable=broad-except
+            except Exception:
+                pass
+
+        if not self.incremental:
             info("Building from scratch")
             shutil.rmtree(self.get_private_folder(), ignore_errors=True)
             if self.output:
@@ -412,6 +416,10 @@ class Project(object):
                                  dest="output",
                                  help="where to output the rendered "
                                  "documentation")
+        self.parser.add_argument("--disable-incremental-build", action="store_true",
+                                 default=False,
+                                 dest="disable_incremental",
+                                 help="Disable incremental build")
         self.parser.add_argument("--get-conf-key", action="store",
                                  help="print the value for a configuration "
                                  "key")
@@ -549,6 +557,7 @@ class Project(object):
         Banana banana
         """
         output = self.config.get_path('output') or None
+        disable_incremental = self.config.get('disable_incremental') or None
         self.sitemap_path = self.config.get_path('sitemap')
 
         if self.sitemap_path is None:
@@ -580,7 +589,7 @@ class Project(object):
         self.__base_doc_folder = os.path.dirname(self.__index_file)
         self.include_paths = OrderedSet([self.__base_doc_folder])
         self.include_paths |= OrderedSet(cmd_line_includes)
-        self.__create_change_tracker()
+        self.__create_change_tracker(disable_incremental)
         self.__setup_private_folder()
         self.__setup_database()
 
