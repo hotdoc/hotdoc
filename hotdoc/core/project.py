@@ -19,12 +19,7 @@
 """
 Core of the core.
 """
-import argparse
-import hashlib
-import pickle as pickle
 import os
-import shutil
-import sys
 import io
 import re
 import linecache
@@ -33,15 +28,10 @@ import json
 from collections import OrderedDict
 
 from hotdoc.core import inclusions
-from hotdoc.core.formatter import Formatter
 from hotdoc.core.extension import Extension
-from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.comment import Tag
 from hotdoc.core.config import Config
-from hotdoc.core.database import Database
 from hotdoc.core.tree import Tree
-from hotdoc.core.links import LinkResolver
-from hotdoc.utils.setup_utils import VERSION
 from hotdoc.utils.loggable import info, error
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.utils import OrderedSet
@@ -71,7 +61,8 @@ class CoreExtension(Extension):
             proj.format(link_resolver, output)
             page.title = proj.tree.root.title
         else:
-            return super(CoreExtension, self).format_page(page, link_resolver, output)
+            return super(CoreExtension, self).format_page(
+                page, link_resolver, output)
 
     def setup(self):
         super(CoreExtension, self).setup()
@@ -89,6 +80,9 @@ class CoreExtension(Extension):
 
     @staticmethod
     def include_file_cb(include_path, line_ranges, symbol):
+        """
+        Banana banana
+        """
         lang = ''
         if include_path.endswith((".md", ".markdown")):
             lang = 'markdown'
@@ -177,12 +171,14 @@ class Project(Configurable):
         """
         info('Setting up %s' % self.project_name, 'project')
 
-        self.app.database.comment_updated_signal.connect(self.__comment_updated_cb)
+        self.app.database.comment_updated_signal.connect(
+            self.__comment_updated_cb)
         for extension in list(self.extensions.values()):
             info('Setting up %s' % extension.extension_name)
             extension.setup()
             self.app.database.flush()
-        self.app.database.comment_updated_signal.disconnect(self.__comment_updated_cb)
+        self.app.database.comment_updated_signal.disconnect(
+            self.__comment_updated_cb)
 
         sitemap = SitemapParser().parse(self.sitemap_path)
         self.tree.parse_sitemap(sitemap)
@@ -205,16 +201,18 @@ class Project(Configurable):
             ext = self.extensions.get(self.tree.root.extension_name)
             ext_folder = ext.formatter.get_output_folder()
             index_path = os.path.join(
-                    self.sanitized_name,
-                    ext_folder,
-                    self.tree.root.link.get_link(link_resolver))
-
+                self.sanitized_name,
+                ext_folder,
+                self.tree.root.link.get_link(link_resolver))
             with open(os.path.join(output, 'html', 'index.html'), 'w',
                       encoding='utf8') as _:
                 _.write('<meta http-equiv="refresh" content="0; url=%s"/>' %
                         index_path)
 
     def create_navigation_script(self, output):
+        """
+        Banana banana
+        """
         sitemap = self.__create_json_sitemap()
         sitemap = sitemap.replace('\\', '\\\\')
         sitemap = sitemap.replace('"', '\\"')
@@ -232,13 +230,21 @@ class Project(Configurable):
             _.write(js_wrapper)
 
     def dump_json_sitemap(self, page, node):
+        """
+        Banana banana
+        """
         node['title'] = page.title
         node['short_description'] = page.short_description
         node['url'] = page.link.get_link(self.app.link_resolver)
         node['extension'] = page.extension_name
         node['subpages'] = []
         node['project_name'] = page.project_name
-        for pagename in page.subpages:
+        if page.extension_name:
+            ext = self.extensions[page.extension_name]
+            subpages = ext.get_subpages_sorted(self.tree.get_pages(), page)
+        else:
+            subpages = page.subpages
+        for pagename in subpages:
             cnode = OrderedDict()
             node['subpages'].append(cnode)
             proj = self.subprojects.get(pagename)
@@ -249,8 +255,10 @@ class Project(Configurable):
                 cpage = proj.tree.root
                 proj.dump_json_sitemap(cpage, cnode)
 
-
     def __create_json_sitemap(self):
+        """
+        Banana banana
+        """
         node = OrderedDict()
         self.dump_json_sitemap(self.tree.root, node)
         return json.dumps(node)
@@ -277,6 +285,7 @@ class Project(Configurable):
                            default=[])
 
     def add_subproject(self, fname, conf_path):
+        """Creates and adds a new subproject."""
         config = Config(conf_file=conf_path)
         proj = Project(self.app)
         proj.parse_config(config)
@@ -289,12 +298,11 @@ class Project(Configurable):
             self.extensions[ext.extension_name] = ext
 
     def __comment_updated_cb(self, doc_db, comment):
-        self.tree.stale_comment_pages (comment)
+        self.tree.stale_comment_pages(comment)
 
+    # pylint: disable=arguments-differ
     def parse_config(self, config, toplevel=False):
-        """
-        Banana banana
-        """
+        """Parses @config setting up @self state."""
         self.sitemap_path = config.get_path('sitemap')
 
         if self.sitemap_path is None:
@@ -309,7 +317,8 @@ class Project(Configurable):
         if not self.project_version:
             error('invalid-config', 'No project version was provided')
 
-        self.sanitized_name = '%s-%s' % (re.sub(r'\W+', '-', self.project_name),
+        self.sanitized_name = '%s-%s' % (re.sub(r'\W+', '-',
+                                                self.project_name),
                                          self.project_version)
 
         self.include_paths = OrderedSet([])

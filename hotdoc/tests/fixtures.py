@@ -104,3 +104,22 @@ class HotdocTest(unittest.TestCase):
         # microsecond
         touch(path)
         return path
+
+    def _create_project_config(self, name, version='0.2',
+                               sitemap_content=None):
+        sitemap_name = name + '.txt'
+        index_name = name + '.markdown'
+        config_name = name + '.json'
+
+        if not sitemap_content:
+            sitemap_content = index_name
+        sm_path = self._create_sitemap(sitemap_name, sitemap_content)
+
+        index_content = "#" + name[0].upper() + name[1:]
+        index_path = self._create_md_file(index_name, index_content)
+
+        return self._create_conf_file(config_name,
+                                      {'index': index_path,
+                                       'sitemap': sm_path,
+                                       'project_name': name,
+                                       'project_version': version})

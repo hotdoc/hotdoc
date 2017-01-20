@@ -105,6 +105,7 @@ class Page(object):
         self.raw_contents = raw_contents
         self.comment = None
         self.generated = False
+        self.pre_sorted = False
         self.output_attrs = None
         self.subpages = OrderedSet()
         self.symbols = []
@@ -458,6 +459,9 @@ class Tree(object):
         for source_file in source_files:
             page = self.__all_pages[source_map[source_file]]
             page.subpages |= sitemap.get_subpages(source_map[source_file])
+            for subpage in page.subpages:
+                if subpage not in unlisted_pagenames:
+                    self.__all_pages[subpage].pre_sorted = True
             page.subpages -= unlisted_pagenames
 
         for placeholder in placeholders:

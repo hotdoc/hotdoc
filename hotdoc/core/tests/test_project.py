@@ -135,3 +135,30 @@ class TestProject(HotdocTest):
             proj_output, 'extra_assets', 'fake_asset.md')))
         self.assertFalse(os.path.exists(os.path.join(
             proj_output, 'subassets', 'fake_asset.md')))
+
+    def test_order_subpages_with_subprojects(self):
+        proj = Project(self)
+
+        content = 'project.markdown\n\tsubproject1.json\n\tsubproject.json'
+        conf_file = self._create_project_config(
+            'project', sitemap_content=content)
+        self._create_project_config('subproject')
+        self._create_project_config('subproject1')
+
+        conf = Config(conf_file=conf_file)
+
+        proj.parse_config(conf)
+        proj.setup()
+        sitemap_json = {}
+        pages = proj.tree.get_pages()
+        proj.dump_json_sitemap(pages['project.markdown'], sitemap_json)
+        subpages = sitemap_json['subpages']
+        self.assertEqual(len(subpages), 2)
+
+        page0_url = [v for (k, v) in sitemap_json['subpages'][
+            0].items() if k == 'url'][0]
+        self.assertEqual(page0_url, 'subproject1.html')
+
+        page1_url = [v for (k, v) in sitemap_json['subpages'][
+            1].items() if k == 'url'][0]
+        self.assertEqual(page1_url, 'subproject.html')

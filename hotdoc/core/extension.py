@@ -464,3 +464,19 @@ class Extension(Configurable):
         else:
             debug('Not formatting page %s, up to date' % page.link.ref,
                   'formatting')
+
+    def get_subpages_sorted(self, pages, page):
+        """Get @page subpages sorted appropriately."""
+
+        sorted_pages = []
+        to_sort = []
+        for page in page.subpages:
+            # Do not resort subprojects even if they are
+            # 'generated'.
+            if pages[page].pre_sorted:
+                sorted_pages.append(page)
+            else:
+                to_sort.append(page)
+
+        return sorted_pages + sorted(
+            to_sort, key=lambda p: pages[p].get_title().lower())
