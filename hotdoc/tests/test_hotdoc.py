@@ -61,7 +61,7 @@ class TestHotdoc(unittest.TestCase):
 
     def assertOutput(self, n_html_files):
         actual = 0
-        for f in os.listdir(os.path.join(self.__output_dir, 'html')):
+        for f in os.listdir(os.path.join(self.__output_dir, 'html', 'test-project-0.1')):
             if f.endswith('.html'):
                 actual += 1
         self.assertEqual(actual, n_html_files)
@@ -75,6 +75,8 @@ class TestHotdoc(unittest.TestCase):
 
         args = ['--index', os.path.join(self.__md_dir, 'index.markdown'),
                 '--output', self.__output_dir,
+                '--project-name', 'test-project',
+                '--project-version', '0.1',
                 '--sitemap', os.path.join(self.__md_dir, 'sitemap.txt'),
                 'run']
         res = run(args)

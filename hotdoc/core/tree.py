@@ -42,7 +42,7 @@ from hotdoc.core.database import Database
 from hotdoc.core.comment import Comment
 # pylint: disable=no-name-in-module
 from hotdoc.parsers import cmark
-from hotdoc.utils.utils import OrderedSet, count_folders, all_subclasses
+from hotdoc.utils.utils import OrderedSet, all_subclasses
 from hotdoc.utils.signals import Signal
 from hotdoc.utils.loggable import info, debug, warn, error, Logger
 
@@ -89,11 +89,8 @@ class Page(object):
                    Optional('symbols'): Schema([And(str, len)]),
                    Optional('short-description'): And(str, len)}
 
-    resolving_symbol_signal = Signal()
-    formatting_signal = Signal()
-
     # pylint: disable=too-many-arguments
-    def __init__(self, source_file, ast, output_path, meta=None,
+    def __init__(self, source_file, ast, output_path, project_name, meta=None,
                  raw_contents=None):
         "Banana banana"
         assert source_file
@@ -116,6 +113,7 @@ class Page(object):
         self.formatted_contents = None
         self.detailed_description = None
         self.build_path = None
+        self.project_name = project_name
 
         meta = meta or {}
 
@@ -153,9 +151,10 @@ class Page(object):
                 'symbols': [],
                 'typed_symbols': {},
                 'subpages': self.subpages,
-                'symbol_names': self.symbol_names}
+                'symbol_names': self.symbol_names,
+                'project_name': self.project_name}
 
-    def resolve_symbols(self, database, link_resolver):
+    def resolve_symbols(self, tree, database, link_resolver):
         """
         When this method is called, the page's symbol names are queried
         from `database`, and added to lists of actual symbols, sorted
@@ -171,7 +170,7 @@ class Page(object):
         for sym_name in self.symbol_names:
             sym = database.get_symbol(sym_name)
             self.__query_extra_symbols(
-                sym, all_syms, link_resolver, database)
+                sym, all_syms, tree, link_resolver, database)
 
         for sym in all_syms:
             sym.update_children_comments()
@@ -231,10 +230,8 @@ class Page(object):
             return ref
 
         url_components = urllib.parse.urlparse(ref)
-        cnt = count_folders(self.build_path)
-        if cnt > 0 and not bool(url_components.scheme):
-            prefix = os.path.join(*([os.path.pardir] * cnt))
-            ref = os.path.join(prefix, ref)
+        if not bool(url_components.scheme):
+            ref = os.path.relpath(ref, os.path.dirname(self.build_path))
 
         return ref
 
@@ -250,10 +247,9 @@ class Page(object):
         self.formatted_contents = u''
 
         self.build_path = os.path.join(
-            os.path.relpath(formatter.get_output_folder(),
-                            'html').lstrip('./'),
-            self.link.ref)
-        Link.relativize_link_signal.connect(self.__relativize_link_cb)
+            formatter.get_output_folder(),
+            os.path.join(self.project_name, self.link.ref))
+        link_resolver.relativize_link_signal.connect(self.__relativize_link_cb)
 
         if self.ast:
             out, diags = cmark.ast_to_html(self.ast, link_resolver)
@@ -269,12 +265,11 @@ class Page(object):
 
         self.output_attrs = defaultdict(lambda: defaultdict(dict))
         formatter.prepare_page_attributes(self)
-        Page.formatting_signal(self, formatter)
         self.__format_symbols(formatter, link_resolver)
         self.detailed_description =\
             formatter.format_page(self)[0]
 
-        Link.relativize_link_signal.disconnect(self.__relativize_link_cb)
+        link_resolver.relativize_link_signal.disconnect(self.__relativize_link_cb)
 
         if output:
             formatter.write_page(self, root, output)
@@ -300,25 +295,25 @@ class Page(object):
                 symbol.unique_name, self.source_file), 'formatting')
             symbol.skip = not formatter.format_symbol(symbol, link_resolver)
 
-    def __query_extra_symbols(self, sym, all_syms, link_resolver,
+    def __query_extra_symbols(self, sym, all_syms, tree, link_resolver,
                               database):
         if sym:
             self.__fetch_comment(sym, database)
-            new_symbols = sum(Page.resolving_symbol_signal(self, sym),
+            new_symbols = sum(tree.resolving_symbol_signal(self, sym),
                               [])
             all_syms.add(sym)
 
             for symbol in new_symbols:
                 self.__query_extra_symbols(
-                    symbol, all_syms, link_resolver, database)
+                    symbol, all_syms, tree, link_resolver, database)
 
     def __resolve_symbol(self, symbol, link_resolver):
         symbol.resolve_links(link_resolver)
 
-        symbol.link.ref = "%s#%s" % (self.link.ref, symbol.unique_name)
+        symbol.link.ref = "%s/%s#%s" % (self.project_name, self.link.ref, symbol.unique_name)
 
         for link in symbol.get_extra_links():
-            link.ref = "%s#%s" % (self.link.ref, link.id_)
+            link.ref = "%s/%s#%s" % (self.project_name, self.link.ref, link.id_)
 
         tsl = self.typed_symbols.get(type(symbol))
         if tsl:
@@ -332,27 +327,27 @@ class Page(object):
 # pylint: disable=too-many-instance-attributes
 class Tree(object):
     "Banana banana"
-    resolve_placeholder_signal = Signal(optimized=True)
-    update_signal = Signal()
 
-    def __init__(self, private_folder, include_paths):
+    def __init__(self, project, app):
         "Banana banana"
-        self.__include_paths = include_paths
-        self.__priv_dir = private_folder
+        self.project = project
+        self.app = app
 
-        try:
-            self.__all_pages = self.__load_private('pages.p')
-            self.__incremental = True
-        except IOError:
+        if self.app.incremental:
+            self.__all_pages = self.__load_private('pages-%s.p' % self.project.sanitized_name)
+        else:
             self.__all_pages = {}
 
         self.__placeholders = {}
         self.root = None
         self.__dep_map = self.__create_dep_map()
-        Database.comment_updated_signal.connect(self.__comment_updated_cb)
+        app.database.comment_updated_signal.connect(self.__comment_updated_cb)
 
         cmark.hotdoc_to_ast(u'', self)
         self.__extensions = {}
+        self.resolve_placeholder_signal = Signal(optimized=True)
+        self.update_signal = Signal()
+        self.resolving_symbol_signal = Signal()
 
     def __create_dep_map(self):
         dep_map = {}
@@ -362,12 +357,12 @@ class Tree(object):
         return dep_map
 
     def __load_private(self, name):
-        path = os.path.join(self.__priv_dir, name)
+        path = os.path.join(self.project.get_private_folder(), name)
         with open(path, 'rb') as _:
             return pickle.loads(_.read())
 
     def __save_private(self, obj, name):
-        path = os.path.join(self.__priv_dir, name)
+        path = os.path.join(self.project.get_private_folder(), name)
         with open(path, 'wb') as _:
             _.write(pickle.dumps(obj))
 
@@ -381,16 +376,17 @@ class Tree(object):
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-statements
-    def __parse_pages(self, change_tracker, sitemap):
+    def __parse_pages(self, sitemap):
+        change_tracker = self.app.change_tracker
         source_files = []
         source_map = {}
         placeholders = []
 
         for i, fname in enumerate(sitemap.get_all_sources().keys()):
             resolved = self.resolve_placeholder_signal(
-                self, fname, self.__include_paths)
+                self, fname, self.project.include_paths)
             if resolved is None:
-                source_file = find_md_file(fname, self.__include_paths)
+                source_file = find_md_file(fname, self.project.include_paths)
                 source_files.append(source_file)
                 if source_file is None:
                     error(
@@ -409,13 +405,13 @@ class Tree(object):
                     source_map[resolved] = fname
                 else:
                     if fname not in self.__all_pages:
-                        page = Page(fname, None, '')
+                        page = Page(fname, None, '', self.project.sanitized_name)
                         page.generated = True
                         self.__all_pages[fname] = page
                         placeholders.append(fname)
 
         stale, unlisted = change_tracker.get_stale_files(
-            source_files, 'user-pages')
+            source_files, 'user-pages-%s' % self.project.sanitized_name)
 
         old_user_symbols = set()
         new_user_symbols = set()
@@ -447,7 +443,7 @@ class Tree(object):
             prev_page = None
             rel_path = None
 
-            for ipath in self.__include_paths:
+            for ipath in self.project.include_paths:
                 rel_path = os.path.relpath(source_file, ipath)
                 prev_page = self.__all_pages.get(rel_path)
                 if prev_page:
@@ -494,55 +490,15 @@ class Tree(object):
         if not os.path.exists(folder):
             os.makedirs(folder)
 
-    def __dump_json_sitemap(self, page, node):
-        node['title'] = page.title
-        node['short_description'] = page.short_description
-        node['url'] = page.link.get_link()
-        node['extension'] = page.extension_name
-        node['subpages'] = []
-        for pagename in page.subpages:
-            cnode = OrderedDict()
-            cpage = self.__all_pages[pagename]
-            node['subpages'].append(cnode)
-            self.__dump_json_sitemap(cpage, cnode)
-
-    def __create_json_sitemap(self):
-        node = OrderedDict()
-        self.__dump_json_sitemap(self.root, node)
-        return json.dumps(node)
-
-    def __create_navigation_script(self, output, extensions):
-        # Wrapping this is in a javascript file to allow
-        # circumventing stupid chrome same origin policy
-        formatter = extensions['core'].get_formatter('html')
-        output = os.path.join(output, formatter.get_output_folder())
-
-        sitemap = self.__create_json_sitemap()
-        sitemap = sitemap.replace('\\', '\\\\')
-        sitemap = sitemap.replace('"', '\\"')
-
-        js_wrapper = 'sitemap_downloaded_cb("'
-        js_wrapper += sitemap
-        js_wrapper += '");'
-
-        dirname = os.path.join(output, 'assets', 'js')
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
-        path = os.path.join(dirname, 'sitemap.js')
-
-        with open(path, 'w') as _:
-            _.write(js_wrapper)
-
     def __get_link_cb(self, link_resolver, name):
         url_components = urllib.parse.urlparse(name)
 
         page = self.__all_pages.get(url_components.path)
         if page:
             ext = self.__extensions[page.extension_name]
-            formatter = ext.get_formatter('html')
-            prefix = os.path.relpath(
-                formatter.get_output_folder(), 'html').lstrip('./')
-            ref = page.link.ref
+            formatter = ext.formatter
+            prefix = formatter.get_output_folder()
+            ref = os.path.join(page.project_name, page.link.ref)
             if url_components.fragment:
                 ref += '#%s' % url_components.fragment
             return Link(os.path.join(prefix, ref), page.link.get_title(), None)
@@ -558,7 +514,7 @@ class Tree(object):
         """
         Banana banana
         """
-        return resolve(uri, self.__include_paths)
+        return resolve(uri, self.project.include_paths)
 
     def walk(self, parent=None):
         """Generator that yields pages in infix order
@@ -610,11 +566,11 @@ class Tree(object):
                                                          str(exception)))
 
         output_path = os.path.dirname(os.path.relpath(
-            source_file, next(iter(self.__include_paths))))
+            source_file, next(iter(self.project.include_paths))))
 
         ast = cmark.hotdoc_to_ast(contents, self)
-        return Page(source_file, ast, output_path, meta=meta,
-                    raw_contents=raw_contents)
+        return Page(source_file, ast, output_path, self.project.sanitized_name,
+                    meta=meta, raw_contents=raw_contents)
 
     def stale_symbol_pages(self, symbols, new_page=None):
         """
@@ -628,11 +584,11 @@ class Tree(object):
                 if new_page and new_page.source_file != page.source_file:
                     page.symbol_names.remove(sym)
 
-    def parse_sitemap(self, change_tracker, sitemap):
+    def parse_sitemap(self, sitemap):
         """
         Banana banana
         """
-        unlisted_symbols = self.__parse_pages(change_tracker, sitemap)
+        unlisted_symbols = self.__parse_pages(sitemap)
         self.root = self.__all_pages[sitemap.index_file]
         self.__update_sitemap(sitemap)
         self.update_signal(self, unlisted_symbols)
@@ -683,7 +639,7 @@ class Tree(object):
                 with io.open(page.source_file, 'r', encoding='utf-8') as _:
                     page.ast = cmark.hotdoc_to_ast(_.read(), self)
 
-            page.resolve_symbols(database, link_resolver)
+            page.resolve_symbols(self, database, link_resolver)
             self.__update_dep_map(page, page.symbols)
 
         for pagename in page.subpages:
@@ -715,10 +671,9 @@ class Tree(object):
 
         self.__extensions = None
         link_resolver.get_link_signal.disconnect(self.__get_link_cb)
-        self.__create_navigation_script(output, extensions)
 
     def persist(self):
         """
         Banana banana
         """
-        self.__save_private(self.__all_pages, 'pages.p')
+        self.__save_private(self.__all_pages, 'pages-%s.p' % self.project.sanitized_name)

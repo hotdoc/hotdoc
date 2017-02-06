@@ -32,10 +32,9 @@ class HotdocTestExtension(Extension):
     argument_prefix = 'test'
     use_custom_key = False
 
-    def __init__(self, project):
-        self.formatters = {'html': None}
+    def __init__(self, app, project):
         self.smart_index = True
-        super(HotdocTestExtension, self).__init__(project)
+        super(HotdocTestExtension, self).__init__(app, project)
 
     def _get_smart_key(self, symbol):
         if not self.use_custom_key:
@@ -66,7 +65,7 @@ class HotdocTestExtension(Extension):
 class TestExtension(HotdocTest):
     def setUp(self):
         super(TestExtension, self).setUp()
-        self.test_ext = HotdocTestExtension(self)
+        self.test_ext = HotdocTestExtension(self, self)
 
     def tearDown(self):
         super(TestExtension, self).tearDown()

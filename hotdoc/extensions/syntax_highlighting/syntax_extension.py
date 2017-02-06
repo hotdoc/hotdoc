@@ -41,11 +41,11 @@ class SyntaxHighlightingExtension(Extension):
     """
     extension_name = 'syntax-highlighting-extension'
     argument_prefix = 'syntax-highlighting'
-    activated = False
 
-    def __init__(self, project):
-        Extension.__init__(self, project)
+    def __init__(self, app, project):
+        Extension.__init__(self, app, project)
         self.__asset_folders = set()
+        self.activated = False
 
     def __formatting_page_cb(self, formatter, page):
         page.output_attrs['html']['stylesheets'].add(
@@ -65,14 +65,16 @@ class SyntaxHighlightingExtension(Extension):
     def __formatted_cb(self, project):
         ipath = os.path.join(HERE, 'prism', 'components')
         for folder in self.__asset_folders:
-            opath = os.path.join(project.output, folder)
+            opath = os.path.join(self.app.output, folder)
             recursive_overwrite(ipath, opath)
 
     def setup(self):
-        if not SyntaxHighlightingExtension.activated:
+        super(SyntaxHighlightingExtension, self).setup()
+        if not self.activated:
             return
 
-        Formatter.formatting_page_signal.connect(self.__formatting_page_cb)
+        for ext in self.project.extensions.values():
+            ext.formatter.formatting_page_signal.connect(self.__formatting_page_cb)
         self.project.formatted_signal.connect(self.__formatted_cb)
 
     @staticmethod
@@ -84,7 +86,7 @@ class SyntaxHighlightingExtension(Extension):
                            help="Activate the syntax highlighting extension",
                            dest='syntax_highlighting_activate')
 
-    @staticmethod
-    def parse_config(project, config):
-        SyntaxHighlightingExtension.activated = \
+    def parse_config(self, config):
+        super(SyntaxHighlightingExtension, self).parse_config(config)
+        self.activated = \
             bool(config.get('syntax_highlighting_activate', False))

@@ -84,7 +84,7 @@ resolve_link(const char *id) {
   Py_DECREF(utf8);
 
   if (link != Py_None) {
-    ref = PyObject_CallMethod(link, "get_link", NULL);
+    ref = PyObject_CallMethod(link, "get_link", "(O)", link_resolver);
 
     if (PyErr_Occurred()) {
       PyErr_Clear();

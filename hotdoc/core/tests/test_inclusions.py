@@ -19,10 +19,16 @@
 # pylint: disable=missing-docstring
 
 from hotdoc.tests.fixtures import HotdocTest
+from hotdoc.core.project import CoreExtension
 from hotdoc.core.inclusions import find_md_file, resolve
 
 
 class TestFileIncluder(HotdocTest):
+    def setUp(self):
+        super(TestFileIncluder, self).setUp()
+        self._core_ext = CoreExtension(self, self)
+        self._core_ext.setup()
+
     def test_missing_abspath(self):
         self.assertEqual(find_md_file('/nope.md', []), None)
 

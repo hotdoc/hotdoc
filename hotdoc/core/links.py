@@ -29,9 +29,7 @@ class Link(MutableObject):
     """
     Banana banana
     """
-    resolving_link_signal = Signal()
     resolving_title_signal = Signal()
-    relativize_link_signal = Signal(optimized=True)
 
     def __init__(self, ref, title, id_):
         self.ref = None
@@ -69,18 +67,18 @@ class Link(MutableObject):
         """
         return self.title
 
-    def get_link(self):
+    def get_link(self, link_resolver):
         """
         Banana banana
         """
-        resolved_ref = Link.resolving_link_signal(self)
+        resolved_ref = link_resolver.resolving_link_signal(self)
         resolved_ref = [elem for elem in resolved_ref if elem is not None]
 
         res = self.ref
         if resolved_ref:
             res = str(resolved_ref[0])
 
-        res = Link.relativize_link_signal(res) or res
+        res = link_resolver.relativize_link_signal(res) or res
 
         return res
 
@@ -89,11 +87,12 @@ class LinkResolver(object):
     """
     Banana banana
     """
-    get_link_signal = Signal()
-
     def __init__(self, database):
         self.__links = {}
         self.__doc_db = database
+        self.get_link_signal = Signal()
+        self.resolving_link_signal = Signal()
+        self.relativize_link_signal = Signal(optimized=True)
 
     # pylint: disable=too-many-return-statements
     def get_named_link(self, name):
@@ -112,7 +111,7 @@ class LinkResolver(object):
             self.__links[name] = sym.link
             return sym.link
 
-        lazy_loaded = LinkResolver.get_link_signal(self, name)
+        lazy_loaded = self.get_link_signal(self, name)
         lazy_loaded = [elem for elem in lazy_loaded if elem is not None]
         if lazy_loaded:
             link = lazy_loaded[0]

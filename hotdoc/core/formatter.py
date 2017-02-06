@@ -56,7 +56,7 @@ from hotdoc.utils.setup_utils import THEME_VERSION
 from hotdoc.utils.utils import (
     OrderedSet, id_from_text, recursive_overwrite, symlink)
 from hotdoc.core.exceptions import HotdocException
-from hotdoc.utils.loggable import Logger, warn, info
+from hotdoc.utils.loggable import Logger, warn, debug
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.signals import Signal
 
@@ -65,7 +65,7 @@ Page.meta_schema[Optional('extra', default=defaultdict())] = \
     Schema({str: object})
 
 
-def _create_hierarchy_graph(hierarchy):
+def _create_hierarchy_graph(hierarchy, link_resolver):
     # FIXME: handle multiple inheritance
     graph = pg.AGraph(directed=True, strict=True)
 
@@ -73,9 +73,9 @@ def _create_hierarchy_graph(hierarchy):
         parent_link = pair[0].get_type_link()
         child_link = pair[1].get_type_link()
 
-        graph.add_node(parent_link.title, URL=parent_link.get_link(),
+        graph.add_node(parent_link.title, URL=parent_link.get_link(link_resolver),
                        style="rounded", shape="box")
-        graph.add_node(child_link.title, URL=child_link.get_link(),
+        graph.add_node(child_link.title, URL=child_link.get_link(link_resolver),
                        style="rounded", shape="box")
 
         graph.add_edge(parent_link.title, child_link.title)
@@ -130,19 +130,16 @@ class Formatter(Configurable):
     """
     Banana banana
     """
-
-    formatting_page_signal = Signal()
-    formatting_symbol_signal = Signal()
-    writing_page_signal = Signal()
-    get_extra_files_signal = Signal()
     extra_assets = None
     theme_path = None
     extra_theme_path = None
     add_anchors = False
     number_headings = False
 
-    def __init__(self, searchpath):
+    def __init__(self, link_resolver, searchpath):
         Configurable.__init__(self)
+
+        self.link_resolver = link_resolver
 
         self._symbol_formatters = {
             FunctionSymbol: self._format_function,
@@ -169,23 +166,21 @@ class Formatter(Configurable):
                           VFunctionSymbol, EnumSymbol, ConstantSymbol,
                           ExportedVariableSymbol, AliasSymbol, CallbackSymbol]
 
-        if Formatter.theme_path:
-            self.__load_theme_templates(searchpath,
-                                        Formatter.theme_path)
-        if Formatter.extra_theme_path:
-            self.__load_theme_templates(searchpath,
-                                        Formatter.extra_theme_path)
-
-        searchpath.append(os.path.join(HERE, "templates"))
-        self.engine = Engine(
-            loader=FileLoader(searchpath, encoding='UTF-8'),
-            extensions=[CoreExtension(), CodeExtension()]
-        )
-
         self.all_scripts = set()
         self.all_stylesheets = set()
-        self._docstring_formatter = GtkDocStringFormatter()
+        self._docstring_formatter = self._make_docstring_formatter()
         self._current_page = None
+        self.extra_assets = None
+        self.add_anchors = False
+        self.number_headings = False
+        self.searchpath = searchpath
+        self.writing_page_signal = Signal()
+        self.formatting_page_signal = Signal()
+        self.get_extra_files_signal = Signal()
+        self.formatting_symbol_signal = Signal()
+
+    def _make_docstring_formatter(self):
+        return GtkDocStringFormatter()
 
     # pylint: disable=no-self-use
     def _get_assets_path(self):
@@ -204,7 +199,7 @@ class Formatter(Configurable):
         for csym in symbol.get_children_symbols():
             self.format_symbol(csym, link_resolver)
 
-        res = Formatter.formatting_symbol_signal(self, symbol)
+        res = self.formatting_symbol_signal(self, symbol)
 
         if False in res:
             return False
@@ -296,7 +291,7 @@ class Formatter(Configurable):
         """
         Banana banana
         """
-        Formatter.formatting_page_signal(self, page)
+        self.formatting_page_signal(self, page)
         return self._format_page(page)
 
     # pylint: disable=no-self-use
@@ -415,7 +410,7 @@ class Formatter(Configurable):
             root, doctype="<!DOCTYPE html>", encoding='unicode',
             include_meta_content_type=True)
 
-        full_path = os.path.join(output, page.link.ref)
+        full_path = os.path.join(output, page.project_name, self.get_output_folder(), page.link.ref)
 
         if not os.path.exists(os.path.dirname(full_path)):
             os.makedirs(os.path.dirname(full_path))
@@ -459,7 +454,7 @@ class Formatter(Configurable):
         """
         Banana banana
         """
-        return 'html'
+        return ''
 
     def _format_link(self, link, title):
         out = ''
@@ -479,7 +474,7 @@ class Formatter(Configurable):
 
         for tok in type_tokens:
             if isinstance(tok, Link):
-                ref = tok.get_link()
+                ref = tok.get_link(self.link_resolver)
                 if ref:
                     out += self._format_link(ref, tok.title)
                     link_before = True
@@ -505,7 +500,7 @@ class Formatter(Configurable):
 
         # FIXME : ugly
         elif hasattr(symbol, "link") and type(symbol) != FieldSymbol:
-            out += self._format_link(symbol.link.get_link(), symbol.link.title)
+            out += self._format_link(symbol.link.get_link(self.link_resolver), symbol.link.title)
 
         if type(symbol) == ParameterSymbol:
             out += ' ' + symbol.argname
@@ -841,7 +836,7 @@ class Formatter(Configurable):
         return (None, False)
 
     def _format_object_hierarchy_symbol(self, symbol):
-        dot_graph = _create_hierarchy_graph(symbol.hierarchy)
+        dot_graph = _create_hierarchy_graph(symbol.hierarchy, self.link_resolver)
         tmp_file = tempfile.NamedTemporaryFile(suffix='.svg', delete=False)
         dot_graph.draw(tmp_file, prog='dot', format='svg', args="-Grankdir=LR")
         tmp_file.close()
@@ -855,8 +850,9 @@ class Formatter(Configurable):
                                'assets_path': self._get_assets_path()})
         return (res, False)
 
-    def _format_comment(self, comment):
-        raise NotImplementedError
+    def _format_comment(self, comment, link_resolver):
+        return self._docstring_formatter.translate_comment(
+            comment, link_resolver)
 
     def __get_theme_files(self, path):
         res = []
@@ -872,10 +868,10 @@ class Formatter(Configurable):
     def _get_extra_files(self):
         res = []
 
-        if Formatter.theme_path:
-            res.extend(self.__get_theme_files(Formatter.theme_path))
-        if Formatter.extra_theme_path:
-            res.extend(self.__get_theme_files(Formatter.extra_theme_path))
+        if self.theme_path:
+            res.extend(self.__get_theme_files(self.theme_path))
+        if self.extra_theme_path:
+            res.extend(self.__get_theme_files(self.extra_theme_path))
 
         for script_path in self.all_scripts:
             dest = os.path.join('js', os.path.basename(script_path))
@@ -892,7 +888,7 @@ class Formatter(Configurable):
         """Banana banana
         """
         group = parser.add_argument_group(
-            'Html formatter', 'html formatter options')
+            'Formatter', 'formatter options')
         group.add_argument("--html-theme", action="store",
                            dest="html_theme", help="html theme to use",
                            default='default')
@@ -907,24 +903,39 @@ class Formatter(Configurable):
                            dest="html_number_headings",
                            help="Enable html headings numbering")
 
-    @staticmethod
-    def parse_config(project, config):
-        """Banana banana
-        """
+    def parse_toplevel_config(self, config):
         html_theme = config.get('html_theme', 'default')
         if html_theme == 'default':
             default_theme = os.path.join(HERE, '..',
                                          'default_theme-%s' % THEME_VERSION)
             html_theme = os.path.abspath(default_theme)
-            info("Using default theme")
+            debug("Using default theme")
         else:
             html_theme = config.get_path('html_theme')
-            info("Using theme located at %s" % html_theme)
+            debug("Using theme located at %s" % html_theme)
 
         Formatter.theme_path = html_theme
 
         Formatter.extra_theme_path = config.get_path('html_extra_theme')
+        
 
-        Formatter.add_anchors = bool(config.get("html_add_anchors"))
-        Formatter.number_headings = bool(
-            config.get("html_number_headings"))
+    def parse_config(self, config):
+        """Banana banana
+        """
+        self.add_anchors = bool(config.get("html_add_anchors"))
+        self.number_headings = bool(config.get("html_number_headings"))
+
+        if self.theme_path:
+            self.__load_theme_templates(self.searchpath,
+                                        self.theme_path)
+        if self.extra_theme_path:
+            self.__load_theme_templates(self.searchpath,
+                                        self.extra_theme_path)
+
+        self.searchpath.append(os.path.join(HERE, "templates"))
+        self.engine = Engine(
+            loader=FileLoader(self.searchpath, encoding='UTF-8'),
+            extensions=[CoreExtension(), CodeExtension()]
+        )
+
+        self._docstring_formatter.parse_config(config)

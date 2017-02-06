@@ -131,17 +131,21 @@ def parse_choice_blacklist(blacklist):
 
 class TagExtension(Extension):
     extension_name = 'core-tags'
-    blacklists = []
+
+    def __init__(self, app, project):
+        super(TagExtension, self).__init__(app, project)
+        self.blacklists = []
 
     def setup(self):
-        Formatter.formatting_symbol_signal.connect(self.__formatting_symbol)
+        super(TagExtension, self).setup()
+        for ext in self.project.extensions.values():
+            ext.formatter.formatting_symbol_signal.connect(self.__formatting_symbol)
 
-    @staticmethod
-    def __formatting_symbol(_, symbol):
+    def __formatting_symbol(self, _, symbol):
         if isinstance(symbol, QualifiedSymbol):
             return True
 
-        for blacklist in TagExtension.blacklists:
+        for blacklist in self.blacklists:
             tag = symbol.comment.tags.get(blacklist.name)
             if not tag:
                 continue
@@ -161,14 +165,14 @@ class TagExtension(Extension):
                            help="filter out symbols based on their tags",
                            nargs='+', dest='choices_blacklist')
 
-    @staticmethod
-    def parse_config(project, config):
+    def parse_config(self, config):
+        super(TagExtension, self).parse_config(config)
         tag_prototypes = config.get('tag_prototypes', [])
 
         for prototype in tag_prototypes:
             validator = validator_from_prototype(prototype)
             if validator:
-                project.register_tag_validator(validator)
+                self.project.register_tag_validator(validator)
 
         blacklist_prototypes = config.get('choices_blacklist', [])
 
@@ -177,11 +181,11 @@ class TagExtension(Extension):
             if not blacklist:
                 continue
 
-            validator = project.tag_validators.get(blacklist.name)
+            validator = self.project.tag_validators.get(blacklist.name)
             if not validator:
                 continue
 
-            TagExtension.blacklists.append(blacklist)
+            self.blacklists.append(blacklist)
 
 
 def get_extension_classes():

@@ -72,15 +72,16 @@ TYPE_MAP = {
 class DevhelpExtension(Extension):
     extension_name = 'devhelp-extension'
     argument_prefix = 'devhelp'
+
     activated = False
 
-    def __init__(self, project):
-        Extension.__init__(self, project)
+    def __init__(self, app, project):
+        Extension.__init__(self, app, project)
         self.__ext_languages = defaultdict(set)
         self.__resolved_symbols_map = {}
 
     def __writing_page_cb(self, formatter, page, path):
-        html_path = os.path.join(self.project.output, 'html')
+        html_path = os.path.join(self.app.output, 'html')
         relpath = os.path.relpath(path, html_path)
 
         dirname = os.path.dirname(relpath)
@@ -105,14 +106,10 @@ class DevhelpExtension(Extension):
             self.__format_subs(tree, node, cpage)
 
     def __format(self, project):
-        oname = project.project_name
-        oname = re.sub(r'\W+', '-', oname)
-        title = project.project_name
-        if project.project_version:
-            oname += '-%s' % project.project_version
-            title += ' %s' % project.project_version
+        oname = project.sanitized_name
+        title = '%s %s' % (project.project_name, project.project_version)
 
-        opath = os.path.join(self.project.output, 'devhelp', oname)
+        opath = os.path.join(self.app.output, 'devhelp', oname)
 
         boilerplate = BOILERPLATE % (
             title,
@@ -151,12 +148,15 @@ class DevhelpExtension(Extension):
 
         return opath
 
-    def __formatted_cb(self, project):
+    def __project_formatted_cb(self, project):
         dh_html_path = self.__format(project)
-        formatter = self.project.extensions['core'].get_formatter('html')
-        html_path = os.path.join(self.project.output,
-                                 formatter.get_output_folder())
+        formatter = self.project.extensions['core'].formatter
+        html_path = os.path.join(self.project.app.output, 'html')
 
+
+    def __formatted_cb(self, app):
+        html_path = os.path.join(app.output, 'html')
+        dh_html_path = os.path.join(app.output, 'devhelp')
         recursive_overwrite(html_path, dh_html_path)
 
         # Remove some stuff not relevant in devhelp
@@ -170,16 +170,20 @@ class DevhelpExtension(Extension):
             os.path.join(HERE, 'devhelp.css'))
 
     def setup(self):
+        super(DevhelpExtension, self).setup()
         if not DevhelpExtension.activated:
             return
 
         # FIXME update the index someday.
-        if self.project.incremental:
+        if self.app.incremental:
             return
 
-        Formatter.writing_page_signal.connect(self.__writing_page_cb)
-        Formatter.formatting_page_signal.connect(self.__formatting_page_cb)
-        self.project.formatted_signal.connect_after(self.__formatted_cb)
+        for ext in self.project.extensions.values():
+            ext.formatter.writing_page_signal.connect(self.__writing_page_cb)
+            ext.formatter.formatting_page_signal.connect(self.__formatting_page_cb)
+
+        self.project.formatted_signal.connect_after(self.__project_formatted_cb)
+        self.app.formatted_signal.connect_after(self.__formatted_cb)
 
     @staticmethod
     def add_arguments(parser):
@@ -190,15 +194,9 @@ class DevhelpExtension(Extension):
                            help="Activate the devhelp extension",
                            dest='devhelp_activate')
 
-    @staticmethod
-    def parse_config(project, config):
-        DevhelpExtension.activated = bool(
-            config.get('devhelp_activate', False))
-        if (DevhelpExtension.activated and
-                config.get('project_name', None) is None):
-            error('invalid-config',
-                  'To activate the devhelp extension,'
-                  '--project-name has to be specified.')
+    def parse_toplevel_config(self, config):
+        super(DevhelpExtension, self).parse_toplevel_config(config)
+        DevhelpExtension.activated = bool(config.get('devhelp_activate', False))
 
 
 def get_extension_classes():

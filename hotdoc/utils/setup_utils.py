@@ -120,6 +120,9 @@ def symlink(source, link_name):
     """
     Method to allow creating symlinks on Windows
     """
+    if os.path.islink(link_name) and os.readlink(link_name) == source:
+        return
+
     os_symlink = getattr(os, "symlink", None)
     if callable(os_symlink):
         os_symlink(source, link_name)

@@ -46,24 +46,25 @@ def list_html_files(root_dir, exclude_dirs):
 
 class SearchExtension(Extension):
     extension_name = 'search'
+    connected = False
 
-    def __init__(self, project):
-        Extension.__init__(self, project)
-        project.formatted_signal.connect(self.__build_index)
-        self.enabled = False
+    def __init__(self, app, project):
+        Extension.__init__(self, app, project)
+        if not SearchExtension.connected:
+            app.formatted_signal.connect(self.__build_index)
+            SearchExtension.connected = True
         self.script = os.path.abspath(os.path.join(HERE, 'trie.js'))
 
     def setup(self):
-        self.enabled = self.project.output_format == 'html'
-        Page.formatting_signal.connect(self.__formatting_page)
+        super(SearchExtension, self).setup()
+        for ext in self.project.extensions.values():
+            ext.formatter.formatting_page_signal.connect(self.__formatting_page)
 
-    def __build_index(self, project):
-        # FIXME
-        if self.project.incremental:
+    def __build_index(self, app):
+        if self.app.incremental:
             return
 
-        formatter = project.extensions['core'].get_formatter('html')
-        output = os.path.join(project.output, formatter.get_output_folder())
+        output = os.path.join(self.app.output, 'html')
 
         assets_path = os.path.join(output, 'assets')
         dest = os.path.join(assets_path, 'js')
@@ -93,7 +94,7 @@ class SearchExtension(Extension):
                                          'search.trie'),
                             os.path.join(topdir, subdir, 'dumped.trie'))
 
-    def __formatting_page(self, page, _):
+    def __formatting_page(self, formatter, page):
         page.output_attrs['html']['scripts'].add(self.script)
 
 

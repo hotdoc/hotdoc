@@ -29,7 +29,6 @@ class Configurable(object):
         """Banana banana"""
         pass
 
-    @staticmethod
-    def parse_config(project, config):
+    def parse_config(self, config):
         """Banana banana"""
         pass

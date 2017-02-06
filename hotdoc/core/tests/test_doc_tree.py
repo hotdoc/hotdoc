@@ -36,18 +36,19 @@ from hotdoc.parsers import cmark
 from hotdoc.core.tree import Tree
 from hotdoc.core.extension import Extension
 from hotdoc.utils.utils import OrderedSet, touch
+from hotdoc.core.config import Config
 
 
 class TestExtension(Extension):
     extension_name = 'test-extension'
     argument_prefix = 'test'
 
-    def __init__(self, project):
-        self.formatters = {'html': None}
-        self.smart_index = True
-        super(TestExtension, self).__init__(project)
+    def __init__(self, app, project):
+        super(TestExtension, self).__init__(app, project)
 
-    def setup(self):
+    def setup(self, smart=True):
+        super(TestExtension, self).setup()
+        self.smart_index = smart
         stale, _ = self.get_stale_files(self.sources)
         for source in stale:
             with open(source, 'r') as _:
@@ -90,8 +91,18 @@ class TestTree(unittest.TestCase):
 
         self.sitemap_parser = SitemapParser()
 
-        self.test_ext = TestExtension(self)
-        self.core_ext = CoreExtension(self)
+        self.sanitized_name = 'test-project-0.1'
+        self.incremental = False
+
+        self.tree = Tree(self, self)
+
+        self.test_ext = TestExtension(self, self)
+        self.core_ext = CoreExtension(self, self)
+
+        cfg = Config()
+
+        self.test_ext.parse_config(cfg)
+        self.core_ext.parse_config(cfg)
 
     def tearDown(self):
         self.__remove_tmp_dirs()
@@ -168,10 +179,9 @@ class TestTree(unittest.TestCase):
             'section.markdown',
             (u'# My section\n'))
 
-        tree = Tree(self.__priv_dir, self.include_paths)
-        tree.parse_sitemap(self.change_tracker, sitemap)
+        self.tree.parse_sitemap(sitemap)
 
-        pages = tree.get_pages()
+        pages = self.tree.get_pages()
 
         # We do not care about ordering
         self.assertSetEqual(
@@ -193,38 +203,38 @@ class TestTree(unittest.TestCase):
             'section.markdown',
             (u'# My section\n'))
 
-        tree = Tree(self.__priv_dir, self.include_paths)
-        tree.parse_sitemap(self.change_tracker, sitemap)
+        self.tree.parse_sitemap(sitemap)
 
         # Building from scratch, all pages are stale
         self.assertSetEqual(
-            set(tree.get_stale_pages()),
+            set(self.tree.get_stale_pages()),
             set([u'index.markdown',
                  u'section.markdown']))
 
-        tree.persist()
+        self.tree.persist()
 
-        tree = Tree(self.__priv_dir, self.include_paths)
-        tree.parse_sitemap(self.change_tracker, sitemap)
+        self.incremental = True
+        self.tree = Tree(self, self)
+        self.tree.parse_sitemap(sitemap)
 
         # Nothing changed, no page is stale
         self.assertSetEqual(
-            set(tree.get_stale_pages()),
+            set(self.tree.get_stale_pages()),
             set({}))
 
         # But we still have our pages
         self.assertSetEqual(
-            set(tree.get_pages()),
+            set(self.tree.get_pages()),
             set([u'index.markdown',
                  u'section.markdown']))
 
         touch(os.path.join(self.__md_dir, u'section.markdown'))
 
-        tree = Tree(self.__priv_dir, self.include_paths)
-        tree.parse_sitemap(self.change_tracker, sitemap)
+        self.tree = Tree(self, self)
+        self.tree.parse_sitemap(sitemap)
 
         self.assertSetEqual(
-            set(tree.get_stale_pages()),
+            set(self.tree.get_stale_pages()),
             set([u'section.markdown']))
 
     def __assert_extension_names(self, tree, name_map):
@@ -233,8 +243,8 @@ class TestTree(unittest.TestCase):
             page = pages[name]
             self.assertEqual(ext_name, page.extension_name)
 
-    def __assert_stale(self, tree, expected_stale):
-        stale_pages = tree.get_stale_pages()
+    def __assert_stale(self, expected_stale):
+        stale_pages = self.tree.get_stale_pages()
         for pagename in expected_stale:
             self.assertIn(pagename, stale_pages)
             stale_pages.pop(pagename)
@@ -294,23 +304,20 @@ class TestTree(unittest.TestCase):
             'page_y.markdown',
             (u'# Page Y\n'))
 
-        tree = Tree(self.__priv_dir, self.include_paths)
-        tree.parse_sitemap(self.change_tracker, sitemap)
+        self.tree.parse_sitemap(sitemap)
 
-        return tree, sitemap
+        return sitemap
 
-    def __update_test_layout(self, tree, sitemap):
+    def __update_test_layout(self, sitemap):
         self.test_ext.reset()
+        self.tree = Tree(self, self)
         self.test_ext.setup()
-
-        tree = Tree(self.__priv_dir, self.include_paths)
-        tree.parse_sitemap(self.change_tracker, sitemap)
-        return tree
+        self.tree.parse_sitemap(sitemap)
 
     def test_extension_basic(self):
-        tree, _ = self.__create_test_layout()
+        _ = self.__create_test_layout()
         self.__assert_extension_names(
-            tree,
+            self.tree,
             {u'index.markdown': 'core',
              u'test-index': 'test-extension',
              u'test-section.markdown': 'test-extension',
@@ -320,9 +327,9 @@ class TestTree(unittest.TestCase):
              u'page_y.markdown': 'test-extension',
              u'core_page.markdown': 'core'})
 
-        all_pages = tree.get_pages()
+        all_pages = self.tree.get_pages()
         self.assertEqual(len(all_pages), 8)
-        self.__assert_stale(tree, all_pages)
+        self.__assert_stale(all_pages)
         self.assertNotIn('source_a.test', all_pages['test-index'].subpages)
         self.assertIn('source_a.test',
                       all_pages['test-section.markdown'].subpages)
@@ -331,8 +338,8 @@ class TestTree(unittest.TestCase):
         self.__create_md_file(
             'source_a.test.markdown',
             (u'# My override\n'))
-        tree, _ = self.__create_test_layout()
-        page = tree.get_pages()['source_a.test']
+        _ = self.__create_test_layout()
+        page = self.tree.get_pages()['source_a.test']
 
         self.assertEqual(
             page.symbol_names,
@@ -350,8 +357,8 @@ class TestTree(unittest.TestCase):
             u'<h1>My override</h1>\n')
 
     def test_no_extension_index_override(self):
-        tree, _ = self.__create_test_layout(with_ext_index=False)
-        ext_index = tree.get_pages()['test-index']
+        _ = self.__create_test_layout(with_ext_index=False)
+        ext_index = self.tree.get_pages()['test-index']
         self.assertEqual(ext_index.generated, True)
         self.assertEqual(len(ext_index.subpages), 4)
 
@@ -366,10 +373,9 @@ class TestTree(unittest.TestCase):
              '...\n'
              '# My documentation\n'))
 
-        tree = Tree(self.__priv_dir, self.include_paths)
-        tree.parse_sitemap(self.change_tracker, sitemap)
+        self.tree.parse_sitemap(sitemap)
 
-        pages = tree.get_pages()
+        pages = self.tree.get_pages()
         page = pages.get('index.markdown')
 
         out, _ = cmark.ast_to_html(page.ast, None)
@@ -398,14 +404,13 @@ class TestTree(unittest.TestCase):
              '\n'
              '[](index.markdown)\n'))
 
-        tree = Tree(self.__priv_dir, self.include_paths)
-        tree.parse_sitemap(self.change_tracker, sitemap)
-        tree.resolve_symbols(self.database, self.link_resolver)
-        tree.format(
+        self.tree.parse_sitemap(sitemap)
+        self.tree.resolve_symbols(self.database, self.link_resolver)
+        self.tree.format(
             self.link_resolver, self.__output_dir,
             {self.core_ext.extension_name: self.core_ext})
 
-        pages = tree.get_pages()
+        pages = self.tree.get_pages()
         page = pages.get('section.markdown')
         self.assertEqual(
             page.formatted_contents,
@@ -425,14 +430,13 @@ class TestTree(unittest.TestCase):
              '\n'
              '[a label](index.markdown)\n'))
 
-        tree = Tree(self.__priv_dir, self.include_paths)
-        tree.parse_sitemap(self.change_tracker, sitemap)
-        tree.resolve_symbols(self.database, self.link_resolver)
-        tree.format(
+        self.tree.parse_sitemap(sitemap)
+        self.tree.resolve_symbols(self.database, self.link_resolver)
+        self.tree.format(
             self.link_resolver, self.__output_dir,
             {self.core_ext.extension_name: self.core_ext})
 
-        pages = tree.get_pages()
+        pages = self.tree.get_pages()
         page = pages.get('section.markdown')
         self.assertEqual(
             page.formatted_contents,
@@ -452,14 +456,13 @@ class TestTree(unittest.TestCase):
              '\n'
              '[](index.markdown#subsection)\n'))
 
-        tree = Tree(self.__priv_dir, self.include_paths)
-        tree.parse_sitemap(self.change_tracker, sitemap)
-        tree.resolve_symbols(self.database, self.link_resolver)
-        tree.format(
+        self.tree.parse_sitemap(sitemap)
+        self.tree.resolve_symbols(self.database, self.link_resolver)
+        self.tree.format(
             self.link_resolver, self.__output_dir,
             {self.core_ext.extension_name: self.core_ext})
 
-        pages = tree.get_pages()
+        pages = self.tree.get_pages()
         page = pages.get('section.markdown')
         self.assertEqual(
             page.formatted_contents,
@@ -468,26 +471,27 @@ class TestTree(unittest.TestCase):
 
     # pylint: disable=too-many-statements
     def test_extension_incremental(self):
-        tree, sitemap = self.__create_test_layout()
-        tree.persist()
+        sitemap = self.__create_test_layout()
+        self.tree.persist()
+
+        self.incremental = True
 
         # Here we touch source_a.test, as its symbols were
         # all contained in a generated page, only that page
         # should now be stale
         self.__touch_src_file('source_a.test')
-        tree = self.__update_test_layout(tree, sitemap)
-        self.__assert_stale(tree, set(['source_a.test']))
-        tree.persist()
+        self.__update_test_layout(sitemap)
+        self.__assert_stale(set(['source_a.test']))
+        self.tree.persist()
 
         # We now touch source_b.test, which symbols are contained
         # both in a generated page and a user-provided one.
         # We expect both pages to be stale
         self.__touch_src_file('source_b.test')
-        tree = self.__update_test_layout(tree, sitemap)
-        self.__assert_stale(tree,
-                            set(['source_b.test',
+        self.__update_test_layout(sitemap)
+        self.__assert_stale(set(['source_b.test',
                                  'page_x.markdown']))
-        tree.persist()
+        self.tree.persist()
 
         # This one is trickier: we unlist symbol_3 from
         # page_x, which means the symbol should now be
@@ -497,20 +501,19 @@ class TestTree(unittest.TestCase):
         self.__create_md_file(
             'page_x.markdown',
             (u'# Page X\n'))
-        tree = self.__update_test_layout(tree, sitemap)
-        self.__assert_stale(tree,
-                            set(['source_b.test',
+        self.__update_test_layout(sitemap)
+        self.__assert_stale(set(['source_b.test',
                                  'page_x.markdown']))
 
-        page_x = tree.get_pages()['page_x.markdown']
+        page_x = self.tree.get_pages()['page_x.markdown']
         self.assertEqual(page_x.symbol_names, OrderedSet())
 
-        source_b_page = tree.get_pages()['source_b.test']
+        source_b_page = self.tree.get_pages()['source_b.test']
         self.assertEqual(
             source_b_page.symbol_names,
             OrderedSet(['symbol_4', 'symbol_3']))
 
-        tree.persist()
+        self.tree.persist()
 
         # Let's make sure the opposite use case works as well,
         # we relocate symbol_3 in page_x , both page_x and
@@ -524,20 +527,19 @@ class TestTree(unittest.TestCase):
              '...\n'
              '# Page X\n'))
 
-        tree = self.__update_test_layout(tree, sitemap)
-        self.__assert_stale(tree,
-                            set(['source_b.test',
+        self.__update_test_layout(sitemap)
+        self.__assert_stale(set(['source_b.test',
                                  'page_x.markdown']))
 
-        page_x = tree.get_pages()['page_x.markdown']
+        page_x = self.tree.get_pages()['page_x.markdown']
         self.assertEqual(page_x.symbol_names, OrderedSet(['symbol_3']))
 
-        source_b_page = tree.get_pages()['source_b.test']
+        source_b_page = self.tree.get_pages()['source_b.test']
         self.assertEqual(
             source_b_page.symbol_names,
             OrderedSet(['symbol_4']))
 
-        tree.persist()
+        self.tree.persist()
 
         # We now move the definition of symbol_3 to source_a.test,
         # we thus expect the generated page for source_a.test to be
@@ -553,28 +555,27 @@ class TestTree(unittest.TestCase):
         self.__create_src_file(
             'source_b.test',
             ['symbol_4'])
-        tree = self.__update_test_layout(tree, sitemap)
+        self.__update_test_layout(sitemap)
 
-        self.__assert_stale(tree,
-                            set(['source_a.test',
+        self.__assert_stale(set(['source_a.test',
                                  'source_b.test',
                                  'page_x.markdown']))
 
-        page_x = tree.get_pages()['page_x.markdown']
+        page_x = self.tree.get_pages()['page_x.markdown']
         self.assertEqual(page_x.symbol_names, OrderedSet(['symbol_3']))
 
-        source_b_page = tree.get_pages()['source_b.test']
+        source_b_page = self.tree.get_pages()['source_b.test']
         self.assertEqual(
             source_b_page.symbol_names,
             OrderedSet(['symbol_4']))
 
-        source_a_page = tree.get_pages()['source_a.test']
+        source_a_page = self.tree.get_pages()['source_a.test']
         self.assertEqual(
             source_a_page.symbol_names,
             OrderedSet(['symbol_1',
                         'symbol_2']))
 
-        tree.persist()
+        self.tree.persist()
 
         # And we rollback again
         self.__create_src_file(
@@ -585,28 +586,27 @@ class TestTree(unittest.TestCase):
             'source_b.test',
             ['symbol_3',
              'symbol_4'])
-        tree = self.__update_test_layout(tree, sitemap)
+        self.__update_test_layout(sitemap)
 
-        self.__assert_stale(tree,
-                            set(['source_a.test',
+        self.__assert_stale(set(['source_a.test',
                                  'source_b.test',
                                  'page_x.markdown']))
 
-        page_x = tree.get_pages()['page_x.markdown']
+        page_x = self.tree.get_pages()['page_x.markdown']
         self.assertEqual(page_x.symbol_names, OrderedSet(['symbol_3']))
 
-        source_b_page = tree.get_pages()['source_b.test']
+        source_b_page = self.tree.get_pages()['source_b.test']
         self.assertEqual(
             source_b_page.symbol_names,
             OrderedSet(['symbol_4']))
 
-        source_a_page = tree.get_pages()['source_a.test']
+        source_a_page = self.tree.get_pages()['source_a.test']
         self.assertEqual(
             source_a_page.symbol_names,
             OrderedSet(['symbol_1',
                         'symbol_2']))
 
-        tree.persist()
+        self.tree.persist()
 
         # Now we'll try removing page_x altogether
         self.__remove_md_file('page_x.markdown')
@@ -618,14 +618,13 @@ class TestTree(unittest.TestCase):
                '\tcore_page.markdown\n')
 
         new_sitemap = self.__parse_sitemap(inp)
-        tree = self.__update_test_layout(tree, new_sitemap)
-        self.__assert_stale(tree,
-                            set(['source_b.test']))
-        source_b_page = tree.get_pages()['source_b.test']
+        self.__update_test_layout(new_sitemap)
+        self.__assert_stale(set(['source_b.test']))
+        source_b_page = self.tree.get_pages()['source_b.test']
         self.assertEqual(
             source_b_page.symbol_names,
             OrderedSet(['symbol_4', 'symbol_3']))
-        tree.persist()
+        self.tree.persist()
 
         # And rollback again
         self.__create_md_file(
@@ -634,29 +633,30 @@ class TestTree(unittest.TestCase):
              'symbols: [symbol_3]\n'
              '...\n'
              '# Page X\n'))
-        tree = self.__update_test_layout(tree, sitemap)
-        self.__assert_stale(tree,
-                            set(['page_x.markdown',
+        self.__update_test_layout(sitemap)
+        self.__assert_stale(set(['page_x.markdown',
                                  'source_b.test']))
 
-        page_x = tree.get_pages()['page_x.markdown']
+        page_x = self.tree.get_pages()['page_x.markdown']
         self.assertEqual(page_x.symbol_names, OrderedSet(['symbol_3']))
 
-        source_b_page = tree.get_pages()['source_b.test']
+        source_b_page = self.tree.get_pages()['source_b.test']
         self.assertEqual(
             source_b_page.symbol_names,
             OrderedSet(['symbol_4']))
 
-        tree.persist()
+        self.tree.persist()
 
     def test_index_override_incremental(self):
-        tree, sitemap = self.__create_test_layout()
-        tree.persist()
-        index_page = tree.get_pages()['test-index']
+        sitemap = self.__create_test_layout()
+        self.tree.persist()
+        index_page = self.tree.get_pages()['test-index']
         self.assertIn('source_b.test', index_page.subpages)
 
+        self.incremental = True
+
         self.__touch_src_file('test-index.markdown')
-        tree = self.__update_test_layout(tree, sitemap)
-        index_page = tree.get_pages()['test-index']
+        self.__update_test_layout(sitemap)
+        index_page = self.tree.get_pages()['test-index']
         self.assertIn('source_b.test', index_page.subpages)
-        tree.persist()
+        self.tree.persist()

@@ -26,34 +26,27 @@ import os
 import shutil
 import sys
 import io
+import re
 import linecache
+import json
 
 from collections import OrderedDict
 
 from hotdoc.core import inclusions
+from hotdoc.core.formatter import Formatter
 from hotdoc.core.extension import Extension
 from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.comment import Tag
-from hotdoc.core.config import ConfigParser
+from hotdoc.core.config import Config
 from hotdoc.core.database import Database
 from hotdoc.core.tree import Tree
 from hotdoc.core.links import LinkResolver
 from hotdoc.utils.setup_utils import VERSION
 from hotdoc.utils.loggable import info, error
 from hotdoc.utils.configurable import Configurable
-from hotdoc.utils.utils import (get_installed_extension_classes,
-                                all_subclasses, get_extra_extension_classes)
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.signals import Signal
 from hotdoc.parsers.sitemap import SitemapParser
-
-
-SUBCOMMAND_DESCRIPTION = """
-Valid subcommands.
-
-Exactly one subcommand is required.
-Run hotdoc {subcommand} -h for more info
-"""
 
 
 LANG_MAPPING = {
@@ -69,12 +62,39 @@ class CoreExtension(Extension):
     """
     extension_name = 'core'
 
-    def __init__(self, project):
-        super(CoreExtension, self).__init__(project)
-        inclusions.include_signal.connect_after(self.__include_file_cb)
+    def __init__(self, app, project):
+        super(CoreExtension, self).__init__(app, project)
+        self.subprojects = {}
 
-    # pylint: disable=no-self-use
-    def __include_file_cb(self, include_path, line_ranges, symbol):
+    def format_page(self, page, link_resolver, output):
+        proj = self.subprojects.get(page.source_file)
+        if proj:
+            proj.format(link_resolver, output)
+            page.title = proj.tree.root.title
+        else:
+            return super(CoreExtension, self).format_page(page, link_resolver, output)
+
+    def setup(self):
+        super(CoreExtension, self).setup()
+        inclusions.include_signal.disconnect(CoreExtension.include_file_cb)
+        inclusions.include_signal.connect_after(CoreExtension.include_file_cb)
+
+    def _resolve_placeholder(self, tree, fname, include_paths):
+        ext = os.path.splitext(fname)[1]
+        if ext != '.json':
+            return None
+
+        conf_path = os.path.join(os.path.dirname(self.project.sitemap_path),
+                                 fname)
+        config = Config(conf_file=conf_path)
+        proj = Project(self.app)
+        proj.parse_config(config)
+        proj.setup()
+        self.subprojects[fname] = proj
+        return True, None
+
+    @staticmethod
+    def include_file_cb(include_path, line_ranges, symbol):
         lang = ''
         if include_path.endswith((".md", ".markdown")):
             lang = 'markdown'
@@ -99,27 +119,20 @@ class CoreExtension(Extension):
 
 
 # pylint: disable=too-many-instance-attributes
-class Project(object):
+class Project(Configurable):
     """
     Banana banana
     """
 
-    formatted_signal = Signal()
-
-    def __init__(self):
-        self.output = None
+    def __init__(self, app):
+        self.app = app
         self.tree = None
-        self.change_tracker = None
-        self.output_format = None
         self.include_paths = None
         self.extensions = {}
         self.tag_validators = {}
-        self.link_resolver = None
-        self.incremental = False
-        self.database = None
-        self.config = None
         self.project_name = None
         self.project_version = None
+        self.sanitized_name = None
         self.sitemap_path = None
 
         if os.name == 'nt':
@@ -128,16 +141,7 @@ class Project(object):
         else:
             self.datadir = "/usr/share"
 
-        self.__conf_file = None
-        self.__extension_classes = OrderedDict({
-            CoreExtension.extension_name: CoreExtension})
-        self.__index_file = None
-        self.__root_page = None
-        self.__base_doc_folder = None
-        self.__private_folder = None
-        self.__dry = False
-        self.__load_extensions()
-        self.__create_arg_parser()
+        self.formatted_signal = Signal()
 
     def register_tag_validator(self, validator):
         """
@@ -145,149 +149,169 @@ class Project(object):
         """
         self.tag_validators[validator.name] = validator
 
-    def format_symbol(self, symbol_name):
-        """
-        Banana banana
-        """
-        sym = self.database.get_symbol(symbol_name)
-        if not sym:
-            return None
-
-        sym.update_children_comments()
-
-        return sym.detailed_description
-
-    def patch_page(self, symbol, raw_comment):
-        """
-        Banana banana
-        """
-        page = self.tree.get_page_for_symbol(symbol.unique_name)
-        if not page:
-            return False
-
-        old_comment = symbol.comment
-        # pylint: disable=no-member
-        new_comment = self.raw_comment_parser.parse_comment(
-            raw_comment,
-            old_comment.filename,
-            old_comment.lineno,
-            old_comment.lineno + raw_comment.count('\n'),
-            self.include_paths)
-
-        if new_comment is None:
-            return False
-
-        if new_comment.name != symbol.unique_name:
-            return False
-
-        symbol.comment = new_comment
-        formatter = self.__get_formatter(page.extension_name)
-        formatter.patch_page(page, symbol, self.output)
-
-        return True
-
     def persist(self):
         """
         Banana banana
         """
 
-        if self.__dry:
+        if self.app.dry:
             return
 
-        info('Persisting database and private files', 'persisting')
         self.tree.persist()
-        self.database.persist()
-        with open(os.path.join(self.get_private_folder(),
-                               'change_tracker.p'), 'wb') as _:
-            _.write(pickle.dumps(self.change_tracker))
-
-        self.__dump_deps_file()
+        for proj in self.extensions[CoreExtension.extension_name].subprojects.values():
+            proj.persist()
 
     def finalize(self):
         """
         Banana banana
         """
         self.formatted_signal.clear()
-        if self.database is not None:
-            info('Closing database')
-            self.database.close()
 
     # pylint: disable=no-self-use
     def get_private_folder(self):
         """
         Banana banana
         """
-        return self.__private_folder
+        return self.app.private_folder
 
     def setup(self):
         """
         Banana banana
         """
-        configurable_classes = all_subclasses(Configurable)
-
-        configured = set()
-        for subclass in configurable_classes:
-            if subclass.parse_config not in configured:
-                subclass.parse_config(self, self.config)
-                configured.add(subclass.parse_config)
-        self.__parse_config()
-
-        self.tree = Tree(self.get_private_folder(), self.include_paths)
+        info('Setting up %s' % self.project_name, 'project')
 
         for extension in list(self.extensions.values()):
             info('Setting up %s' % extension.extension_name)
             extension.setup()
-            self.database.flush()
+            self.app.database.flush()
 
         sitemap = SitemapParser().parse(self.sitemap_path)
-        self.tree.parse_sitemap(self.change_tracker, sitemap)
+        self.tree.parse_sitemap(sitemap)
 
         info("Resolving symbols", 'resolution')
-        self.tree.resolve_symbols(self.database, self.link_resolver)
-        self.database.flush()
+        self.tree.resolve_symbols(self.app.database, self.app.link_resolver)
+        self.app.database.flush()
 
-    def format(self):
+    def format(self, link_resolver, output):
         """
         Banana banana
         """
-        if not self.output:
+        if not output:
             return
 
-        self.tree.format(self.link_resolver, self.output, self.extensions)
-        self.config.dump(conf_file=os.path.join(self.output, 'hotdoc.json'))
+        self.tree.format(link_resolver, output, self.extensions)
         self.formatted_signal(self)
 
-    def __dump_deps_file(self):
-        dest = self.config.get('deps_file_dest')
-        target = self.config.get('deps_file_target')
+    def create_navigation_script(self, output):
+        sitemap = self.__create_json_sitemap()
+        sitemap = sitemap.replace('\\', '\\\\')
+        sitemap = sitemap.replace('"', '\\"')
 
-        if dest is None:
-            info("Not dumping deps file")
-            return
+        js_wrapper = 'sitemap_downloaded_cb("'
+        js_wrapper += sitemap
+        js_wrapper += '");'
 
-        info("Dumping deps file to %s with target %s" % (dest, target))
-        destdir = os.path.dirname(dest)
-        if not os.path.exists(destdir):
-            os.makedirs(destdir)
+        dirname = os.path.join(output, 'html', 'assets', 'js')
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        path = os.path.join(dirname, 'sitemap.js')
 
-        empty_targets = []
+        with open(path, 'w') as _:
+            _.write(js_wrapper)
 
-        with io.open(dest, 'w', encoding='utf-8') as _:
-            _.write(u'%s: ' % target)
+    def dump_json_sitemap(self, page, node):
+        node['title'] = page.title
+        node['short_description'] = page.short_description
+        node['url'] = page.link.get_link(self.app.link_resolver)
+        node['extension'] = page.extension_name
+        node['subpages'] = []
+        node['project_name'] = page.project_name
+        for pagename in page.subpages:
+            cnode = OrderedDict()
+            node['subpages'].append(cnode)
+            proj = self.extensions[CoreExtension.extension_name].subprojects.get(pagename)
+            if not proj:
+                cpage = self.tree.get_pages()[pagename]
+                self.dump_json_sitemap(cpage, cnode)
+            else:
+                cpage = proj.tree.root
+                proj.dump_json_sitemap(cpage, cnode)
 
-            if self.config:
-                for dep in self.config.get_dependencies():
-                    empty_targets.append(dep)
-                    _.write(u'%s ' % dep)
 
-            if self.tree:
-                for page in list(self.tree.get_pages().values()):
-                    if not page.generated:
-                        empty_targets.append(page.source_file)
-                        _.write(u'%s ' % page.source_file)
+    def __create_json_sitemap(self):
+        node = OrderedDict()
+        self.dump_json_sitemap(self.tree.root, node)
+        return json.dumps(node)
 
-            for empty_target in empty_targets:
-                _.write(u'\n\n%s:' % empty_target)
+    @staticmethod
+    def add_arguments(parser):
+        group = parser.add_argument_group(
+            'Project', 'project-related options')
+        group.add_argument("--project-name", action="store",
+                           dest="project_name",
+                           help="Name of the documented project")
+        group.add_argument("--project-version", action="store",
+                           dest="project_version",
+                           help="Version of the documented project")
+        group.add_argument("-i", "--index", action="store",
+                           dest="index", help="location of the "
+                           "index file")
+        group.add_argument("--sitemap", action="store",
+                           dest="sitemap",
+                           help="Location of the sitemap file")
+        group.add_argument('--include-paths',
+                           help='paths to look up included files in',
+                           dest='include_paths', action='append',
+                           default=[])
+
+    def __create_extensions(self):
+        for ext_class in list(self.app.extension_classes.values()):
+            ext = ext_class(self.app, self)
+            self.extensions[ext.extension_name] = ext
+
+    def parse_config(self, config, toplevel=False):
+        """
+        Banana banana
+        """
+        self.sitemap_path = config.get_path('sitemap')
+
+        if self.sitemap_path is None:
+            error('invalid-config',
+                  'No sitemap was provided')
+
+        self.project_name = config.get('project_name', None)
+        if not self.project_name:
+            error('invalid-config', 'No project name was provided')
+
+        self.project_version = config.get('project_version', None)
+        if not self.project_version:
+            error('invalid-config', 'No project version was provided')
+
+        self.sanitized_name = '%s-%s' % (re.sub(r'\W+', '-', self.project_name),
+                                         self.project_version)
+
+        index_file = config.get_index()
+        if index_file is None:
+            error('invalid-config', 'index is required')
+        if not os.path.exists(index_file):
+            error('invalid-config',
+                  'The provided index "%s" does not exist' %
+                  index_file)
+
+        self.include_paths = OrderedSet([os.path.dirname(index_file)])
+        self.include_paths |= OrderedSet(config.get_paths('include_paths'))
+
+        self.tree = Tree(self, self.app)
+
+        self.__create_extensions()
+
+        for extension in list(self.extensions.values()):
+            if toplevel:
+                extension.parse_toplevel_config(config)
+            extension.parse_config(config)
+
+        if config.conf_file:
+            self.app.change_tracker.add_hard_dependency(config.conf_file)
 
     def __add_default_tags(self, _, comment):
         for validator in list(self.tag_validators.values()):
@@ -296,304 +320,11 @@ class Project(object):
                     Tag(name=validator.name,
                         description=validator.default)
 
-    def __setup_database(self):
-        self.database = Database()
-        self.database.comment_added_signal.connect(self.__add_default_tags)
-        self.database.comment_updated_signal.connect(
-            self.__add_default_tags)
-        self.database.setup(self.get_private_folder())
-        self.link_resolver = LinkResolver(self.database)
-
-    def __create_change_tracker(self, disable_incremental):
-        if not disable_incremental:
-            try:
-                with open(os.path.join(self.get_private_folder(),
-                                       'change_tracker.p'), 'rb') as _:
-                    self.change_tracker = pickle.loads(_.read())
-
-                if self.change_tracker.hard_dependencies_are_stale():
-                    raise IOError
-                self.incremental = True
-                info("Building incrementally")
-            # pylint: disable=broad-except
-            except Exception:
-                pass
-
-        if not self.incremental:
-            info("Building from scratch")
-            shutil.rmtree(self.get_private_folder(), ignore_errors=True)
-            if self.output:
-                shutil.rmtree(self.output, ignore_errors=True)
-            self.change_tracker = ChangeTracker()
-
     def __get_formatter(self, extension_name):
         """
         Banana banana
         """
         ext = self.extensions.get(extension_name)
         if ext:
-            return ext.get_formatter(self.output_format)
+            return ext.formatter
         return None
-
-    def __check_initial_args(self, args):
-        if args.version:
-            print(VERSION)
-        elif args.makefile_path:
-            here = os.path.dirname(__file__)
-            path = os.path.join(here, '..', 'utils', 'hotdoc.mk')
-            print(os.path.abspath(path))
-        elif args.get_conf_path:
-            key = args.get_conf_path
-            path = self.config.get_path(key, rel_to_cwd=True)
-            if path is not None:
-                print(path)
-        elif args.get_conf_key:
-            key = args.get_conf_key
-            value = self.config.get(args.get_conf_key, None)
-            if value is not None:
-                print(value)
-        elif args.get_private_folder:
-            print(os.path.relpath(self.__private_folder,
-                                  self.config.get_invoke_dir()))
-        elif args.has_extension:
-            ext_name = args.has_extension
-            print(ext_name in self.__extension_classes)
-        elif args.list_extensions:
-            for ext_name in self.__extension_classes:
-                print(ext_name)
-        else:
-            self.parser.print_usage()
-
-    def __create_arg_parser(self):
-        self.parser = \
-            argparse.ArgumentParser(
-                formatter_class=argparse.RawDescriptionHelpFormatter,)
-
-        configurable_classes = all_subclasses(Configurable)
-
-        seen = set()
-        for subclass in configurable_classes:
-            if subclass.add_arguments not in seen:
-                subclass.add_arguments(self.parser)
-                seen.add(subclass.add_arguments)
-
-        self.parser.add_argument('command', action="store",
-                                 choices=('run', 'conf', 'help'),
-                                 nargs="?")
-        self.parser.add_argument('--dry',
-                                 help='Dry run, nothing will be output',
-                                 dest='dry', action='store_true')
-        self.parser.add_argument('--conf-file', help='Path to the config file',
-                                 dest='conf_file')
-        self.parser.add_argument('--output-conf-file',
-                                 help='Path where to save the updated conf'
-                                 ' file',
-                                 dest='output_conf_file')
-        self.parser.add_argument('--version', help="Print version and exit",
-                                 action="store_true")
-        self.parser.add_argument('--makefile-path',
-                                 help="Print path to includable "
-                                 "Makefile and exit",
-                                 action="store_true")
-        self.parser.add_argument('--deps-file-dest',
-                                 help='Where to output the dependencies file')
-        self.parser.add_argument('--deps-file-target',
-                                 help='Name of the dependencies target',
-                                 default='doc.stamp.d')
-        self.parser.add_argument("-i", "--index", action="store",
-                                 dest="index", help="location of the "
-                                 "index file")
-        self.parser.add_argument("--sitemap", action="store",
-                                 dest="sitemap",
-                                 help="Location of the sitemap file")
-        self.parser.add_argument("--project-name", action="store",
-                                 dest="project_name",
-                                 help="Name of the documented project")
-        self.parser.add_argument("--project-version", action="store",
-                                 dest="project_version",
-                                 help="Version of the documented project")
-        self.parser.add_argument("-o", "--output", action="store",
-                                 dest="output",
-                                 help="where to output the rendered "
-                                 "documentation")
-        self.parser.add_argument("--disable-incremental-build", action="store_true",
-                                 default=False,
-                                 dest="disable_incremental",
-                                 help="Disable incremental build")
-        self.parser.add_argument("--get-conf-key", action="store",
-                                 help="print the value for a configuration "
-                                 "key")
-        self.parser.add_argument("--get-conf-path", action="store",
-                                 help="print the value for a configuration "
-                                 "path")
-        self.parser.add_argument("--get-private-folder", action="store_true",
-                                 help="get the path to hotdoc's private "
-                                 "folder")
-        self.parser.add_argument("--output-format", action="store",
-                                 dest="output_format", help="format for the "
-                                 "output")
-        self.parser.add_argument("--has-extension", action="store",
-                                 dest="has_extension", help="Check if a given "
-                                 "extension is available")
-        self.parser.add_argument("--list-extensions", action="store_true",
-                                 dest="list_extensions", help="Print "
-                                 "available extensions")
-        self.parser.add_argument('--include-paths',
-                                 help='paths to look up included files in',
-                                 dest='include_paths', action='append',
-                                 default=[])
-        self.parser.add_argument("-", action="store_true",
-                                 help="Separator to allow finishing a list"
-                                 " of arguments before a command",
-                                 dest="whatever")
-
-    def load_command_line(self, args):
-        """
-        Loads the repo from command line arguments
-        """
-        args = self.parser.parse_args(args)
-        self.__load_config(args)
-
-        cmd = args.command
-
-        if cmd == 'help':
-            self.parser.print_help()
-            sys.exit(0)
-        elif cmd is None:
-            self.__check_initial_args(args)
-            sys.exit(0)
-
-        exit_now = False
-        save_config = False
-
-        if cmd == 'run':
-            self.__dry = bool(args.dry)
-        elif cmd == 'conf':
-            save_config = True
-            exit_now = True
-
-        if save_config:
-            self.config.dump(args.output_conf_file)
-
-        if exit_now:
-            sys.exit(0)
-
-    def load_conf_file(self, conf_file, overrides):
-        """
-        Load the project from a configuration file and key-value
-        overides.
-        """
-        if conf_file is None and os.path.exists('hotdoc.json'):
-            conf_file = 'hotdoc.json'
-
-        self.__conf_file = conf_file
-
-        if conf_file and not os.path.exists(conf_file):
-            error('invalid-config',
-                  "No configuration file was found at %s" % conf_file)
-
-        actual_args = {}
-        defaults = {'output_format': 'html'}
-
-        for key, value in list(overrides.items()):
-            if key in ('cmd', 'conf_file', 'dry'):
-                continue
-            if value != self.parser.get_default(key):
-                actual_args[key] = value
-            if self.parser.get_default(key) is not None:
-                defaults[key] = value
-
-        self.config = ConfigParser(command_line_args=actual_args,
-                                   conf_file=conf_file,
-                                   defaults=defaults)
-
-        index = self.config.get_index()
-
-        if index:
-            hash_obj = hashlib.md5(self.config.get_index().encode('utf-8'))
-            priv_name = 'hotdoc-private-' + hash_obj.hexdigest()
-        else:
-            priv_name = 'hotdoc-private'
-
-        self.__private_folder = os.path.abspath(priv_name)
-
-    def __load_extensions(self):
-        extension_classes = get_installed_extension_classes(True)
-        for subclass in extension_classes:
-            self.__extension_classes[subclass.extension_name] = subclass
-        extra_classes = get_extra_extension_classes(
-            os.environ.get('HOTDOC_EXTENSION_PATH', '').split(':'))
-        self.__extension_classes.update(extra_classes)
-
-    # pylint: disable=no-self-use
-    def __load_config(self, args):
-        """
-        Banana banana
-        """
-        cli = dict(vars(args))
-        self.load_conf_file(args.conf_file, cli)
-
-    def __setup_private_folder(self):
-        folder = self.get_private_folder()
-        if os.path.exists(folder):
-            if not os.path.isdir(folder):
-                error('setup-issue',
-                      '%s exists but is not a directory' % folder)
-        else:
-            os.mkdir(folder)
-
-    def __create_extensions(self):
-        for ext_class in list(self.__extension_classes.values()):
-            ext = ext_class(self)
-            self.extensions[ext.extension_name] = ext
-
-    def get_base_doc_folder(self):
-        """Get the folder in which the main index was located
-        """
-        return self.__base_doc_folder
-
-    def __parse_config(self):
-        """
-        Banana banana
-        """
-        output = self.config.get_path('output') or None
-        disable_incremental = self.config.get('disable_incremental') or None
-        self.sitemap_path = self.config.get_path('sitemap')
-
-        if self.sitemap_path is None:
-            error('invalid-config',
-                  'No sitemap was provided')
-
-        if output is not None:
-            self.output = os.path.abspath(output)
-        else:
-            self.output = None
-
-        self.project_name = self.config.get('project_name', None)
-        self.project_version = self.config.get('project_version', None)
-        self.output_format = self.config.get('output_format')
-
-        if self.output_format not in ["html"]:
-            error('invalid-config',
-                  'Unsupported output format : %s' % self.output_format)
-
-        self.__index_file = self.config.get_index()
-        if self.__index_file is None:
-            error('invalid-config', 'index is required')
-        if not os.path.exists(self.__index_file):
-            error('invalid-config',
-                  'The provided index "%s" does not exist' %
-                  self.__index_file)
-
-        cmd_line_includes = self.config.get_paths('include_paths')
-        self.__base_doc_folder = os.path.dirname(self.__index_file)
-        self.include_paths = OrderedSet([self.__base_doc_folder])
-        self.include_paths |= OrderedSet(cmd_line_includes)
-        self.__create_change_tracker(disable_incremental)
-        self.__setup_private_folder()
-        self.__setup_database()
-
-        self.__create_extensions()
-
-        if self.__conf_file:
-            self.change_tracker.add_hard_dependency(self.__conf_file)

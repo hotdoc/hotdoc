@@ -70,20 +70,15 @@ class Extension(Configurable):
             be overriden and namespaced appropriately.
         project: project.Project, the Project instance which documentation
             hotdoc is working on.
-        formatters: dict, a mapping of format -> `formatter.Formatter`
-            subclass instances.
+        formatter: formatter.Formatter, may be subclassed.
     """
     # pylint: disable=unused-argument
     extension_name = "base-extension"
     argument_prefix = ''
-
-    index = None
-    sources = set()
     paths_arguments = {}
     path_arguments = {}
-    smart_index = False
 
-    def __init__(self, project):
+    def __init__(self, app, project):
         """Constructor for `Extension`.
 
         This should never get called directly.
@@ -93,15 +88,14 @@ class Extension(Configurable):
                 is being generated.
         """
         self.project = project
-        Tree.resolve_placeholder_signal.connect(
-            self.__resolve_placeholder_cb)
-        Tree.update_signal.connect(self.__update_tree_cb)
-
-        if not hasattr(self, 'formatters'):
-            self.formatters = {"html": Formatter([])}
-
+        self.app = app
+        self.sources = set()
+        self.index = None
+        self.smart_index = False
         self._created_symbols = defaultdict(OrderedSet)
         self.__package_root = None
+
+        self.formatter = self._make_formatter()
 
     # pylint: disable=no-self-use
     def warn(self, code, message):
@@ -149,19 +143,6 @@ class Extension(Configurable):
             domain = self.extension_name
         info(message, domain)
 
-    def get_formatter(self, output_format):
-        """
-        Get the `formatter.Formatter` instance of this extension
-        for a given output format.
-
-        Args:
-            output_format: str, the output format, for example `html`
-        Returns:
-            formatter.Formatter: the formatter for this format,
-                or `None`.
-        """
-        return self.formatters.get(output_format)
-
     def reset(self):
         """
         This function is only useful for testing purposes, at least
@@ -181,7 +162,9 @@ class Extension(Configurable):
         constructed, but before its `tree.Tree.resolve_symbols`
         method has been called.
         """
-        pass
+        self.project.tree.resolve_placeholder_signal.connect(
+            self.__resolve_placeholder_cb)
+        self.project.tree.update_signal.connect(self.__update_tree_cb)
 
     def get_stale_files(self, all_files, prefix=None):
         """
@@ -192,7 +175,8 @@ class Extension(Configurable):
             all_files: see `change_tracker.ChangeTracker.get_stale_files`
         """
         prefix = prefix or self.extension_name
-        return self.project.change_tracker.get_stale_files(
+        prefix += '-%s' % self.project.sanitized_name
+        return self.app.change_tracker.get_stale_files(
             all_files,
             prefix)
 
@@ -207,29 +191,26 @@ class Extension(Configurable):
         """
         return []
 
-    @classmethod
-    def parse_standard_config(cls, config):
-        """
-        Subclasses should call this in their
-        `utils.configurable.Configurable.parse_config` implementation.
+    def parse_toplevel_config(self, config):
+        self.formatter.parse_toplevel_config(config)
 
-        Args:
-            config: core.config.ConfigParser, the configuration holder.
-        """
-        prefix = cls.argument_prefix
+    def parse_config(self, config):
+        prefix = self.argument_prefix
         prefix += '_'
-        cls.sources = config.get_sources(prefix)
-        cls.index = config.get_index(prefix)
-        cls.smart_index = bool(config.get('%s_smart_index' %
-                                          cls.argument_prefix))
+        self.sources = config.get_sources(prefix)
+        self.index = config.get_index(prefix)
+        self.smart_index = bool(config.get('%s_smart_index' %
+                                           self.argument_prefix))
 
-        for arg, dest in list(cls.paths_arguments.items()):
+        for arg, dest in list(self.paths_arguments.items()):
             val = config.get_paths(arg)
-            setattr(cls, dest, val)
+            setattr(self, dest, val)
 
-        for arg, dest in list(cls.path_arguments.items()):
+        for arg, dest in list(self.path_arguments.items()):
             val = config.get_path(arg)
-            setattr(cls, dest, val)
+            setattr(self, dest, val)
+
+        self.formatter.parse_config(config)
 
     @classmethod
     def add_index_argument(cls, group, prefix=None, smart=True):
@@ -347,7 +328,7 @@ class Extension(Configurable):
         Returns:
             symbols.Symbol: the created symbol, or `None`.
         """
-        sym = self.project.database.get_or_create_symbol(*args, **kwargs)
+        sym = self.app.database.get_or_create_symbol(*args, **kwargs)
         # pylint: disable=unidiomatic-typecheck
         smart_key = self._get_smart_key(sym)
         if sym and type(sym) != Symbol and smart_key:
@@ -355,7 +336,13 @@ class Extension(Configurable):
 
         return sym
 
+    def _make_formatter(self):
+        return Formatter(self.app.link_resolver, [])
+
     def __resolve_placeholder_cb(self, tree, name, include_paths):
+        return self._resolve_placeholder(tree, name, include_paths)
+
+    def _resolve_placeholder(self, tree, name, include_paths):
         self.__find_package_root()
 
         override_path = os.path.join(self.__package_root, name)
@@ -383,7 +370,7 @@ class Extension(Configurable):
             index.title = self._get_smart_index_title()
 
         for sym_name in unlisted_sym_names:
-            sym = self.project.database.get_symbol(sym_name)
+            sym = self.app.database.get_symbol(sym_name)
             if sym and sym.filename in self._get_all_sources():
                 self._created_symbols[self._get_smart_key(sym)].add(sym_name)
 
@@ -413,14 +400,14 @@ class Extension(Configurable):
         page = tree.get_pages().get(page_name)
 
         if not page:
-            page = Page(page_name, None, os.path.dirname(page_name))
+            page = Page(page_name, None, os.path.dirname(page_name), tree.project.sanitized_name)
             page.extension_name = self.extension_name
             page.generated = True
             source_abs = os.path.abspath(source_file)
             if os.path.exists(source_abs):
-                page.comment = self.project.database.get_comment(source_abs)
+                page.comment = self.app.database.get_comment(source_abs)
             else:
-                page.comment = self.project.database.get_comment(page_name)
+                page.comment = self.app.database.get_comment(page_name)
             tree.add_page(index, page_name, page)
         else:
             page.is_stale = True
@@ -457,19 +444,18 @@ class Extension(Configurable):
                 for resolving links potentially mentioned in `page`
             output: str, path to the output directory.
         """
-        formatter = self.get_formatter('html')
         if page.is_stale:
             debug('Formatting page %s' % page.link.ref, 'formatting')
 
             if output:
                 actual_output = os.path.join(output,
-                                             formatter.get_output_folder())
+                                             'html')
                 if not os.path.exists(actual_output):
                     os.makedirs(actual_output)
             else:
                 actual_output = None
 
-            page.format(formatter, link_resolver, output, actual_output)
+            page.format(self.formatter, link_resolver, output, actual_output)
         else:
             debug('Not formatting page %s, up to date' % page.link.ref,
                   'formatting')

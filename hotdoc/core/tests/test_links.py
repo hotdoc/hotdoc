@@ -54,7 +54,7 @@ class TestLinkResolver(unittest.TestCase):
 
         func.resolve_links(self.link_resolver)
 
-        self.assertEqual(param.get_type_link().get_link(), None)
+        self.assertEqual(param.get_type_link().get_link(self.link_resolver), None)
 
         struct = self.database.get_or_create_symbol(
             StructSymbol, unique_name='test-struct', filename='test_a.x')
@@ -63,7 +63,7 @@ class TestLinkResolver(unittest.TestCase):
         func.resolve_links(self.link_resolver)
 
         # Not in a page but still
-        self.assertEqual(param.get_type_link().get_link(), 'test-struct')
+        self.assertEqual(param.get_type_link().get_link(self.link_resolver), 'test-struct')
 
         self.database.persist()
         self.database.close()
@@ -79,4 +79,4 @@ class TestLinkResolver(unittest.TestCase):
             filename='text_b.x', parameters=[param])
 
         func.resolve_links(self.link_resolver)
-        self.assertEqual(param.get_type_link().get_link(), 'test-struct')
+        self.assertEqual(param.get_type_link().get_link(self.link_resolver), 'test-struct')

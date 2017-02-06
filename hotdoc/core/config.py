@@ -28,7 +28,7 @@ from hotdoc.utils.loggable import error
 
 
 # pylint: disable=too-many-instance-attributes
-class ConfigParser(object):
+class Config(object):
     """
     Helper class to help deal with common extension dependencies.
 
@@ -72,15 +72,15 @@ class ConfigParser(object):
                 `hotdoc.json` in the current directory.
         """
 
-        self.__conf_file = None
+        self.conf_file = None
         self.__conf_dir = None
         contents = '{}'
 
         if conf_file:
-            self.__conf_file = os.path.abspath(conf_file)
-            self.__conf_dir = os.path.dirname(self.__conf_file)
+            self.conf_file = os.path.abspath(conf_file)
+            self.__conf_dir = os.path.dirname(self.conf_file)
             try:
-                with open(self.__conf_file, 'r') as _:
+                with open(self.conf_file, 'r') as _:
                     contents = _.read()
             except IOError:
                 pass
@@ -217,8 +217,8 @@ class ConfigParser(object):
             path = self.__config.get(key)
             from_conf = True
 
-        if path is None:
-            return ""
+        if not isinstance(path, str):
+            return None
 
         res = self.__abspath(path, from_conf)
 
@@ -318,8 +318,8 @@ class ConfigParser(object):
             if key.endswith('sources'):
                 all_deps |= self.get_sources(key[:len('sources') * -1])
 
-        if self.__conf_file is not None:
-            all_deps.add(self.__conf_file)
+        if self.conf_file is not None:
+            all_deps.add(self.conf_file)
 
         all_deps.add(self.get_path("sitemap", rel_to_cwd=True))
 
@@ -366,5 +366,5 @@ class ConfigParser(object):
             elif key != 'command':
                 final_conf[key] = value
 
-        with open(conf_file or self.__conf_file or 'hotdoc.json', 'w') as _:
+        with open(conf_file or self.conf_file or 'hotdoc.json', 'w') as _:
             _.write(json.dumps(final_conf, sort_keys=True, indent=4))

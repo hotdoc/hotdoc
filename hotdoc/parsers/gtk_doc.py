@@ -356,9 +356,10 @@ class GtkDocStringFormatter(Configurable):
     A parser for the legacy gtk-doc format.
     """
 
-    remove_xml_tags = False
-    escape_html = False
-    gdbus_codegen_sources = []
+    def __init__(self):
+        self.remove_xml_tags = False
+        self.escape_html = False
+        self.gdbus_codegen_sources = []
 
     # pylint: disable=no-self-use
     def comment_to_ast(self, comment, link_resolver):
@@ -391,17 +392,17 @@ class GtkDocStringFormatter(Configurable):
 
         text = comment.description
 
-        if (GtkDocStringFormatter.remove_xml_tags or comment.filename in
-                GtkDocStringFormatter.gdbus_codegen_sources):
+        if (self.remove_xml_tags or comment.filename in
+                self.gdbus_codegen_sources):
             text = re.sub('<.*?>', '', text)
 
-        if GtkDocStringFormatter.escape_html:
+        if self.escape_html:
             text = cgi.escape(text)
         ast, diagnostics = cmark.gtkdoc_to_ast(text, link_resolver)
 
         for diag in diagnostics:
             if (comment.filename and comment.filename not in
-                    GtkDocStringFormatter.gdbus_codegen_sources):
+                    self.gdbus_codegen_sources):
                 column = diag.column + comment.col_offset
                 if diag.lineno == 0:
                     column += comment.initial_col_offset
@@ -444,20 +445,17 @@ class GtkDocStringFormatter(Configurable):
         out, _ = cmark.ast_to_html(ast, link_resolver)
         return out
 
-    def translate_comment(self, comment, link_resolver, output_format):
+    def translate_comment(self, comment, link_resolver):
         """
         Given a gtk-doc comment string, returns the comment translated
         to the desired format.
         """
         out = u''
 
-        if output_format == 'html':
-            self.translate_tags(comment, link_resolver)
-            ast = self.comment_to_ast(comment, link_resolver)
-            out += self.ast_to_html(ast, link_resolver)
-            return out
-
-        raise Exception("Unrecognized format %s" % output_format)
+        self.translate_tags(comment, link_resolver)
+        ast = self.comment_to_ast(comment, link_resolver)
+        out += self.ast_to_html(ast, link_resolver)
+        return out
 
     def translate_tags(self, comment, link_resolver):
         """Banana banana
@@ -487,13 +485,9 @@ class GtkDocStringFormatter(Configurable):
                                  "removed in their comments, and warnings "
                                  "will not be emitted for comment issues"))
 
-    @staticmethod
-    def parse_config(project, config):
+    def parse_config(self, config):
         """Banana banana
         """
-        GtkDocStringFormatter.remove_xml_tags = config.get(
-            'gtk_doc_remove_xml')
-        GtkDocStringFormatter.escape_html = config.get(
-            'gtk_doc_escape_html')
-        GtkDocStringFormatter.gdbus_codegen_sources = config.get_paths(
-            'gdbus_codegen_sources')
+        self.remove_xml_tags = config.get('gtk_doc_remove_xml')
+        self.escape_html = config.get('gtk_doc_escape_html')
+        self.gdbus_codegen_sources = config.get_paths('gdbus_codegen_sources')

@@ -109,16 +109,15 @@ ALL_LICENSES = {
 class LicenseExtension(Extension):
     extension_name = 'license-extension'
     argument_prefix = 'license'
-    default_license = None
-    default_copyright_holders = []
-    authors_hold_copyright = True
 
-    def __init__(self, project):
-        Extension.__init__(self, project)
+    def __init__(self, app, project):
+        Extension.__init__(self, app, project)
         self.__installed_assets = set()
+        self.default_license = None
+        self.default_copyright_holders = []
+        self.authors_hold_copyright = True
 
-    @staticmethod
-    def __license_for_page(page):
+    def __license_for_page(self, page):
         if 'license' in page.meta:
             short_name = page.meta['license']
             try:
@@ -128,12 +127,11 @@ class LicenseExtension(Extension):
                       'In %s: no such license %s' % (page.source_file,
                                                      short_name))
         else:
-            license_ = LicenseExtension.default_license
+            license_ = self.default_license
 
         return license_
 
-    @staticmethod
-    def __authors_for_page(page):
+    def __authors_for_page(self, page):
         authors = []
         for data in page.meta.get('authors') or []:
             authors.append(
@@ -141,12 +139,10 @@ class LicenseExtension(Extension):
                                 data.get('email'),
                                 [str(year) for year in data.get('years')],
                                 data.get('has-copyright',
-                                         LicenseExtension.
-                                         authors_hold_copyright)))
+                                         self.authors_hold_copyright)))
         return authors
 
-    @staticmethod
-    def __extra_copyrights_for_page(page):
+    def __extra_copyrights_for_page(self, page):
         extra_copyrights = []
         for data in page.meta.get('extra-copyrights') or []:
             extra_copyrights.append(
@@ -155,7 +151,7 @@ class LicenseExtension(Extension):
                                 [str(year) for year in data.get('years')],
                                 True))
 
-        return extra_copyrights or LicenseExtension.default_copyright_holders
+        return extra_copyrights or self.default_copyright_holders
 
     def __copyrights_for_page(self, page):
         return (self.__authors_for_page(page) +
@@ -198,13 +194,14 @@ class LicenseExtension(Extension):
         return res
 
     def setup(self):
-        Formatter.formatting_page_signal.connect(self.__formatting_page_cb)
-        Formatter.get_extra_files_signal.connect(self.__get_extra_files_cb)
+        super(LicenseExtension, self).setup()
+        for ext in self.project.extensions.values():
+            ext.formatter.formatting_page_signal.connect(self.__formatting_page_cb)
+            ext.formatter.get_extra_files_signal.connect(self.__get_extra_files_cb)
 
         for ext in list(self.project.extensions.values()):
-            formatter = ext.formatters.get('html')
             template_path = os.path.join(HERE, 'html_templates')
-            formatter.engine.loader.searchpath.append(template_path)
+            ext.formatter.engine.loader.searchpath.append(template_path)
 
     @staticmethod
     def add_arguments(parser):
@@ -220,12 +217,12 @@ class LicenseExtension(Extension):
                            "This can be overriden on a per-page basis",
                            dest="authors_hold_copyright", action='store')
 
-    @staticmethod
-    def parse_config(project, config):
+    def parse_config(self, config):
+        super(LicenseExtension, self).parse_config(config)
         short_name = config.get("default-license")
         if short_name is not None:
             try:
-                LicenseExtension.default_license = ALL_LICENSES[short_name]
+                self.default_license = ALL_LICENSES[short_name]
             except KeyError:
                 error('no-such-license', 'Unknown license : %s' % short_name)
         data = config.get("default-copyright-holders")
@@ -237,12 +234,12 @@ class LicenseExtension(Extension):
                       'Invalid default copyright holders metadata : %s' %
                       str(data))
             for datum in data:
-                LicenseExtension.default_copyright_holders.append(
+                self.default_copyright_holders.append(
                     CopyrightHolder(datum.get('name'),
                                     datum.get('email'),
                                     [str(year) for year in datum.get('years')],
                                     True))
-        LicenseExtension.authors_hold_copyright = config.get(
+        self.authors_hold_copyright = config.get(
             "authors_hold_copyright", True)
 
 

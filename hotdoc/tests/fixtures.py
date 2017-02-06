@@ -20,12 +20,14 @@
 
 import unittest
 import os
+import json
 import shutil
 
-from hotdoc.core.project import CoreExtension
 from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.utils.utils import touch
 from hotdoc.core.database import Database
+from hotdoc.core.links import LinkResolver
+from hotdoc.core.tree import Tree
 
 
 # pylint: disable=too-many-instance-attributes
@@ -44,14 +46,16 @@ class HotdocTest(unittest.TestCase):
         os.mkdir(self._md_dir)
         os.mkdir(self._priv_dir)
         os.mkdir(self._src_dir)
-        self._core_ext = CoreExtension(self)
         self.change_tracker = ChangeTracker()
         self.database = Database()
+        self.link_resolver = LinkResolver(self.database)
         self.database.setup(self._priv_dir)
+        self.incremental = False
+        self.sanitized_name = 'test-project-0.1'
+        self.tree = Tree(self, self)
 
     def tearDown(self):
         self._remove_tmp_dirs()
-        del self._core_ext
 
     def _remove_tmp_dirs(self):
         shutil.rmtree(self._md_dir, ignore_errors=True)
@@ -64,10 +68,22 @@ class HotdocTest(unittest.TestCase):
         with open(path, 'w') as _:
             _.write(contents)
 
-        # Just making sure we don't hit a race condition,
-        # in real world situations it is assumed users
-        # will not update source files twice in the same
-        # microsecond
+        touch(path)
+        return path
+
+    def _create_sitemap(self, name, contents):
+        path = os.path.join(self._md_dir, name)
+        with open(path, 'w') as _:
+            _.write(contents)
+
+        touch(path)
+        return path
+
+    def _create_conf_file(self, name, conf):
+        path = os.path.join(self._md_dir, name)
+        with open(path, 'w') as _:
+            _.write(json.dumps(conf))
+
         touch(path)
         return path
 
@@ -82,5 +98,4 @@ class HotdocTest(unittest.TestCase):
         # will not update source files twice in the same
         # microsecond
         touch(path)
-
         return path

@@ -35,11 +35,10 @@ from hotdoc.utils.loggable import debug
 class Database(object):
     """Banana banana
     """
-    comment_added_signal = Signal()
-    comment_updated_signal = Signal()
-    symbol_updated_signal = Signal()
-
     def __init__(self):
+        self.comment_added_signal = Signal()
+        self.comment_updated_signal = Signal()
+
         self.__comments = {}
         self.__symbols = {}
         self.__incremental = False
@@ -92,9 +91,6 @@ class Database(object):
 
         for key, value in list(kwargs.items()):
             setattr(symbol, key, value)
-
-        if self.__incremental:
-            self.symbol_updated_signal(self, symbol)
 
         self.__symbols[unique_name] = symbol
 
