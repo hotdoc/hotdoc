@@ -214,6 +214,8 @@ def execute_command(parser, config, ext_classes):
         app = Application(ext_classes)
         app.parse_config(config)
         res = app.run()
+    elif cmd == 'conf':
+        config.dump(conf_file = config.get('output_conf_file', None))
     elif cmd is None:
         if config.get('version'):
             print (VERSION)

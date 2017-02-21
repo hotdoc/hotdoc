@@ -337,7 +337,9 @@ class Config(object):
 
         if conf_file:
             conf_dir = os.path.dirname(conf_file)
-            if not os.path.exists(conf_dir):
+            if not conf_dir:
+                conf_dir = self.__invoke_dir
+            elif not os.path.exists(conf_dir):
                 os.makedirs(conf_dir)
         else:
             conf_dir = self.__conf_dir
@@ -363,7 +365,7 @@ class Config(object):
                         relpath = os.path.relpath(path, conf_dir)
                         new_list.append(relpath)
                 final_conf[key] = new_list
-            elif key != 'command':
+            elif key not in ['command', 'output_conf_file']:
                 final_conf[key] = value
 
         with open(conf_file or self.conf_file or 'hotdoc.json', 'w') as _:
