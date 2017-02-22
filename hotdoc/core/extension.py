@@ -22,7 +22,7 @@ Utilities and baseclasses for extensions
 import os
 from collections import defaultdict
 
-from hotdoc.core.inclusions import find_md_file
+from hotdoc.core.inclusions import find_file
 from hotdoc.core.symbols import Symbol
 from hotdoc.core.tree import Tree, Page
 from hotdoc.core.formatter import Formatter
@@ -348,12 +348,12 @@ class Extension(Configurable):
         override_path = os.path.join(self.__package_root, name)
         if name == '%s-index' % self.argument_prefix:
             if self.index:
-                path = find_md_file(self.index, include_paths)
+                path = find_file(self.index, include_paths)
                 assert path is not None
                 return path, self.extension_name
             return True, self.extension_name
         elif self.smart_index and override_path in self._get_all_sources():
-            path = find_md_file('%s.markdown' % name, include_paths)
+            path = find_file('%s.markdown' % name, include_paths)
             return path or True, None
         return None
 
