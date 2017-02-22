@@ -84,8 +84,7 @@ class CoreExtension(Extension):
         if ext != '.json':
             return None
 
-        conf_path = os.path.join(os.path.dirname(self.project.sitemap_path),
-                                 fname)
+        conf_path = inclusions.find_file(fname, include_paths)
         config = Config(conf_file=conf_path)
         proj = Project(self.app)
         proj.parse_config(config)

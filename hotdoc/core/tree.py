@@ -33,7 +33,7 @@ import yaml
 from yaml.constructor import ConstructorError
 from schema import Schema, SchemaError, Optional, And
 
-from hotdoc.core.inclusions import find_md_file, resolve
+from hotdoc.core.inclusions import find_file, resolve
 from hotdoc.core.symbols import Symbol, StructSymbol, ClassSymbol, InterfaceSymbol, AliasSymbol
 from hotdoc.core.links import Link
 from hotdoc.core.filesystem import ChangeTracker
@@ -386,7 +386,7 @@ class Tree(object):
             resolved = self.resolve_placeholder_signal(
                 self, fname, self.project.include_paths)
             if resolved is None:
-                source_file = find_md_file(fname, self.project.include_paths)
+                source_file = find_file(fname, self.project.include_paths)
                 source_files.append(source_file)
                 if source_file is None:
                     error(

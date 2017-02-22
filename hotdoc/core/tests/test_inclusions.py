@@ -20,7 +20,7 @@
 
 from hotdoc.tests.fixtures import HotdocTest
 from hotdoc.core.project import CoreExtension
-from hotdoc.core.inclusions import find_md_file, resolve
+from hotdoc.core.inclusions import find_file, resolve
 
 
 class TestFileIncluder(HotdocTest):
@@ -30,18 +30,18 @@ class TestFileIncluder(HotdocTest):
         self._core_ext.setup()
 
     def test_missing_abspath(self):
-        self.assertEqual(find_md_file('/nope.md', []), None)
+        self.assertEqual(find_file('/nope.md', []), None)
 
     def test_abspath(self):
         path = self._create_md_file('yep.md', 'stuff')
-        self.assertEqual(find_md_file(path, []), path)
+        self.assertEqual(find_file(path, []), path)
 
     def test_relpath(self):
         path = self._create_md_file('yep.md', 'stuff')
-        self.assertEqual(find_md_file('yep.md', [self._md_dir]), path)
+        self.assertEqual(find_file('yep.md', [self._md_dir]), path)
 
     def test_missing_relpath(self):
-        self.assertEqual(find_md_file('yep.md', [self._md_dir]), None)
+        self.assertEqual(find_file('yep.md', [self._md_dir]), None)
 
     def test_resolve(self):
         _ = self._create_md_file('yep.md', 'stuff')
