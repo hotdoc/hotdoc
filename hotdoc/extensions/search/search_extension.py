@@ -22,6 +22,7 @@ import os
 import shutil
 from hotdoc.core.extension import Extension
 from hotdoc.core.tree import Page
+from hotdoc.utils.setup_utils import symlink
 from hotdoc.extensions.search.create_index import SearchIndex
 
 DESCRIPTION =\
@@ -87,12 +88,16 @@ class SearchExtension(Extension):
                             self.project.get_private_folder())
         index.scan(stale)
 
-        for subdir in subdirs:
-            if subdir == 'assets':
-                continue
-            shutil.copyfile(os.path.join(self.project.get_private_folder(),
-                                         'search.trie'),
-                            os.path.join(topdir, subdir, 'dumped.trie'))
+        dest = os.path.join(topdir, 'dumped.trie')
+        shutil.copyfile(os.path.join(self.project.get_private_folder(),
+                                     'search.trie'),
+                        dest)
+        for root, dirs, files in os.walk(topdir):
+            for dir_ in dirs:
+                if dir_ == 'assets':
+                    continue
+                symlink (os.path.relpath(dest, os.path.join(root, dir_)),
+                         os.path.join(root, dir_, 'dumped.trie'))
 
     def __formatting_page(self, formatter, page):
         page.output_attrs['html']['scripts'].add(self.script)
