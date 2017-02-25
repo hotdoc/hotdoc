@@ -26,6 +26,7 @@ import errno
 import shutil
 import tarfile
 import unittest
+import contextlib
 from distutils.command.build import build
 from distutils.command.build_ext import build_ext
 from distutils.core import Command
@@ -38,7 +39,7 @@ from setuptools.command.sdist import sdist
 from setuptools.command.test import test
 
 from hotdoc.utils.setup_utils import (
-    VERSION, THEME_VERSION, require_clean_submodules, symlink)
+    VERSION, require_clean_submodules, symlink)
 
 SOURCE_DIR = os.path.abspath(os.path.dirname(__file__))
 CMARK_DIR = os.path.join(SOURCE_DIR, 'cmark')
@@ -49,6 +50,17 @@ CMARK_BUILT_SRCDIR = os.path.join(CMARK_BUILD_DIR, 'src')
 CMARK_INCLUDE_DIRS = [CMARK_SRCDIR, CMARK_BUILT_SRCDIR]
 
 require_clean_submodules(SOURCE_DIR, ['cmark'])
+
+
+@contextlib.contextmanager
+def cd(path):
+    CWD = os.getcwd()
+
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(CWD)
 
 
 # pylint: disable=too-few-public-methods
@@ -68,17 +80,15 @@ class CMarkExtension(Extension):
             print("please get a version of make and re-run setup")
             sys.exit(-1)
 
-        cwd = os.getcwd()
         if not os.path.exists(CMARK_BUILD_DIR):
             os.mkdir(CMARK_BUILD_DIR)
-        os.chdir(CMARK_BUILD_DIR)
-        try:
-            spawn.spawn(['cmake', CMARK_DIR])
-            spawn.spawn(['make', 'cmarkextensions'])
-        except spawn.DistutilsExecError:
-            print("Error while running cmake")
-            sys.exit(-1)
-        os.chdir(cwd)
+        with cd(CMARK_BUILD_DIR):
+            try:
+                spawn.spawn(['cmake', CMARK_DIR])
+                spawn.spawn(['make', 'cmarkextensions'])
+            except spawn.DistutilsExecError:
+                print("Error while running cmake")
+                sys.exit(-1)
 
     # pylint: disable=missing-docstring
     def build_custom(self):
@@ -105,18 +115,19 @@ CMARK_MODULE = CMarkExtension('hotdoc.parsers.cmark',
                               define_macros=[
                                   ('LIBDIR', '"%s"' % CMARK_BUILD_DIR)])
 
+# The default theme
 
-DEFAULT_THEME =\
-    'https://people.collabora.com/~meh/hotdoc_bootstrap_theme-%s/dist.tgz' % \
-    THEME_VERSION
+THEME_SRC_DIR = os.path.join(SOURCE_DIR, 'hotdoc', 'hotdoc_bootstrap_theme')
+THEME_DIST_DIR = os.path.join(THEME_SRC_DIR, 'dist')
+require_clean_submodules (os.path.dirname(THEME_SRC_DIR), 'hotdoc_bootstrap_theme')
 
-
-class DownloadDefaultTemplate(Command):
+class BuildDefaultTheme(Command):
     """
-    This will download the default theme (bootstrap)
+    This will build the default theme.
     """
     user_options = []
-    description = "Download default html template"
+    description = ("Build default html theme, the following dependencies are "
+        "required: make, npm")
 
     # pylint: disable=missing-docstring
     def initialize_options(self):
@@ -129,34 +140,23 @@ class DownloadDefaultTemplate(Command):
     # pylint: disable=missing-docstring
     # pylint: disable=no-self-use
     def run(self):
-        theme_path = os.path.join(SOURCE_DIR, 'hotdoc', 'default_theme-%s' %
-                                  THEME_VERSION)
+        if spawn.find_executable('make') is None:
+            print("make is required")
+            print("please get a version of make and re-run setup")
+            sys.exit(-1)
+        if spawn.find_executable('npm') is None:
+            print("npm is required")
+            print("please get a version of npm and re-run setup")
+            sys.exit(-1)
 
-        if os.path.exists(theme_path):
-            return
-
-        # Only installed at setup_requires time, whatever
-        # pylint: disable=import-error
-        import requests
-        response = \
-            requests.get(DEFAULT_THEME)
-
-        with open('default_theme.tgz', 'wb') as _:
-            _.write(response.content)
-
-        tar = tarfile.open('default_theme.tgz')
-        extract_path = os.path.join(SOURCE_DIR, 'hotdoc')
-        tar.extractall(extract_path)
-        tar.close()
-
-        extract_path = os.path.join(extract_path, 'dist')
-
-        shutil.rmtree(theme_path, ignore_errors=True)
-
-        shutil.move(extract_path, theme_path)
-
-        os.unlink('default_theme.tgz')
-
+        with cd(THEME_SRC_DIR):
+            try:
+                spawn.spawn(['npm', 'install'])
+                spawn.spawn(['./node_modules/bower/bin/bower', 'install'])
+                spawn.spawn(['make'])
+            except spawn.DistutilsExecError as e:
+                print("Error while building default theme", e)
+                sys.exit(-1)
 
 class LinkPreCommitHook(Command):
     """
@@ -190,7 +190,7 @@ class LinkPreCommitHook(Command):
 class CustomDevelop(develop):
 
     def run(self):
-        self.run_command('download_default_template')
+        self.run_command('build_default_theme')
         self.run_command('link_pre_commit_hook')
         return develop.run(self)
 
@@ -199,7 +199,7 @@ class CustomDevelop(develop):
 class CustomBuild(build):
 
     def run(self):
-        self.run_command('download_default_template')
+        self.run_command('build_default_theme')
         return build.run(self)
 
 
@@ -207,16 +207,8 @@ class CustomBuild(build):
 class CustomSDist(sdist):
 
     def run(self):
-        self.run_command('download_default_template')
+        self.run_command('build_default_theme')
         return sdist.run(self)
-
-
-# pylint: disable=missing-docstring
-class CustomBDistEgg(bdist_egg):
-
-    def run(self):
-        self.run_command('download_default_template')
-        return bdist_egg.run(self)
 
 
 class CustomBuildExt(build_ext):
@@ -226,6 +218,16 @@ class CustomBuildExt(build_ext):
 
         build_ext.run(self)
         return True
+
+# pylint: disable=missing-docstring
+class CustomBDistEgg(bdist_egg):
+
+    def run(self):
+        # This will not run when installing from pip, thus
+        # avoiding a few dependencies.
+        if not os.path.exists (THEME_DIST_DIR):
+            self.run_command('build_default_theme')
+        return bdist_egg.run(self)
 
 
 # From http://stackoverflow.com/a/17004263/2931197
@@ -307,20 +309,20 @@ if __name__ == '__main__':
         cmdclass={'build': CustomBuild,
                   'build_ext': CustomBuildExt,
                   'sdist': CustomSDist,
+		  'bdist_egg': CustomBDistEgg,
                   'develop': CustomDevelop,
-                  'bdist_egg': CustomBDistEgg,
                   'test': DiscoverTest,
                   'link_pre_commit_hook': LinkPreCommitHook,
-                  'download_default_template': DownloadDefaultTemplate},
+                  'build_default_theme': BuildDefaultTheme},
         scripts=['hotdoc/hotdoc',
                  'hotdoc/hotdoc_dep_printer'],
         package_data={
             'hotdoc.core': ['templates/*', 'assets/*'],
-            'hotdoc': ['default_theme-%s/templates/*' % THEME_VERSION,
-                       'default_theme-%s/js/*' % THEME_VERSION,
-                       'default_theme-%s/css/*' % THEME_VERSION,
-                       'default_theme-%s/images/*' % THEME_VERSION,
-                       'default_theme-%s/fonts/*' % THEME_VERSION,
+            'hotdoc': [os.path.join(THEME_DIST_DIR, 'templates', '*'),
+                       os.path.join(THEME_DIST_DIR, 'js', '*'),
+                       os.path.join(THEME_DIST_DIR, 'css', '*'),
+                       os.path.join(THEME_DIST_DIR, 'images', '*'),
+                       os.path.join(THEME_DIST_DIR, 'fonts', '*'),
                        'VERSION.txt'],
             'hotdoc.utils': ['hotdoc.m4', 'hotdoc.mk'],
             'hotdoc.extensions.syntax_highlighting': [
@@ -345,5 +347,4 @@ if __name__ == '__main__':
         classifiers=[
             "Programming Language :: Python :: 3",
             "Programming Language :: Python :: 3.4",
-            "Programming Language :: Python :: 3.5"],
-        setup_requires=['requests'])
+            "Programming Language :: Python :: 3.5"])

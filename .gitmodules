@@ -6,3 +6,7 @@
 	path = hotdoc/extensions/syntax_highlighting/prism
 	url = https://github.com/PrismJS/prism.git
 	branch = master
+[submodule "hotdoc/hotdoc_bootstrap_theme"]
+	path = hotdoc/hotdoc_bootstrap_theme
+	url = https://github.com/hotdoc/hotdoc_bootstrap_theme.git
+	branch = master

@@ -52,7 +52,6 @@ from hotdoc.core.symbols import\
      VFunctionSymbol, ClassSymbol, InterfaceSymbol)
 from hotdoc.core.links import Link
 from hotdoc.parsers.gtk_doc import GtkDocStringFormatter
-from hotdoc.utils.setup_utils import THEME_VERSION
 from hotdoc.utils.utils import (
     OrderedSet, id_from_text, recursive_overwrite, symlink)
 from hotdoc.core.exceptions import HotdocException
@@ -906,8 +905,8 @@ class Formatter(Configurable):
     def parse_toplevel_config(self, config):
         html_theme = config.get('html_theme', 'default')
         if html_theme == 'default':
-            default_theme = os.path.join(HERE, '..',
-                                         'default_theme-%s' % THEME_VERSION)
+            default_theme = os.path.join(HERE, os.pardir,
+                                         'hotdoc_bootstrap_theme', 'dist')
             html_theme = os.path.abspath(default_theme)
             debug("Using default theme")
         else:
