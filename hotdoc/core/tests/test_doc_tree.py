@@ -103,6 +103,7 @@ class TestTree(unittest.TestCase):
 
         self.test_ext.parse_config(cfg)
         self.core_ext.parse_config(cfg)
+        self.subprojects = {}
 
     def tearDown(self):
         self.__remove_tmp_dirs()

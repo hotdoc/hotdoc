@@ -115,7 +115,16 @@ class Application(Configurable):
 
         return res
 
-    def __dump_deps_file(self):
+    def __dump_project_deps_file(self, project, f, empty_targets):
+        for page in list(project.tree.get_pages().values()):
+            if not page.generated:
+                empty_targets.append(page.source_file)
+            f.write(u'%s ' % page.source_file)
+
+        for subproj in project.subprojects.values():
+            self.__dump_project_deps_file(subproj, f, empty_targets)
+
+    def __dump_deps_file(self, project):
         dest = self.config.get('deps_file_dest', None)
         target = self.config.get('deps_file_target')
 
@@ -131,19 +140,14 @@ class Application(Configurable):
             os.makedirs(destdir)
 
         empty_targets = []
-
-        with io.open(dest, 'w', encoding='utf-8') as _:
+        with open(dest, 'w', encoding='utf-8') as _:
             _.write(u'%s: ' % target)
 
             for dep in self.config.get_dependencies():
                 empty_targets.append(dep)
                 _.write(u'%s ' % dep)
 
-            if self.tree:
-                for page in list(self.tree.get_pages().values()):
-                    if not page.generated:
-                        empty_targets.append(page.source_file)
-                        _.write(u'%s ' % page.source_file)
+            self.__dump_project_deps_file(project, _, empty_targets)
 
             for empty_target in empty_targets:
                 _.write(u'\n\n%s:' % empty_target)
@@ -159,7 +163,7 @@ class Application(Configurable):
         with open(os.path.join(self.private_folder,
                                'change_tracker.p'), 'wb') as _:
             _.write(pickle.dumps(self.change_tracker))
-        self.__dump_deps_file()
+        self.__dump_deps_file(project)
 
     def __finalize(self, project):
         if self.database is not None:
@@ -215,10 +219,10 @@ def execute_command(parser, config, ext_classes):
         app.parse_config(config)
         res = app.run()
     elif cmd == 'conf':
-        config.dump(conf_file = config.get('output_conf_file', None))
+        config.dump(conf_file=config.get('output_conf_file', None))
     elif cmd is None:
         if config.get('version'):
-            print (VERSION)
+            print(VERSION)
         elif config.get('makefile_path'):
             here = os.path.dirname(__file__)
             path = os.path.join(here, 'utils', 'hotdoc.mk')
@@ -227,7 +231,7 @@ def execute_command(parser, config, ext_classes):
             key = config.get('get_conf_path')
             path = config.get_path(key, rel_to_cwd=True)
             if path is not None:
-                print (path)
+                print(path)
         elif config.get('nf_key'):
             key = config.get('get_conf_key')
             value = config.get(key, None)

@@ -67,7 +67,7 @@ class CoreExtension(Extension):
         self.subprojects = {}
 
     def format_page(self, page, link_resolver, output):
-        proj = self.subprojects.get(page.source_file)
+        proj = self.project.subprojects.get(page.source_file)
         if proj:
             proj.format(link_resolver, output)
             page.title = proj.tree.root.title
@@ -85,11 +85,7 @@ class CoreExtension(Extension):
             return None
 
         conf_path = inclusions.find_file(fname, include_paths)
-        config = Config(conf_file=conf_path)
-        proj = Project(self.app)
-        proj.parse_config(config)
-        proj.setup()
-        self.subprojects[fname] = proj
+        self.project.add_subproject(fname, conf_path)
         return True, None
 
     @staticmethod
@@ -133,6 +129,7 @@ class Project(Configurable):
         self.project_version = None
         self.sanitized_name = None
         self.sitemap_path = None
+        self.subprojects = {}
 
         if os.name == 'nt':
             self.datadir = os.path.join(
@@ -157,7 +154,7 @@ class Project(Configurable):
             return
 
         self.tree.persist()
-        for proj in self.extensions[CoreExtension.extension_name].subprojects.values():
+        for proj in self.subprojects.values():
             proj.persist()
 
     def finalize(self):
@@ -262,6 +259,13 @@ class Project(Configurable):
                            help='paths to look up included files in',
                            dest='include_paths', action='append',
                            default=[])
+
+    def add_subproject(self, fname, conf_path):
+        config = Config(conf_file=conf_path)
+        proj = Project(self.app)
+        proj.parse_config(config)
+        proj.setup()
+        self.subprojects[fname] = proj
 
     def __create_extensions(self):
         for ext_class in list(self.app.extension_classes.values()):
