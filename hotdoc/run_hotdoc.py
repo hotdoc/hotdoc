@@ -232,7 +232,7 @@ def execute_command(parser, config, ext_classes):
             path = config.get_path(key, rel_to_cwd=True)
             if path is not None:
                 print(path)
-        elif config.get('nf_key'):
+        elif config.get('get_conf_key'):
             key = config.get('get_conf_key')
             value = config.get(key, None)
             if value is not None:

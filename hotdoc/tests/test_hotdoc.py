@@ -182,6 +182,27 @@ class TestHotdoc(unittest.TestCase):
             new_conf = json.loads(_.read())
         self.assertDictEqual(new_conf, conf)
 
+        f = io.StringIO()
+        args = ['--get-conf-key', 'project_version']
+        with redirect_stdout(f):
+            res = run(args)
+        self.assertEqual(res, 0)
+        self.assertEqual(f.getvalue().strip(), '0.2')
+
+        f = io.StringIO()
+        args = ['--get-conf-key', 'project_version', '--project-version', '0.3']
+        with redirect_stdout(f):
+            res = run(args)
+        self.assertEqual(res, 0)
+        self.assertEqual(f.getvalue().strip(), '0.3')
+
+        f = io.StringIO()
+        args = ['--get-conf-path', 'index']
+        with redirect_stdout(f):
+            res = run(args)
+        self.assertEqual(res, 0)
+        self.assertEqual(f.getvalue().strip(), os.path.relpath(index_path, os.getcwd()))
+
     def test_version(self):
         from hotdoc.utils.setup_utils import VERSION
         args = ['--version']
@@ -199,3 +220,23 @@ class TestHotdoc(unittest.TestCase):
         self.assertEqual(res, 0)
         path = f.getvalue().strip()
         self.assertTrue(os.path.exists(path))
+
+    def test_private_folder(self):
+        self.__create_md_file('index.markdown',
+                              "## A very simple index\n")
+
+        with open(os.path.join(self.__md_dir, 'sitemap.txt'), 'w') as _:
+            _.write('index.markdown')
+
+        args = ['--index', os.path.join(self.__md_dir, 'index.markdown'),
+                '--output', self.__output_dir,
+                '--project-name', 'test-project',
+                '--project-version', '0.1',
+                '--sitemap', os.path.join(self.__md_dir, 'sitemap.txt'),
+                '--get-private-folder']
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            res = run(args)
+        self.assertEqual(res, 0)
+        path = f.getvalue().strip()
