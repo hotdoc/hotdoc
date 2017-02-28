@@ -139,6 +139,8 @@ class Project(Configurable):
 
         self.formatted_signal = Signal()
 
+        self.__create_redirect_index = False
+
     def register_tag_validator(self, validator):
         """
         Banana banana
@@ -199,6 +201,19 @@ class Project(Configurable):
 
         self.tree.format(link_resolver, output, self.extensions)
         self.formatted_signal(self)
+
+        if self.__create_redirect_index:
+            ext = self.extensions.get(self.tree.root.extension_name)
+            ext_folder = ext.formatter.get_output_folder()
+            index_path = os.path.join(
+                    self.sanitized_name,
+                    ext_folder,
+                    self.tree.root.link.get_link(link_resolver))
+
+            with open(os.path.join(output, 'html', 'index.html'), 'w',
+                      encoding='utf8') as _:
+                _.write('<meta http-equiv="refresh" content="0; url=%s"/>' %
+                        index_path)
 
     def create_navigation_script(self, output):
         sitemap = self.__create_json_sitemap()
@@ -309,6 +324,9 @@ class Project(Configurable):
             self.include_paths |= OrderedSet([os.path.dirname(index_file)])
 
         self.include_paths |= OrderedSet(config.get_paths('include_paths'))
+
+        if toplevel:
+            self.__create_redirect_index = True
 
         self.tree = Tree(self, self.app)
 
