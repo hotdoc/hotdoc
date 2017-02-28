@@ -21,7 +21,6 @@
 import os
 import shutil
 from hotdoc.core.extension import Extension
-from hotdoc.core.tree import Page
 from hotdoc.utils.setup_utils import symlink
 from hotdoc.extensions.search.create_index import SearchIndex
 
@@ -59,9 +58,11 @@ class SearchExtension(Extension):
     def setup(self):
         super(SearchExtension, self).setup()
         for ext in self.project.extensions.values():
-            ext.formatter.formatting_page_signal.connect(self.__formatting_page)
+            ext.formatter.formatting_page_signal.connect(
+                self.__formatting_page)
 
-    def __build_index(self, app):
+    def __build_index(self, app):  # pylint: disable=unused-argument
+        # pylint: disable=too-many-locals
         if self.app.incremental:
             return
 
@@ -92,13 +93,21 @@ class SearchExtension(Extension):
         shutil.copyfile(os.path.join(self.project.get_private_folder(),
                                      'search.trie'),
                         dest)
+        # pylint: disable=unused-variable
         for root, dirs, files in os.walk(topdir):
             for dir_ in dirs:
                 if dir_ == 'assets':
                     continue
-                symlink (os.path.relpath(dest, os.path.join(root, dir_)),
-                         os.path.join(root, dir_, 'dumped.trie'))
+                dest_trie = os.path.join(root, dir_, 'dumped.trie')
+                try:
+                    os.remove(dest_trie)
+                except OSError:
+                    pass
 
+                symlink(os.path.relpath(
+                    dest, os.path.join(root, dir_)), dest_trie)
+
+    # pylint: disable=unused-argument
     def __formatting_page(self, formatter, page):
         page.output_attrs['html']['scripts'].add(self.script)
 
