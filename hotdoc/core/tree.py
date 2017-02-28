@@ -341,7 +341,6 @@ class Tree(object):
         self.__placeholders = {}
         self.root = None
         self.__dep_map = self.__create_dep_map()
-        app.database.comment_updated_signal.connect(self.__comment_updated_cb)
 
         cmark.hotdoc_to_ast(u'', self)
         self.__extensions = {}
@@ -504,12 +503,6 @@ class Tree(object):
             return Link(os.path.join(prefix, ref), page.link.get_title(), None)
         return None
 
-    def __comment_updated_cb(self, doc_db, comment):
-        pagename = self.__dep_map.get(comment.name)
-        page = self.__all_pages.get(pagename)
-        if page:
-            page.is_stale = True
-
     def resolve(self, uri):
         """
         Banana banana
@@ -571,6 +564,12 @@ class Tree(object):
         ast = cmark.hotdoc_to_ast(contents, self)
         return Page(source_file, ast, output_path, self.project.sanitized_name,
                     meta=meta, raw_contents=raw_contents)
+
+    def stale_comment_pages(self, comment):
+        pagename = self.__dep_map.get(comment.name)
+        page = self.__all_pages.get(pagename)
+        if page:
+            page.is_stale = True
 
     def stale_symbol_pages(self, symbols, new_page=None):
         """

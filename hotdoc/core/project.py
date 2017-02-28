@@ -176,10 +176,12 @@ class Project(Configurable):
         """
         info('Setting up %s' % self.project_name, 'project')
 
+        self.app.database.comment_updated_signal.connect(self.__comment_updated_cb)
         for extension in list(self.extensions.values()):
             info('Setting up %s' % extension.extension_name)
             extension.setup()
             self.app.database.flush()
+        self.app.database.comment_updated_signal.disconnect(self.__comment_updated_cb)
 
         sitemap = SitemapParser().parse(self.sitemap_path)
         self.tree.parse_sitemap(sitemap)
@@ -272,6 +274,9 @@ class Project(Configurable):
             ext = ext_class(self.app, self)
             self.extensions[ext.extension_name] = ext
 
+    def __comment_updated_cb(self, doc_db, comment):
+        self.tree.stale_comment_pages (comment)
+
     def parse_config(self, config, toplevel=False):
         """
         Banana banana
@@ -293,15 +298,16 @@ class Project(Configurable):
         self.sanitized_name = '%s-%s' % (re.sub(r'\W+', '-', self.project_name),
                                          self.project_version)
 
-        index_file = config.get_index()
-        if index_file is None:
-            error('invalid-config', 'index is required')
-        if not os.path.exists(index_file):
-            error('invalid-config',
-                  'The provided index "%s" does not exist' %
-                  index_file)
+        self.include_paths = OrderedSet([])
 
-        self.include_paths = OrderedSet([os.path.dirname(index_file)])
+        index_file = config.get_index()
+        if index_file:
+            if not os.path.exists(index_file):
+                error('invalid-config',
+                      'The provided index "%s" does not exist' %
+                      index_file)
+            self.include_paths |= OrderedSet([os.path.dirname(index_file)])
+
         self.include_paths |= OrderedSet(config.get_paths('include_paths'))
 
         self.tree = Tree(self, self.app)
@@ -313,7 +319,7 @@ class Project(Configurable):
                 extension.parse_toplevel_config(config)
             extension.parse_config(config)
 
-        if config.conf_file:
+        if not toplevel and config.conf_file:
             self.app.change_tracker.add_hard_dependency(config.conf_file)
 
     def __add_default_tags(self, _, comment):

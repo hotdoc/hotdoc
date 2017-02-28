@@ -55,6 +55,7 @@ class Application(Configurable):
         self.dry = False
         self.incremental = False
         self.config = None
+        self.project = None
         self.formatted_signal = Signal()
 
     @staticmethod
@@ -74,44 +75,27 @@ class Application(Configurable):
 
     def parse_config(self, config):
         self.config = config
-        Logger.parse_config(config)
         self.output = config.get_path('output')
         self.dry = config.get('dry')
-        index = config.get_index()
+        self.project = Project(self)
+        self.project.parse_config(self.config, toplevel=True)
+        self.private_folder = os.path.abspath('hotdoc-private-%s' % self.project.sanitized_name)
 
-        if index:
-            hash_obj = hashlib.md5(index.encode('utf-8'))
-            priv_name = 'hotdoc-private-' + hash_obj.hexdigest()
-        else:
-            priv_name = 'hotdoc-private'
-
-        self.private_folder = os.path.abspath(priv_name)
-
-        self.__create_change_tracker(config.get('disable_incremental'))
+        self.__create_change_tracker(self.config.get('disable_incremental'))
         self.__setup_private_folder()
         self.__setup_database()
 
     def run(self):
         res = 0
-        try:
-            project = Project(self)
-            project.parse_config(self.config, toplevel=True)
-            project.setup()
-            project.format(self.link_resolver, self.output)
-            project.create_navigation_script(self.output)
-            self.formatted_signal(self)
-            self.__persist(project)
-        except HotdocException:
-            res = len(Logger.get_issues())
-        except Exception:
-            print("An unknown error happened while building the documentation"
-                  " and hotdoc cannot recover from it. Please report "
-                  "a bug with this error message and the steps to "
-                  "reproduce it")
-            traceback.print_exc()
-            res = 1
-        finally:
-            self.__finalize(project)
+
+        if self.config.conf_file:
+            self.change_tracker.add_hard_dependency(self.config.conf_file)
+
+        self.project.setup()
+        self.project.format(self.link_resolver, self.output)
+        self.project.create_navigation_script(self.output)
+        self.formatted_signal(self)
+        self.__persist(self.project)
 
         return res
 
@@ -165,11 +149,11 @@ class Application(Configurable):
             _.write(pickle.dumps(self.change_tracker))
         self.__dump_deps_file(project)
 
-    def __finalize(self, project):
+    def finalize(self):
         if self.database is not None:
             info('Closing database')
             self.database.close()
-        project.finalize()
+        self.project.finalize()
 
     def __setup_private_folder(self):
         if os.path.exists(self.private_folder):
@@ -212,12 +196,29 @@ def execute_command(parser, config, ext_classes):
     res = 0
     cmd = config.get('command')
 
+    get_private_folder = config.get('get_private_folder', False)
+
     if cmd == 'help':
         parser.print_help()
-    elif cmd == 'run':
+    elif cmd == 'run' or get_private_folder: # git.mk backward compat
         app = Application(ext_classes)
-        app.parse_config(config)
-        res = app.run()
+        try:
+            app.parse_config(config)
+            if get_private_folder:
+                print (app.private_folder)
+                return res
+            res = app.run()
+        except HotdocException:
+            res = len(Logger.get_issues())
+        except Exception:
+            print("An unknown error happened while building the documentation"
+                  " and hotdoc cannot recover from it. Please report "
+                  "a bug with this error message and the steps to "
+                  "reproduce it")
+            traceback.print_exc()
+            res = 1
+        finally:
+            app.finalize()
     elif cmd == 'conf':
         config.dump(conf_file=config.get('output_conf_file', None))
     elif cmd is None:
@@ -315,5 +316,7 @@ def run(args):
     config = Config(command_line_args=actual_args,
                     conf_file=conf_file,
                     defaults=defaults)
+
+    Logger.parse_config(config)
 
     return execute_command(parser, config, ext_classes)

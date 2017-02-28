@@ -240,3 +240,4 @@ class TestHotdoc(unittest.TestCase):
             res = run(args)
         self.assertEqual(res, 0)
         path = f.getvalue().strip()
+        self.assertTrue(os.path.basename(path).startswith('hotdoc-private'))

@@ -135,10 +135,10 @@ class Formatter(Configurable):
     add_anchors = False
     number_headings = False
 
-    def __init__(self, link_resolver, searchpath):
+    def __init__(self, extension, searchpath):
         Configurable.__init__(self)
 
-        self.link_resolver = link_resolver
+        self.extension = extension
 
         self._symbol_formatters = {
             FunctionSymbol: self._format_function,
@@ -473,7 +473,7 @@ class Formatter(Configurable):
 
         for tok in type_tokens:
             if isinstance(tok, Link):
-                ref = tok.get_link(self.link_resolver)
+                ref = tok.get_link(self.extension.app.link_resolver)
                 if ref:
                     out += self._format_link(ref, tok.title)
                     link_before = True
@@ -499,7 +499,7 @@ class Formatter(Configurable):
 
         # FIXME : ugly
         elif hasattr(symbol, "link") and type(symbol) != FieldSymbol:
-            out += self._format_link(symbol.link.get_link(self.link_resolver), symbol.link.title)
+            out += self._format_link(symbol.link.get_link(self.extension.app.link_resolver), symbol.link.title)
 
         if type(symbol) == ParameterSymbol:
             out += ' ' + symbol.argname
@@ -835,7 +835,7 @@ class Formatter(Configurable):
         return (None, False)
 
     def _format_object_hierarchy_symbol(self, symbol):
-        dot_graph = _create_hierarchy_graph(symbol.hierarchy, self.link_resolver)
+        dot_graph = _create_hierarchy_graph(symbol.hierarchy, self.extension.app.link_resolver)
         tmp_file = tempfile.NamedTemporaryFile(suffix='.svg', delete=False)
         dot_graph.draw(tmp_file, prog='dot', format='svg', args="-Grankdir=LR")
         tmp_file.close()

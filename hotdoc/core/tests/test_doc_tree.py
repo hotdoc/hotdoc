@@ -661,3 +661,17 @@ class TestTree(unittest.TestCase):
         index_page = self.tree.get_pages()['test-index']
         self.assertIn('source_b.test', index_page.subpages)
         self.tree.persist()
+
+    def test_extension_index_only(self):
+        inp = (u'test-index\n'
+                '\ttest-section.markdown\n')
+        self.test_ext.setup()
+        sitemap = self.__parse_sitemap(inp)
+        self.__create_md_file(
+            'test-section.markdown',
+            u'# My test section\n')
+        self.tree.parse_sitemap(sitemap)
+        self.__assert_extension_names(
+            self.tree,
+            {u'test-index': 'test-extension',
+             u'test-section.markdown': 'test-extension'})

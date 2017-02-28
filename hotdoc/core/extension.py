@@ -337,7 +337,7 @@ class Extension(Configurable):
         return sym
 
     def _make_formatter(self):
-        return Formatter(self.app.link_resolver, [])
+        return Formatter(self, [])
 
     def __resolve_placeholder_cb(self, tree, name, include_paths):
         return self._resolve_placeholder(tree, name, include_paths)
