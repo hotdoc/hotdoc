@@ -24,7 +24,7 @@ from collections import defaultdict
 
 from hotdoc.core.inclusions import find_file
 from hotdoc.core.symbols import Symbol
-from hotdoc.core.tree import Tree, Page
+from hotdoc.core.tree import Page
 from hotdoc.core.formatter import Formatter
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.loggable import debug, info, warn, error
@@ -61,6 +61,7 @@ class ExtDependency(object):
         self.is_upstream = is_upstream
 
 
+# pylint: disable=too-many-instance-attributes
 class Extension(Configurable):
     """
     All extensions should inherit from this base class
@@ -192,6 +193,7 @@ class Extension(Configurable):
         return []
 
     def parse_toplevel_config(self, config):
+        """Parses and make use of the toplevel configuration."""
         self.formatter.parse_toplevel_config(config)
 
     def parse_config(self, config):
@@ -349,7 +351,9 @@ class Extension(Configurable):
         if name == '%s-index' % self.argument_prefix:
             if self.index:
                 path = find_file(self.index, include_paths)
-                assert path is not None
+                if path is None:
+                    self.error("invalid-config",
+                               "Could not find index file %s" % self.index)
                 return path, self.extension_name
             return True, self.extension_name
         elif self.smart_index and override_path in self._get_all_sources():
@@ -400,7 +404,8 @@ class Extension(Configurable):
         page = tree.get_pages().get(page_name)
 
         if not page:
-            page = Page(page_name, None, os.path.dirname(page_name), tree.project.sanitized_name)
+            page = Page(page_name, None, os.path.dirname(
+                page_name), tree.project.sanitized_name)
             page.extension_name = self.extension_name
             page.generated = True
             source_abs = os.path.abspath(source_file)
