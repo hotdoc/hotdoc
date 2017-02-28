@@ -475,7 +475,13 @@ PyInit_cmark(void)
   PyObject *utils_mod = PyImport_ImportModule("hotdoc.utils.utils");
   PyObject *module = PyModule_Create(&moduledef);
 
-	if (module == NULL)
+  if (module == NULL)
+    return NULL;
+
+  if (utils_mod == NULL)
+    return NULL;
+
+  if (exception_mod == NULL)
     return NULL;
 
   cmark_init();
