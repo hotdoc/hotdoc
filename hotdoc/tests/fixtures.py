@@ -32,6 +32,7 @@ from hotdoc.core.tree import Tree
 
 # pylint: disable=too-many-instance-attributes
 class HotdocTest(unittest.TestCase):
+
     def setUp(self):
         self._here = os.path.dirname(__file__)
         self._md_dir = os.path.abspath(os.path.join(
@@ -65,6 +66,10 @@ class HotdocTest(unittest.TestCase):
 
     def _create_md_file(self, name, contents):
         path = os.path.join(self._md_dir, name)
+        try:
+            os.mkdir(os.path.dirname(path))
+        except FileExistsError:
+            pass
         with open(path, 'w') as _:
             _.write(contents)
 

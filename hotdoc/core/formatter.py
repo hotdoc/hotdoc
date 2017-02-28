@@ -72,9 +72,11 @@ def _create_hierarchy_graph(hierarchy, link_resolver):
         parent_link = pair[0].get_type_link()
         child_link = pair[1].get_type_link()
 
-        graph.add_node(parent_link.title, URL=parent_link.get_link(link_resolver),
+        graph.add_node(parent_link.title,
+                       URL=parent_link.get_link(link_resolver),
                        style="rounded", shape="box")
-        graph.add_node(child_link.title, URL=child_link.get_link(link_resolver),
+        graph.add_node(child_link.title,
+                       URL=child_link.get_link(link_resolver),
                        style="rounded", shape="box")
 
         graph.add_edge(parent_link.title, child_link.title)
@@ -129,7 +131,6 @@ class Formatter(Configurable):
     """
     Banana banana
     """
-    extra_assets = None
     theme_path = None
     extra_theme_path = None
     add_anchors = False
@@ -177,8 +178,9 @@ class Formatter(Configurable):
         self.formatting_page_signal = Signal()
         self.get_extra_files_signal = Signal()
         self.formatting_symbol_signal = Signal()
+        self.engine = None
 
-    def _make_docstring_formatter(self):
+    def _make_docstring_formatter(self):  # pylint: disable=no-self-use
         return GtkDocStringFormatter()
 
     # pylint: disable=no-self-use
@@ -265,8 +267,7 @@ class Formatter(Configurable):
 
     def __copy_extra_files(self, root, page_folder):
         self.__copy_assets(os.path.join(root, 'html', 'assets'))
-        extra_assets_paths = self.__copy_extra_assets(
-            os.path.join(root, 'html'))
+        extra_assets_paths = self.__copy_extra_assets(page_folder)
 
         root = os.path.join(root, 'html')
         if root != page_folder:
@@ -409,7 +410,8 @@ class Formatter(Configurable):
             root, doctype="<!DOCTYPE html>", encoding='unicode',
             include_meta_content_type=True)
 
-        full_path = os.path.join(output, page.project_name, self.get_output_folder(), page.link.ref)
+        full_path = os.path.join(
+            output, page.project_name, self.get_output_folder(), page.link.ref)
 
         if not os.path.exists(os.path.dirname(full_path)):
             os.makedirs(os.path.dirname(full_path))
@@ -499,7 +501,8 @@ class Formatter(Configurable):
 
         # FIXME : ugly
         elif hasattr(symbol, "link") and type(symbol) != FieldSymbol:
-            out += self._format_link(symbol.link.get_link(self.extension.app.link_resolver), symbol.link.title)
+            out += self._format_link(symbol.link.get_link(self.extension.app.link_resolver),
+                                     symbol.link.title)
 
         if type(symbol) == ParameterSymbol:
             out += ' ' + symbol.argname
@@ -677,8 +680,7 @@ class Formatter(Configurable):
         return (self.__format_parameter_detail(
             parameter.argname,
             parameter.formatted_doc,
-            extra=parameter.extension_contents),
-                False)
+            extra=parameter.extension_contents), False)
 
     def _format_field_symbol(self, field):
         field_id = self._format_linked_symbol(field)
@@ -835,7 +837,8 @@ class Formatter(Configurable):
         return (None, False)
 
     def _format_object_hierarchy_symbol(self, symbol):
-        dot_graph = _create_hierarchy_graph(symbol.hierarchy, self.extension.app.link_resolver)
+        dot_graph = _create_hierarchy_graph(
+            symbol.hierarchy, self.extension.app.link_resolver)
         tmp_file = tempfile.NamedTemporaryFile(suffix='.svg', delete=False)
         dot_graph.draw(tmp_file, prog='dot', format='svg', args="-Grankdir=LR")
         tmp_file.close()
@@ -888,6 +891,11 @@ class Formatter(Configurable):
         """
         group = parser.add_argument_group(
             'Formatter', 'formatter options')
+        group.add_argument(
+            "--extra-assets",
+            help="Extra asset folders to copy in the output",
+            action='append', dest='extra_assets', default=[])
+
         group.add_argument("--html-theme", action="store",
                            dest="html_theme", help="html theme to use",
                            default='default')
@@ -903,10 +911,12 @@ class Formatter(Configurable):
                            help="Enable html headings numbering")
 
     def parse_toplevel_config(self, config):
+        """Parse @config to setup @self state."""
         html_theme = config.get('html_theme', 'default')
         if html_theme == 'default':
             default_theme = os.path.join(HERE, os.pardir,
                                          'hotdoc_bootstrap_theme', 'dist')
+
             html_theme = os.path.abspath(default_theme)
             debug("Using default theme")
         else:
@@ -916,7 +926,6 @@ class Formatter(Configurable):
         Formatter.theme_path = html_theme
 
         Formatter.extra_theme_path = config.get_path('html_extra_theme')
-        
 
     def parse_config(self, config):
         """Banana banana
@@ -938,3 +947,4 @@ class Formatter(Configurable):
         )
 
         self._docstring_formatter.parse_config(config)
+        self.extra_assets = OrderedSet(config.get_paths('extra_assets'))
