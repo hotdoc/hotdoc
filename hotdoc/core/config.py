@@ -99,11 +99,6 @@ class Config(object):
 
         self.__cli = command_line_args or {}
         self.__defaults = defaults or {}
-        index = self.get_index()
-        if index:
-            self.__base_index_path = os.path.dirname(index)
-        else:
-            self.__base_index_path = ''
 
     def __abspath(self, path, from_conf):
         if path is None:
@@ -191,9 +186,6 @@ class Config(object):
         else:
             index = self.__config.get('%sindex' % prefix)
             from_conf = True
-
-        if prefix and index:
-            return os.path.join(self.__base_index_path, index)
 
         return self.__abspath(index, from_conf)
 
@@ -326,6 +318,7 @@ class Config(object):
         cwd = os.getcwd()
         return [os.path.relpath(fname, cwd) for fname in all_deps if fname]
 
+    # pylint: disable=too-many-branches
     def dump(self, conf_file=None):
         """
         Dump the possibly updated config to a file.
