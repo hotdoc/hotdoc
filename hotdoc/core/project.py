@@ -64,7 +64,6 @@ class CoreExtension(Extension):
 
     def __init__(self, app, project):
         super(CoreExtension, self).__init__(app, project)
-        self.subprojects = {}
 
     def format_page(self, page, link_resolver, output):
         proj = self.project.subprojects.get(page.source_file)
@@ -242,7 +241,7 @@ class Project(Configurable):
         for pagename in page.subpages:
             cnode = OrderedDict()
             node['subpages'].append(cnode)
-            proj = self.extensions[CoreExtension.extension_name].subprojects.get(pagename)
+            proj = self.subprojects.get(pagename)
             if not proj:
                 cpage = self.tree.get_pages()[pagename]
                 self.dump_json_sitemap(cpage, cnode)
