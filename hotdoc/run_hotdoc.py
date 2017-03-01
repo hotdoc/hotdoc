@@ -205,7 +205,7 @@ def execute_command(parser, config, ext_classes):
         try:
             app.parse_config(config)
             if get_private_folder:
-                print (app.private_folder)
+                print(app.private_folder)
                 return res
             res = app.run()
         except HotdocException:
@@ -277,9 +277,9 @@ def run(args):
     parser.add_argument("--get-private-folder", action="store_true",
                         help="get the path to hotdoc's private "
                         "folder")
-    parser.add_argument("--has-extension", action="store",
-                        dest="has_extension", help="Check if a given "
-                        "extension is available")
+    parser.add_argument("--has-extension", action="append",
+                        dest="has_extensions", default=[],
+                        help="Check if a given extension is available")
     parser.add_argument("--list-extensions", action="store_true",
                         dest="list_extensions", help="Print "
                         "available extensions")
@@ -308,6 +308,24 @@ def run(args):
             actual_args[key] = value
         if parser.get_default(key) is not None:
             defaults[key] = value
+
+    if known_args.has_extensions:
+        res = 0
+        for extension_name in known_args.has_extensions:
+            found = False
+            for klass in ext_classes:
+                if klass.extension_name == extension_name:
+                    found = True
+                    print("Extension '%s'... FOUND." % extension_name)
+            if not found:
+                print("Extension '%s'... NOT FOUND." % extension_name)
+                res = 1
+        return res
+    elif known_args.list_extensions:
+        print("Extensions:")
+        for klass in ext_classes:
+            print(" - %s " % klass.extension_name)
+        return 0
 
     conf_file = actual_args.get('conf_file')
     if conf_file is None and os.path.exists('hotdoc.json'):
