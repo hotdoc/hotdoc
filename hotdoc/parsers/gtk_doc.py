@@ -96,9 +96,6 @@ class GtkDocParser(object):
         annotations = []
         if len(split) > 1:
             annotations = self.__parse_annotations(split[1])
-        elif not raw_title.strip().endswith(':'):
-            raise HotdocSourceException(
-                message="Missing colon in comment name : %s" % raw_title)
         return title, annotations
 
     def __parse_key_value_annotation(self, name, string):
