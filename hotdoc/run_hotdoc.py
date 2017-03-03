@@ -287,6 +287,10 @@ def run(args):
                         help="Separator to allow finishing a list"
                         " of arguments before a command",
                         dest="whatever")
+    parser.add_argument("--disable-incremental-build", action="store_true",
+                        default=False,
+                        dest="disable_incremental",
+                        help="Disable incremental build")
 
     # We only get these once, doing this now means all
     # installed extensions will show up as Configurable subclasses.
