@@ -99,6 +99,9 @@ class LinkResolver(object):
         """
         Banana banana
         """
+        return self.__get_named_link(name)
+
+    def __get_named_link(self, name, recursed=False):
         url_components = urllib.parse.urlparse(name)
         if bool(url_components.netloc):
             return Link(name, None, name)
@@ -125,6 +128,9 @@ class LinkResolver(object):
         # Formatters should warn later about broken anchor links
         if bool(url_components.fragment) and not bool(url_components.path):
             return Link(name, None, name)
+
+        if name.endswith('s') and not recursed:
+            return self.__get_named_link(name[:-1], True)
 
         return None
 
