@@ -22,7 +22,6 @@ A syntax highlighting module
 import os
 
 from hotdoc.core.extension import Extension
-from hotdoc.core.formatter import Formatter
 
 from hotdoc.utils.utils import recursive_overwrite
 
@@ -74,19 +73,20 @@ class SyntaxHighlightingExtension(Extension):
             return
 
         for ext in self.project.extensions.values():
-            ext.formatter.formatting_page_signal.connect(self.__formatting_page_cb)
+            ext.formatter.formatting_page_signal.connect(
+                self.__formatting_page_cb)
         self.project.formatted_signal.connect(self.__formatted_cb)
 
     @staticmethod
     def add_arguments(parser):
         group = parser.add_argument_group('Syntax highlighting extension',
                                           DESCRIPTION)
-        group.add_argument('--syntax-highlighting-activate',
+        group.add_argument('--disable-syntax-highlighting',
                            action="store_true",
-                           help="Activate the syntax highlighting extension",
-                           dest='syntax_highlighting_activate')
+                           help="Deactivate the syntax highlighting extension",
+                           dest='disable_syntax_highlighting')
 
     def parse_config(self, config):
         super(SyntaxHighlightingExtension, self).parse_config(config)
         self.activated = \
-            bool(config.get('syntax_highlighting_activate', False))
+            not bool(config.get('disable_syntax_highlighting', False))
