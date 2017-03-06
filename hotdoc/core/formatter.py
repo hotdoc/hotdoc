@@ -129,7 +129,8 @@ class SymbolDescriptions(object):
 # pylint: disable=too-many-instance-attributes
 class Formatter(Configurable):
     """
-    Banana banana
+    Takes care of rendering the documentation symbols and comments into HTML
+    pages.
     """
     extra_assets = None
     theme_path = None
@@ -138,6 +139,11 @@ class Formatter(Configurable):
     number_headings = False
 
     def __init__(self, extension, searchpath):
+        """
+        Args:
+            extension (`extension.Extension`): The extension instance.
+            searchpath (str): Path where templates live.
+        """
         Configurable.__init__(self)
 
         self.extension = extension

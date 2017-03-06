@@ -1,3 +1,10 @@
+### Setting up environment for contributing
+
+Required tools for making a git commit:
+```
+pip install git-pylint-commit-hook git-pep8-commit-hook
+```
+
 ### Running tests
 
 To run all the tests, at release time for example, simply run `python setup.py test`.
