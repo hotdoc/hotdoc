@@ -43,8 +43,26 @@ class TagValidator(object):
 
 class Comment(object):
     """
+    Represents a piece of markup text, optionally tied to a particular symbol.
     Code-parsing extensions should add instances of this class to
     Database.
+
+    Args:
+        name (str): Unique name for the symbol that this comment refers to.
+        title (Comment): Another comment containing the display name of the
+            symbol that this comment refers to.
+        params (dict): FIXME
+        filename (str): Path to source file containing this comment.
+        lineno (int): Line number where this comment starts.
+        endlineno (int): Line number where this comment ends.
+        annotations (dict): FIXME
+        description (str): Markup text of the comment.
+        short_description (Comment): Another comment containing a short
+            description of the symbol that can be used in indices, etc.
+        tags (dict): FIXME
+        raw_comment (str): The text of the comment as it appears in the source
+            file.
+        topics (dict): FIXME
     """
     # This constructor is convenient
     # pylint: disable=too-many-instance-attributes

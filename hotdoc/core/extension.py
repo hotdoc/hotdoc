@@ -72,6 +72,8 @@ class Extension(Configurable):
         project: project.Project, the Project instance which documentation
             hotdoc is working on.
         formatter: formatter.Formatter, may be subclassed.
+        argument_prefix (str): Short name of this extension, used as a prefix
+            to add to automatically generated command-line arguments.
     """
     # pylint: disable=unused-argument
     extension_name = "base-extension"
@@ -213,6 +215,31 @@ class Extension(Configurable):
             setattr(self, dest, val)
 
         self.formatter.parse_config(config)
+
+    @staticmethod
+    def add_arguments(parser):
+        """
+        Subclasses may implement this method to add their own arguments to
+        the hotdoc binary.
+
+        In this function, you should add an argument group to the passed-in
+        parser, corresponding to your extension.
+        You can then add arguments to that argument group.
+
+        Example::
+
+            @staticmethod
+            def add_arguments(parser):
+                group = parser.add_argument_group('Chilidoc',
+                    'Delicious Hotdoc extension')
+                Chilidoc.add_sources_argument(group)
+                group.add_argument('--chili-spicy', action='store_true',
+                    help='Whether to add extra pepper')
+
+        Args:
+            parser (argparse.ArgumentParser): Main hotdoc argument parser
+        """
+        pass
 
     @classmethod
     def add_index_argument(cls, group, prefix=None, smart=True):
