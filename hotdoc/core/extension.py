@@ -24,7 +24,7 @@ from collections import defaultdict
 
 from hotdoc.core.inclusions import find_file
 from hotdoc.core.symbols import Symbol
-from hotdoc.core.tree import Tree, Page
+from hotdoc.core.tree import Page
 from hotdoc.core.formatter import Formatter
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.loggable import debug, info, warn, error
@@ -61,6 +61,7 @@ class ExtDependency(object):
         self.is_upstream = is_upstream
 
 
+# pylint: disable=too-many-instance-attributes
 class Extension(Configurable):
     """
     All extensions should inherit from this base class
@@ -71,6 +72,8 @@ class Extension(Configurable):
         project: project.Project, the Project instance which documentation
             hotdoc is working on.
         formatter: formatter.Formatter, may be subclassed.
+        argument_prefix (str): Short name of this extension, used as a prefix
+            to add to automatically generated command-line arguments.
     """
     # pylint: disable=unused-argument
     extension_name = "base-extension"
@@ -192,6 +195,7 @@ class Extension(Configurable):
         return []
 
     def parse_toplevel_config(self, config):
+        """Banana banana"""
         self.formatter.parse_toplevel_config(config)
 
     def parse_config(self, config):
@@ -211,6 +215,31 @@ class Extension(Configurable):
             setattr(self, dest, val)
 
         self.formatter.parse_config(config)
+
+    @staticmethod
+    def add_arguments(parser):
+        """
+        Subclasses may implement this method to add their own arguments to
+        the hotdoc binary.
+
+        In this function, you should add an argument group to the passed-in
+        parser, corresponding to your extension.
+        You can then add arguments to that argument group.
+
+        Example::
+
+            @staticmethod
+            def add_arguments(parser):
+                group = parser.add_argument_group('Chilidoc',
+                    'Delicious Hotdoc extension')
+                Chilidoc.add_sources_argument(group)
+                group.add_argument('--chili-spicy', action='store_true',
+                    help='Whether to add extra pepper')
+
+        Args:
+            parser (argparse.ArgumentParser): Main hotdoc argument parser
+        """
+        pass
 
     @classmethod
     def add_index_argument(cls, group, prefix=None, smart=True):
@@ -400,7 +429,8 @@ class Extension(Configurable):
         page = tree.get_pages().get(page_name)
 
         if not page:
-            page = Page(page_name, None, os.path.dirname(page_name), tree.project.sanitized_name)
+            page = Page(page_name, None, os.path.dirname(page_name),
+                        tree.project.sanitized_name)
             page.extension_name = self.extension_name
             page.generated = True
             source_abs = os.path.abspath(source_file)

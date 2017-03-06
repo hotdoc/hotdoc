@@ -33,7 +33,12 @@ from hotdoc.utils.loggable import debug
 
 
 class Database(object):
-    """Banana banana
+    """
+    A store of comments and symbols. Eventually, during the documentation
+    generation phase, comments and symbols are matched up (using
+    `hotdoc.core.comment.Comment.name` and
+    `hotdoc.core.symbol.Symbol.unique_name`) to determine what goes into the
+    generated documentation and how it is described.
     """
     def __init__(self):
         self.comment_added_signal = Signal()
@@ -47,7 +52,10 @@ class Database(object):
 
     def add_comment(self, comment):
         """
-        Banana banana
+        Add a comment to the database.
+
+        Args:
+            comment (hotdoc.core.Comment): comment to add
         """
         if not comment:
             return
