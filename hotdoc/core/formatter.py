@@ -72,9 +72,11 @@ def _create_hierarchy_graph(hierarchy, link_resolver):
         parent_link = pair[0].get_type_link()
         child_link = pair[1].get_type_link()
 
-        graph.add_node(parent_link.title, URL=parent_link.get_link(link_resolver),
+        graph.add_node(parent_link.title,
+                       URL=parent_link.get_link(link_resolver),
                        style="rounded", shape="box")
-        graph.add_node(child_link.title, URL=child_link.get_link(link_resolver),
+        graph.add_node(child_link.title,
+                       URL=child_link.get_link(link_resolver),
                        style="rounded", shape="box")
 
         graph.add_edge(parent_link.title, child_link.title)
@@ -169,6 +171,7 @@ class Formatter(Configurable):
         self.all_stylesheets = set()
         self._docstring_formatter = self._make_docstring_formatter()
         self._current_page = None
+        self.engine = None
         self.extra_assets = None
         self.add_anchors = False
         self.number_headings = False
@@ -178,7 +181,8 @@ class Formatter(Configurable):
         self.get_extra_files_signal = Signal()
         self.formatting_symbol_signal = Signal()
 
-    def _make_docstring_formatter(self):
+    @staticmethod
+    def _make_docstring_formatter():
         return GtkDocStringFormatter()
 
     # pylint: disable=no-self-use
@@ -409,7 +413,8 @@ class Formatter(Configurable):
             root, doctype="<!DOCTYPE html>", encoding='unicode',
             include_meta_content_type=True)
 
-        full_path = os.path.join(output, page.project_name, self.get_output_folder(), page.link.ref)
+        full_path = os.path.join(output, page.project_name,
+                                 self.get_output_folder(), page.link.ref)
 
         if not os.path.exists(os.path.dirname(full_path)):
             os.makedirs(os.path.dirname(full_path))
@@ -499,7 +504,9 @@ class Formatter(Configurable):
 
         # FIXME : ugly
         elif hasattr(symbol, "link") and type(symbol) != FieldSymbol:
-            out += self._format_link(symbol.link.get_link(self.extension.app.link_resolver), symbol.link.title)
+            out += self._format_link(
+                symbol.link.get_link(self.extension.app.link_resolver),
+                symbol.link.title)
 
         if type(symbol) == ParameterSymbol:
             out += ' ' + symbol.argname
@@ -835,7 +842,8 @@ class Formatter(Configurable):
         return (None, False)
 
     def _format_object_hierarchy_symbol(self, symbol):
-        dot_graph = _create_hierarchy_graph(symbol.hierarchy, self.extension.app.link_resolver)
+        dot_graph = _create_hierarchy_graph(symbol.hierarchy,
+                                            self.extension.app.link_resolver)
         tmp_file = tempfile.NamedTemporaryFile(suffix='.svg', delete=False)
         dot_graph.draw(tmp_file, prog='dot', format='svg', args="-Grankdir=LR")
         tmp_file.close()
@@ -903,6 +911,8 @@ class Formatter(Configurable):
                            help="Enable html headings numbering")
 
     def parse_toplevel_config(self, config):
+        """Banana banana
+        """
         html_theme = config.get('html_theme', 'default')
         if html_theme == 'default':
             default_theme = os.path.join(HERE, os.pardir,
@@ -916,7 +926,6 @@ class Formatter(Configurable):
         Formatter.theme_path = html_theme
 
         Formatter.extra_theme_path = config.get_path('html_extra_theme')
-        
 
     def parse_config(self, config):
         """Banana banana
