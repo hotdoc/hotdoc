@@ -117,7 +117,11 @@ class Config(object):
         all_files = OrderedSet()
         for item in source_patterns:
             item = self.__abspath(item, from_conf)
-            if '*' in item:
+
+            if item in all_files:
+                continue
+
+            if not os.path.exists(item):
                 all_files |= glob.glob(item)
             else:
                 all_files.add(item)
