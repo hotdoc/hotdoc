@@ -56,7 +56,7 @@ class GtkDocParser(object):
     Banana banana
     """
 
-    def __init__(self, project):
+    def __init__(self, project, section_file_matching=True):
         """
         Lifted from
         http://stackoverflow.com/questions/5323703/regex-how-to-match-sequence-of-key-value-pairs-at-end-of-string
@@ -79,6 +79,7 @@ class GtkDocParser(object):
         tag_validation_regex += '):)'
 
         self.tag_validation_regex = re.compile(tag_validation_regex)
+        self.__section_file_matching = section_file_matching
 
     def __parse_title(self, source_filename, raw_title):
         if raw_title.startswith('SECTION'):
@@ -87,7 +88,13 @@ class GtkDocParser(object):
                 os.path.dirname(source_filename), rel_filename))
 
             if not os.path.exists(section_name):
-                section_name = rel_filename
+                fname, ext = os.path.splitext(source_filename)
+                if self.__section_file_matching and os.path.exists(
+                        source_filename) and ext == ".c" and os.path.exists(
+                            fname + '.h'):
+                    section_name = source_filename[:-2] + '.h'
+                else:
+                    section_name = rel_filename
 
             return section_name, []
 
