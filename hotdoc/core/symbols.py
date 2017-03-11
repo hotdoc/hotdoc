@@ -65,6 +65,7 @@ class Symbol(Base):
         self.extension_attributes = {}
         self.skip = False
 
+        self.extra = {}
         Base.__init__(self, **kwargs)
 
     @classmethod
