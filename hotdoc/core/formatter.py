@@ -170,6 +170,7 @@ class Formatter(Configurable):
         self.all_stylesheets = set()
         self._docstring_formatter = self._make_docstring_formatter()
         self._current_page = None
+        self.engine = None
         self.extra_assets = None
         self.add_anchors = False
         self.number_headings = False
@@ -410,8 +411,8 @@ class Formatter(Configurable):
             root, doctype="<!DOCTYPE html>", encoding='unicode',
             include_meta_content_type=True)
 
-        full_path = os.path.join(
-            output, page.project_name, self.get_output_folder(), page.link.ref)
+        full_path = os.path.join(output, page.project_name,
+                                 self.get_output_folder(), page.link.ref)
 
         if not os.path.exists(os.path.dirname(full_path)):
             os.makedirs(os.path.dirname(full_path))
@@ -501,8 +502,9 @@ class Formatter(Configurable):
 
         # FIXME : ugly
         elif hasattr(symbol, "link") and type(symbol) != FieldSymbol:
-            out += self._format_link(symbol.link.get_link(self.extension.app.link_resolver),
-                                     symbol.link.title)
+            out += self._format_link(
+                symbol.link.get_link(self.extension.app.link_resolver),
+                symbol.link.title)
 
         if type(symbol) == ParameterSymbol:
             out += ' ' + symbol.argname

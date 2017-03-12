@@ -405,8 +405,8 @@ class Extension(Configurable):
 
         needs_comment = False
         if not page:
-            page = Page(page_name, None, os.path.dirname(
-                page_name), tree.project.sanitized_name)
+            page = Page(page_name, None, os.path.dirname(page_name),
+                        tree.project.sanitized_name)
             page.extension_name = self.extension_name
             page.generated = True
             tree.add_page(index, page_name, page)
