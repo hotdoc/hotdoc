@@ -463,18 +463,18 @@ class Tree(object):
             self.__all_pages.pop(rel_path)
             unlisted_pagenames.add(rel_path)
 
-        for source_file in source_files:
-            page = self.__all_pages[source_map[source_file]]
-            page.subpages |= sitemap.get_subpages(source_map[source_file])
-            for subpage in page.subpages:
-                if subpage not in unlisted_pagenames:
-                    self.__all_pages[subpage].pre_sorted = True
-            page.subpages -= unlisted_pagenames
+        def setup_subpages(pagenames, get_pagename):
+            """Setup subpages for pages with names in @pagenames"""
+            for pagename in pagenames:
+                page = self.__all_pages[get_pagename(pagename)]
+                page.subpages |= sitemap.get_subpages(get_pagename(pagename))
+                for subpage in page.subpages:
+                    if subpage not in unlisted_pagenames:
+                        self.__all_pages[subpage].pre_sorted = True
+                page.subpages -= unlisted_pagenames
 
-        for placeholder in placeholders:
-            page = self.__all_pages[placeholder]
-            page.subpages |= sitemap.get_subpages(placeholder)
-            page.subpages -= unlisted_pagenames
+        setup_subpages(source_files, lambda x: source_map[x])
+        setup_subpages(placeholders, lambda x: x)
 
         return old_user_symbols - new_user_symbols
 
