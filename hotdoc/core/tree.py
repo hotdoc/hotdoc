@@ -23,10 +23,9 @@ Implements standalone markdown files parsing.
 """
 import io
 import os
-import json
 import urllib.parse
 import pickle as pickle
-from collections import namedtuple, defaultdict, OrderedDict
+from collections import namedtuple, defaultdict
 
 # pylint: disable=import-error
 import yaml
@@ -34,11 +33,11 @@ from yaml.constructor import ConstructorError
 from schema import Schema, SchemaError, Optional, And
 
 from hotdoc.core.inclusions import find_file, resolve
-from hotdoc.core.symbols import Symbol, StructSymbol, ClassSymbol, InterfaceSymbol, AliasSymbol
+from hotdoc.core.symbols import Symbol, StructSymbol, ClassSymbol,\
+    InterfaceSymbol, AliasSymbol
 from hotdoc.core.links import Link
 from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.exceptions import HotdocSourceException, InvalidPageMetadata
-from hotdoc.core.database import Database
 from hotdoc.core.comment import Comment
 # pylint: disable=no-name-in-module
 from hotdoc.parsers import cmark
@@ -165,7 +164,8 @@ class Page(object):
             'TypedSymbolsList', ['name', 'symbols'])
 
         for subclass in all_subclasses(Symbol):
-            self.typed_symbols[subclass] = typed_symbols_list(subclass.get_plural_name(), [])
+            self.typed_symbols[subclass] = typed_symbols_list(
+                subclass.get_plural_name(), [])
 
         all_syms = OrderedSet()
         for sym_name in self.symbol_names:
@@ -178,7 +178,8 @@ class Page(object):
             self.__resolve_symbol(sym, link_resolver)
             self.symbol_names.add(sym.unique_name)
 
-        for sym_type in [ClassSymbol, AliasSymbol, InterfaceSymbol, StructSymbol]:
+        for sym_type in [ClassSymbol, AliasSymbol, InterfaceSymbol,
+                         StructSymbol]:
             syms = self.typed_symbols[sym_type].symbols
 
             if not syms:
@@ -188,7 +189,8 @@ class Page(object):
                 self.title = syms[0].display_name
             if self.comment is None:
                 self.comment = Comment(name=self.source_file)
-                self.comment.short_description = syms[0].comment.short_description
+                self.comment.short_description = syms[
+                    0].comment.short_description
                 self.comment.title = syms[0].comment.title
             break
 
@@ -270,7 +272,8 @@ class Page(object):
         self.detailed_description =\
             formatter.format_page(self)[0]
 
-        link_resolver.relativize_link_signal.disconnect(self.__relativize_link_cb)
+        link_resolver.relativize_link_signal.disconnect(
+            self.__relativize_link_cb)
 
         if output:
             formatter.write_page(self, root, output)
@@ -311,10 +314,12 @@ class Page(object):
     def __resolve_symbol(self, symbol, link_resolver):
         symbol.resolve_links(link_resolver)
 
-        symbol.link.ref = "%s/%s#%s" % (self.project_name, self.link.ref, symbol.unique_name)
+        symbol.link.ref = "%s/%s#%s" % (self.project_name,
+                                        self.link.ref, symbol.unique_name)
 
         for link in symbol.get_extra_links():
-            link.ref = "%s/%s#%s" % (self.project_name, self.link.ref, link.id_)
+            link.ref = "%s/%s#%s" % (self.project_name,
+                                     self.link.ref, link.id_)
 
         tsl = self.typed_symbols.get(type(symbol))
         if tsl:
@@ -335,7 +340,8 @@ class Tree(object):
         self.app = app
 
         if self.app.incremental:
-            self.__all_pages = self.__load_private('pages-%s.p' % self.project.sanitized_name)
+            self.__all_pages = self.__load_private(
+                'pages-%s.p' % self.project.sanitized_name)
         else:
             self.__all_pages = {}
 
@@ -405,7 +411,8 @@ class Tree(object):
                     source_map[resolved] = fname
                 else:
                     if fname not in self.__all_pages:
-                        page = Page(fname, None, '', self.project.sanitized_name)
+                        page = Page(fname, None, '',
+                                    self.project.sanitized_name)
                         page.generated = True
                         self.__all_pages[fname] = page
                         placeholders.append(fname)
@@ -570,6 +577,9 @@ class Tree(object):
                     meta=meta, raw_contents=raw_contents)
 
     def stale_comment_pages(self, comment):
+        """
+        Banana banana
+        """
         pagename = self.__dep_map.get(comment.name)
         page = self.__all_pages.get(pagename)
         if page:
@@ -679,4 +689,5 @@ class Tree(object):
         """
         Banana banana
         """
-        self.__save_private(self.__all_pages, 'pages-%s.p' % self.project.sanitized_name)
+        self.__save_private(self.__all_pages, 'pages-%s.p' %
+                            self.project.sanitized_name)
