@@ -601,7 +601,6 @@ class Formatter(Configurable):
         raw_code = None
         if enum.raw_text is not None:
             raw_code = self._format_raw_code(enum.raw_text)
-
         members_list = self._format_members_list(enum.members, 'Members')
         template = self.engine.get_template("enum.html")
         out = template.render({"symbol": enum,
@@ -795,9 +794,20 @@ class Formatter(Configurable):
     def _format_class_symbol(self, klass):
         hierarchy = self._format_hierarchy(klass)
         template = self.engine.get_template('class.html')
+        raw_code = None
+        if klass.raw_text is not None:
+            raw_code = self._format_raw_code(klass.raw_text)
+
+        for member in klass.members:
+            self.format_symbol(member, self.extension.app.link_resolver)
+
+        members_list = self._format_members_list(klass.members, 'Members')
+
         return (template.render({'symbol': klass,
                                  'klass': klass,
-                                 'hierarchy': hierarchy}),
+                                 'hierarchy': hierarchy,
+                                 'raw_code': raw_code,
+                                 'members_list': members_list}),
                 False)
 
     def _format_interface_symbol(self, interface):
