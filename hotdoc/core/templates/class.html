@@ -1,4 +1,4 @@
-@require(klass, hierarchy)
+@require(klass, hierarchy, raw_code, members_list)
 @extends('base_symbol.html')
 
 @def header():
@@ -19,6 +19,12 @@
 <div class="class_details">
 	@klass.formatted_doc
 </div>
+@end
+@if raw_code:
+@raw_code
+@end
+\
+@members_list
 @end
 \
 @end

@@ -274,6 +274,7 @@ class FunctionSymbol(Symbol):
     parameters = Column(MutableList.as_mutable(PickleType))
     return_value = Column(MutableList.as_mutable(PickleType))
     is_method = Column(Boolean)
+    is_constructor = Column(Boolean)
     is_ctor_for = Column(String)
     throws = Column(Boolean)
     __mapper_args__ = {
@@ -409,6 +410,8 @@ class StructSymbol(Symbol):
     def __init__(self, **kwargs):
         self.members = {}
         self.anonymous = False
+        # pylint: disable=redefined-variable-type
+        self.members = []
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
@@ -510,12 +513,12 @@ class AliasSymbol(Symbol):
         return [self.aliased_type]
 
 
-class ClassSymbol(Symbol):
+class ClassSymbol(StructSymbol):
     """
     Banana banana
     """
     __tablename__ = 'classes'
-    id_ = Column(Integer, ForeignKey('symbols.id_'), primary_key=True)
+    id_ = Column(Integer, ForeignKey('structures.id_'), primary_key=True)
     __mapper_args__ = {
         'polymorphic_identity': 'classes',
     }
@@ -526,13 +529,14 @@ class ClassSymbol(Symbol):
     def __init__(self, **kwargs):
         self.hierarchy = []
         self.children = {}
-        Symbol.__init__(self, **kwargs)
+        StructSymbol.__init__(self, **kwargs)
 
     def get_type_name(self):
         return "Class"
 
     def get_children_symbols(self):
-        return self.hierarchy + list(self.children.values())
+        return self.hierarchy + list(
+            self.children.values()) + super().get_children_symbols()
 
 
 class InterfaceSymbol(ClassSymbol):
