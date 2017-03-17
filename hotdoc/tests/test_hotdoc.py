@@ -23,7 +23,6 @@ import unittest
 import os
 import shutil
 import json
-import sys
 import io
 
 from contextlib import redirect_stdout
@@ -85,7 +84,7 @@ class TestHotdoc(unittest.TestCase):
 
     def assertOutput(self, n_html_files):
         actual = 0
-        for f in os.listdir(os.path.join(self.__output_dir, 'html', 'test-project-0.1')):
+        for f in os.listdir(os.path.join(self.__output_dir, 'html')):
             if f.endswith('.html'):
                 actual += 1
         self.assertEqual(actual, n_html_files)
@@ -172,7 +171,7 @@ class TestHotdoc(unittest.TestCase):
         self.assertEqual(res, 0)
         with open(os.path.join(self._test_dir, 'hotdoc.json')) as _:
             updated_conf = json.loads(_.read())
-        self.assertEqual (updated_conf.get('project_version'), '0.2')
+        self.assertEqual(updated_conf.get('project_version'), '0.2')
 
         conf = updated_conf
         args = ['conf', '--output-conf-file', 'new_hotdoc.json']
@@ -190,7 +189,8 @@ class TestHotdoc(unittest.TestCase):
         self.assertEqual(f.getvalue().strip(), '0.2')
 
         f = io.StringIO()
-        args = ['--get-conf-key', 'project_version', '--project-version', '0.3']
+        args = ['--get-conf-key', 'project_version',
+                '--project-version', '0.3']
         with redirect_stdout(f):
             res = run(args)
         self.assertEqual(res, 0)
@@ -201,7 +201,8 @@ class TestHotdoc(unittest.TestCase):
         with redirect_stdout(f):
             res = run(args)
         self.assertEqual(res, 0)
-        self.assertEqual(f.getvalue().strip(), os.path.relpath(index_path, os.getcwd()))
+        self.assertEqual(f.getvalue().strip(),
+                         os.path.relpath(index_path, os.getcwd()))
 
     def test_version(self):
         from hotdoc.utils.setup_utils import VERSION

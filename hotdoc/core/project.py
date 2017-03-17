@@ -132,7 +132,7 @@ class Project(Configurable):
 
         self.formatted_signal = Signal()
 
-        self.__create_redirect_index = False
+        self.is_toplevel = False
 
     def register_tag_validator(self, validator):
         """
@@ -197,18 +197,6 @@ class Project(Configurable):
         self.tree.format(link_resolver, output, self.extensions)
         self.formatted_signal(self)
 
-        if self.__create_redirect_index:
-            ext = self.extensions.get(self.tree.root.extension_name)
-            ext_folder = ext.formatter.get_output_folder()
-            index_path = os.path.join(
-                self.sanitized_name,
-                ext_folder,
-                self.tree.root.link.get_link(link_resolver))
-            with open(os.path.join(output, 'html', 'index.html'), 'w',
-                      encoding='utf8') as _:
-                _.write('<meta http-equiv="refresh" content="0; url=%s"/>' %
-                        index_path)
-
     def create_navigation_script(self, output):
         """
         Banana banana
@@ -229,7 +217,7 @@ class Project(Configurable):
         with open(path, 'w') as _:
             _.write(js_wrapper)
 
-    def dump_json_sitemap(self, page, node):
+    def dump_json_sitemap(self, page, node, in_toplevel):
         """
         Banana banana
         """
@@ -240,6 +228,7 @@ class Project(Configurable):
         node['subpages'] = []
         node['project_name'] = page.project_name
         node['render_subpages'] = page.render_subpages
+        node['in_toplevel'] = in_toplevel
         if page.extension_name:
             ext = self.extensions[page.extension_name]
             subpages = ext.get_subpages_sorted(self.tree.get_pages(), page)
@@ -251,17 +240,17 @@ class Project(Configurable):
             proj = self.subprojects.get(pagename)
             if not proj:
                 cpage = self.tree.get_pages()[pagename]
-                self.dump_json_sitemap(cpage, cnode)
+                self.dump_json_sitemap(cpage, cnode, in_toplevel)
             else:
                 cpage = proj.tree.root
-                proj.dump_json_sitemap(cpage, cnode)
+                proj.dump_json_sitemap(cpage, cnode, in_toplevel=False)
 
     def __create_json_sitemap(self):
         """
         Banana banana
         """
         node = OrderedDict()
-        self.dump_json_sitemap(self.tree.root, node)
+        self.dump_json_sitemap(self.tree.root, node, True)
         return json.dumps(node)
 
     @staticmethod
@@ -334,8 +323,7 @@ class Project(Configurable):
 
         self.include_paths |= OrderedSet(config.get_paths('include_paths'))
 
-        if toplevel:
-            self.__create_redirect_index = True
+        self.is_toplevel = toplevel
 
         self.tree = Tree(self, self.app)
 

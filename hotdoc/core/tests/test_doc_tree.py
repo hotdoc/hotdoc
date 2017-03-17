@@ -46,6 +46,7 @@ class TestExtension(Extension):
     def __init__(self, app, project):
         super(TestExtension, self).__init__(app, project)
 
+    # pylint: disable=arguments-differ
     def setup(self, smart=True):
         super(TestExtension, self).setup()
         self.smart_index = smart
@@ -105,6 +106,7 @@ class TestTree(unittest.TestCase):
         self.test_ext.parse_config(cfg)
         self.core_ext.parse_config(cfg)
         self.subprojects = {}
+        self.is_toplevel = True
 
     def tearDown(self):
         self.__remove_tmp_dirs()
@@ -665,7 +667,7 @@ class TestTree(unittest.TestCase):
 
     def test_extension_index_only(self):
         inp = (u'test-index\n'
-                '\ttest-section.markdown\n')
+               '\ttest-section.markdown\n')
         self.test_ext.setup()
         sitemap = self.__parse_sitemap(inp)
         self.__create_md_file(

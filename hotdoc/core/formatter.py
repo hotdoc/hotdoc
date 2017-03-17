@@ -417,8 +417,8 @@ class Formatter(Configurable):
             root, doctype="<!DOCTYPE html>", encoding='unicode',
             include_meta_content_type=True)
 
-        full_path = os.path.join(output, page.project_name,
-                                 self.get_output_folder(), page.link.ref)
+        full_path = os.path.join(output, self.get_output_folder(page),
+                                 page.link.ref)
 
         if not os.path.exists(os.path.dirname(full_path)):
             os.makedirs(os.path.dirname(full_path))
@@ -458,11 +458,14 @@ class Formatter(Configurable):
     def _get_extension(self):
         return "html"
 
-    def get_output_folder(self):
+    def get_output_folder(self, page):
         """
         Banana banana
         """
-        return ''
+        if self.extension.project.is_toplevel:
+            return ''
+
+        return page.project_name
 
     def _format_link(self, link, title):
         out = ''
@@ -662,7 +665,9 @@ class Formatter(Configurable):
              'extra_html': page.output_attrs['html']['extra_html'],
              'extra_footer_html':
              page.output_attrs['html']['extra_footer_html'],
-             'symbols_details': symbols_details})
+             'symbols_details': symbols_details,
+             'in_toplevel': self.extension.project.is_toplevel}
+        )
 
         return (out, True)
 
