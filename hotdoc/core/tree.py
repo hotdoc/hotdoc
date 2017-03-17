@@ -62,6 +62,7 @@ def _no_duplicates_constructor(loader, node, deep=False):
 
     return loader.construct_mapping(node, deep)
 
+
 yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
                      _no_duplicates_constructor)
 
@@ -175,9 +176,14 @@ class Page(object):
             self.__query_extra_symbols(
                 sym, all_syms, tree, link_resolver, database)
 
+        if tree.project.is_toplevel:
+            page_path = self.link.ref
+        else:
+            page_path = self.project_name + '/' + self.link.ref
+
         for sym in all_syms:
             sym.update_children_comments()
-            self.__resolve_symbol(sym, link_resolver)
+            self.__resolve_symbol(sym, link_resolver, page_path)
             self.symbol_names.add(sym.unique_name)
 
         for sym_type in [ClassSymbol, AliasSymbol, InterfaceSymbol,
@@ -251,9 +257,8 @@ class Page(object):
 
         self.formatted_contents = u''
 
-        self.build_path = os.path.join(
-            formatter.get_output_folder(),
-            os.path.join(self.project_name, self.link.ref))
+        self.build_path = os.path.join(formatter.get_output_folder(self),
+                                       self.link.ref)
         link_resolver.relativize_link_signal.connect(self.__relativize_link_cb)
 
         if self.ast:
@@ -313,15 +318,13 @@ class Page(object):
                 self.__query_extra_symbols(
                     symbol, all_syms, tree, link_resolver, database)
 
-    def __resolve_symbol(self, symbol, link_resolver):
+    def __resolve_symbol(self, symbol, link_resolver, page_path):
         symbol.resolve_links(link_resolver)
 
-        symbol.link.ref = "%s/%s#%s" % (self.project_name,
-                                        self.link.ref, symbol.unique_name)
+        symbol.link.ref = "%s#%s" % (page_path, symbol.unique_name)
 
         for link in symbol.get_extra_links():
-            link.ref = "%s/%s#%s" % (self.project_name,
-                                     self.link.ref, link.id_)
+            link.ref = "%s#%s" % (page_path, link.id_)
 
         tsl = self.typed_symbols.get(type(symbol))
         if tsl:
@@ -506,15 +509,16 @@ class Tree(object):
         url_components = urllib.parse.urlparse(name)
 
         page = self.__all_pages.get(url_components.path)
-        if page:
-            ext = self.__extensions[page.extension_name]
-            formatter = ext.formatter
-            prefix = formatter.get_output_folder()
-            ref = os.path.join(page.project_name, page.link.ref)
-            if url_components.fragment:
-                ref += '#%s' % url_components.fragment
-            return Link(os.path.join(prefix, ref), page.link.get_title(), None)
-        return None
+        if not page:
+            return None
+
+        ext = self.__extensions[page.extension_name]
+        formatter = ext.formatter
+        prefix = formatter.get_output_folder(page)
+        ref = page.link.ref
+        if url_components.fragment:
+            ref += '#%s' % url_components.fragment
+        return Link(os.path.join(prefix, ref), page.link.get_title(), None)
 
     def resolve(self, uri):
         """

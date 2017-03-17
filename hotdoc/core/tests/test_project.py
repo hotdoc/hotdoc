@@ -151,7 +151,7 @@ class TestProject(HotdocTest):
         proj.setup()
         sitemap_json = {}
         pages = proj.tree.get_pages()
-        proj.dump_json_sitemap(pages['project.markdown'], sitemap_json)
+        proj.dump_json_sitemap(pages['project.markdown'], sitemap_json, True)
         subpages = sitemap_json['subpages']
         self.assertEqual(len(subpages), 2)
 
