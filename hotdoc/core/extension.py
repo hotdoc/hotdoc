@@ -357,6 +357,9 @@ class Extension(Configurable):
         Returns:
             symbols.Symbol: the created symbol, or `None`.
         """
+        if not kwargs.get('project_name'):
+            kwargs['project_name'] = self.project.project_name
+
         sym = self.app.database.get_or_create_symbol(*args, **kwargs)
         # pylint: disable=unidiomatic-typecheck
         smart_key = self._get_smart_key(sym)

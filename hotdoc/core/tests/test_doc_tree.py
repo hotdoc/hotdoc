@@ -91,6 +91,7 @@ class TestTree(unittest.TestCase):
 
         self.sitemap_parser = SitemapParser()
 
+        self.project_name = 'test-project'
         self.sanitized_name = 'test-project-0.1'
         self.incremental = False
 

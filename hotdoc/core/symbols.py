@@ -54,6 +54,7 @@ class Symbol(Base):
     extension_attributes = Column(MutableDict.as_mutable(PickleType))
     link = Column(Link.as_mutable(PickleType))
     skip = Column(Boolean)
+    project_name = Column(String)
 
     __mapper_args__ = {
         'polymorphic_identity': 'symbol',

@@ -34,6 +34,7 @@ class HotdocTestExtension(Extension):
 
     def __init__(self, app, project):
         self.smart_index = True
+        self.name = 'test'
         super(HotdocTestExtension, self).__init__(app, project)
 
     def _get_smart_key(self, symbol):
@@ -64,6 +65,7 @@ class HotdocTestExtension(Extension):
 
 class TestExtension(HotdocTest):
     def setUp(self):
+        self.project_name = 'test'
         super(TestExtension, self).setUp()
         self.test_ext = HotdocTestExtension(self, self)
 
