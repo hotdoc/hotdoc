@@ -239,6 +239,7 @@ class Project(Configurable):
         node['extension'] = page.extension_name
         node['subpages'] = []
         node['project_name'] = page.project_name
+        node['render_subpages'] = page.render_subpages
         if page.extension_name:
             ext = self.extensions[page.extension_name]
             subpages = ext.get_subpages_sorted(self.tree.get_pages(), page)

@@ -127,6 +127,7 @@ class Page(object):
 
         self.symbol_names = OrderedSet(meta.get('symbols') or [])
         self.short_description = meta.get('short-description')
+        self.render_subpages = meta.get('render-subpages', True)
 
         self.title = None
         self.__discover_title(meta)
@@ -152,7 +153,8 @@ class Page(object):
                 'typed_symbols': {},
                 'subpages': self.subpages,
                 'symbol_names': self.symbol_names,
-                'project_name': self.project_name}
+                'project_name': self.project_name,
+                'render_subpages': self.render_subpages}
 
     def resolve_symbols(self, tree, database, link_resolver):
         """
