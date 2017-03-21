@@ -127,6 +127,7 @@ class Page(object):
 
         self.symbol_names = OrderedSet(meta.get('symbols') or [])
         self.short_description = meta.get('short-description')
+        self.render_subpages = meta.get('render-subpages', True)
 
         self.title = None
         self.__discover_title(meta)
