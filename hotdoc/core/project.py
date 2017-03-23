@@ -75,6 +75,11 @@ class CoreExtension(Extension):
             return None
 
         conf_path = inclusions.find_file(fname, include_paths)
+        if not conf_path:
+            error('invalid-config',
+                  '(%s) Could not find subproject config file %s' % (
+                      self.project.sanitized_name, fname))
+
         self.project.add_subproject(fname, conf_path)
         return True, None
 
