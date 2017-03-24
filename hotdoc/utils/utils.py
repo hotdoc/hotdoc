@@ -207,6 +207,25 @@ class OrderedSet(collections.MutableSet):
             curr = end[1]
             curr[2] = end[1] = self.map[key] = [key, curr, end]
 
+    def __getstate__(self):
+        if len(self) == 0:
+            # The state can't be an empty list.
+            # We need to return a truthy value, or else
+            # __setstate__ won't be run.
+            #
+            # This could have been done more gracefully by always putting
+            # the state in a tuple, but this way is backwards- and forwards-
+            # compatible with previous versions of OrderedSet.
+            return (None,)
+        else:
+            return list(self)
+
+    def __setstate__(self, state):
+        if state == (None,):
+            self.__init__([])
+        else:
+            self.__init__(state)
+
     def discard(self, key):
         if key in self.map:
             key, prev, nxt = self.map.pop(key)
