@@ -154,7 +154,8 @@ class Page(object):
                 'typed_symbols': {},
                 'subpages': self.subpages,
                 'symbol_names': self.symbol_names,
-                'project_name': self.project_name}
+                'project_name': self.project_name,
+                'render_subpages': self.render_subpages}
 
     def resolve_symbols(self, tree, database, link_resolver):
         """
