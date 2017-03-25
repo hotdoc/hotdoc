@@ -22,8 +22,9 @@
 Implements standalone markdown files parsing.
 """
 import io
+import re
 import os
-import urllib.parse
+from urllib.parse import urlparse
 import pickle as pickle
 from collections import namedtuple, defaultdict
 
@@ -96,8 +97,9 @@ class Page(object):
         assert source_file
         basename = os.path.basename(source_file)
         name = os.path.splitext(basename)[0]
-        ref = os.path.join(output_path, basename)
-        pagename = '%s.html' % os.path.splitext(ref)[0]
+        ref = os.path.join(output_path,
+                           re.sub(r'\W+', '-', os.path.splitext(basename)[0]))
+        pagename = '%s.html' % ref
 
         self.ast = ast
         self.extension_name = None
@@ -240,7 +242,7 @@ class Page(object):
         if not ref:
             return ref
 
-        url_components = urllib.parse.urlparse(ref)
+        url_components = urlparse(ref)
         if not bool(url_components.scheme):
             ref = os.path.relpath(ref, os.path.dirname(self.build_path))
 
@@ -506,7 +508,7 @@ class Tree(object):
             os.makedirs(folder)
 
     def __get_link_cb(self, link_resolver, name):
-        url_components = urllib.parse.urlparse(name)
+        url_components = urlparse(name)
 
         page = self.__all_pages.get(url_components.path)
         if not page:
