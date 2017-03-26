@@ -49,7 +49,7 @@ class ExtDependency(object):
             generate an error.
     """
 
-    def __init__(self, dependency_name, is_upstream=False):
+    def __init__(self, dependency_name, is_upstream=False, optional=False):
         """
         Constructor for `Extension`.
 
@@ -59,6 +59,7 @@ class ExtDependency(object):
         """
         self.dependency_name = dependency_name
         self.is_upstream = is_upstream
+        self.optional = optional
 
 
 # pylint: disable=too-many-instance-attributes
