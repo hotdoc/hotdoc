@@ -88,7 +88,8 @@ class Page(object):
     "Banana banana"
     meta_schema = {Optional('title'): And(str, len),
                    Optional('symbols'): Schema([And(str, len)]),
-                   Optional('short-description'): And(str, len)}
+                   Optional('short-description'): And(str, len),
+                   Optional('render-subpages'): bool}
 
     # pylint: disable=too-many-arguments
     def __init__(self, source_file, ast, output_path, project_name, meta=None,
