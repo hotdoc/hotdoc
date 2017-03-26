@@ -46,8 +46,13 @@ from hotdoc.utils.signals import Signal
 
 
 class Application(Configurable):
+    """
+    Banana banana
+    """
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, extension_classes):
-        self.extension_classes = OrderedDict({CoreExtension.extension_name: CoreExtension})
+        self.extension_classes = OrderedDict(
+            {CoreExtension.extension_name: CoreExtension})
         for ext_class in extension_classes:
             self.extension_classes[ext_class.extension_name] = ext_class
         self.output = None
@@ -91,6 +96,9 @@ class Application(Configurable):
         self.__setup_database()
 
     def run(self):
+        """
+        Banana banana
+        """
         res = 0
 
         if self.config.conf_file:
@@ -184,6 +192,9 @@ class Application(Configurable):
         self.__dump_deps_file(project)
 
     def finalize(self):
+        """
+        Banana banana
+        """
         if self.database is not None:
             info('Closing database')
             self.database.close()
@@ -199,9 +210,6 @@ class Application(Configurable):
 
     def __setup_database(self):
         self.database = Database()
-        #self.database.comment_added_signal.connect(self.__add_default_tags)
-        #self.database.comment_updated_signal.connect(
-        #    self.__add_default_tags)
         self.database.setup(self.private_folder)
         self.link_resolver = LinkResolver(self.database)
 
@@ -280,7 +288,11 @@ def create_default_layout(config):
             pass
 
 
+# pylint: disable=too-many-branches
 def execute_command(parser, config, ext_classes):
+    """
+    Banana banana
+    """
     res = 0
     cmd = config.get('command')
 
@@ -288,7 +300,7 @@ def execute_command(parser, config, ext_classes):
 
     if cmd == 'help':
         parser.print_help()
-    elif cmd == 'run' or get_private_folder: # git.mk backward compat
+    elif cmd == 'run' or get_private_folder:  # git.mk backward compat
         app = Application(ext_classes)
         try:
             app.parse_config(config)
@@ -298,7 +310,7 @@ def execute_command(parser, config, ext_classes):
             res = app.run()
         except HotdocException:
             res = len(Logger.get_issues())
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             print("An unknown error happened while building the documentation"
                   " and hotdoc cannot recover from it. Please report "
                   "a bug with this error message and the steps to "
@@ -338,6 +350,9 @@ def execute_command(parser, config, ext_classes):
 
     return res
 
+
+# pylint: disable=too-many-branches
+# pylint: disable=too-many-locals
 def run(args):
     """
     Banana banana
@@ -390,7 +405,10 @@ def run(args):
 
     # We only get these once, doing this now means all
     # installed extensions will show up as Configurable subclasses.
-    ext_classes = get_installed_extension_classes(sort=True)
+    try:
+        ext_classes = get_installed_extension_classes(sort=True)
+    except HotdocException:
+        return 1
 
     add_args_methods = set()
 

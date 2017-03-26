@@ -122,7 +122,7 @@ class Project(Configurable):
         self.app = app
         self.tree = None
         self.include_paths = None
-        self.extensions = {}
+        self.extensions = OrderedDict()
         self.tag_validators = {}
         self.project_name = None
         self.project_version = None
