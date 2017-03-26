@@ -23,7 +23,6 @@
 import traceback
 import os
 import argparse
-import hashlib
 import shutil
 import pickle
 
@@ -43,8 +42,13 @@ from hotdoc.utils.signals import Signal
 
 
 class Application(Configurable):
+    """
+    Banana banana
+    """
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, extension_classes):
-        self.extension_classes = OrderedDict({CoreExtension.extension_name: CoreExtension})
+        self.extension_classes = OrderedDict(
+            {CoreExtension.extension_name: CoreExtension})
         for ext_class in extension_classes:
             self.extension_classes[ext_class.extension_name] = ext_class
         self.output = None
@@ -79,13 +83,17 @@ class Application(Configurable):
         self.dry = config.get('dry')
         self.project = Project(self)
         self.project.parse_config(self.config, toplevel=True)
-        self.private_folder = os.path.abspath('hotdoc-private-%s' % self.project.sanitized_name)
+        self.private_folder = os.path.abspath('hotdoc-private-%s' %
+                                              self.project.sanitized_name)
 
         self.__create_change_tracker(self.config.get('disable_incremental'))
         self.__setup_private_folder()
         self.__setup_database()
 
     def run(self):
+        """
+        Banana banana
+        """
         res = 0
 
         if self.config.conf_file:
@@ -99,14 +107,14 @@ class Application(Configurable):
 
         return res
 
-    def __dump_project_deps_file(self, project, f, empty_targets):
+    def __dump_project_deps_file(self, project, fhandle, empty_targets):
         for page in list(project.tree.get_pages().values()):
             if not page.generated:
                 empty_targets.append(page.source_file)
-            f.write(u'%s ' % page.source_file)
+            fhandle.write(u'%s ' % page.source_file)
 
         for subproj in project.subprojects.values():
-            self.__dump_project_deps_file(subproj, f, empty_targets)
+            self.__dump_project_deps_file(subproj, fhandle, empty_targets)
 
     def __dump_deps_file(self, project):
         dest = self.config.get('deps_file_dest', None)
@@ -150,6 +158,9 @@ class Application(Configurable):
         self.__dump_deps_file(project)
 
     def finalize(self):
+        """
+        Banana banana
+        """
         if self.database is not None:
             info('Closing database')
             self.database.close()
@@ -159,15 +170,13 @@ class Application(Configurable):
         if os.path.exists(self.private_folder):
             if not os.path.isdir(self.private_folder):
                 error('setup-issue',
-                      '%s exists but is not a directory' % folder)
+                      '%s exists but is not a directory' %
+                      self.private_folder)
         else:
             os.mkdir(self.private_folder)
 
     def __setup_database(self):
         self.database = Database()
-        #self.database.comment_added_signal.connect(self.__add_default_tags)
-        #self.database.comment_updated_signal.connect(
-        #    self.__add_default_tags)
         self.database.setup(self.private_folder)
         self.link_resolver = LinkResolver(self.database)
 
@@ -192,7 +201,11 @@ class Application(Configurable):
             self.change_tracker = ChangeTracker()
 
 
+# pylint: disable=too-many-branches
 def execute_command(parser, config, ext_classes):
+    """
+    Banana banana
+    """
     res = 0
     cmd = config.get('command')
 
@@ -200,7 +213,7 @@ def execute_command(parser, config, ext_classes):
 
     if cmd == 'help':
         parser.print_help()
-    elif cmd == 'run' or get_private_folder: # git.mk backward compat
+    elif cmd == 'run' or get_private_folder:  # git.mk backward compat
         app = Application(ext_classes)
         try:
             app.parse_config(config)
@@ -210,7 +223,7 @@ def execute_command(parser, config, ext_classes):
             res = app.run()
         except HotdocException:
             res = len(Logger.get_issues())
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             print("An unknown error happened while building the documentation"
                   " and hotdoc cannot recover from it. Please report "
                   "a bug with this error message and the steps to "
@@ -245,6 +258,9 @@ def execute_command(parser, config, ext_classes):
 
     return res
 
+
+# pylint: disable=too-many-branches
+# pylint: disable=too-many-locals
 def run(args):
     """
     Banana banana
@@ -294,7 +310,10 @@ def run(args):
 
     # We only get these once, doing this now means all
     # installed extensions will show up as Configurable subclasses.
-    ext_classes = get_installed_extension_classes(sort=True)
+    try:
+        ext_classes = get_installed_extension_classes(sort=True)
+    except HotdocException:
+        return 1
 
     add_args_methods = set()
 
@@ -303,7 +322,7 @@ def run(args):
             klass.add_arguments(parser)
             add_args_methods.add(klass.add_arguments)
 
-    known_args, unknown = parser.parse_known_args(args)
+    known_args, _ = parser.parse_known_args(args)
 
     defaults = {}
     actual_args = {}

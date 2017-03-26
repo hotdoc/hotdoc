@@ -33,6 +33,7 @@ from toposort import toposort_flatten
 
 from hotdoc.core.exceptions import HotdocSourceException
 from hotdoc.utils.setup_utils import symlink
+from hotdoc.utils.loggable import error
 
 WIN32 = (sys.platform == 'win32')
 
@@ -167,9 +168,12 @@ def get_installed_extension_classes(sort):
         topodeps = set()
         for dep in deps:
             if dep.dependency_name not in all_classes:
-                print("Missing dependency %s for %s" % (dep.dependency_name,
-                                                        klass.extension_name))
-                continue
+                if dep.optional:
+                    continue
+                else:
+                    error("setup-issue",
+                          "Missing dependency %s for %s" %
+                          (dep.dependency_name, klass.extension_name))
             if dep.is_upstream:
                 topodeps.add(
                     klass_list.index(all_classes[dep.dependency_name]))
