@@ -23,8 +23,6 @@ Setup file for hotdoc.
 import os
 import sys
 import errno
-import shutil
-import tarfile
 import unittest
 import contextlib
 from distutils.command.build import build
@@ -52,6 +50,8 @@ CMARK_INCLUDE_DIRS = [CMARK_SRCDIR, CMARK_BUILT_SRCDIR]
 require_clean_submodules(SOURCE_DIR, ['cmark'])
 
 
+# pylint: disable=invalid-name
+# pylint: disable=missing-docstring
 @contextlib.contextmanager
 def cd(path):
     CWD = os.getcwd()
@@ -119,7 +119,9 @@ CMARK_MODULE = CMarkExtension('hotdoc.parsers.cmark',
 
 THEME_SRC_DIR = os.path.join(SOURCE_DIR, 'hotdoc', 'hotdoc_bootstrap_theme')
 THEME_DIST_DIR = os.path.join(THEME_SRC_DIR, 'dist')
-require_clean_submodules (os.path.dirname(THEME_SRC_DIR), 'hotdoc_bootstrap_theme')
+require_clean_submodules(os.path.dirname(THEME_SRC_DIR),
+                         'hotdoc_bootstrap_theme')
+
 
 class BuildDefaultTheme(Command):
     """
@@ -127,7 +129,7 @@ class BuildDefaultTheme(Command):
     """
     user_options = []
     description = ("Build default html theme, the following dependencies are "
-        "required: make, npm")
+                   "required: make, npm")
 
     # pylint: disable=missing-docstring
     def initialize_options(self):
@@ -153,10 +155,14 @@ class BuildDefaultTheme(Command):
             try:
                 spawn.spawn(['npm', 'install'])
                 spawn.spawn(['./node_modules/bower/bin/bower', 'install'])
+                os.environ['LESS_INCLUDE_PATH'] = os.path.join(
+                    SOURCE_DIR, 'hotdoc', 'less')
                 spawn.spawn(['make'])
+                del os.environ['LESS_INCLUDE_PATH']
             except spawn.DistutilsExecError as e:
                 print("Error while building default theme", e)
                 sys.exit(-1)
+
 
 class LinkPreCommitHook(Command):
     """
@@ -219,13 +225,14 @@ class CustomBuildExt(build_ext):
         build_ext.run(self)
         return True
 
+
 # pylint: disable=missing-docstring
 class CustomBDistEgg(bdist_egg):
 
     def run(self):
         # This will not run when installing from pip, thus
         # avoiding a few dependencies.
-        if not os.path.exists (THEME_DIST_DIR):
+        if not os.path.exists(THEME_DIST_DIR):
             self.run_command('build_default_theme')
         return bdist_egg.run(self)
 
@@ -309,7 +316,7 @@ if __name__ == '__main__':
         cmdclass={'build': CustomBuild,
                   'build_ext': CustomBuildExt,
                   'sdist': CustomSDist,
-		  'bdist_egg': CustomBDistEgg,
+                  'bdist_egg': CustomBDistEgg,
                   'develop': CustomDevelop,
                   'test': DiscoverTest,
                   'link_pre_commit_hook': LinkPreCommitHook,
