@@ -80,7 +80,7 @@ class TestConfig(unittest.TestCase):
 
         cfg = Config(conf_file=conf_file)
         self.assertSetEqual(
-            set(cfg.get_sources('test_')),
+            set(cfg.get_sources('test')),
             set([os.path.join(self.__priv_dir, 'foo.x'),
                  os.path.join(self.__priv_dir, 'bar.x'),
                  os.path.join(self.__priv_dir, 'baz.x')]))
@@ -150,7 +150,7 @@ class TestConfig(unittest.TestCase):
         overriden_abs_dir = os.path.join(invoke_dir, overriden_src_dir)
 
         self.assertSetEqual(
-            set(cfg.get_sources('test_')),
+            set(cfg.get_sources('test')),
             set([os.path.join(overriden_abs_dir, 'other.x'),
                  os.path.join(overriden_abs_dir, 'foobar.x')]))
 

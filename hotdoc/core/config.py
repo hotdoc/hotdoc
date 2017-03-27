@@ -267,7 +267,8 @@ class Config(object):
             utils.utils.OrderedSet: The set of sources for the given
                 `prefix`.
         """
-        prefixed = '%ssources' % prefix
+        prefix = prefix.replace('-', '_')
+        prefixed = '%s_sources' % prefix
 
         if prefixed in self.__cli:
             sources = self.__cli.get(prefixed)
@@ -281,7 +282,7 @@ class Config(object):
 
         sources = self.__resolve_patterns(sources, from_conf)
 
-        prefixed = '%ssource_filters' % prefix
+        prefixed = '%s_source_filters' % prefix
         if prefixed in self.__cli:
             filters = self.__cli.get(prefixed)
             from_conf = False
@@ -310,11 +311,11 @@ class Config(object):
                 continue
 
             if key.endswith('sources'):
-                all_deps |= self.get_sources(key[:len('sources') * -1])
+                all_deps |= self.get_sources(key[:len('sources') * -1 - 1])
 
         for key, _ in list(self.__cli.items()):
             if key.endswith('sources'):
-                all_deps |= self.get_sources(key[:len('sources') * -1])
+                all_deps |= self.get_sources(key[:len('sources') * -1 - 1])
 
         if self.conf_file is not None:
             all_deps.add(self.conf_file)
