@@ -218,7 +218,6 @@ class Extension(Configurable):
             config: a `config.Config` instance
         """
         prefix = self.argument_prefix
-        prefix += '_'
         self.sources = config.get_sources(prefix)
         self.index = config.get_index(prefix)
         self.smart_index = bool(config.get('%s_smart_index' %
