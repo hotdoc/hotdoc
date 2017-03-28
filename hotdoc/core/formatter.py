@@ -25,7 +25,6 @@ By design, hotdoc only supports html output.
 import os
 import html
 import re
-import tempfile
 import urllib.parse
 import shutil
 
@@ -33,8 +32,6 @@ from collections import defaultdict
 
 from lxml import etree
 import lxml.html
-
-import pygraphviz as pg
 
 # pylint: disable=import-error
 from wheezy.template.engine import Engine
@@ -62,26 +59,6 @@ from hotdoc.utils.signals import Signal
 
 Page.meta_schema[Optional('extra', default=defaultdict())] = \
     Schema({str: object})
-
-
-def _create_hierarchy_graph(hierarchy, link_resolver):
-    # FIXME: handle multiple inheritance
-    graph = pg.AGraph(directed=True, strict=True)
-
-    for pair in hierarchy:
-        parent_link = pair[0].get_type_link()
-        child_link = pair[1].get_type_link()
-
-        graph.add_node(parent_link.title,
-                       URL=parent_link.get_link(link_resolver),
-                       style="rounded", shape="box")
-        graph.add_node(child_link.title,
-                       URL=child_link.get_link(link_resolver),
-                       style="rounded", shape="box")
-
-        graph.add_edge(parent_link.title, child_link.title)
-
-    return graph
 
 
 class FormatterBadLinkException(HotdocException):
@@ -848,22 +825,6 @@ class Formatter(Configurable):
         if format_function:
             return format_function(symbol)
         return (None, False)
-
-    def _format_object_hierarchy_symbol(self, symbol):
-        dot_graph = _create_hierarchy_graph(
-            symbol.hierarchy, self.extension.app.link_resolver)
-        tmp_file = tempfile.NamedTemporaryFile(suffix='.svg', delete=False)
-        dot_graph.draw(tmp_file, prog='dot', format='svg', args="-Grankdir=LR")
-        tmp_file.close()
-        with open(tmp_file.name, 'r') as _:
-            contents = _.read()
-        os.unlink(_.name)
-
-        pagename = 'object_hierarchy.html'
-        template = self.engine.get_template(pagename)
-        res = template.render({'graph': contents,
-                               'assets_path': self._get_assets_path()})
-        return (res, False)
 
     def _format_comment(self, comment, link_resolver):
         return self._docstring_formatter.translate_comment(

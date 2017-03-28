@@ -6,10 +6,6 @@ short-description: Detailed instructions for installing hotdoc
 
 ## System-wide dependencies
 
-### graphviz
-
-Hotdoc needs [graphviz](http://www.graphviz.org/) to generate object hierarchies, you will thus need to install graphviz-dev, and some libraries it depends depend on the python headers, so you will need to install them too.
-
 ### lxml
 
 Hotdoc also uses lxml, which depends on libxml2 and libxslt.
@@ -23,13 +19,13 @@ For now, hotdoc bundles its own version of [libcmark](https://github.com/jgm/cma
 On Fedora you can install all these dependencies with:
 
 ```
-dnf install graphviz-devel python-devel libxml2-devel libxslt-devel cmake libyaml-devel
+dnf install python-devel libxml2-devel libxslt-devel cmake libyaml-devel
 ```
 
 And on ubuntu / debian:
 
 ```
-apt-get install libgraphviz-dev python-dev libxml2-dev libxslt1-dev cmake libyaml-dev
+apt-get install python-dev libxml2-dev libxslt1-dev cmake libyaml-dev
 ```
 
 I guess it should be similar on Ubuntu / debian, refer to <https://cmake.org/install/> for more info.
