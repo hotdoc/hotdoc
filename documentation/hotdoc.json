@@ -8,8 +8,8 @@
     "add_anchors": true,
     "output": "built_doc",
     "project_name": "hotdoc",
+    "project_version": "0.X",
     "sitemap": "sitemap.txt",
-    "html_theme": "/home/meh/devel/hotdoc/hotdoc_bootstrap_theme/dist",
     "syntax_highlighting_activate": true,
     "devhelp_activate": true
 }
