@@ -32,14 +32,14 @@ I guess it should be similar on Ubuntu / debian, refer to <https://cmake.org/ins
 
 ## Creating a virtualenv
 
-It is highly recommended to use [virtualenv](https://virtualenv.readthedocs.org/en/latest/) to try out any new python project, and hotdoc is no exception. You can however skip this step if you really do not
+It is highly recommended to use a virtual env to try out any new python project, and hotdoc is no exception. You can however skip this step if you really do not
 care about installing hotdoc system-wide.
 
 > Assuming [pip](https://pip.pypa.io/en/stable/) is installed
 
 ```
-pip2 install virtualenv
-virtualenv --python=python2.7 hotdoc_env
+pip3 install virtualenv
+python3 -m venv hotdoc_env
 . hotdoc_env/bin/activate
 ```
 
@@ -58,7 +58,7 @@ Three main alternatives are available:
   ```
   git clone https://github.com/hotdoc/hotdoc.git
   cd hotdoc
-  python2 setup.py install
+  python3 setup.py install
   ```
 
 * Installing an editable version from a github clone:
