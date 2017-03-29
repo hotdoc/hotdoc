@@ -299,13 +299,14 @@ class Extension(Configurable):
 
         group.add_argument("--%s-sources" % prefix,
                            action="store", nargs="+",
-                           dest="%s_sources" % prefix,
+                           dest="%s_sources" % prefix.replace('-', '_'),
                            help="%s source files to parse" % prefix)
 
         if allow_filters:
             group.add_argument("--%s-source-filters" % prefix,
                                action="store", nargs="+",
-                               dest="%s_source_filters" % prefix,
+                               dest="%s_source_filters" % prefix.replace(
+                                   '-', '_'),
                                help="%s source files to ignore" % prefix)
 
     @classmethod
