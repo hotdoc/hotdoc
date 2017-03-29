@@ -154,10 +154,10 @@ class TestProject(HotdocTest):
         proj = Project(self)
 
         content = 'project.markdown\n\tsubproject1.json\n\tsubproject.json'
-        conf_file = self._create_project_config(
+        conf_file = self._create_project_config_file(
             'project', sitemap_content=content)
-        self._create_project_config('subproject')
-        self._create_project_config('subproject1')
+        self._create_project_config_file('subproject')
+        self._create_project_config_file('subproject1')
 
         conf = Config(conf_file=conf_file)
 
