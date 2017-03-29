@@ -283,6 +283,7 @@ class Project(Configurable):
         """Creates and adds a new subproject."""
         config = Config(conf_file=conf_path)
         proj = Project(self.app)
+        proj.parse_name_from_config(config)
         proj.parse_config(config)
         proj.setup()
         self.subprojects[fname] = proj
@@ -295,15 +296,10 @@ class Project(Configurable):
     def __comment_updated_cb(self, doc_db, comment):
         self.tree.stale_comment_pages(comment)
 
-    # pylint: disable=arguments-differ
-    def parse_config(self, config, toplevel=False):
-        """Parses @config setting up @self state."""
-        self.sitemap_path = config.get_path('sitemap')
-
-        if self.sitemap_path is None:
-            error('invalid-config',
-                  'No sitemap was provided')
-
+    def parse_name_from_config(self, config):
+        """
+        Banana banana
+        """
         self.project_name = config.get('project_name', None)
         if not self.project_name:
             error('invalid-config', 'No project name was provided')
@@ -315,6 +311,15 @@ class Project(Configurable):
         self.sanitized_name = '%s-%s' % (re.sub(r'\W+', '-',
                                                 self.project_name),
                                          self.project_version)
+
+    # pylint: disable=arguments-differ
+    def parse_config(self, config, toplevel=False):
+        """Parses @config setting up @self state."""
+        self.sitemap_path = config.get_path('sitemap')
+
+        if self.sitemap_path is None:
+            error('invalid-config',
+                  'No sitemap was provided')
 
         self.include_paths = OrderedSet([])
 

@@ -43,11 +43,13 @@ class TestProject(HotdocTest):
 
         conf = Config({})
         with self.assertRaises(ConfigError):
+            proj.parse_name_from_config(conf)
             proj.parse_config(conf)
 
         sm_path = self._create_sitemap('sitemap.txt', 'index.markdown\n')
         conf = Config({'sitemap': sm_path})
         with self.assertRaises(ConfigError):
+            proj.parse_name_from_config(conf)
             proj.parse_config(conf)
 
         index_path = self._create_md_file('index.markdown', '# Project')
@@ -55,6 +57,7 @@ class TestProject(HotdocTest):
                        'index': index_path,
                        'project_name': 'test-project',
                        'project_version': '0.1'})
+        proj.parse_name_from_config(conf)
         proj.parse_config(conf)
 
         self.assertDictEqual(
@@ -86,6 +89,7 @@ class TestProject(HotdocTest):
                        'project_name': 'test-project',
                        'project_version': '0.1',
                        'output': self._output_dir})
+        proj.parse_name_from_config(conf)
         proj.parse_config(conf)
         proj.setup()
 
@@ -119,6 +123,7 @@ class TestProject(HotdocTest):
                        'project_version': '0.1',
                        'extra_assets': [os.path.dirname(extra_assets)],
                        'output': self._output_dir})
+        proj.parse_name_from_config(conf)
         proj.parse_config(conf)
         proj.setup()
         proj_output = os.path.join(
@@ -147,6 +152,7 @@ class TestProject(HotdocTest):
 
         conf = Config(conf_file=conf_file)
 
+        proj.parse_name_from_config(conf)
         proj.parse_config(conf)
         proj.setup()
         sitemap_json = {}

@@ -158,6 +158,7 @@ class Page(object):
                 'subpages': self.subpages,
                 'symbol_names': self.symbol_names,
                 'project_name': self.project_name,
+                'pre_sorted': self.pre_sorted,
                 'render_subpages': self.render_subpages}
 
     def resolve_symbols(self, tree, database, link_resolver):

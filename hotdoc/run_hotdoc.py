@@ -78,10 +78,11 @@ class Application(Configurable):
         self.output = config.get_path('output')
         self.dry = config.get('dry')
         self.project = Project(self)
-        self.project.parse_config(self.config, toplevel=True)
+        self.project.parse_name_from_config(self.config)
         self.private_folder = os.path.abspath('hotdoc-private-%s' % self.project.sanitized_name)
-
         self.__create_change_tracker(self.config.get('disable_incremental'))
+        self.project.parse_config(self.config, toplevel=True)
+
         self.__setup_private_folder()
         self.__setup_database()
 
