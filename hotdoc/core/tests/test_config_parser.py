@@ -145,7 +145,8 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(cfg.get('index'), 'another_index.markdown')
 
         self.assertEqual(cfg.get_index(),
-                         os.path.join(invoke_dir, 'another_index.markdown'))
+                         os.path.join(invoke_dir,
+                                      'another_index.markdown'))
 
         overriden_abs_dir = os.path.join(invoke_dir, overriden_src_dir)
 

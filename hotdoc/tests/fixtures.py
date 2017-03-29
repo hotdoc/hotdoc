@@ -24,7 +24,10 @@ import json
 import shutil
 
 from hotdoc.core.filesystem import ChangeTracker
+from hotdoc.core.config import Config
 from hotdoc.utils.utils import touch
+from hotdoc.utils.utils import get_installed_extension_classes
+from hotdoc.run_hotdoc import Application
 from hotdoc.core.database import Database
 from hotdoc.core.links import LinkResolver
 from hotdoc.core.tree import Tree
@@ -87,7 +90,7 @@ class HotdocTest(unittest.TestCase):
     def _create_conf_file(self, name, conf):
         path = os.path.join(self._md_dir, name)
         with open(path, 'w') as _:
-            _.write(json.dumps(conf))
+            _.write(json.dumps(conf, indent=4))
 
         touch(path)
         return path
@@ -105,8 +108,9 @@ class HotdocTest(unittest.TestCase):
         touch(path)
         return path
 
-    def _create_project_config(self, name, version='0.2',
-                               sitemap_content=None):
+    def _create_project_config_file(self, name, version='0.2',
+                                    sitemap_content=None,
+                                    extra_conf=None):
         sitemap_name = name + '.txt'
         index_name = name + '.markdown'
         config_name = name + '.json'
@@ -118,8 +122,21 @@ class HotdocTest(unittest.TestCase):
         index_content = "#" + name[0].upper() + name[1:]
         index_path = self._create_md_file(index_name, index_content)
 
-        return self._create_conf_file(config_name,
-                                      {'index': index_path,
-                                       'sitemap': sm_path,
-                                       'project_name': name,
-                                       'project_version': version})
+        conf = {'index': index_path, 'sitemap': sm_path,
+                'project_name': name, 'project_version': version,
+                'output': self._output_dir}
+
+        if extra_conf:
+            conf.update(extra_conf)
+
+        return self._create_conf_file(config_name, conf)
+
+    def _create_project_config(self, name, **kwargs):
+        return Config(conf_file=self._create_project_config_file(name,
+                                                                 **kwargs))
+
+    @staticmethod
+    def create_application():
+        ext_classes = get_installed_extension_classes(sort=True)
+
+        return Application(ext_classes)
