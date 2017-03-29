@@ -27,6 +27,7 @@ import shutil
 import pickle
 import json
 
+from urllib.parse import urlparse
 from collections import OrderedDict
 
 from hotdoc.core.project import Project, CoreExtension
@@ -34,7 +35,7 @@ from hotdoc.core.config import Config
 from hotdoc.core.exceptions import HotdocException
 from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.database import Database
-from hotdoc.core.links import LinkResolver
+from hotdoc.core.links import LinkResolver, Link
 from hotdoc.utils.utils import all_subclasses, get_installed_extension_classes, get_cat
 from hotdoc.utils.loggable import Logger, error, info
 from hotdoc.utils.setup_utils import VERSION
@@ -57,6 +58,7 @@ class Application(Configurable):
         self.config = None
         self.project = None
         self.formatted_signal = Signal()
+        self.__all_projects = {}
 
     @staticmethod
     def add_arguments(parser):
@@ -93,12 +95,41 @@ class Application(Configurable):
             self.change_tracker.add_hard_dependency(self.config.conf_file)
 
         self.project.setup()
+        self.__retrieve_all_projects(self.project)
+
+        self.link_resolver.get_link_signal.connect_after(self.__get_link_cb)
         self.project.format(self.link_resolver, self.output)
         self.project.write_out(self.output)
+
+        self.link_resolver.get_link_signal.disconnect(self.__get_link_cb)
+
         self.formatted_signal(self)
         self.__persist(self.project)
 
         return res
+
+    def __get_link_cb(self, link_resolver, name):
+        url_components = urlparse(name)
+
+        project = self.__all_projects.get(url_components.path)
+        if not project:
+            return None
+
+        page = project.tree.root
+        ext = project.extensions[page.extension_name]
+        formatter = ext.formatter
+        prefix = formatter.get_output_folder(page)
+        ref = page.link.ref
+        if url_components.fragment:
+            ref += '#%s' % url_components.fragment
+
+        return Link(os.path.join(prefix, ref), page.link.get_title(), None)
+
+    def __retrieve_all_projects(self, project):
+        self.__all_projects[project.project_name] = project
+
+        for subproj in project.subprojects.values():
+            self.__retrieve_all_projects(subproj)
 
     def __dump_project_deps_file(self, project, deps_file, empty_targets):
         for page in list(project.tree.get_pages().values()):
