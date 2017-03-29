@@ -55,12 +55,12 @@ class TestConfig(unittest.TestCase):
                          os.path.join(self.__priv_dir, 'my_index.markdown'))
 
         # An absolute path was passed, and must thus be retrieved
-        self.assertEqual(cfg.get_index('test_'),
+        self.assertEqual(cfg.get_index('test'),
                          '/home/meh/test_index.markdown')
 
         self.assertIsNone(cfg.get_index('invalid_prefix'))
 
-        self.assertEqual(cfg.get_index('test_other_'),
+        self.assertEqual(cfg.get_index('test_other'),
                          os.path.join(self.__priv_dir,
                                       'other_index.markdown'))
 

@@ -185,12 +185,16 @@ class Config(object):
         Returns:
             str: An absolute path, or `None`
         """
-        prefixed = '%sindex' % prefix
+        if prefix:
+            prefixed = '%s_index' % prefix
+        else:
+            prefixed = 'index'
+
         if prefixed in self.__cli and self.__cli[prefixed]:
             index = self.__cli.get(prefixed)
             from_conf = False
         else:
-            index = self.__config.get('%sindex' % prefix)
+            index = self.__config.get(prefixed)
             from_conf = True
 
         return self.__abspath(index, from_conf)
