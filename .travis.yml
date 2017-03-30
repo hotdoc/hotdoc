@@ -1,0 +1,12 @@
+language: python
+dist: trusty
+sudo: required
+python:
+  - "3.4"
+  - "3.5"
+  - "3.6"
+
+install: "python3 setup.py develop"
+
+# command to run tests
+script: python -m unittest
