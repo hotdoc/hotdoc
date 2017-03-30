@@ -285,8 +285,7 @@ INSTALL_REQUIRES = [
     'schema',
     'wheezy.template==0.1.167',
     'sqlalchemy>=1.0.8',
-    'toposort==1.4',
-    'future']
+    'toposort==1.4']
 
 EXTRAS_REQUIRE = {
     'dev': ['git-pylint-commit-hook',
