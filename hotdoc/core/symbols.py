@@ -55,6 +55,7 @@ class Symbol(Base):
     link = Column(Link.as_mutable(PickleType))
     skip = Column(Boolean)
     project_name = Column(String)
+    parent_name = Column(String)
 
     __mapper_args__ = {
         'polymorphic_identity': 'symbol',

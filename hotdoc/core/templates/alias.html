@@ -2,9 +2,10 @@
 @extends('base_symbol.html')
 
 @def header():
-<h3>
+@(header_level = '4' if alias.extension_attributes['order_by_section'] else '3')
+<h@header_level>
 	@alias.link.title
-</h3>
+</h@header_level>
 @end
 @def content():
 <pre>

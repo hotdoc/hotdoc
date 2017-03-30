@@ -2,9 +2,11 @@
 @extends('base_symbol.html')
 
 @def header():
-<h3>
+@if not klass.extension_attributes['order_by_section']:
+<h@header_level>
 	@klass.link.title
-</h3>
+</h@header_level>
+@end
 @end
 
 @def content():

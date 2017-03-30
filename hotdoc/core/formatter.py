@@ -30,7 +30,7 @@ import re
 import urllib.parse
 import shutil
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 from lxml import etree
 
@@ -160,8 +160,8 @@ class Formatter(Configurable):
             InterfaceSymbol: self._format_interface_symbol,
         }
 
-        self._ordering = [InterfaceSymbol, ClassSymbol, FunctionSymbol,
-                          FunctionMacroSymbol, SignalSymbol,
+        self._ordering = [InterfaceSymbol, ClassSymbol,
+                          FunctionSymbol, FunctionMacroSymbol, SignalSymbol,
                           PropertySymbol, StructSymbol,
                           VFunctionSymbol, EnumSymbol, ConstantSymbol,
                           ExportedVariableSymbol, AliasSymbol, CallbackSymbol]
@@ -179,6 +179,7 @@ class Formatter(Configurable):
         self.formatting_page_signal = Signal()
         self.get_extra_files_signal = Signal()
         self.formatting_symbol_signal = Signal()
+        self._order_by_parent = False
 
         self.__cache_dir = os.path.join(self.extension.app.private_folder,
                                         'cache')
@@ -201,7 +202,13 @@ class Formatter(Configurable):
         if not symbol:
             return ''
 
+        symbol.extension_attributes['order_by_section'] = \
+            self._order_by_parent and symbol.parent_name
         for csym in symbol.get_children_symbols():
+            if csym:
+                csym.parent_name = symbol.parent_name
+                csym.extension_attributes['order_by_section'] = \
+                    self._order_by_parent and symbol.parent_name
             self.format_symbol(csym, link_resolver)
 
         res = self.formatting_symbol_signal(self, symbol)
@@ -568,11 +575,10 @@ class Formatter(Configurable):
                 detailed_descriptions.append(element.detailed_description)
 
         symbol_type = symbols_list.name
-
         symbol_descriptions = None
         if detailed_descriptions:
-            symbol_descriptions = SymbolDescriptions(detailed_descriptions,
-                                                     symbol_type)
+            symbol_descriptions = SymbolDescriptions(
+                detailed_descriptions, symbol_type)
 
         return symbol_descriptions
 
@@ -581,7 +587,8 @@ class Formatter(Configurable):
         if struct.raw_text is not None:
             raw_code = self._format_raw_code(struct.raw_text)
 
-        members_list = self._format_members_list(struct.members, 'Fields')
+        members_list = self._format_members_list(struct.members, 'Fields',
+                                                 struct)
 
         template = self.engine.get_template("struct.html")
         out = template.render({"symbol": struct,
@@ -601,7 +608,8 @@ class Formatter(Configurable):
         raw_code = None
         if enum.raw_text is not None:
             raw_code = self._format_raw_code(enum.raw_text)
-        members_list = self._format_members_list(enum.members, 'Members')
+        members_list = self._format_members_list(enum.members, 'Members',
+                                                 enum)
         template = self.engine.get_template("enum.html")
         out = template.render({"symbol": enum,
                                "enum": enum,
@@ -623,12 +631,15 @@ class Formatter(Configurable):
             page.output_attrs['html']['scripts'].add(
                 os.path.join(HERE, 'assets', 'css.escape.js'))
 
-    # pylint: disable=too-many-locals
-    def _format_page(self, page):
+    def __get_symbols_details(self, page, parent_name=None):
         symbols_details = []
-
         for symbols_type in self._ordering:
-            symbols_list = page.typed_symbols.get(symbols_type)
+            if not self._order_by_parent:
+                symbols_list = page.typed_symbols.get(symbols_type)
+            else:
+                symbols_list = page.by_parent_symbols[parent_name].get(
+                    symbols_type)
+
             if not symbols_list:
                 continue
 
@@ -637,6 +648,30 @@ class Formatter(Configurable):
 
             if symbols_descriptions:
                 symbols_details.append(symbols_descriptions)
+                if parent_name:
+                    if len(symbols_list.symbols) == 1:
+                        sym = symbols_list.symbols[0]
+                        if sym.unique_name == parent_name:
+                            symbols_descriptions.name = None
+
+        return symbols_details
+
+    # pylint: disable=too-many-locals
+    def _format_page(self, page):
+        symbols_details = []
+        by_sections = []
+        by_section_symbols = namedtuple('BySectionSymbols',
+                                        ['name', 'symbols_details'])
+
+        if not self._order_by_parent:
+            symbols_details = self.__get_symbols_details(page)
+        else:
+            for parent_name in page.by_parent_symbols.keys():
+                symbols_details = self.__get_symbols_details(page, parent_name)
+
+                if symbols_details:
+                    by_sections.append(by_section_symbols(parent_name,
+                                                          symbols_details))
 
         template = self.engine.get_template('page.html')
 
@@ -681,6 +716,7 @@ class Formatter(Configurable):
              'attrs': page.output_attrs['html'],
              'meta': {},
              'symbols_details': symbols_details,
+             'sections_details': by_sections,
              'in_toplevel': self.extension.project.is_toplevel}
         )
 
@@ -721,10 +757,13 @@ class Formatter(Configurable):
         return_item.formatted_link = self._format_linked_symbol(return_item)
         return (template.render({'return_item': return_item}), False)
 
-    def _format_return_value_symbol(self, return_value):
+    def _format_return_value_symbol(self, return_value, parent):
         template = self.engine.get_template('multi_return_value.html')
         if return_value[0] is None:
             return_value = return_value[1:]
+        for rval in return_value:
+            rval.extension_attributes['order_by_section'] = \
+                self._order_by_parent and parent.parent_name
         return template.render({'return_items': return_value})
 
     def _format_callable(self, callable_, callable_type, title,
@@ -737,7 +776,7 @@ class Formatter(Configurable):
         prototype = self._format_prototype(callable_, is_pointer, title)
 
         return_value_detail = self._format_return_value_symbol(
-            callable_.return_value)
+            callable_.return_value, callable_)
 
         tags = {}
         if callable_.comment:
@@ -801,7 +840,8 @@ class Formatter(Configurable):
         for member in klass.members:
             self.format_symbol(member, self.extension.app.link_resolver)
 
-        members_list = self._format_members_list(klass.members, 'Members')
+        members_list = self._format_members_list(klass.members, 'Members',
+                                                 klass)
 
         return (template.render({'symbol': klass,
                                  'klass': klass,
@@ -817,8 +857,12 @@ class Formatter(Configurable):
                                  'hierarchy': hierarchy}),
                 False)
 
-    def _format_members_list(self, members, member_designation):
+    def _format_members_list(self, members, member_designation,
+                             parent):
         template = self.engine.get_template('member_list.html')
+        for member in members:
+            member.extension_attributes['order_by_section'] = \
+                self._order_by_parent and parent.parent_name
         return template.render({'members': members,
                                 'member_designation': member_designation})
 
@@ -840,7 +884,7 @@ class Formatter(Configurable):
             parameters.append(_.detailed_description)
 
         return_value_detail = self._format_return_value_symbol(
-            function_macro.return_value)
+            function_macro.return_value, function_macro)
 
         out = template.render({'prototype': prototype,
                                'symbol': function_macro,
