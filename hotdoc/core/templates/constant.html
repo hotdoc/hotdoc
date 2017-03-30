@@ -2,9 +2,10 @@
 @extends('base_symbol.html')
 
 @def header():
-<h3 class="constant">
+@(header_level = '4' if constant.extension_attributes['order_by_section'] else '3')
+<h@header_level class="constant">
 	@constant.link.title
-</h3>
+</h@header_level>
 @end
 @def content():
 \

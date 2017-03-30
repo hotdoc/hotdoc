@@ -26,7 +26,7 @@ import re
 import os
 from urllib.parse import urlparse
 import pickle as pickle
-from collections import namedtuple, defaultdict
+from collections import namedtuple, defaultdict, OrderedDict
 
 # pylint: disable=import-error
 import yaml
@@ -118,6 +118,7 @@ class Page(object):
         self.subpages = OrderedSet()
         self.symbols = []
         self.typed_symbols = {}
+        self.by_parent_symbols = OrderedDict()
         self.is_stale = True
         self.formatted_contents = None
         self.detailed_description = None
@@ -161,6 +162,7 @@ class Page(object):
                 'output_attrs': None,
                 'symbols': [],
                 'typed_symbols': {},
+                'by_parent_symbols': {},
                 'subpages': self.subpages,
                 'symbol_names': self.symbol_names,
                 'project_name': self.project_name,
@@ -168,19 +170,25 @@ class Page(object):
                 'cached_paths': self.cached_paths,
                 'render_subpages': self.render_subpages}
 
+    @staticmethod
+    def __get_empty_typed_symbols():
+        typed_symbols_list = namedtuple(
+            'TypedSymbolsList', ['name', 'symbols'])
+        empty_typed_symbols = {}
+
+        for subclass in all_subclasses(Symbol):
+            empty_typed_symbols[subclass] = typed_symbols_list(
+                subclass.get_plural_name(), [])
+
+        return empty_typed_symbols
+
     def resolve_symbols(self, tree, database, link_resolver):
         """
         When this method is called, the page's symbol names are queried
         from `database`, and added to lists of actual symbols, sorted
         by symbol class.
         """
-        typed_symbols_list = namedtuple(
-            'TypedSymbolsList', ['name', 'symbols'])
-
-        for subclass in all_subclasses(Symbol):
-            self.typed_symbols[subclass] = typed_symbols_list(
-                subclass.get_plural_name(), [])
-
+        self.typed_symbols = self.__get_empty_typed_symbols()
         all_syms = OrderedSet()
         for sym_name in self.symbol_names:
             sym = database.get_symbol(sym_name)
@@ -196,6 +204,11 @@ class Page(object):
             sym.update_children_comments()
             self.__resolve_symbol(sym, link_resolver, page_path)
             self.symbol_names.add(sym.unique_name)
+
+        # Always put symbols with no parent at the end
+        no_parent_syms = self.by_parent_symbols.pop(None, None)
+        if no_parent_syms:
+            self.by_parent_symbols[None] = no_parent_syms
 
         for sym_type in [ClassSymbol, AliasSymbol, InterfaceSymbol,
                          StructSymbol]:
@@ -327,6 +340,16 @@ class Page(object):
         tsl = self.typed_symbols.get(type(symbol))
         if tsl:
             tsl.symbols.append(symbol)
+
+            by_parent_symbols = self.by_parent_symbols.get(symbol.parent_name)
+            if not by_parent_symbols:
+                by_parent_symbols = self.__get_empty_typed_symbols()
+                parent_name = symbol.parent_name
+                if parent_name is None:
+                    parent_name = 'Others symbols'
+                self.by_parent_symbols[symbol.parent_name] = by_parent_symbols
+            by_parent_symbols.get(type(symbol)).symbols.append(symbol)
+
         self.symbols.append(symbol)
 
         debug('Resolved symbol %s to page %s' %

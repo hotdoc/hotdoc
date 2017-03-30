@@ -1,10 +1,11 @@
 @require(return_items)
 @if return_items:
 <div class="multi_return_value_container">
+	@(header_level = '5' if return_items[0].extension_attributes['order_by_section'] else '4')
 	@if len (return_items) == 1:
-		<h4>Returns:</h4>
+		<h@header_level class="always-hide-toc" data-toc-skip=true>Returns:</h@header_level>
 	@else:
-		<h4>Returns a tuple made of</h4>
+		<h@header_level data-toc-skip=true>Returns a tuple made of</h@header_level>
 	@end
 	<table>
 		<colgroup>

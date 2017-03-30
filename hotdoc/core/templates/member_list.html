@@ -2,7 +2,8 @@
 
 @if members:
 <div class="member_details">
-	<h4>@member_designation</h4>
+	@(header_level = '5' if members[0].extension_attributes['order_by_section'] else '4')
+	<h@header_level class="always-hide-toc" data-toc-skip=true>@member_designation</h@header_level>
 	<div class="member_container">
 		<table>
 			<tbody>

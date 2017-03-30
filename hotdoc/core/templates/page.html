@@ -1,36 +1,62 @@
-@require(page, source_file, symbols_details, attrs)
+@require(page, source_file, symbols_details, attrs, sections_details)
 @extends('base_page.html')
 
+@def render_symbols(sdetails, section):
+
+    @for symbols_detail in sdetails:
+        @(html_id = '')
+        @if symbols_detail.name:
+            @(html_id = '_'.join(symbols_detail.name.split()))
+            @if section and section.name:
+                @(html_id = '_'.join(section.name.split()) + html_id)
+                @(header_level = '3')
+            @else:
+                @(header_level = '2')
+            @end
+            <h@header_level class="symbol_section" id="@html_id">@symbols_detail.name</h@header_level>
+        @end
+        \
+        @for i, description in enumerate(symbols_detail.descriptions):
+            @description
+        @end
+    @end
+@end
+
+@def render_sections():
+
+    @for section in sections_details:
+        @(html_id = '')
+        @if section.name:
+            <h2 class="symbol_section" id="@html_id">@section.name</h2>
+        @end
+        @render_symbols(section.symbols_details, section)
+    @end
+@end
+
 @def content():
+    <div id="page-description" data-hotdoc-source="@source_file" data-hotdoc-role="main">
+    @if page.formatted_contents:
+        @page.formatted_contents
+    @end
+    </div>
+    @if sections_details:
+        @render_sections()
+    @else:
+        @render_symbols(symbols_details, None)
+    @end
+    @(extra_html = attrs.get('extra_html', []))
+    @for extra in extra_html:
+        @extra
+    @end
 
-@(extra_html = attrs.get('extra_html', []))
-<div id="page-description" data-hotdoc-source="@source_file" data-hotdoc-role="main">
-@if page.formatted_contents:
-@page.formatted_contents
-@end
-@for extra in extra_html:
-@extra
-@end
-</div>
-
-@for symbols_detail in symbols_details:
-@if symbols_detail.name:
-@(html_id = '_'.join(symbols_detail.name.split()))
-<h2 class="symbol_section" id="@html_id">@symbols_detail.name</h2>
-@end
-\
-@for i, description in enumerate(symbols_detail.descriptions):
-@description
-@end
-@end
 @end
 \
 @def footer():
 \
-@(extra_footer_html = attrs.get('extra_footer_html', []))
-@for extra in extra_footer_html:
-@extra
-@end
+    @(extra_footer_html = attrs.get('extra_footer_html', []))
+    @for extra in extra_footer_html:
+        @extra
+    @end
 \
 @end
 @def edit_button():
