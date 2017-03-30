@@ -8,5 +8,5 @@
 	branch = master
 [submodule "hotdoc/hotdoc_bootstrap_theme"]
 	path = hotdoc/hotdoc_bootstrap_theme
-	url = https://github.com/hotdoc/hotdoc_bootstrap_theme.git
+	url = https://github.com/thiblahute/hotdoc_bootstrap_theme.git
 	branch = master
