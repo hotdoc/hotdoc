@@ -222,7 +222,7 @@ def create_default_layout (config):
     md_folder_path = check_path (init_dir, 'markdown_files')
     assets_folder_path = check_path (init_dir, 'assets')
     output_path = check_path (init_dir, 'built_doc')
-    cat_path = os.path.join (assets_folder_path, 'cat.png')
+    cat_path = os.path.join (assets_folder_path, 'cat.gif')
 
     os.makedirs (init_dir)
     os.makedirs (assets_folder_path)
@@ -243,7 +243,8 @@ def create_default_layout (config):
         _.write ('# %s\n' % project_name.capitalize())
         try:
             cat = get_cat (cat_path)
-            _.write ('\n![](assets/cat.png)')
+            _.write("\nIt's dangerous to go alone, take this\n")
+            _.write ('\n![](assets/cat.gif)')
         except Exception as e:  # No cat, too bad
             pass
 

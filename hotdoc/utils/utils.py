@@ -334,6 +334,6 @@ def get_cat(path):
     Banana banana
     """
     filename, _ = urlretrieve(
-        'http://thecatapi.com/api/images/get?format=src&type=png',
+        'http://thecatapi.com/api/images/get?format=src&type=gif',
         filename=path)
     return filename
