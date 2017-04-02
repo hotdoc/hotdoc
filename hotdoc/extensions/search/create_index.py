@@ -89,16 +89,14 @@ def parse_content(section, stop_words, selector='.//p'):
 def write_fragment(fragments_dir, url, text):
     dest = os.path.join(fragments_dir, url + '.fragment')
     dest = dest.replace('#', '-')
-    try:
-        _ = open(dest, 'w')
-    except IOError:
+    if not os.path.exists(os.path.dirname(dest)):
         os.makedirs(os.path.dirname(dest))
-        _ = open(dest, 'w')
-    finally:
-        _.write("fragment_downloaded_cb(")
-        _.write(json.dumps({"url": url, "fragment": text}))
-        _.write(");")
-        _.close()
+    _ = open(dest, 'w')
+
+    _.write("fragment_downloaded_cb(")
+    _.write(json.dumps({"url": url, "fragment": text}))
+    _.write(");")
+    _.close()
 
 
 # pylint: disable=too-many-locals
@@ -127,7 +125,7 @@ def parse_file(root_dir, filename, stop_words, fragments_dir):
 
         for tok, text, id_ in parse_content(section, stop_words,
                                             selector=TITLE_SELECTOR):
-            if id_:
+            if id_ and len(id_) < 30:  # Protect against unreasonably large ids
                 section_id = '%s#%s' % (url, id_)
             else:
                 section_id = section_url
@@ -142,7 +140,7 @@ def parse_file(root_dir, filename, stop_words, fragments_dir):
                 yield tok.lower(), section_id, True
 
         for tok, text, id_ in parse_content(section, stop_words):
-            if id_:
+            if id_ and len(id_) < 30:
                 section_id = '%s#%s' % (url, id_)
             else:
                 section_id = section_url
