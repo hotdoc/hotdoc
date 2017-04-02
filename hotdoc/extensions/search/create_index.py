@@ -52,14 +52,10 @@ INITIAL_SELECTOR = (
 )
 
 TITLE_SELECTOR = (
-    './ul[@class="base_symbol_header"]'
-    '/li'
-    '/h3'
-    '/span'
-    '/code'
+    './h1|h2|h2|h3|h4|h5|h6'
 )
 
-TOK_REGEX = re.compile(r'[a-zA-Z_][a-zA-Z0-9_\.]*[a-zA-Z0-9_]')
+TOK_REGEX = re.compile(r'[a-zA-Z_][a-zA-Z0-9_\.]*[a-zA-Z0-9_]*')
 
 
 def get_sections(root, selector='./div[@id]'):
@@ -71,17 +67,23 @@ def parse_content(section, stop_words, selector='.//p'):
         text = lxml.html.tostring(elem, method="text",
                                   encoding='unicode')
 
+        id_ = elem.attrib.get('id')
+        if not id_:
+            elem = elem.xpath('preceding::*[@id]')[-1]
+            if elem is not None:
+                id_ = elem.attrib['id']
+
         tokens = TOK_REGEX.findall(text)
 
         for token in tokens:
             original_token = token + ' '
             if token in stop_words:
-                yield (None, original_token)
+                yield (None, original_token, id_)
                 continue
 
-            yield (token, original_token)
+            yield (token, original_token, id_)
 
-        yield (None, '\n')
+        yield (None, '\n', id_)
 
 
 def write_fragment(fragments_dir, url, text):
@@ -99,6 +101,8 @@ def write_fragment(fragments_dir, url, text):
         _.close()
 
 
+# pylint: disable=too-many-locals
+# pylint: disable=too-many-branches
 def parse_file(root_dir, filename, stop_words, fragments_dir):
     with io.open(filename, 'r', encoding='utf-8') as _:
         contents = _.read()
@@ -119,28 +123,43 @@ def parse_file(root_dir, filename, stop_words, fragments_dir):
     sections = get_sections(initial, SECTIONS_SELECTOR)
     for section in sections:
         section_url = '%s#%s' % (url, section.attrib.get('id', '').strip())
-        section_text = ''
+        subsections = defaultdict(str)
 
-        for tok, text in parse_content(section, stop_words,
-                                       selector=TITLE_SELECTOR):
-            section_text += text
+        for tok, text, id_ in parse_content(section, stop_words,
+                                            selector=TITLE_SELECTOR):
+            if id_:
+                section_id = '%s#%s' % (url, id_)
+            else:
+                section_id = section_url
+
+            subsections[section_id] += text
+
             if tok is None:
                 continue
-            yield tok, section_url, True
-            if any(c.isupper() for c in tok):
-                yield tok.lower(), section_url, True
 
-        for tok, text in parse_content(section, stop_words):
-            section_text += text
+            yield tok, section_id, True
+            if any(c.isupper() for c in tok):
+                yield tok.lower(), section_id, True
+
+        for tok, text, id_ in parse_content(section, stop_words):
+            if id_:
+                section_id = '%s#%s' % (url, id_)
+            else:
+                section_id = section_url
+
+            subsections[section_id] += text
+
             if tok is None:
                 continue
-            yield tok, section_url, False
-            if any(c.isupper() for c in tok):
-                yield tok.lower(), section_url, False
 
-        write_fragment(fragments_dir,
-                       section_url,
-                       lxml.html.tostring(section, encoding='unicode'))
+            yield tok, section_id, False
+            if any(c.isupper() for c in tok):
+                yield tok.lower(), section_id, False
+
+        for section_id, section_text in subsections.items():
+            write_fragment(fragments_dir,
+                           section_id,
+                           section_text)
 
 
 def prepare_folder(dest):
