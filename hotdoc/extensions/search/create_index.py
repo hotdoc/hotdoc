@@ -80,6 +80,9 @@ def parse_content(section, stop_words, selector='.//p'):
             if token in stop_words:
                 yield (None, original_token, id_)
                 continue
+            if token.endswith('.'):
+                yield (token.rstrip('.'), original_token, id_)
+                continue
 
             yield (token, original_token, id_)
 
