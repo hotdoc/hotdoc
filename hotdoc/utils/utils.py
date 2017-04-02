@@ -28,6 +28,8 @@ import sys
 import subprocess
 import re
 
+from urllib.request import urlretrieve
+
 import pkg_resources
 from toposort import toposort_flatten
 
@@ -325,3 +327,13 @@ def id_from_text(text, add_hash=False):
         return '#%s' % id_
     else:
         return id_
+
+
+def get_cat(path):
+    """
+    Banana banana
+    """
+    filename, _ = urlretrieve(
+        'http://thecatapi.com/api/images/get?format=src&type=png',
+        filename=path)
+    return filename

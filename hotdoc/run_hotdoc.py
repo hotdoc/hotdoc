@@ -26,6 +26,7 @@ import argparse
 import hashlib
 import shutil
 import pickle
+import json
 
 from collections import OrderedDict
 
@@ -35,7 +36,7 @@ from hotdoc.core.exceptions import HotdocException
 from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.database import Database
 from hotdoc.core.links import LinkResolver
-from hotdoc.utils.utils import all_subclasses, get_installed_extension_classes
+from hotdoc.utils.utils import all_subclasses, get_installed_extension_classes, get_cat
 from hotdoc.utils.loggable import Logger, error, info
 from hotdoc.utils.setup_utils import VERSION
 from hotdoc.utils.configurable import Configurable
@@ -193,6 +194,60 @@ class Application(Configurable):
             self.change_tracker = ChangeTracker()
 
 
+def check_path (init_dir, name):
+    path = os.path.join (init_dir, name)
+    if os.path.exists (path):
+        error ('setup-issue', '%s already exists' % path)
+    return path
+
+
+def create_default_layout (config):
+    project_name = config.get('project_name')
+    project_version = config.get('project_version')
+
+    if not project_name or not project_version:
+        error ('setup-issue', '--project-name and --project-version must be specified')
+
+    init_dir = config.get_path ('init_dir')
+    if not init_dir:
+        init_dir = config.get_invoke_dir()
+    else:
+        if os.path.exists (init_dir) and not os.path.isdir (init_dir):
+            error ('setup-issue',
+                   'Init directory exists but is not a directory: %s' %
+                   init_dir)
+
+    sitemap_path = check_path (init_dir, 'sitemap.txt')
+    conf_path = check_path (init_dir, 'hotdoc.json')
+    md_folder_path = check_path (init_dir, 'markdown_files')
+    assets_folder_path = check_path (init_dir, 'assets')
+    output_path = check_path (init_dir, 'built_doc')
+    cat_path = os.path.join (assets_folder_path, 'cat.png')
+
+    os.makedirs (init_dir)
+    os.makedirs (assets_folder_path)
+    os.makedirs (md_folder_path)
+
+    with open (sitemap_path, 'w') as _:
+        _.write ('index.md\n')
+
+    with open (conf_path, 'w') as _:
+        _.write(json.dumps({'project_name': project_name,
+                            'project_version': project_version,
+                            'sitemap': 'sitemap.txt',
+                            'index': os.path.join ('markdown_files', 'index.md'),
+                            'output': 'built_doc',
+                            'extra_assets': ['assets']}))
+
+    with open (os.path.join (md_folder_path, 'index.md'), 'w') as _:
+        _.write ('# %s\n' % project_name.capitalize())
+        try:
+            cat = get_cat (cat_path)
+            _.write ('\n![](assets/cat.png)')
+        except Exception as e:  # No cat, too bad
+            pass
+
+
 def execute_command(parser, config, ext_classes):
     res = 0
     cmd = config.get('command')
@@ -220,6 +275,11 @@ def execute_command(parser, config, ext_classes):
             res = 1
         finally:
             app.finalize()
+    elif cmd == 'init':
+        try:
+            create_default_layout (config)
+        except HotdocException:
+            res = 1
     elif cmd == 'conf':
         config.dump(conf_file=config.get('output_conf_file', None))
     elif cmd is None:
@@ -255,7 +315,7 @@ def run(args):
         add_help=False)
 
     parser.add_argument('command', action="store",
-                        choices=('run', 'conf', 'help'),
+                        choices=('run', 'conf', 'init', 'help'),
                         nargs="?")
     parser.add_argument('--conf-file', help='Path to the config file',
                         dest='conf_file')
@@ -263,6 +323,9 @@ def run(args):
                         help='Path where to save the updated conf'
                         ' file',
                         dest='output_conf_file')
+    parser.add_argument('--init-dir',
+                        help='Directory to initialize',
+                        dest='init_dir')
     parser.add_argument('--version', help="Print version and exit",
                         action="store_true")
     parser.add_argument('--makefile-path',
@@ -332,9 +395,12 @@ def run(args):
             print(" - %s " % klass.extension_name)
         return 0
 
-    conf_file = actual_args.get('conf_file')
-    if conf_file is None and os.path.exists('hotdoc.json'):
-        conf_file = 'hotdoc.json'
+    if known_args.command != 'init':
+        conf_file = actual_args.get('conf_file')
+        if conf_file is None and os.path.exists('hotdoc.json'):
+            conf_file = 'hotdoc.json'
+    else:
+        conf_file = ''
 
     config = Config(command_line_args=actual_args,
                     conf_file=conf_file,
