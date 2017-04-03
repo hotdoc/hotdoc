@@ -205,7 +205,8 @@ class CustomDevelop(develop):
 class CustomBuild(build):
 
     def run(self):
-        self.run_command('build_default_theme')
+        if not os.path.exists(THEME_DIST_DIR):
+            self.run_command('build_default_theme')
         return build.run(self)
 
 
