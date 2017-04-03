@@ -16,13 +16,29 @@ hotdoc help
 
 ## Setting up a project from scratch.
 
-You will first need to create the markdown files that will constitute the
-"skeleton" of your documentation, see the
+This will set up the project in the current directory:
+
+```
+hotdoc init
+```
+
+You can use `--init-dir` to specify a different directory, which will
+be created:
+
+```
+hotdoc init --init-dir test
+cd test
+```
+
+Once that's done:
+
+```
+hotdoc run
+xdg-open built_doc/html/index.html
+```
+
+Refer to the
 [page creation tutorial](the-markdown-pages.markdown#page-creation-tutorial)
 for more information.
 
-If you followed this tutorial up to its end you should now know how to
-structure your markdown files together and how to define in which pages
-individual source code symbols should be placed.
-
-If you need more inspiration, check out the [examples section](examples.markdown)
+If you need more inspiration, check out the [other projects that use hotdoc](users.markdown)

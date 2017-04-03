@@ -11,7 +11,9 @@ The configuration file is a simple, flat json file made of a set of key-value pa
 ``` json
 {
 	"index": "markdown_files/index.markdown",
-	"sitemap": "sitemap.txt"
+	"sitemap": "sitemap.txt",
+	"project_name": "Foo",
+	"project_version": "0.1"
 }
 ```
 
@@ -29,13 +31,13 @@ Options specified from the command-line will take precedence over their json cou
 An easy way to create a configuration file from a command-line invocation is to replace `run` with `conf` in the command-line, for example to translate:
 
 ``` shell
-hotdoc --index markdown_files/index.markdown --output built_doc --sitemap sitemap.txt run
+hotdoc --project-name "Foo" --project-version "0.1" --index markdown_files/index.markdown --output built_doc --sitemap sitemap.txt run
 ```
 
 you should use 
 
 ``` shell
-hotdoc --index markdown_files/index.markdown --output built_doc --sitemap sitemap.txt conf
+hotdoc --project-name "Foo" --project-version "0.1" --index markdown_files/index.markdown --output built_doc --sitemap sitemap.txt conf
 ```
 
 This will create a hotdoc.json file in the current directory, which means you can now run hotdoc that way:

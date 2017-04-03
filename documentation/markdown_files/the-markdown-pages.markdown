@@ -22,7 +22,7 @@ two main purposes:
 
 The following instructions will help explaining a few concepts through example.
 
-### Set up a basic page tree
+### Setting up a basic page tree
 
 Set up a test folder
 
@@ -63,7 +63,7 @@ index.markdown
 You can now run hotdoc with
 
 ``` shell
-hotdoc --index markdown_files/index.markdown --output built_doc --sitemap sitemap.txt run
+hotdoc --index markdown_files/index.markdown --output built_doc --project-name "simplest-example" --project-version "0.1" --sitemap sitemap.txt run
 ```
 
 from the `~/hotdoc_layout_test` folder, and check the output with `xdg-open built_doc/html/index.html`.
@@ -75,7 +75,7 @@ A few things are to be noted here:
 * Hotdoc will by default look for subpages in the folder where the provided
   index is located, so only the basenames need to be input in the sitemap.
   Additional folders in which to look for documentation pages (but also code
-  samples) can be provided to hotdoc with the `include-paths`
+  samples) can be provided to hotdoc via the `include-paths`
   configuration option.
 
 * Links to pages in the doc tree are updated at format-time, in our example
@@ -95,7 +95,7 @@ eye at [this page](the-configuration-file.markdown) and
 If however you also want to use one or more hotdoc extensions to parse source
 code files and document the symbols that they contain, then keep on reading.
 
-### Assign sub-trees to language extensions
+### Assigning sub-trees to language extensions
 
 When hotdoc parses markdown sources, it attributes them an "extension-name". This name allows using language-specific formatters at format-time, amongst other things that extensions can customize. Of course an extension can choose to not provide a specific formatter, in which case the default formatter will be used.
 
@@ -135,12 +135,12 @@ index.markdown
 Finally run hotdoc this way:
 
 ``` shell
-hotdoc --index markdown_files/index.markdown --output built_doc --python-index python_index.markdown --sitemap sitemap.txt run -vv
+hotdoc --index markdown_files/index.markdown --output built_doc --project-name "simplest-example" --project-version "0.1" --python-index python_index.markdown --sitemap sitemap.txt run -vv
 ```
 
-> Note that the two pages you created earlier are not reparsed, nor
-> reformatted. This only presents a very theoretical advantage in our case,
-> but this can come in quite handy when managing hundreds of pages.
+Note that the two pages you created earlier are not reparsed, nor
+reformatted. This only presents a very theoretical advantage in our case,
+but this can come in quite handy when managing hundreds of pages.
 
 Provided the [python extension] is installed in the current environment,
 the `python_index.markdown` page will be rendered with the
@@ -148,10 +148,13 @@ the `python_index.markdown` page will be rendered with the
 `grep "data-extension" built_doc/html/python_index.html`, which should show :
 `<div data-extension="python-extension" class="page_container" id="page-wrapper">`
 
-> Note: In that example, the "well-known-name" is `python-index` and the
-> command-line argument to let the extension know about the sub-index filename
-> is `python-index` too. The path for the sub-index will be treated
-> as relative to the main index.
+In that example, the "well-known-name" is `python-index` and the
+command-line argument to let the extension know about the sub-index filename
+is `python-index` too. The path for the sub-index will be treated
+as relative to the main index.
+
+You can of course have the python index be the top level index in the
+sitemap.
 
 ### Add symbols to pages
 
@@ -209,7 +212,7 @@ This is a module to demonstrate documenting source code symbols.
 You can now invoke hotdoc with
 
 ``` shell
-hotdoc --index markdown_files/index.markdown --output built_doc --python-index python_index.markdown --python-sources module_to_document.py --sitemap sitemap.txt run
+hotdoc --index markdown_files/index.markdown --output built_doc --project-name "simplest-example" --project-version "0.1" --python-index python_index.markdown --python-sources module_to_document.py --sitemap sitemap.txt run
 ```
 , and check the result with `xdg-open built_doc/html/python_index.html`.
 
