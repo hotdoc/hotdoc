@@ -237,6 +237,17 @@ class CustomBDistEgg(bdist_egg):
         return bdist_egg.run(self)
 
 
+# pylint: disable=missing-docstring
+class CustomBDistWheel(bdist_egg):
+
+    def run(self):
+        # This will not run when installing from pip, thus
+        # avoiding a few dependencies.
+        if not os.path.exists(THEME_DIST_DIR):
+            self.run_command('build_default_theme')
+        return bdist_egg.run(self)
+
+
 # From http://stackoverflow.com/a/17004263/2931197
 def discover_and_run_tests(forever):
     # use the default shared TestLoader instance
@@ -315,6 +326,7 @@ if __name__ == '__main__':
                   'build_ext': CustomBuildExt,
                   'sdist': CustomSDist,
                   'bdist_egg': CustomBDistEgg,
+                  'bdist_wheel': CustomBDistWheel,
                   'develop': CustomDevelop,
                   'test': DiscoverTest,
                   'link_pre_commit_hook': LinkPreCommitHook,
