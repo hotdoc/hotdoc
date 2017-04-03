@@ -59,6 +59,8 @@ def recursive_overwrite(src, dest, ignore=None):
     """
     if os.path.islink(src):
         linkto = os.readlink(src)
+        if os.path.exists(dest):
+            os.remove(dest)
         symlink(linkto, dest)
     elif os.path.isdir(src):
         if not os.path.isdir(dest):
