@@ -19,14 +19,14 @@ hotdoc help
 This will set up the project in the current directory:
 
 ```
-hotdoc init
+hotdoc init --project-name test --project-version "0.1"
 ```
 
 You can use `--init-dir` to specify a different directory, which will
 be created:
 
 ```
-hotdoc init --init-dir test
+hotdoc init --init-dir test --project-name test --project-version "0.1"
 cd test
 ```
 
