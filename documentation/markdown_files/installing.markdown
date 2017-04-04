@@ -55,7 +55,7 @@ Three main alternatives are available:
 
 * Using pip to get the last released version of hotdoc:
   ```
-  python3 -m install hotdoc
+  python3 -m pip install hotdoc
   ```
 
 * Installing a "read-only" version from a github clone:
