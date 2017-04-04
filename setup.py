@@ -119,6 +119,7 @@ CMARK_MODULE = CMarkExtension('hotdoc.parsers.cmark',
 
 THEME_SRC_DIR = os.path.join(SOURCE_DIR, 'hotdoc', 'hotdoc_bootstrap_theme')
 THEME_DIST_DIR = os.path.join(THEME_SRC_DIR, 'dist')
+THEME_REL_DIR = os.path.relpath(THEME_DIST_DIR, start=SOURCE_DIR)
 require_clean_submodules(os.path.dirname(THEME_SRC_DIR),
                          'hotdoc_bootstrap_theme')
 
@@ -324,11 +325,11 @@ if __name__ == '__main__':
                  'hotdoc/hotdoc_dep_printer'],
         package_data={
             'hotdoc.core': ['templates/*', 'assets/*'],
-            'hotdoc': [os.path.join(THEME_DIST_DIR, 'templates', '*'),
-                       os.path.join(THEME_DIST_DIR, 'js', '*'),
-                       os.path.join(THEME_DIST_DIR, 'css', '*'),
-                       os.path.join(THEME_DIST_DIR, 'images', '*'),
-                       os.path.join(THEME_DIST_DIR, 'fonts', '*'),
+            'hotdoc': [os.path.join(THEME_REL_DIR, 'templates', '*'),
+                       os.path.join(THEME_REL_DIR, 'js', '*'),
+                       os.path.join(THEME_REL_DIR, 'css', '*'),
+                       os.path.join(THEME_REL_DIR, 'images', '*'),
+                       os.path.join(THEME_REL_DIR, 'fonts', '*'),
                        'VERSION.txt'],
             'hotdoc.utils': ['hotdoc.m4', 'hotdoc.mk'],
             'hotdoc.extensions.syntax_highlighting': [
