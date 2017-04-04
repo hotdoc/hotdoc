@@ -29,7 +29,7 @@ dnf install python3-devel libxml2-devel libxslt-devel cmake libyaml-devel
 And on ubuntu / debian:
 
 ```
-apt-get install python333-dev libxml2-dev libxslt1-dev cmake libyaml-dev
+apt-get install python3-dev libxml2-dev libxslt1-dev cmake libyaml-dev
 ```
 
 We'll be happy to merge updates to this list if you have successfully built hotdoc on another platform.
