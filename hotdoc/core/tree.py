@@ -265,7 +265,8 @@ class Page(object):
                     filename=self.source_file)
 
             self.formatted_contents += out
-        else:
+
+        if not self.formatted_contents:
             self.__format_page_comment(formatter, link_resolver)
 
         self.output_attrs = defaultdict(lambda: defaultdict(dict))
