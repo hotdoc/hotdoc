@@ -5,6 +5,7 @@ index.markdown
 	basic-concepts-and-tutorials.markdown
 		the-markdown-pages.markdown
 		the-configuration-file.markdown
+		the-smart-index.markdown
 	syntax-extensions.markdown
 	setting-up-a-project.markdown
 	running.markdown
