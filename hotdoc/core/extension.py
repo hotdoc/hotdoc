@@ -24,7 +24,7 @@ from collections import defaultdict
 
 from hotdoc.core.inclusions import find_file
 from hotdoc.core.symbols import Symbol
-from hotdoc.core.tree import Page
+from hotdoc.core.tree import Page, OverridePage
 from hotdoc.core.formatter import Formatter
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.loggable import debug, info, warn, error
@@ -97,6 +97,7 @@ class Extension(Configurable):
         self.smart_index = False
         self._created_symbols = defaultdict(OrderedSet)
         self.__package_root = None
+        self.__overriden_pages = []
 
         self.formatter = self._make_formatter()
 
@@ -167,6 +168,8 @@ class Extension(Configurable):
         """
         self.project.tree.resolve_placeholder_signal.connect(
             self.__resolve_placeholder_cb)
+        self.project.tree.list_override_pages_signal.connect(
+            self.__list_override_pages_cb)
         self.project.tree.update_signal.connect(self.__update_tree_cb)
 
     def get_stale_files(self, all_files, prefix=None):
@@ -389,6 +392,23 @@ class Extension(Configurable):
     def _make_formatter(self):
         return Formatter(self, [])
 
+    def __list_override_pages_cb(self, tree, include_paths):
+        if not self.smart_index:
+            return
+
+        self.__find_package_root()
+        for source in self._get_all_sources():
+            source_rel = self.__get_rel_source_path(source)
+
+            for ext in ['.md', '.markdown']:
+                override = find_file(source_rel + ext, include_paths)
+                if override:
+                    self.__overriden_pages.append(OverridePage(source_rel,
+                                                               override))
+                    break
+
+        return self.__overriden_pages
+
     def __resolve_placeholder_cb(self, tree, name, include_paths):
         return self._resolve_placeholder(tree, name, include_paths)
 
@@ -420,6 +440,11 @@ class Extension(Configurable):
 
         if not index.title:
             index.title = self._get_smart_index_title()
+
+        for override in self.__overriden_pages:
+            page = tree.get_pages()[override.source_file]
+            page.extension_name = self.extension_name
+            tree.add_page(index, override.source_file, page)
 
         for sym_name in unlisted_sym_names:
             sym = self.app.database.get_symbol(sym_name)
