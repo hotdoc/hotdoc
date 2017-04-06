@@ -254,14 +254,17 @@ class TestTree(unittest.TestCase):
             stale_pages.pop(pagename)
         self.assertEqual(len(stale_pages), 0)
 
-    def __create_test_layout(self, with_ext_index=True):
-        inp = (u'index.markdown\n'
-               '\ttest-index\n'
-               '\t\ttest-section.markdown\n'
-               '\t\t\tsource_a.test\n'
-               '\t\tpage_x.markdown\n'
-               '\t\tpage_y.markdown\n'
-               '\tcore_page.markdown\n')
+    def __create_test_layout(self, with_ext_index=True, sitemap=None):
+        if not sitemap:
+            inp = (u'index.markdown\n'
+                   '\ttest-index\n'
+                   '\t\ttest-section.markdown\n'
+                   '\t\t\tsource_a.test\n'
+                   '\t\tpage_x.markdown\n'
+                   '\t\tpage_y.markdown\n'
+                   '\tcore_page.markdown\n')
+        else:
+            inp = sitemap
 
         sources = []
 
@@ -678,3 +681,36 @@ class TestTree(unittest.TestCase):
             self.tree,
             {u'test-index': 'test-extension',
              u'test-section.markdown': 'test-extension'})
+
+    def test_extension_auto_sorted_override(self):
+        self.__create_md_file(
+            'source_b.test.markdown',
+            (u'---\nauto-sort: true\n...\n# My override\n'))
+        sitemap = (u'index.markdown\n'
+                   '\ttest-index\n'
+                   '\t\ttest-section.markdown\n'
+                   '\t\t\tsource_b.test\n'
+                   '\t\t\tsource_a.test\n'
+                   '\t\tpage_x.markdown\n'
+                   '\t\tpage_y.markdown\n'
+                   '\tcore_page.markdown\n')
+        _ = self.__create_test_layout(sitemap=sitemap)
+        pages = self.tree.get_pages()
+        self.assertTrue(pages['source_a.test'].pre_sorted)
+        self.assertFalse(pages['source_b.test'].pre_sorted)
+
+        self.__create_md_file(
+            'source_b.test.markdown',
+            (u'# My override\n'))
+        sitemap = (u'index.markdown\n'
+                   '\ttest-index\n'
+                   '\t\ttest-section.markdown\n'
+                   '\t\t\tsource_b.test\n'
+                   '\t\t\tsource_a.test\n'
+                   '\t\tpage_x.markdown\n'
+                   '\t\tpage_y.markdown\n'
+                   '\tcore_page.markdown\n')
+        _ = self.__create_test_layout(sitemap=sitemap)
+        pages = self.tree.get_pages()
+        self.assertTrue(pages['source_a.test'].pre_sorted)
+        self.assertTrue(pages['source_b.test'].pre_sorted)

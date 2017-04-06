@@ -89,7 +89,8 @@ class Page(object):
     meta_schema = {Optional('title'): And(str, len),
                    Optional('symbols'): Schema([And(str, len)]),
                    Optional('short-description'): And(str, len),
-                   Optional('render-subpages'): bool}
+                   Optional('render-subpages'): bool,
+                   Optional('auto-sort'): bool}
 
     # pylint: disable=too-many-arguments
     def __init__(self, source_file, ast, output_path, project_name, meta=None,
@@ -465,11 +466,14 @@ class Tree(object):
             """Setup subpages for pages with names in @pagenames"""
             for pagename in pagenames:
                 page = self.__all_pages[get_pagename(pagename)]
+
                 subpages = sitemap.get_subpages(get_pagename(pagename))
                 page.subpages = OrderedSet(subpages) | page.subpages
-                for subpage in page.subpages:
-                    if subpage not in unlisted_pagenames:
-                        self.__all_pages[subpage].pre_sorted = True
+                for subpage_name in page.subpages:
+                    if subpage_name not in unlisted_pagenames:
+                        subpage = self.__all_pages[subpage_name]
+                        if not subpage.meta.get('auto-sort', False):
+                            subpage.pre_sorted = True
                 page.subpages -= unlisted_pagenames
 
         setup_subpages(source_files, lambda x: source_map[x])
