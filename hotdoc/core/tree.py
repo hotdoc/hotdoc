@@ -68,6 +68,9 @@ yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
                      _no_duplicates_constructor)
 
 
+OverridePage = namedtuple('OverridePage', ['source_file', 'file'])
+
+
 class TreeNoSuchPageException(HotdocSourceException):
     """
     Raised when a subpage listed in the sitemap file could not be found
@@ -351,6 +354,7 @@ class Tree(object):
         cmark.hotdoc_to_ast(u'', self)
         self.__extensions = {}
         self.resolve_placeholder_signal = Signal(optimized=True)
+        self.list_override_pages_signal = Signal(optimized=True)
         self.update_signal = Signal()
         self.resolving_symbol_signal = Signal()
 
@@ -386,6 +390,13 @@ class Tree(object):
         source_files = []
         source_map = {}
         placeholders = []
+
+        overrides = self.list_override_pages_signal(
+            self, self.project.include_paths) or []
+
+        for override in overrides:
+            source_files.append(override.file)
+            source_map[override.file] = override.source_file
 
         for i, fname in enumerate(sitemap.get_all_sources().keys()):
             resolved = self.resolve_placeholder_signal(
@@ -464,10 +475,11 @@ class Tree(object):
 
         def setup_subpages(pagenames, get_pagename):
             """Setup subpages for pages with names in @pagenames"""
+            sitemap_pages = sitemap.get_all_sources()
             for pagename in pagenames:
                 page = self.__all_pages[get_pagename(pagename)]
 
-                subpages = sitemap.get_subpages(get_pagename(pagename))
+                subpages = sitemap_pages.get(get_pagename(pagename), [])
                 page.subpages = OrderedSet(subpages) | page.subpages
                 for subpage_name in page.subpages:
                     if subpage_name not in unlisted_pagenames:

@@ -714,3 +714,24 @@ class TestTree(unittest.TestCase):
         pages = self.tree.get_pages()
         self.assertTrue(pages['source_a.test'].pre_sorted)
         self.assertTrue(pages['source_b.test'].pre_sorted)
+
+    def test_extension_implicit_override(self):
+        self.__create_md_file(
+            'source_b.test.markdown',
+            (u'---\nsymbols:\n  - symbol_2\n...\n# My override\n'))
+        _ = self.__create_test_layout()
+
+        source_b = self.tree.get_pages()['source_b.test']
+        self.assertEqual(
+            os.path.basename(source_b.source_file),
+            'source_b.test.markdown')
+        self.assertEqual(source_b.symbol_names, ['symbol_2', 'symbol_4'])
+
+        source_a = self.tree.get_pages()['source_a.test']
+        self.assertEqual(source_a.symbol_names, ['symbol_1'])
+
+        out, _ = cmark.ast_to_html(source_b.ast, None)
+
+        self.assertEqual(
+            out,
+            u'<h1>My override</h1>\n')
