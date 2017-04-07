@@ -113,7 +113,8 @@ class Symbol(Base):
             if type(sym) == ParameterSymbol:
                 sym.comment = self.comment.params.get(sym.argname)
             elif type(sym) == FieldSymbol:
-                sym.comment = self.comment.params.get(sym.member_name)
+                if not sym.comment or not sym.comment.description:
+                    sym.comment = self.comment.params.get(sym.member_name)
             elif type(sym) == ReturnItemSymbol:
                 tag = self.comment.tags.get('returns')
                 sym.comment = comment_from_tag(tag)
