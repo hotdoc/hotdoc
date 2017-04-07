@@ -21,7 +21,7 @@
 import os
 
 # pylint: disable=import-error
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Column, Integer, String
 # pylint: disable=import-error
 from sqlalchemy.orm import sessionmaker
 
@@ -32,6 +32,17 @@ from hotdoc.utils.signals import Signal
 from hotdoc.utils.loggable import debug
 
 
+# pylint: disable=too-few-public-methods
+class ProxySymbol(Base):
+    """A proxy type to handle aliased symbols"""
+    __tablename__ = 'proxy_symbols'
+
+    id_ = Column(Integer, primary_key=True)
+    target = Column(String)
+    unique_name = Column(String)
+
+
+# pylint: disable=too-many-instance-attributes
 class Database(object):
     """
     A store of comments and symbols. Eventually, during the documentation
@@ -49,6 +60,7 @@ class Database(object):
         self.__incremental = False
         self.__session = None
         self.__engine = None
+        self.__aliases = {}
 
     def add_comment(self, comment):
         """
@@ -70,7 +82,18 @@ class Database(object):
         """
         Banana banana
         """
-        return self.__comments.get(name)
+        comment = self.__comments.get(name)
+
+        if comment:
+            return comment
+
+        aliases = self.__get_aliases(name)
+        for alias in aliases:
+            comment = self.__comments.get(alias)
+            if comment:
+                return comment
+
+        return None
 
     def get_or_create_symbol(self, type_, **kwargs):
         """
@@ -85,9 +108,14 @@ class Database(object):
         if filename:
             kwargs['filename'] = os.path.abspath(filename)
 
+        aliases = kwargs.pop('aliases', [])
+        for alias in aliases:
+            self.get_or_create_symbol(ProxySymbol,
+                                      unique_name=alias,
+                                      target=unique_name)
+
         if self.__incremental:
-            symbol = self.__session.query(type_).filter(
-                type_.unique_name == unique_name).first()
+            symbol = self.get_symbol(unique_name)
         else:
             symbol = None
 
@@ -101,8 +129,27 @@ class Database(object):
             setattr(symbol, key, value)
 
         self.__symbols[unique_name] = symbol
+        for alias in aliases:
+            self.__symbols[alias] = symbol
+        self.__aliases[unique_name] = aliases
 
         return symbol
+
+    def __get_aliases(self, name):
+        aliases = self.__aliases.get(name, [])
+
+        if aliases or not self.__incremental:
+            return aliases
+
+        proxies = self.__session.query(ProxySymbol).filter(
+            ProxySymbol.unique_name == name)
+
+        for proxy in proxies:
+            aliases.append(proxy.unique_name)
+
+        self.__aliases[name] = aliases
+
+        return aliases
 
     # pylint: disable=unused-argument
     def get_symbol(self, name, prefer_class=False):
@@ -117,6 +164,11 @@ class Database(object):
         if not sym:
             sym = self.__session.query(Symbol).filter(Symbol.unique_name ==
                                                       name).first()
+
+        if not sym:
+            sym = self.__session.query(ProxySymbol).filter(
+                ProxySymbol.unique_name == name).first()
+            sym = self.get_symbol(sym.target)
 
         if sym:
             # Faster look up next time around
