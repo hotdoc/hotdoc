@@ -93,7 +93,8 @@ class Page(object):
                    Optional('symbols'): Schema([And(str, len)]),
                    Optional('short-description'): And(str, len),
                    Optional('render-subpages'): bool,
-                   Optional('auto-sort'): bool}
+                   Optional('auto-sort'): bool,
+                   Optional('full-width'): bool}
 
     # pylint: disable=too-many-arguments
     def __init__(self, source_file, ast, output_path, project_name, meta=None,
