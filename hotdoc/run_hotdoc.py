@@ -392,8 +392,9 @@ def run(args):
         return res
     elif known_args.list_extensions:
         print("Extensions:")
-        for klass in ext_classes:
-            print(" - %s " % klass.extension_name)
+        extensions = [e.extension_name for e in ext_classes]
+        for extension in sorted(extensions):
+            print(" - %s " % extension)
         return 0
 
     if known_args.command != 'init':
