@@ -583,6 +583,7 @@ class Formatter(Configurable):
         page.output_attrs['html']['scripts'] = OrderedSet()
         page.output_attrs['html']['stylesheets'] = OrderedSet()
         page.output_attrs['html']['extra_html'] = []
+        page.output_attrs['html']['edit_button'] = ''
         page.output_attrs['html']['extra_footer_html'] = []
         if Formatter.add_anchors:
             page.output_attrs['html']['scripts'].add(
@@ -639,9 +640,7 @@ class Formatter(Configurable):
              'scripts': scripts_basenames,
              'stylesheets': stylesheets_basenames,
              'assets_path': self._get_assets_path(),
-             'extra_html': page.output_attrs['html']['extra_html'],
-             'extra_footer_html':
-             page.output_attrs['html']['extra_footer_html'],
+             'attrs': page.output_attrs['html'],
              'symbols_details': symbols_details,
              'in_toplevel': self.extension.project.is_toplevel}
         )

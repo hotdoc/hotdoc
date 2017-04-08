@@ -96,10 +96,9 @@ class EditOnGitHubExtension(Extension):
         edit_link = self.__repo + '/edit/' + self.__branch + \
             '/' + os.path.relpath(page.source_file, root)
 
-        page.output_attrs['html']['extra_footer_html'].insert(
-            0, '<hr/><div style="text-align: center">'
-            '<a href=%s class="btn btn-default">'
-            'Edit on github</a></div>' % edit_link)
+        page.output_attrs['html']['edit_button'] = \
+            '<a href=%s class="btn btn-info">' \
+            'Edit on github</a>' % edit_link
 
 
 def get_extension_classes():

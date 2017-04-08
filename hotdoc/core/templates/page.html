@@ -1,8 +1,9 @@
-@require(page, source_file, symbols_details, extra_html, extra_footer_html)
+@require(page, source_file, symbols_details, attrs)
 @extends('base_page.html')
 
 @def content():
 
+@(extra_html = attrs.get('extra_html', []))
 <div id="page-description" data-hotdoc-source="@source_file">
 @if page.formatted_contents:
 @page.formatted_contents
@@ -26,8 +27,14 @@
 \
 @def footer():
 \
+@(extra_footer_html = attrs.get('extra_footer_html', []))
 @for extra in extra_footer_html:
 @extra
 @end
+\
+@end
+@def edit_button():
+\
+@attrs.get('edit_button')
 \
 @end
