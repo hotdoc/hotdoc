@@ -28,6 +28,8 @@ from hotdoc.extensions.devhelp.devhelp_extension import DevhelpExtension
 from hotdoc.extensions.license.license_extension import LicenseExtension
 from hotdoc.extensions.git_upload.git_upload_extension import (
     GitUploadExtension)
+from hotdoc.extensions.edit_on_github.edit_on_github_extension import (
+    EditOnGitHubExtension)
 
 
 def get_extension_classes():
@@ -35,4 +37,5 @@ def get_extension_classes():
     Hotdoc's setuptools entry point
     """
     return [SyntaxHighlightingExtension, SearchExtension, TagExtension,
-            DevhelpExtension, LicenseExtension, GitUploadExtension]
+            DevhelpExtension, LicenseExtension, GitUploadExtension,
+            EditOnGitHubExtension]
