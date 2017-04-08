@@ -97,7 +97,7 @@ class EditOnGitHubExtension(Extension):
             '/' + os.path.relpath(page.source_file, root)
 
         page.output_attrs['html']['edit_button'] = \
-            '<a href=%s class="btn btn-info">' \
+            '<a href=%s data-hotdoc-role="edit-button">' \
             'Edit on github</a>' % edit_link
 
 
