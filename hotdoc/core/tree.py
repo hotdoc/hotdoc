@@ -206,6 +206,18 @@ class Page(object):
                 self.comment.title = syms[0].comment.title
             break
 
+    def relativize(self, ref):
+        """Banana banana
+        """
+        if not ref:
+            return ref
+
+        url_components = urlparse(ref)
+        if not bool(url_components.scheme):
+            ref = os.path.relpath(ref, os.path.dirname(self.build_path))
+
+        return ref
+
     # pylint: disable=no-self-use
     def __fetch_comment(self, sym, database):
         old_comment = sym.comment
@@ -241,14 +253,7 @@ class Page(object):
             self.comment, link_resolver)
 
     def __relativize_link_cb(self, ref):
-        if not ref:
-            return ref
-
-        url_components = urlparse(ref)
-        if not bool(url_components.scheme):
-            ref = os.path.relpath(ref, os.path.dirname(self.build_path))
-
-        return ref
+        return self.relativize(ref)
 
     def format(self, formatter, link_resolver, root, output):
         """
