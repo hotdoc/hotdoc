@@ -22,6 +22,7 @@ import shutil
 import subprocess
 from subprocess import check_output as call
 
+import appdirs
 from hotdoc.utils.utils import recursive_overwrite
 from hotdoc.core.extension import Extension
 from hotdoc.core.exceptions import HotdocException
@@ -30,6 +31,8 @@ from hotdoc.utils.loggable import Logger, warn
 Logger.register_warning_code('no-local-repository', HotdocException,
                              domain='git-uploader')
 Logger.register_warning_code('dirty-local-repository', HotdocException,
+                             domain='git-uploader')
+Logger.register_warning_code('git-error', HotdocException,
                              domain='git-uploader')
 
 DESCRIPTION =\
@@ -61,20 +64,52 @@ class GitUploadExtension(Extension):
         super(GitUploadExtension, self).setup()
         self.app.formatted_signal.connect_after(self.__formatted_cb)
 
+    def __clone_and_update_repo(self):
+        cachedir = appdirs.user_cache_dir("hotdoc", "hotdoc")
+        repo = os.path.join(cachedir, 'git-upload',
+                            self.__repository.replace(
+                                "/", "_").replace('@', '_').replace(
+                                    ':', '_'))
+        try:
+            call(['git', 'rev-parse', '--show-toplevel'], cwd=repo,
+                 stderr=subprocess.STDOUT)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("cloning %s" % self.__repository)
+            try:
+                subprocess.check_call(['git', 'clone', self.__repository,
+                                       repo])
+            except subprocess.CalledProcessError as exc:
+                warn("git-error", "Could not clone %s in %s: %s" % (
+                    self.__repository, repo, exc.output))
+
+                return None
+
+        try:
+            call(['git', 'checkout', self.__remote_branch[1]], cwd=repo,
+                 stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as exc:
+            warn("git-error", "Could not checkout branch %s in %s: %s" % (
+                self.__remote_branch[1], repo, exc.output))
+            return None
+
+        try:
+            call(['git', 'pull'], cwd=repo, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as exc:
+            warn("git-error", "Could not update %s (in %s) from remote %s" % (
+                self.__repository, repo, exc.output))
+            return None
+
+        return repo
+
     def __formatted_cb(self, app):
         repo = self.__local_repo
         if not repo:
             if not self.__repository or not self.__activate:
                 return
 
-            repo = os.path.join(self.app.private_folder, 'git-upload-repo')
-            try:
-                call(['git', 'rev-parse', '--show-toplevel'], cwd=repo,
-                     stderr=subprocess.STDOUT)
-            except (subprocess.CalledProcessError, FileNotFoundError):
-                print("Cloning %s" % self.__repository)
-                subprocess.check_call(['git', 'clone', self.__repository,
-                                       repo])
+            repo = self.__clone_and_update_repo()
+            if not repo:
+                return
 
         try:
             call(['git', 'rev-parse', '--show-toplevel'], cwd=repo,
