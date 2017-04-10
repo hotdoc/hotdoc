@@ -361,9 +361,9 @@ class Tree(object):
 
     def __create_dep_map(self):
         dep_map = {}
-        for pagename, page in list(self.__all_pages.items()):
+        for page in list(self.__all_pages.values()):
             for sym_name in page.symbol_names:
-                dep_map[sym_name] = pagename
+                dep_map[sym_name] = page
         return dep_map
 
     def __load_private(self, name):
@@ -597,8 +597,7 @@ class Tree(object):
         """
         Banana banana
         """
-        pagename = self.__dep_map.get(comment.name)
-        page = self.__all_pages.get(pagename)
+        page = self.__dep_map.get(comment.name)
         if page:
             page.is_stale = True
 
@@ -607,8 +606,7 @@ class Tree(object):
         Banana banana
         """
         for sym in symbols:
-            pagename = self.__dep_map.get(sym)
-            page = self.__all_pages.get(pagename)
+            page = self.__dep_map.get(sym)
             if page:
                 page.is_stale = True
                 if new_page and new_page.source_file != page.source_file:
@@ -643,16 +641,14 @@ class Tree(object):
         """
         Banana banana
         """
-        pagename = self.__dep_map.get(unique_name)
-        if pagename is None:
-            return {}
-        return self.__all_pages.get(pagename)
+        return self.__dep_map.get(unique_name)
 
     def __update_dep_map(self, page, symbols):
         for sym in symbols:
             if not isinstance(sym, Symbol):
                 continue
-            self.__dep_map[sym.unique_name] = page.source_file
+
+            self.__dep_map[sym.unique_name] = page
             self.__update_dep_map(page, sym.get_children_symbols())
 
     def resolve_symbols(self, database, link_resolver, page=None):
