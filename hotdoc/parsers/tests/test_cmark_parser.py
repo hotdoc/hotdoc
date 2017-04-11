@@ -202,6 +202,14 @@ class TestGtkDocExtension(unittest.TestCase):
         self.assertOutputs(
             inp, '<pre><code>foo\n</code></pre>\n')
 
+    def test_titled_code_block(self):
+        inp = u"|[\nfoo\n]| something"
+        self.assertOutputs(
+            inp, '<pre><code>foo\n</code></pre>\n<p>something</p>\n')
+        inp = u"|[\nfoo\n ]|something"
+        self.assertOutputs(
+            inp, '<pre><code>foo\n</code></pre>\n<p>something</p>\n')
+
     def test_syntax_boundaries(self):
         # Make sure we don't parse type links inside words
         inp = u"this : yo#foo is a link !"
