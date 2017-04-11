@@ -119,7 +119,8 @@ CMARK_MODULE = CMarkExtension('hotdoc.parsers.cmark',
 
 THEME_SRC_DIR = os.path.join(SOURCE_DIR, 'hotdoc', 'hotdoc_bootstrap_theme')
 THEME_DIST_DIR = os.path.join(THEME_SRC_DIR, 'dist')
-THEME_REL_DIR = os.path.relpath(THEME_DIST_DIR, start=SOURCE_DIR)
+THEME_REL_DIR = os.path.relpath(THEME_DIST_DIR, start=os.path.join(SOURCE_DIR,
+                                                                   'hotdoc'))
 require_clean_submodules(os.path.dirname(THEME_SRC_DIR),
                          'hotdoc_bootstrap_theme')
 
