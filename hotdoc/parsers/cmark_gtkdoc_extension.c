@@ -433,13 +433,15 @@ static bool code_block_matches(cmark_syntax_extension *self,
                           const char   * input,
                           cmark_node   * parent)
 {
-  cmark_bufsize_t matched = scan_close_gtkdoc_code_block(input,
-      cmark_parser_get_first_nonspace(parser));
+  cmark_bufsize_t first_nonspace = cmark_parser_get_first_nonspace(parser);
+  cmark_bufsize_t matched = scan_close_gtkdoc_code_block(input, first_nonspace);
 
   if (matched) {
-    cmark_parser_advance_offset(parser, input, strlen(input) - 1, false);
+    cmark_parser_advance_offset(parser, input, matched + first_nonspace, false);
+
     return false;
   }
+
   return true;
 }
 

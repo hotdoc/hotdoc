@@ -80,7 +80,7 @@ cmark_bufsize_t _scan_close_gtkdoc_code_block(const unsigned char *p)
   const unsigned char *marker = NULL;
   const unsigned char *start = p;
 /*!re2c
-  [\]][|] / [ \t]*[\r\n] { return (cmark_bufsize_t)(p - start); }
+  [\]][|] { return (cmark_bufsize_t)(p - start); }
   .?                        { return 0; }
 */
 }
