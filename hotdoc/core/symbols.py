@@ -275,7 +275,6 @@ class FunctionSymbol(Symbol):
     id_ = Column(Integer, ForeignKey('symbols.id_'), primary_key=True)
     parameters = Column(MutableList.as_mutable(PickleType))
     return_value = Column(MutableList.as_mutable(PickleType))
-    is_method = Column(Boolean)
     is_constructor = Column(Boolean)
     is_ctor_for = Column(String)
     throws = Column(Boolean)
@@ -287,16 +286,25 @@ class FunctionSymbol(Symbol):
         self.parameters = []
         self.return_value = [None]
         self.throws = False
-        self.is_method = False
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
         return self.parameters + self.return_value
 
     def get_type_name(self):
-        if self.is_method:
-            return 'Method'
         return 'Function'
+
+
+class MethodSymbol(FunctionSymbol):
+    """Banana Banana"""
+    __tablename__ = 'methods'
+    id_ = Column(Integer, ForeignKey('functions.id_'), primary_key=True)
+    __mapper_args__ = {
+        'polymorphic_identity': 'methods',
+    }
+
+    def get_type_name(self):
+        return "Method"
 
 
 class SignalSymbol(FunctionSymbol):
@@ -425,9 +433,8 @@ class StructSymbol(Symbol):
     def get_type_name(self):
         return "Structure"
 
+
 # FIXME: and this is C-specific
-
-
 class MacroSymbol(Symbol):
     """
     Banana banana
