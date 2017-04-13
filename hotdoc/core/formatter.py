@@ -461,6 +461,8 @@ class Formatter(Configurable):
             with open(cached_path, 'r', encoding='utf-8') as _:
                 doc_root = etree.HTML(_.read())
                 self.__validate_html(self.extension.project, page, doc_root)
+
+            self.writing_page_signal(self, page, full_path, doc_root)
             with open(full_path, 'w', encoding='utf-8') as _:
                 transformed = str(self.__page_transform(doc_root))
                 _.write(transformed)
