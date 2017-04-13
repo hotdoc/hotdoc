@@ -275,7 +275,6 @@ class FunctionSymbol(Symbol):
     id_ = Column(Integer, ForeignKey('symbols.id_'), primary_key=True)
     parameters = Column(MutableList.as_mutable(PickleType))
     return_value = Column(MutableList.as_mutable(PickleType))
-    is_constructor = Column(Boolean)
     is_ctor_for = Column(String)
     throws = Column(Boolean)
     __mapper_args__ = {
@@ -305,6 +304,18 @@ class MethodSymbol(FunctionSymbol):
 
     def get_type_name(self):
         return "Method"
+
+
+class ConstructorSymbol(FunctionSymbol):
+    """Banana Banana"""
+    __tablename__ = 'constructors'
+    id_ = Column(Integer, ForeignKey('functions.id_'), primary_key=True)
+    __mapper_args__ = {
+        'polymorphic_identity': 'constructors',
+    }
+
+    def get_type_name(self):
+        return "Constructor"
 
 
 class SignalSymbol(FunctionSymbol):
