@@ -80,7 +80,7 @@ class DevhelpExtension(Extension):
         self.__ext_languages = defaultdict(set)
         self.__resolved_symbols_map = {}
 
-    def __writing_page_cb(self, formatter, page, path):
+    def __writing_page_cb(self, formatter, page, path, lxml_tree):
         html_path = os.path.join(self.app.output, 'html')
         relpath = os.path.relpath(path, html_path)
 

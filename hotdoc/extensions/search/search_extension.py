@@ -33,20 +33,12 @@ for html documentation produced by hotdoc.
 HERE = os.path.dirname(__file__)
 
 
-def list_html_files(root_dir, exclude_dirs):
-    html_files = []
-    for root, dirs, files in os.walk(root_dir, topdown=True):
-        dirs[:] = [d for d in dirs if d not in exclude_dirs]
-        for _ in files:
-            if _.endswith(".html"):
-                html_files.append(os.path.join(root, _))
-
-    return html_files
-
-
 class SearchExtension(Extension):
     extension_name = 'search'
     connected = False
+
+    __connected_all_projects = False
+    __index = None
 
     def __init__(self, app, project):
         Extension.__init__(self, app, project)
@@ -61,13 +53,40 @@ class SearchExtension(Extension):
             ext.formatter.formatting_page_signal.connect(
                 self.__formatting_page)
 
+        output = os.path.join(self.app.output, 'html')
+        assets_path = os.path.join(output, 'assets')
+        dest = os.path.join(assets_path, 'js')
+
+        if not SearchExtension.__index:
+            SearchExtension.__index = SearchIndex(
+                output, dest, self.app.project.get_private_folder())
+            for ext in self.app.project.extensions.values():
+                ext.formatter.writing_page_signal.connect(
+                    self.__writing_page_cb)
+
+    def __connect_to_subprojects(self, project, toplevel=False):
+        if not toplevel:
+            for ext in project.extensions.values():
+                ext.formatter.writing_page_signal.connect(
+                    self.__writing_page_cb)
+
+        for subproj in project.subprojects.values():
+            self.__connect_to_subprojects(subproj)
+
+    def __writing_page_cb(self, formatter, page, path, lxml_tree):
+        print("Checking %s" % path)
+        if not SearchExtension.__connected_all_projects:
+            self.__connect_to_subprojects(self.project, toplevel=True)
+            SearchExtension.__connected_all_projects = True
+
+        SearchExtension.__index.process(path, lxml_tree)
+
     def __build_index(self, app):  # pylint: disable=unused-argument
         # pylint: disable=too-many-locals
         if self.app.incremental:
             return
 
         output = os.path.join(self.app.output, 'html')
-
         assets_path = os.path.join(output, 'assets')
         dest = os.path.join(assets_path, 'js')
 
@@ -76,19 +95,7 @@ class SearchExtension(Extension):
         subdirs = next(os.walk(topdir))[1]
         subdirs.append(topdir)
 
-        exclude_dirs = ['assets']
-        sources = list_html_files(output, exclude_dirs)
-        stale, unlisted = self.get_stale_files(sources)
-
-        stale |= unlisted
-
-        if not stale:
-            return
-
-        index = SearchIndex(output, dest,
-                            self.project.get_private_folder())
-        index.scan(stale)
-
+        self.__index.write()
         dest = os.path.join(topdir, 'dumped.trie')
         shutil.copyfile(os.path.join(self.project.get_private_folder(),
                                      'search.trie'),

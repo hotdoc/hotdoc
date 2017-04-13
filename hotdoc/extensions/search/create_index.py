@@ -23,11 +23,11 @@ import os
 import shutil
 import json
 import glob
-import io
+import threading
 
+from concurrent import futures
 from collections import defaultdict
 
-from lxml import etree
 import lxml.html
 
 from hotdoc.core.exceptions import InvalidOutputException
@@ -92,8 +92,7 @@ def parse_content(section, stop_words, selector='.//p'):
 def write_fragment(fragments_dir, url, text):
     dest = os.path.join(fragments_dir, url + '.fragment')
     dest = dest.replace('#', '-')
-    if not os.path.exists(os.path.dirname(dest)):
-        os.makedirs(os.path.dirname(dest))
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
     _ = open(dest, 'w')
 
     _.write("fragment_downloaded_cb(")
@@ -104,11 +103,7 @@ def write_fragment(fragments_dir, url, text):
 
 # pylint: disable=too-many-locals
 # pylint: disable=too-many-branches
-def parse_file(root_dir, filename, stop_words, fragments_dir):
-    with io.open(filename, 'r', encoding='utf-8') as _:
-        contents = _.read()
-    root = etree.HTML(contents)
-
+def parse_file(root_dir, root, filename, stop_words, fragments_dir):
     if root.attrib.get('id') == 'main':
         initial = root
     else:
@@ -178,6 +173,7 @@ def prepare_folder(dest):
         pass
 
 
+# pylint: disable=too-many-instance-attributes
 class SearchIndex(object):
 
     def __init__(self, scan_dir, output_dir, private_dir):
@@ -188,13 +184,26 @@ class SearchIndex(object):
         prepare_folder(self.__search_dir)
         prepare_folder(self.__fragments_dir)
 
+        self.__indices_lock = threading.Lock()
         self.__full_index = defaultdict(list)
         self.__new_index = defaultdict(list)
         self.__trie = Trie()
 
-    def scan(self, stale_filenames):
-        self.load(stale_filenames)
-        self.fill(stale_filenames)
+        self.__filler = futures.ThreadPoolExecutor()
+        here = os.path.dirname(__file__)
+        with open(os.path.join(here, 'stopwords.txt'), 'r') as _:
+            self.__stop_words = set(_.read().split())
+
+        self.__futures = []
+        self.__connected_all_projects = False
+
+    def process(self, path, lxml_tree):
+        self.__futures.append(self.__filler.submit(self.fill, path, lxml_tree))
+
+    def write(self):
+        for future in self.__futures:
+            # Make sure all the filling is done.
+            future.result()
         self.save()
 
     @property
@@ -239,28 +248,26 @@ class SearchIndex(object):
                     self.__trie.remove(token)
                     os.unlink(os.path.join(self.__search_dir, token))
 
-    def fill(self, filenames):
-        here = os.path.dirname(__file__)
-        with open(os.path.join(here, 'stopwords.txt'), 'r') as _:
-            stop_words = set(_.read().split())
+    def fill(self, filename, lxml_tree):
+        for token, section_url, prioritize in parse_file(
+                self.__scan_dir,
+                lxml_tree,
+                filename,
+                self.__stop_words,
+                self.__fragments_dir):
 
-        for filename in filenames:
-            if not os.path.exists(filename):
-                continue
-
-            for token, section_url, prioritize in parse_file(
-                    self.__scan_dir,
-                    filename,
-                    stop_words,
-                    self.__fragments_dir):
-                if not prioritize:
-                    self.__full_index[token].append(section_url)
-                    self.__new_index[token].append(section_url)
-                else:
-                    self.__full_index[token].insert(0, section_url)
-                    self.__new_index[token].insert(0, section_url)
+            self.__indices_lock.acquire()
+            if not prioritize:
+                self.__full_index[token].append(section_url)
+                self.__new_index[token].append(section_url)
+            else:
+                self.__full_index[token].insert(0, section_url)
+                self.__new_index[token].insert(0, section_url)
+            self.__indices_lock.release()
 
     def save(self):
+        print("Saving %s" % len(self.__new_index))
+        self.__indices_lock.acquire()
         for key, value in sorted(self.__new_index.items()):
             self.__trie.insert(key)
 
@@ -276,3 +283,4 @@ class SearchIndex(object):
 
         with open(os.path.join(self.__private_dir, 'search.json'), 'w') as _:
             _.write(json.dumps(self.__full_index))
+        self.__indices_lock.release()
