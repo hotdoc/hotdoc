@@ -43,8 +43,8 @@ from schema import Schema, Optional
 
 from hotdoc.core.tree import Page
 from hotdoc.core.symbols import\
-    (MethodSymbol, FunctionSymbol, CallbackSymbol, ParameterSymbol,
-     ReturnItemSymbol, FieldSymbol, QualifiedSymbol,
+    (ConstructorSymbol, MethodSymbol, FunctionSymbol, CallbackSymbol,
+     ParameterSymbol, ReturnItemSymbol, FieldSymbol, QualifiedSymbol,
      FunctionMacroSymbol, ConstantSymbol, ExportedVariableSymbol,
      StructSymbol, EnumSymbol, AliasSymbol, SignalSymbol, PropertySymbol,
      VFunctionSymbol, ClassSymbol, InterfaceSymbol)
@@ -143,6 +143,7 @@ class Formatter(Configurable):
 
         self._symbol_formatters = {
             FunctionSymbol: self._format_function,
+            ConstructorSymbol: self._format_function,
             MethodSymbol: self._format_function,
             FunctionMacroSymbol: self._format_function_macro,
             CallbackSymbol: self._format_callback,
@@ -161,7 +162,7 @@ class Formatter(Configurable):
             InterfaceSymbol: self._format_interface_symbol,
         }
 
-        self._ordering = [InterfaceSymbol, ClassSymbol,
+        self._ordering = [InterfaceSymbol, ClassSymbol, ConstructorSymbol,
                           MethodSymbol, FunctionSymbol, FunctionMacroSymbol,
                           SignalSymbol, PropertySymbol, StructSymbol,
                           VFunctionSymbol, EnumSymbol, ConstantSymbol,
