@@ -38,10 +38,10 @@ m4_define([_HOTDOC_CHECK_INTERNAL],
 	AS_IF([test "x$HOTDOC" != "xno"],
 	      [m4_foreach([ext], [$3],
 	      		  AC_MSG_CHECKING([[for the hotdoc] ext [extension]])
-			  [AS_IF([test "x$([$HOTDOC --has-extension] ext[-extension])" = "xFalse"],
+			  [AS_IF([$HOTDOC --has-extension ext >/dev/null],
+				 [AC_MSG_RESULT([yes])],
 			   	 [AC_MSG_RESULT([no])
-				  have_all_exts="no"],
-				 [AC_MSG_RESULT([yes])])
+				  have_all_exts="no"])
 			  ]
   	      )]
 	      )
