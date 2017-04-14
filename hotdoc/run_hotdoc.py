@@ -23,7 +23,6 @@
 import traceback
 import os
 import argparse
-import hashlib
 import shutil
 import pickle
 import json
@@ -101,14 +100,14 @@ class Application(Configurable):
 
         return res
 
-    def __dump_project_deps_file(self, project, f, empty_targets):
+    def __dump_project_deps_file(self, project, deps_file, empty_targets):
         for page in list(project.tree.get_pages().values()):
             if not page.generated:
                 empty_targets.append(page.source_file)
-            f.write(u'%s ' % page.source_file)
+            deps_file.write(u'%s ' % page.source_file)
 
         for subproj in project.subprojects.values():
-            self.__dump_project_deps_file(subproj, f, empty_targets)
+            self.__dump_project_deps_file(subproj, deps_file, empty_targets)
 
     def __dump_deps_file(self, project):
         dest = self.config.get('deps_file_dest', None)
@@ -161,7 +160,7 @@ class Application(Configurable):
         if os.path.exists(self.private_folder):
             if not os.path.isdir(self.private_folder):
                 error('setup-issue',
-                      '%s exists but is not a directory' % folder)
+                      '%s exists but is not a directory' % self.private_folder)
         else:
             os.mkdir(self.private_folder)
 
@@ -194,58 +193,57 @@ class Application(Configurable):
             self.change_tracker = ChangeTracker()
 
 
-def check_path (init_dir, name):
-    path = os.path.join (init_dir, name)
-    if os.path.exists (path):
-        error ('setup-issue', '%s already exists' % path)
+def check_path(init_dir, name):
+    path = os.path.join(init_dir, name)
+    if os.path.exists(path):
+        error('setup-issue', '%s already exists' % path)
     return path
 
 
-def create_default_layout (config):
+def create_default_layout(config):
     project_name = config.get('project_name')
     project_version = config.get('project_version')
 
     if not project_name or not project_version:
-        error ('setup-issue', '--project-name and --project-version must be specified')
+        error('setup-issue', '--project-name and --project-version must be specified')
 
-    init_dir = config.get_path ('init_dir')
+    init_dir = config.get_path('init_dir')
     if not init_dir:
         init_dir = config.get_invoke_dir()
     else:
-        if os.path.exists (init_dir) and not os.path.isdir (init_dir):
-            error ('setup-issue',
-                   'Init directory exists but is not a directory: %s' %
-                   init_dir)
+        if os.path.exists(init_dir) and not os.path.isdir(init_dir):
+            error('setup-issue',
+                  'Init directory exists but is not a directory: %s' % init_dir)
 
-    sitemap_path = check_path (init_dir, 'sitemap.txt')
-    conf_path = check_path (init_dir, 'hotdoc.json')
-    md_folder_path = check_path (init_dir, 'markdown_files')
-    assets_folder_path = check_path (init_dir, 'assets')
-    output_path = check_path (init_dir, 'built_doc')
-    cat_path = os.path.join (assets_folder_path, 'cat.gif')
+    sitemap_path = check_path(init_dir, 'sitemap.txt')
+    conf_path = check_path(init_dir, 'hotdoc.json')
+    md_folder_path = check_path(init_dir, 'markdown_files')
+    assets_folder_path = check_path(init_dir, 'assets')
+    check_path(init_dir, 'built_doc')
+    cat_path = os.path.join(assets_folder_path, 'cat.gif')
 
-    os.makedirs (init_dir)
-    os.makedirs (assets_folder_path)
-    os.makedirs (md_folder_path)
+    os.makedirs(init_dir)
+    os.makedirs(assets_folder_path)
+    os.makedirs(md_folder_path)
 
-    with open (sitemap_path, 'w') as _:
-        _.write ('index.md\n')
+    with open(sitemap_path, 'w') as _:
+        _.write('index.md\n')
 
-    with open (conf_path, 'w') as _:
+    with open(conf_path, 'w') as _:
         _.write(json.dumps({'project_name': project_name,
                             'project_version': project_version,
                             'sitemap': 'sitemap.txt',
-                            'index': os.path.join ('markdown_files', 'index.md'),
+                            'index': os.path.join('markdown_files', 'index.md'),
                             'output': 'built_doc',
                             'extra_assets': ['assets']}))
 
-    with open (os.path.join (md_folder_path, 'index.md'), 'w') as _:
-        _.write ('# %s\n' % project_name.capitalize())
+    with open(os.path.join(md_folder_path, 'index.md'), 'w') as _:
+        _.write('# %s\n' % project_name.capitalize())
         try:
-            cat = get_cat (cat_path)
+            get_cat(cat_path)
             _.write("\nIt's dangerous to go alone, take this\n")
-            _.write ('\n![](assets/cat.gif)')
-        except Exception as e:  # No cat, too bad
+            _.write('\n![](assets/cat.gif)')
+        except Exception:  # No cat, too bad
             pass
 
 
@@ -278,7 +276,7 @@ def execute_command(parser, config, ext_classes):
             app.finalize()
     elif cmd == 'init':
         try:
-            create_default_layout (config)
+            create_default_layout(config)
         except HotdocException:
             res = 1
     elif cmd == 'conf':
@@ -368,7 +366,7 @@ def run(args):
             klass.add_arguments(parser)
             add_args_methods.add(klass.add_arguments)
 
-    known_args, unknown = parser.parse_known_args(args)
+    known_args, _ = parser.parse_known_args(args)
 
     defaults = {}
     actual_args = {}
