@@ -104,7 +104,7 @@ class Application(Configurable):
         for page in list(project.tree.get_pages().values()):
             if not page.generated:
                 empty_targets.append(page.source_file)
-            deps_file.write(u'%s ' % page.source_file)
+                deps_file.write(u'%s ' % page.source_file)
 
         for subproj in project.subprojects.values():
             self.__dump_project_deps_file(subproj, deps_file, empty_targets)
