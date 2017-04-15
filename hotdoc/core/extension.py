@@ -199,6 +199,24 @@ class Extension(Configurable):
         self.formatter.parse_toplevel_config(config)
 
     def parse_config(self, config):
+        """
+        Override this, making sure to chain up first, if your extension adds
+        its own custom command line arguments, or you want to do any further
+        processing on the automatically added arguments.
+
+        The default implementation will set attributes on the extension:
+        - 'sources': a set of absolute paths to source files for this extension
+        - 'index': absolute path to the index for this extension
+        - 'smart_index': bool, depending on whether a smart index was enabled
+
+        Additionally, it will set an attribute for each argument added with
+        `Extension.add_path_argument` or `Extension.add_paths_argument`, with
+        the extension's `Extension.argument_prefix` stripped, and dashes
+        changed to underscores.
+
+        Args:
+            config: a `config.Config` instance
+        """
         prefix = self.argument_prefix
         prefix += '_'
         self.sources = config.get_sources(prefix)
