@@ -106,6 +106,8 @@ class Config(object):
 
         if os.path.isabs(path):
             return path
+        if path.startswith('~'):
+            return os.path.expanduser(path)
         if from_conf:
             return os.path.abspath(os.path.join(self.__conf_dir, path))
         return os.path.abspath(os.path.join(self.__invoke_dir, path))
