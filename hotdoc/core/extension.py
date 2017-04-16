@@ -497,7 +497,7 @@ class Extension(Configurable):
             else:
                 actual_output = None
 
-            page.format(self.formatter, link_resolver, output, actual_output)
+            page.format(self.formatter, link_resolver, actual_output)
         else:
             debug('Not formatting page %s, up to date' % page.link.ref,
                   'formatting')

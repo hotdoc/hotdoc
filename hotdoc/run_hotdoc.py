@@ -94,7 +94,7 @@ class Application(Configurable):
 
         self.project.setup()
         self.project.format(self.link_resolver, self.output)
-        self.project.create_navigation_script(self.output)
+        self.project.write_out(self.output)
         self.formatted_signal(self)
         self.__persist(self.project)
 

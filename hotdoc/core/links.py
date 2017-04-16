@@ -78,8 +78,6 @@ class Link(MutableObject):
         if resolved_ref:
             res = str(resolved_ref[0])
 
-        res = link_resolver.relativize_link_signal(res) or res
-
         return res
 
 
@@ -92,7 +90,6 @@ class LinkResolver(object):
         self.__doc_db = database
         self.get_link_signal = Signal()
         self.resolving_link_signal = Signal()
-        self.relativize_link_signal = Signal(optimized=True)
 
     # pylint: disable=too-many-return-statements
     def get_named_link(self, name):

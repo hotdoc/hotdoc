@@ -31,7 +31,6 @@ import shutil
 from collections import defaultdict
 
 from lxml import etree
-import lxml.html
 
 # pylint: disable=import-error
 from wheezy.template.engine import Engine
@@ -67,6 +66,32 @@ class FormatterBadLinkException(HotdocException):
     to nowhere.
     """
     pass
+
+
+XSLT_PAGE_TRANSFORM = etree.XML('''\
+<xsl:stylesheet version="1.0"
+    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+    xmlns:hotdoc="uri:hotdoc">
+    <xsl:variable name="sitemap" select="hotdoc:sitemap()" />
+    <xsl:variable name="subpages" select="hotdoc:subpages()" />
+    <xsl:param name="root_rel_path" />
+    <xsl:template match="//sitemap">
+        <xsl:copy-of select="$sitemap" />
+    </xsl:template>
+    <xsl:template match="//subpages">
+        <xsl:copy-of select="$subpages" />
+    </xsl:template>
+    <xsl:template match="a/@href[not(starts-with(.,'http://'))]">
+        <xsl:attribute name="href">
+            <xsl:value-of select="concat($root_rel_path, .)"/>
+        </xsl:attribute>
+    </xsl:template>
+    <xsl:template match="@*|node()">
+        <xsl:copy>
+            <xsl:apply-templates select="@*|node()"/>
+        </xsl:copy>
+    </xsl:template>
+</xsl:stylesheet>''')
 
 
 Logger.register_warning_code('bad-local-link', FormatterBadLinkException,
@@ -163,6 +188,10 @@ class Formatter(Configurable):
         self.get_extra_files_signal = Signal()
         self.formatting_symbol_signal = Signal()
         self.engine = None
+
+        self.__cache_dir = os.path.join(self.extension.app.private_folder,
+                                        'cache')
+        self.__page_transform = etree.XSLT(XSLT_PAGE_TRANSFORM)
 
     def _make_docstring_formatter(self):  # pylint: disable=no-self-use
         return GtkDocStringFormatter()
@@ -334,17 +363,13 @@ class Formatter(Configurable):
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-statements
-    def write_page(self, page, build_root, output):
-        """
-        Banana banana
-        """
-        root = etree.HTML(str(page.detailed_description))
+    def __validate_html(self, page, doc_root, full_path):
         id_nodes = {n.attrib['id']: "".join([x for x in n.itertext()])
-                    for n in root.xpath('.//*[@id]')}
+                    for n in doc_root.xpath('.//*[@id]')}
 
-        section_numbers = self.__init_section_numbers(root)
+        section_numbers = self.__init_section_numbers(doc_root)
 
-        targets = root.xpath(
+        targets = doc_root.xpath(
             './/*[self::h1 or self::h2 or self::h3 or '
             'self::h4 or self::h5 or self::img]')
 
@@ -377,7 +402,7 @@ class Formatter(Configurable):
             target.attrib['id'] = id_
             id_nodes[id_] = text
 
-        empty_links = root.xpath('.//a[not(text()) and not(*)]')
+        empty_links = doc_root.xpath('.//a[not(text()) and not(*)]')
         for link in empty_links:
             href = link.attrib.get('href')
             if href and href.startswith('#'):
@@ -390,24 +415,7 @@ class Formatter(Configurable):
                          (href, page.source_file))
                     link.text = "FIXME broken link to %s" % href
 
-        page.detailed_description = lxml.html.tostring(
-            root, doctype="<!DOCTYPE html>", encoding='unicode',
-            include_meta_content_type=True)
-
-        full_path = os.path.join(output, self.get_output_folder(page),
-                                 page.link.ref)
-
-        if not os.path.exists(os.path.dirname(full_path)):
-            os.makedirs(os.path.dirname(full_path))
-
-        self.writing_page_signal(self, page, full_path)
-
-        with open(full_path, 'w') as _:
-            _.write(page.detailed_description)
-
-        self.__copy_extra_files(build_root, os.path.dirname(full_path))
-
-        images = root.xpath('.//img')
+        images = doc_root.xpath('.//img')
         # All required assets should now be in place
         for img in images:
             src = img.attrib.get('src')
@@ -429,7 +437,56 @@ class Formatter(Configurable):
                      (page.source_file, src, path))
                 continue
 
-        return full_path
+    def write_out(self, page, xml_subpages, xml_sitemap, output):
+        """Banana banana
+        """
+        # pylint: disable=missing-docstring
+        def sitemap(_):
+            return xml_sitemap
+
+        # pylint: disable=missing-docstring
+        def subpages(_):
+            return xml_subpages
+
+        namespace = etree.FunctionNamespace('uri:hotdoc')
+        namespace['sitemap'] = sitemap
+        namespace['subpages'] = subpages
+        html_output = os.path.join(output, 'html')
+        for cached_path in page.cached_paths:
+            rel_path = os.path.relpath(cached_path, self.__cache_dir)
+            root_rel_path = os.path.relpath(self.__cache_dir, os.path.dirname(cached_path))
+            full_path = os.path.join(html_output, rel_path)
+            if not os.path.exists(os.path.dirname(full_path)):
+                os.makedirs(os.path.dirname(full_path))
+
+            self.__copy_extra_files(output, os.path.dirname(full_path))
+
+            if root_rel_path == '.':
+                root_rel_path = ''
+            else:
+                root_rel_path += '/'
+            with open(cached_path, 'r') as _:
+                doc_root = etree.HTML(_.read())
+                self.__validate_html(page, doc_root, full_path)
+            with open(full_path, 'w') as _:
+                _.write(str(self.__page_transform(
+                    doc_root,
+                    root_rel_path=etree.XSLT.strparam(root_rel_path))))
+
+    def cache_page(self, page):
+        """
+        Banana banana
+        """
+        full_path = os.path.join(self.__cache_dir,
+                                 self.get_output_folder(page),
+                                 page.link.ref)
+        if not os.path.exists(os.path.dirname(full_path)):
+            os.makedirs(os.path.dirname(full_path))
+
+        with open(full_path, 'w') as _:
+            _.write(page.detailed_description)
+
+        page.cached_paths.add(full_path)
 
     # pylint: disable=no-self-use
     def _get_extension(self):
@@ -641,6 +698,7 @@ class Formatter(Configurable):
              'stylesheets': stylesheets_basenames,
              'assets_path': self._get_assets_path(),
              'attrs': page.output_attrs['html'],
+             'meta': {},
              'symbols_details': symbols_details,
              'in_toplevel': self.extension.project.is_toplevel}
         )
@@ -921,3 +979,20 @@ class Formatter(Configurable):
 
         self._docstring_formatter.parse_config(config)
         self.extra_assets = OrderedSet(config.get_paths('extra_assets'))
+
+    def format_navigation(self, project):
+        """Banana banana
+        """
+        template = self.engine.get_template('site_navigation.html')
+        return etree.XML(template.render({'project': project}))
+
+    def format_subpages(self, page, subpages):
+        """Banana banana
+        """
+        if not page.render_subpages or not subpages:
+            return None
+
+        template = self.engine.get_template('subpages.html')
+        return etree.XML(template.render({'page': page,
+                                          'link_resolver': self.extension.app.link_resolver,
+                                          'subpages': subpages}))

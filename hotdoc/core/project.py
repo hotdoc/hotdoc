@@ -23,9 +23,6 @@ import os
 import io
 import re
 import linecache
-import json
-
-from collections import OrderedDict
 
 from hotdoc.core import inclusions
 from hotdoc.core.extension import Extension
@@ -202,62 +199,6 @@ class Project(Configurable):
         self.tree.format(link_resolver, output, self.extensions)
         self.formatted_signal(self)
 
-    def create_navigation_script(self, output):
-        """
-        Banana banana
-        """
-        sitemap = self.__create_json_sitemap()
-        sitemap = sitemap.replace('\\', '\\\\')
-        sitemap = sitemap.replace('"', '\\"')
-
-        js_wrapper = 'sitemap_downloaded_cb("'
-        js_wrapper += sitemap
-        js_wrapper += '");'
-
-        dirname = os.path.join(output, 'html', 'assets', 'js')
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
-        path = os.path.join(dirname, 'sitemap.js')
-
-        with open(path, 'w') as _:
-            _.write(js_wrapper)
-
-    def dump_json_sitemap(self, page, node, in_toplevel):
-        """
-        Banana banana
-        """
-        node['title'] = page.title
-        node['short_description'] = page.short_description
-        node['url'] = page.link.get_link(self.app.link_resolver)
-        node['extension'] = page.extension_name
-        node['subpages'] = []
-        node['project_name'] = page.project_name
-        node['render_subpages'] = page.render_subpages
-        node['in_toplevel'] = in_toplevel
-        if page.extension_name:
-            ext = self.extensions[page.extension_name]
-            subpages = ext.get_subpages_sorted(self.tree.get_pages(), page)
-        else:
-            subpages = page.subpages
-        for pagename in subpages:
-            cnode = OrderedDict()
-            node['subpages'].append(cnode)
-            proj = self.subprojects.get(pagename)
-            if not proj:
-                cpage = self.tree.get_pages()[pagename]
-                self.dump_json_sitemap(cpage, cnode, in_toplevel)
-            else:
-                cpage = proj.tree.root
-                proj.dump_json_sitemap(cpage, cnode, in_toplevel=False)
-
-    def __create_json_sitemap(self):
-        """
-        Banana banana
-        """
-        node = OrderedDict()
-        self.dump_json_sitemap(self.tree.root, node, True)
-        return json.dumps(node)
-
     @staticmethod
     def add_arguments(parser):
         group = parser.add_argument_group(
@@ -362,3 +303,44 @@ class Project(Configurable):
         if ext:
             return ext.formatter
         return None
+
+    def write_out_tree(self, page, html_sitemap, output):
+        """Banana banana
+        """
+        subpages = []
+        ext = self.extensions[page.extension_name]
+        subpage_names = ext.get_subpages_sorted(self.tree.get_pages(), page)
+        formatter = ext.formatter
+        for pagename in subpage_names:
+            proj = self.subprojects.get(pagename)
+
+            if not proj:
+                cpage = self.tree.get_pages()[pagename]
+                self.write_out_tree(cpage, html_sitemap, output)
+            else:
+                cpage = proj.tree.root
+                proj.write_out_tree(cpage, html_sitemap, output)
+            subpages.append(cpage)
+
+        html_subpages = formatter.format_subpages(page, subpages)
+        formatter.write_out(page, html_subpages, html_sitemap, output)
+
+    def write_out(self, output):
+        """Banana banana
+        """
+        ext = self.extensions.get(self.tree.root.extension_name)
+        html_sitemap = ext.formatter.format_navigation(self)
+        self.write_out_tree(self.tree.root, html_sitemap, output)
+
+        # Just in case the sitemap root isn't named index
+        ext_folder = ext.formatter.get_output_folder(self.tree.root)
+        index_path = os.path.join(
+            ext_folder,
+            self.tree.root.link.get_link(self.app.link_resolver))
+
+        default_index_path = os.path.join(output, 'html', 'index.html')
+
+        if not os.path.exists(default_index_path):
+            with open(default_index_path, 'w', encoding='utf8') as _:
+                _.write('<meta http-equiv="refresh" content="0; url=%s"/>' %
+                        index_path)

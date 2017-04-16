@@ -1,9 +1,13 @@
-@require(page, scripts, stylesheets, assets_path)
+@require(page, meta, scripts, stylesheets, assets_path)
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+@for key, value in meta:
+<meta data-hd-key="@str(key)" data-hd-value="@str(value)" />
+@end
 
 <title>@page.get_title()</title>
 

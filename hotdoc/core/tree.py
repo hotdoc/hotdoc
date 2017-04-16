@@ -118,6 +118,7 @@ class Page(object):
         self.detailed_description = None
         self.build_path = None
         self.project_name = project_name
+        self.cached_paths = OrderedSet()
 
         meta = meta or {}
 
@@ -159,6 +160,7 @@ class Page(object):
                 'symbol_names': self.symbol_names,
                 'project_name': self.project_name,
                 'pre_sorted': self.pre_sorted,
+                'cached_paths': self.cached_paths,
                 'render_subpages': self.render_subpages}
 
     def resolve_symbols(self, tree, database, link_resolver):
@@ -206,18 +208,6 @@ class Page(object):
                 self.comment.title = syms[0].comment.title
             break
 
-    def relativize(self, ref):
-        """Banana banana
-        """
-        if not ref:
-            return ref
-
-        url_components = urlparse(ref)
-        if not bool(url_components.scheme):
-            ref = os.path.relpath(ref, os.path.dirname(self.build_path))
-
-        return ref
-
     # pylint: disable=no-self-use
     def __fetch_comment(self, sym, database):
         old_comment = sym.comment
@@ -252,10 +242,7 @@ class Page(object):
         self.formatted_contents += formatter.format_comment(
             self.comment, link_resolver)
 
-    def __relativize_link_cb(self, ref):
-        return self.relativize(ref)
-
-    def format(self, formatter, link_resolver, root, output):
+    def format(self, formatter, link_resolver, output):
         """
         Banana banana
         """
@@ -268,7 +255,6 @@ class Page(object):
 
         self.build_path = os.path.join(formatter.get_output_folder(self),
                                        self.link.ref)
-        link_resolver.relativize_link_signal.connect(self.__relativize_link_cb)
 
         if self.ast:
             out, diags = cmark.ast_to_html(self.ast, link_resolver)
@@ -288,11 +274,8 @@ class Page(object):
         self.detailed_description =\
             formatter.format_page(self)[0]
 
-        link_resolver.relativize_link_signal.disconnect(
-            self.__relativize_link_cb)
-
         if output:
-            formatter.write_page(self, root, output)
+            formatter.cache_page(self)
 
     # pylint: disable=no-self-use
     def get_title(self):
@@ -481,7 +464,8 @@ class Tree(object):
             """Setup subpages for pages with names in @pagenames"""
             for pagename in pagenames:
                 page = self.__all_pages[get_pagename(pagename)]
-                page.subpages |= sitemap.get_subpages(get_pagename(pagename))
+                subpages = sitemap.get_subpages(get_pagename(pagename))
+                page.subpages = OrderedSet(subpages) | page.subpages
                 for subpage in page.subpages:
                     if subpage not in unlisted_pagenames:
                         self.__all_pages[subpage].pre_sorted = True
