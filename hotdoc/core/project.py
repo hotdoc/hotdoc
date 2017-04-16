@@ -24,6 +24,8 @@ import io
 import re
 import linecache
 
+from collections import OrderedDict
+
 from hotdoc.core import inclusions
 from hotdoc.core.extension import Extension
 from hotdoc.core.comment import Tag
@@ -307,7 +309,7 @@ class Project(Configurable):
     def write_out_tree(self, page, html_sitemap, output):
         """Banana banana
         """
-        subpages = []
+        subpages = OrderedDict({})
         ext = self.extensions[page.extension_name]
         subpage_names = ext.get_subpages_sorted(self.tree.get_pages(), page)
         formatter = ext.formatter
@@ -316,11 +318,18 @@ class Project(Configurable):
 
             if not proj:
                 cpage = self.tree.get_pages()[pagename]
+                sub_formatter = self.extensions[cpage.extension_name].formatter
                 self.write_out_tree(cpage, html_sitemap, output)
             else:
                 cpage = proj.tree.root
+                sub_formatter = proj.extensions[cpage.extension_name].formatter
                 proj.write_out_tree(cpage, html_sitemap, output)
-            subpages.append(cpage)
+
+            subpage_link = cpage.link.get_link(self.app.link_resolver)
+            prefix = sub_formatter.get_output_folder(cpage)
+            if prefix:
+                subpage_link = '%s/%s' % (prefix, subpage_link)
+            subpages[subpage_link] = cpage
 
         html_subpages = formatter.format_subpages(page, subpages)
         formatter.write_out(page, html_subpages, html_sitemap, output)

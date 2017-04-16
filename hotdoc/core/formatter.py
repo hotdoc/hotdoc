@@ -77,16 +77,16 @@ XSLT_PAGE_TRANSFORM = etree.XML('''\
     <xsl:variable name="sitemap" select="hotdoc:sitemap()" />
     <xsl:variable name="subpages" select="hotdoc:subpages()" />
     <xsl:param name="root_rel_path" />
-    <xsl:template match="//sitemap">
-        <xsl:copy-of select="$sitemap" />
-    </xsl:template>
-    <xsl:template match="//subpages">
-        <xsl:copy-of select="$subpages" />
-    </xsl:template>
     <xsl:template match="a/@href[not(starts-with(.,'http://'))]">
         <xsl:attribute name="href">
             <xsl:value-of select="concat($root_rel_path, .)"/>
         </xsl:attribute>
+    </xsl:template>
+    <xsl:template match="//sitemap">
+        <xsl:apply-templates select="$sitemap" />
+    </xsl:template>
+    <xsl:template match="//subpages">
+        <xsl:apply-templates select="$subpages" />
     </xsl:template>
     <xsl:template match="@*|node()">
         <xsl:copy>
@@ -472,9 +472,10 @@ class Formatter(Configurable):
                 doc_root = etree.HTML(_.read())
                 self.__validate_html(page, doc_root, full_path)
             with open(full_path, 'w') as _:
-                _.write(str(self.__page_transform(
+                transformed = str(self.__page_transform(
                     doc_root,
-                    root_rel_path=etree.XSLT.strparam(root_rel_path))))
+                    root_rel_path=etree.XSLT.strparam(root_rel_path)))
+                _.write(transformed)
 
     def cache_page(self, page):
         """
@@ -1005,6 +1006,4 @@ class Formatter(Configurable):
             return None
 
         return etree.XML(template.render({'page': page,
-                                          'link_resolver':
-                                          self.extension.app.link_resolver,
                                           'subpages': subpages}))
