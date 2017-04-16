@@ -68,7 +68,7 @@ class TestTree(unittest.TestCase):
         here = os.path.dirname(__file__)
         self.__md_dir = os.path.abspath(os.path.join(
             here, 'tmp-markdown-files'))
-        self.__priv_dir = os.path.abspath(os.path.join(
+        self.private_folder = os.path.abspath(os.path.join(
             here, 'tmp-private'))
         self.__src_dir = os.path.abspath(os.path.join(
             here, 'tmp-src-files'))
@@ -76,7 +76,7 @@ class TestTree(unittest.TestCase):
             here, 'tmp-output'))
         self.__remove_tmp_dirs()
         os.mkdir(self.__md_dir)
-        os.mkdir(self.__priv_dir)
+        os.mkdir(self.private_folder)
         os.mkdir(self.__src_dir)
         os.mkdir(self.get_generated_doc_folder())
         self.include_paths = OrderedSet([self.__md_dir])
@@ -85,7 +85,7 @@ class TestTree(unittest.TestCase):
         # Using the real doc database is too costly, tests should be lightning
         # fast (and they are)
         self.database = Database()
-        self.database.setup(self.__priv_dir)
+        self.database.setup(self.private_folder)
         self.link_resolver = LinkResolver(self.database)
 
         self.change_tracker = ChangeTracker()
@@ -114,13 +114,13 @@ class TestTree(unittest.TestCase):
         del self.core_ext
 
     def get_generated_doc_folder(self):
-        return os.path.join(self.__priv_dir, 'generated')
+        return os.path.join(self.private_folder, 'generated')
 
     def get_base_doc_folder(self):
         return self.__md_dir
 
     def get_private_folder(self):
-        return self.__priv_dir
+        return self.private_folder
 
     def __parse_sitemap(self, text):
         path = os.path.join(self.__md_dir, 'sitemap.txt')
@@ -167,7 +167,7 @@ class TestTree(unittest.TestCase):
 
     def __remove_tmp_dirs(self):
         shutil.rmtree(self.__md_dir, ignore_errors=True)
-        shutil.rmtree(self.__priv_dir, ignore_errors=True)
+        shutil.rmtree(self.private_folder, ignore_errors=True)
         shutil.rmtree(self.__src_dir, ignore_errors=True)
         shutil.rmtree(self.__output_dir, ignore_errors=True)
         shutil.rmtree(self.get_generated_doc_folder(), ignore_errors=True)

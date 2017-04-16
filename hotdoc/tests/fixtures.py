@@ -37,7 +37,7 @@ class HotdocTest(unittest.TestCase):
         self._here = os.path.dirname(__file__)
         self._md_dir = os.path.abspath(os.path.join(
             self._here, 'tmp-markdown-files'))
-        self._priv_dir = os.path.abspath(os.path.join(
+        self.private_folder = os.path.abspath(os.path.join(
             self._here, 'tmp-private'))
         self._src_dir = os.path.abspath(os.path.join(
             self._here, 'tmp-src-files'))
@@ -45,12 +45,12 @@ class HotdocTest(unittest.TestCase):
             self._here, 'tmp-output'))
         self._remove_tmp_dirs()
         os.mkdir(self._md_dir)
-        os.mkdir(self._priv_dir)
+        os.mkdir(self.private_folder)
         os.mkdir(self._src_dir)
         self.change_tracker = ChangeTracker()
         self.database = Database()
         self.link_resolver = LinkResolver(self.database)
-        self.database.setup(self._priv_dir)
+        self.database.setup(self.private_folder)
         self.incremental = False
         self.sanitized_name = 'test-project-0.1'
         self.tree = Tree(self, self)
@@ -60,7 +60,7 @@ class HotdocTest(unittest.TestCase):
 
     def _remove_tmp_dirs(self):
         shutil.rmtree(self._md_dir, ignore_errors=True)
-        shutil.rmtree(self._priv_dir, ignore_errors=True)
+        shutil.rmtree(self.private_folder, ignore_errors=True)
         shutil.rmtree(self._src_dir, ignore_errors=True)
         shutil.rmtree(self._output_dir, ignore_errors=True)
 

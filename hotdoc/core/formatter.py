@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+# pylint: disable=too-many-lines
+
 """
 The base formatter module.
 
@@ -454,7 +456,8 @@ class Formatter(Configurable):
         html_output = os.path.join(output, 'html')
         for cached_path in page.cached_paths:
             rel_path = os.path.relpath(cached_path, self.__cache_dir)
-            root_rel_path = os.path.relpath(self.__cache_dir, os.path.dirname(cached_path))
+            root_rel_path = os.path.relpath(
+                self.__cache_dir, os.path.dirname(cached_path))
             full_path = os.path.join(html_output, rel_path)
             if not os.path.exists(os.path.dirname(full_path)):
                 os.makedirs(os.path.dirname(full_path))
@@ -983,7 +986,11 @@ class Formatter(Configurable):
     def format_navigation(self, project):
         """Banana banana
         """
-        template = self.engine.get_template('site_navigation.html')
+        try:
+            template = self.engine.get_template('site_navigation.html')
+        except IOError:
+            return None
+
         return etree.XML(template.render({'project': project}))
 
     def format_subpages(self, page, subpages):
@@ -992,7 +999,12 @@ class Formatter(Configurable):
         if not page.render_subpages or not subpages:
             return None
 
-        template = self.engine.get_template('subpages.html')
+        try:
+            template = self.engine.get_template('subpages.html')
+        except IOError:
+            return None
+
         return etree.XML(template.render({'page': page,
-                                          'link_resolver': self.extension.app.link_resolver,
+                                          'link_resolver':
+                                          self.extension.app.link_resolver,
                                           'subpages': subpages}))
