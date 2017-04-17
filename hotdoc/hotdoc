@@ -1,8 +1,7 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 #
-# Copyright © 2015,2016 Mathieu Duponchelle <mathieu.duponchelle@opencreed.com>
-# Copyright © 2015,2016 Collabora Ltd
+# Copyright 2015,2016 Mathieu Duponchelle <mathieu.duponchelle@opencreed.com>
+# Copyright 2015,2016 Collabora Ltd
 #
 # This library is free software; you can redistribute it and/or modify it under
 # the terms of the GNU Lesser General Public License as published by the Free
