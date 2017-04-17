@@ -179,7 +179,6 @@ class Formatter(Configurable):
         self.formatting_page_signal = Signal()
         self.get_extra_files_signal = Signal()
         self.formatting_symbol_signal = Signal()
-        self.engine = None
 
         self.__cache_dir = os.path.join(self.extension.app.private_folder,
                                         'cache')
@@ -959,6 +958,7 @@ class Formatter(Configurable):
             loader=FileLoader(self.searchpath, encoding='UTF-8'),
             extensions=[CoreExtension(), CodeExtension()]
         )
+        self.engine.global_vars.update({'e': html.escape})
 
         self._docstring_formatter.parse_config(config)
 
