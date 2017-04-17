@@ -145,7 +145,7 @@ class GitUploadExtension(Extension):
 
             recursive_overwrite(built_f, copy_dest)
 
-            call(['git', 'add', copy_dest], cwd=repo)
+            call(['git', 'add', filename], cwd=repo)
 
         if self.__copy_only:
             return
