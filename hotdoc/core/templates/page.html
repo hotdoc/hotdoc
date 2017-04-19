@@ -4,7 +4,7 @@
 @def content():
 
 @(extra_html = attrs.get('extra_html', []))
-<div id="page-description" data-hotdoc-source="@source_file">
+<div id="page-description" data-hotdoc-source="@source_file" data-hotdoc-role="main">
 @if page.formatted_contents:
 @page.formatted_contents
 @end

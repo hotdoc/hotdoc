@@ -23,6 +23,7 @@ import os
 import io
 import re
 import linecache
+import shutil
 
 from collections import OrderedDict
 
@@ -127,6 +128,8 @@ class Project(Configurable):
         self.sanitized_name = None
         self.sitemap_path = None
         self.subprojects = {}
+        self.extra_asset_folders = OrderedSet()
+        self.extra_assets = {}
 
         if os.name == 'nt':
             self.datadir = os.path.join(
@@ -221,6 +224,10 @@ class Project(Configurable):
                            help='paths to look up included files in',
                            dest='include_paths', action='append',
                            default=[])
+        group.add_argument(
+            "--extra-assets",
+            help="Extra asset folders to copy in the output",
+            action='append', dest='extra_assets', default=[])
 
     def add_subproject(self, fname, conf_path):
         """Creates and adds a new subproject."""
@@ -290,6 +297,8 @@ class Project(Configurable):
         if not toplevel and config.conf_file:
             self.app.change_tracker.add_hard_dependency(config.conf_file)
 
+        self.extra_asset_folders = OrderedSet(config.get_paths('extra_assets'))
+
     def __add_default_tags(self, _, comment):
         for validator in list(self.tag_validators.values()):
             if validator.default and validator.name not in comment.tags:
@@ -306,7 +315,15 @@ class Project(Configurable):
             return ext.formatter
         return None
 
-    def write_out_tree(self, page, html_sitemap, output):
+    def __write_extra_assets(self, output):
+        for src, dest in self.extra_assets.items():
+            dest = os.path.join(output, 'html', dest)
+            destdir = os.path.dirname(dest)
+            if not os.path.exists(destdir):
+                os.makedirs(destdir)
+            shutil.copyfile(src, dest)
+
+    def write_out_tree(self, page, output):
         """Banana banana
         """
         subpages = OrderedDict({})
@@ -319,11 +336,11 @@ class Project(Configurable):
             if not proj:
                 cpage = self.tree.get_pages()[pagename]
                 sub_formatter = self.extensions[cpage.extension_name].formatter
-                self.write_out_tree(cpage, html_sitemap, output)
+                self.write_out_tree(cpage, output)
             else:
                 cpage = proj.tree.root
                 sub_formatter = proj.extensions[cpage.extension_name].formatter
-                proj.write_out_tree(cpage, html_sitemap, output)
+                proj.write_out_tree(cpage, output)
 
             subpage_link = cpage.link.get_link(self.app.link_resolver)
             prefix = sub_formatter.get_output_folder(cpage)
@@ -332,14 +349,27 @@ class Project(Configurable):
             subpages[subpage_link] = cpage
 
         html_subpages = formatter.format_subpages(page, subpages)
-        formatter.write_out(page, html_subpages, html_sitemap, output)
+        formatter.write_out(page, html_subpages, output)
 
     def write_out(self, output):
         """Banana banana
         """
         ext = self.extensions.get(self.tree.root.extension_name)
         html_sitemap = ext.formatter.format_navigation(self)
-        self.write_out_tree(self.tree.root, html_sitemap, output)
+
+        escaped_sitemap = html_sitemap.replace(
+            '\\', '\\\\').replace('"', '\\"').replace('\n', '')
+        js_wrapper = 'sitemap_downloaded_cb("%s");' % escaped_sitemap
+        js_dir = os.path.join(output, 'html', 'assets', 'js')
+        if not os.path.exists(js_dir):
+            os.makedirs(js_dir)
+        with open(os.path.join(js_dir, 'sitemap.js'), 'w') as _:
+            _.write(js_wrapper)
+
+        self.write_out_tree(self.tree.root, output)
+
+        self.__write_extra_assets(output)
+        ext.formatter.copy_assets(os.path.join(output, 'html', 'assets'))
 
         # Just in case the sitemap root isn't named index
         ext_folder = ext.formatter.get_output_folder(self.tree.root)

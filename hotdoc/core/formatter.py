@@ -51,7 +51,7 @@ from hotdoc.core.symbols import\
 from hotdoc.core.links import Link
 from hotdoc.parsers.gtk_doc import GtkDocStringFormatter
 from hotdoc.utils.utils import (
-    OrderedSet, id_from_text, recursive_overwrite, symlink)
+    OrderedSet, id_from_text, recursive_overwrite)
 from hotdoc.core.exceptions import HotdocException
 from hotdoc.utils.loggable import Logger, warn, debug
 from hotdoc.utils.configurable import Configurable
@@ -74,18 +74,8 @@ XSLT_PAGE_TRANSFORM = etree.XML('''\
 <xsl:stylesheet version="1.0"
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
     xmlns:hotdoc="uri:hotdoc">
-    <xsl:variable name="sitemap" select="hotdoc:sitemap()" />
     <xsl:variable name="subpages" select="hotdoc:subpages()" />
-    <xsl:param name="root_rel_path" />
-    <xsl:template match="a/@href[not(starts-with(.,'http://'))]">
-        <xsl:attribute name="href">
-            <xsl:value-of select="concat($root_rel_path, .)"/>
-        </xsl:attribute>
-    </xsl:template>
-    <xsl:template match="//sitemap">
-        <xsl:apply-templates select="$sitemap" />
-    </xsl:template>
-    <xsl:template match="//subpages">
+    <xsl:template match="subpages">
         <xsl:apply-templates select="$subpages" />
     </xsl:template>
     <xsl:template match="@*|node()">
@@ -260,7 +250,9 @@ class Formatter(Configurable):
 
         return paths
 
-    def __copy_assets(self, assets_path):
+    def copy_assets(self, assets_path):
+        """Banana banana
+        """
         if not os.path.exists(assets_path):
             os.mkdir(assets_path)
 
@@ -279,21 +271,6 @@ class Formatter(Configurable):
                 shutil.copy(src, dest)
             elif os.path.isdir(src):
                 recursive_overwrite(src, dest)
-
-    def __copy_extra_files(self, root, page_folder):
-        self.__copy_assets(os.path.join(root, 'html', 'assets'))
-        extra_assets_paths = self.__copy_extra_assets(page_folder)
-
-        root = os.path.join(root, 'html')
-        if root != page_folder:
-            relpath = os.path.relpath(root, page_folder)
-            for path in ['assets'] + extra_assets_paths:
-                try:
-                    basename = os.path.basename(path)
-                    symlink(os.path.join(relpath, basename),
-                            os.path.join(page_folder, basename))
-                except OSError:
-                    pass
 
     def patch_page(self, page, symbol):
         """
@@ -365,7 +342,8 @@ class Formatter(Configurable):
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-statements
-    def __validate_html(self, page, doc_root, full_path):
+    def __validate_html(self, project, page, doc_root):
+        rel_path = os.path.join(self.get_output_folder(page), page.link.ref)
         id_nodes = {n.attrib['id']: "".join([x for x in n.itertext()])
                     for n in doc_root.xpath('.//*[@id]')}
 
@@ -404,7 +382,9 @@ class Formatter(Configurable):
             target.attrib['id'] = id_
             id_nodes[id_] = text
 
-        empty_links = doc_root.xpath('.//a[not(text()) and not(*)]')
+        main_node = doc_root.find('.//*[@data-hotdoc-role="main"]')
+
+        empty_links = main_node.xpath('.//a[not(text()) and not(*)]')
         for link in empty_links:
             href = link.attrib.get('href')
             if href and href.startswith('#'):
@@ -416,65 +396,64 @@ class Formatter(Configurable):
                          "Empty anchor link to %s in %s points nowhere" %
                          (href, page.source_file))
                     link.text = "FIXME broken link to %s" % href
+                link.attrib["href"] = rel_path + href
 
-        images = doc_root.xpath('.//img')
+        assets = main_node.xpath('.//*[@src]')
         # All required assets should now be in place
-        for img in images:
-            src = img.attrib.get('src')
-            if not src:
-                warn('no-image-src',
-                     'Empty image source in %s' % page.source_file)
-                continue
+        for asset in assets:
+            self.__lookup_asset(asset, project, page)
 
-            comps = urllib.parse.urlparse(src)
-            if comps.scheme:
-                continue
+    def __lookup_asset(self, asset, project, page):
+        src = asset.attrib.get('src')
+        if not src:
+            warn('no-image-src',
+                 'Empty image source in %s' % page.source_file)
+            return
 
-            path = os.path.abspath(os.path.join(
-                os.path.dirname(full_path), src))
-            if not os.path.exists(path):
-                warn('bad-image-src',
-                     ('In %s, a local image refers to an unknown source (%s). '
-                      'It should be available in the build folder, at %s') %
-                     (page.source_file, src, path))
-                continue
+        comps = urllib.parse.urlparse(src)
+        if comps.scheme:
+            return
 
-    def write_out(self, page, xml_subpages, xml_sitemap, output):
+        folders = [os.path.dirname(page.source_file)] if not page.generated \
+            else []
+        folders += [os.path.join(folder, os.path.pardir)
+                    for folder in project.extra_asset_folders]
+
+        for folder in folders:
+            path = os.path.abspath(os.path.join(folder, src))
+            if os.path.exists(path):
+                output_folder = os.path.join(
+                    self.get_output_folder(page),
+                    os.path.dirname(page.link.ref))
+                project.extra_assets[path] = os.path.join(output_folder, src)
+                asset.attrib['src'] = os.path.join(output_folder, src)
+                return
+
+        warn('bad-image-src',
+             ('In %s, a local assets refers to an unknown source (%s). '
+              'It should be available in one of these locations: %s') %
+             (page.source_file, src, str(folders)))
+
+    def write_out(self, page, xml_subpages, output):
         """Banana banana
         """
-        # pylint: disable=missing-docstring
-        def sitemap(_):
-            return xml_sitemap
-
         # pylint: disable=missing-docstring
         def subpages(_):
             return xml_subpages
 
         namespace = etree.FunctionNamespace('uri:hotdoc')
-        namespace['sitemap'] = sitemap
         namespace['subpages'] = subpages
         html_output = os.path.join(output, 'html')
         for cached_path in page.cached_paths:
             rel_path = os.path.relpath(cached_path, self.__cache_dir)
-            root_rel_path = os.path.relpath(
-                self.__cache_dir, os.path.dirname(cached_path))
             full_path = os.path.join(html_output, rel_path)
             if not os.path.exists(os.path.dirname(full_path)):
                 os.makedirs(os.path.dirname(full_path))
-
-            self.__copy_extra_files(output, os.path.dirname(full_path))
-
-            if root_rel_path == '.':
-                root_rel_path = ''
-            else:
-                root_rel_path += '/'
             with open(cached_path, 'r') as _:
                 doc_root = etree.HTML(_.read())
-                self.__validate_html(page, doc_root, full_path)
+                self.__validate_html(self.extension.project, page, doc_root)
             with open(full_path, 'w') as _:
-                transformed = str(self.__page_transform(
-                    doc_root,
-                    root_rel_path=etree.XSLT.strparam(root_rel_path)))
+                transformed = str(self.__page_transform(doc_root))
                 _.write(transformed)
 
     def cache_page(self, page):
@@ -670,6 +649,10 @@ class Formatter(Configurable):
         scripts = []
         stylesheets = []
 
+        rel_path = os.path.relpath('.', os.path.join(
+            self.get_output_folder(page),
+            os.path.dirname(page.link.ref)))
+
         if Formatter.extra_theme_path:
             js_dir = os.path.join(Formatter.extra_theme_path, 'js')
             try:
@@ -700,7 +683,7 @@ class Formatter(Configurable):
              'source_file': os.path.basename(page.source_file),
              'scripts': scripts_basenames,
              'stylesheets': stylesheets_basenames,
-             'assets_path': self._get_assets_path(),
+             'rel_path': rel_path,
              'attrs': page.output_attrs['html'],
              'meta': {},
              'symbols_details': symbols_details,
@@ -926,10 +909,6 @@ class Formatter(Configurable):
         """
         group = parser.add_argument_group(
             'Formatter', 'formatter options')
-        group.add_argument(
-            "--extra-assets",
-            help="Extra asset folders to copy in the output",
-            action='append', dest='extra_assets', default=[])
 
         group.add_argument("--html-theme", action="store",
                            dest="html_theme", help="html theme to use",
@@ -982,7 +961,6 @@ class Formatter(Configurable):
         )
 
         self._docstring_formatter.parse_config(config)
-        self.extra_assets = OrderedSet(config.get_paths('extra_assets'))
 
     def format_navigation(self, project):
         """Banana banana
@@ -992,12 +970,12 @@ class Formatter(Configurable):
         except IOError:
             return None
 
-        return etree.XML(template.render({'project': project}))
+        return template.render({'project': project})
 
     def format_subpages(self, page, subpages):
         """Banana banana
         """
-        if not page.render_subpages or not subpages:
+        if not subpages:
             return None
 
         try:
