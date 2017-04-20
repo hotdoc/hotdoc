@@ -71,6 +71,7 @@ class DevhelpExtension(Extension):
     argument_prefix = 'devhelp'
 
     activated = False
+    __connected = False
 
     def __init__(self, app, project):
         Extension.__init__(self, app, project)
@@ -106,7 +107,7 @@ class DevhelpExtension(Extension):
         oname = project.sanitized_name
         title = '%s %s' % (project.project_name, project.project_version)
 
-        opath = os.path.join(self.app.output, 'devhelp', oname)
+        opath = os.path.join(self.app.output, 'devhelp')
 
         boilerplate = BOILERPLATE % (
             title,
@@ -166,7 +167,7 @@ class DevhelpExtension(Extension):
 
     def setup(self):
         super(DevhelpExtension, self).setup()
-        if not DevhelpExtension.activated:
+        if not DevhelpExtension.activated or DevhelpExtension.__connected:
             return
 
         # FIXME update the index someday.
@@ -181,6 +182,7 @@ class DevhelpExtension(Extension):
         self.project.formatted_signal.connect_after(
             self.__project_formatted_cb)
         self.app.formatted_signal.connect_after(self.__formatted_cb)
+        DevhelpExtension.__connected = True
 
     @staticmethod
     def add_arguments(parser):
