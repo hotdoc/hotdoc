@@ -28,9 +28,14 @@ import os
 import html
 import re
 import urllib.parse
+from urllib.request import urlretrieve
 import shutil
+import tarfile
+import hashlib
 
 from collections import defaultdict, namedtuple
+
+import appdirs
 
 from lxml import etree
 
@@ -92,9 +97,25 @@ Logger.register_warning_code('no-image-src', FormatterBadLinkException,
                              domain='html-formatter')
 Logger.register_warning_code('bad-image-src', FormatterBadLinkException,
                              domain='html-formatter')
+Logger.register_warning_code('download-theme-error', HotdocException,
+                             domain='html-formatter')
 
 
 HERE = os.path.dirname(__file__)
+
+
+def _download_progress_cb(blocknum, blocksize, totalsize):
+    """Banana Banana"""
+    readsofar = blocknum * blocksize
+    if totalsize > 0:
+        percent = readsofar * 1e2 / totalsize
+        msg = "\r%5.1f%% %*d / %d" % (
+            percent, len(str(totalsize)), readsofar, totalsize)
+        print(msg)
+        if readsofar >= totalsize:  # near the end
+            print("\n")
+    else:  # total size is unknown
+        print("read %d\n" % (readsofar,))
 
 
 # pylint: disable=too-few-public-methods
@@ -963,7 +984,10 @@ class Formatter(Configurable):
             'Formatter', 'formatter options')
 
         group.add_argument("--html-theme", action="store",
-                           dest="html_theme", help="html theme to use",
+                           dest="html_theme",
+                           help="html theme to use, this can be a url to a"
+                           " released tarball on an http server"
+                           " (preferably with a ?sha256=param)",
                            default='default')
         group.add_argument("--html-extra-theme", action="store",
                            dest="html_extra_theme",
@@ -976,18 +1000,63 @@ class Formatter(Configurable):
                            dest="html_number_headings",
                            help="Enable html headings numbering")
 
+    def __download_theme(self, uri):
+        sha = urllib.parse.parse_qs(uri.query).get('sha256')
+        cachedir = appdirs.user_cache_dir("hotdoc", "hotdoc")
+        os.makedirs(cachedir, exist_ok=True)
+
+        if sha:
+            sha = sha[0]
+
+        if sha and os.path.isdir(os.path.join(cachedir, "themes", sha)):
+            return os.path.join(cachedir, "themes", sha)
+
+        print("Downloading %s" % uri.geturl())
+        tarball = os.path.join(cachedir, "themes", os.path.basename(uri.path))
+        try:
+            urlretrieve(uri.geturl(), tarball, _download_progress_cb)
+        except (TimeoutError, urllib.error.HTTPError) as exce:
+            warn('download-theme-error',
+                 "Error downloading %s: %s - Using default them" % (
+                     tarball, exce))
+            return 'default'
+
+        if not sha:
+            with open(tarball) as file_:
+                sha = hashlib.sha256().update(file_.read()).hexdigest()
+
+        themepath = os.path.join(cachedir, "themes", sha)
+        try:
+            os.makedirs(os.path.join(themepath))
+            with tarfile.open(tarball) as file_:
+                file_.extractall(themepath)
+        except tarfile.ReadError:
+            warn('download-theme-error',
+                 "%s is not a supported tarball - Using default theme" %
+                 themepath)
+            os.rmdir(themepath)
+            return 'default'
+
+        return themepath
+
     def parse_toplevel_config(self, config):
         """Parse @config to setup @self state."""
         html_theme = config.get('html_theme', 'default')
+
+        if html_theme != 'default':
+            uri = urllib.parse.urlparse(html_theme)
+            if not uri.scheme:
+                html_theme = config.get_path('html_theme')
+                debug("Using theme located at %s" % html_theme)
+            elif uri.scheme.startswith('http'):
+                html_theme = self.__download_theme(uri)
+
         if html_theme == 'default':
             default_theme = os.path.join(HERE, os.pardir,
                                          'hotdoc_bootstrap_theme', 'dist')
 
             html_theme = os.path.abspath(default_theme)
             debug("Using default theme")
-        else:
-            html_theme = config.get_path('html_theme')
-            debug("Using theme located at %s" % html_theme)
 
         Formatter.theme_path = html_theme
 

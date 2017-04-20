@@ -74,7 +74,6 @@ class SearchExtension(Extension):
             self.__connect_to_subprojects(subproj)
 
     def __writing_page_cb(self, formatter, page, path, lxml_tree):
-        print("Checking %s" % path)
         if not SearchExtension.__connected_all_projects:
             self.__connect_to_subprojects(self.project, toplevel=True)
             SearchExtension.__connected_all_projects = True
