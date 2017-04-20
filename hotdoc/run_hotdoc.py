@@ -276,7 +276,7 @@ def create_default_layout(config):
                             'sitemap': 'sitemap.txt',
                             'index': os.path.join('markdown_files', 'index.md'),
                             'output': 'built_doc',
-                            'extra_assets': ['assets']}))
+                            'extra_assets': ['assets']}, indent=4))
 
     with open(os.path.join(md_folder_path, 'index.md'), 'w') as _:
         _.write('# %s\n' % project_name.capitalize())
