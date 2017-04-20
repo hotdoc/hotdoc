@@ -19,7 +19,6 @@
 # pylint: disable=missing-docstring
 
 import os
-import re
 
 from collections import defaultdict, namedtuple
 from lxml import etree
@@ -29,8 +28,6 @@ from hotdoc.core.symbols import (
     SignalSymbol, ConstantSymbol, FunctionMacroSymbol, CallbackSymbol,
     InterfaceSymbol, AliasSymbol, VFunctionSymbol, ExportedVariableSymbol)
 from hotdoc.core.extension import Extension
-from hotdoc.core.formatter import Formatter
-from hotdoc.utils.loggable import error
 from hotdoc.utils.utils import recursive_overwrite
 
 DESCRIPTION =\
@@ -149,11 +146,9 @@ class DevhelpExtension(Extension):
         return opath
 
     def __project_formatted_cb(self, project):
-        dh_html_path = self.__format(project)
-        formatter = self.project.extensions['core'].formatter
-        html_path = os.path.join(self.project.app.output, 'html')
+        self.__format(project)
 
-
+    # pylint: disable=no-self-use
     def __formatted_cb(self, app):
         html_path = os.path.join(app.output, 'html')
         dh_html_path = os.path.join(app.output, 'devhelp')
@@ -180,9 +175,11 @@ class DevhelpExtension(Extension):
 
         for ext in self.project.extensions.values():
             ext.formatter.writing_page_signal.connect(self.__writing_page_cb)
-            ext.formatter.formatting_page_signal.connect(self.__formatting_page_cb)
+            ext.formatter.formatting_page_signal.connect(
+                self.__formatting_page_cb)
 
-        self.project.formatted_signal.connect_after(self.__project_formatted_cb)
+        self.project.formatted_signal.connect_after(
+            self.__project_formatted_cb)
         self.app.formatted_signal.connect_after(self.__formatted_cb)
 
     @staticmethod
@@ -196,7 +193,8 @@ class DevhelpExtension(Extension):
 
     def parse_toplevel_config(self, config):
         super(DevhelpExtension, self).parse_toplevel_config(config)
-        DevhelpExtension.activated = bool(config.get('devhelp_activate', False))
+        DevhelpExtension.activated = bool(
+            config.get('devhelp_activate', False))
 
 
 def get_extension_classes():
