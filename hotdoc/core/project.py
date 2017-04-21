@@ -316,7 +316,7 @@ class Project(Configurable):
         return None
 
     def __write_extra_assets(self, output):
-        for src, dest in self.extra_assets.items():
+        for dest, src in self.extra_assets.items():
             dest = os.path.join(output, 'html', dest)
             destdir = os.path.dirname(dest)
             if not os.path.exists(destdir):

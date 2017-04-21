@@ -424,7 +424,7 @@ class Formatter(Configurable):
                 output_folder = os.path.join(
                     self.get_output_folder(page),
                     os.path.dirname(page.link.ref))
-                project.extra_assets[path] = os.path.join(output_folder, src)
+                project.extra_assets[os.path.join(output_folder, src)] = path
                 asset.attrib['src'] = os.path.join(output_folder, src)
                 return
 
