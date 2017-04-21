@@ -172,14 +172,14 @@ class GitUploadExtension(Extension):
                  "It can contain the path in which the html files reside.\n"
                  "Specifying it activates the upload.\n"
                  "NOTE: It should most probably never be in the config file."
-                 " - html files from that directory will be deleted and only.",
+                 " - html files from that directory will be deleted.",
             default=None)
         group.add_argument(
             '--git-upload-repository',
             help="Git repository to upload to.\n Will be used only if "
             "--git-upload-local-repo is not available.\n", default=None)
         group.add_argument('--git-upload-remote-branch',
-                           help="Remove/branch to push the update to",
+                           help="Remote/branch to push the update to",
                            default="origin/master")
         group.add_argument('--git-upload-commit-message',
                            help="Commit message to use for the update.",
