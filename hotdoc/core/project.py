@@ -357,14 +357,15 @@ class Project(Configurable):
         ext = self.extensions.get(self.tree.root.extension_name)
         html_sitemap = ext.formatter.format_navigation(self)
 
-        escaped_sitemap = html_sitemap.replace(
-            '\\', '\\\\').replace('"', '\\"').replace('\n', '')
-        js_wrapper = 'sitemap_downloaded_cb("%s");' % escaped_sitemap
-        js_dir = os.path.join(output, 'html', 'assets', 'js')
-        if not os.path.exists(js_dir):
-            os.makedirs(js_dir)
-        with open(os.path.join(js_dir, 'sitemap.js'), 'w') as _:
-            _.write(js_wrapper)
+        if html_sitemap:
+            escaped_sitemap = html_sitemap.replace(
+                '\\', '\\\\').replace('"', '\\"').replace('\n', '')
+            js_wrapper = 'sitemap_downloaded_cb("%s");' % escaped_sitemap
+            js_dir = os.path.join(output, 'html', 'assets', 'js')
+            if not os.path.exists(js_dir):
+                os.makedirs(js_dir)
+            with open(os.path.join(js_dir, 'sitemap.js'), 'w') as _:
+                _.write(js_wrapper)
 
         self.write_out_tree(self.tree.root, output)
 
