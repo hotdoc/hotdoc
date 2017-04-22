@@ -21,6 +21,7 @@ import os
 import shutil
 import subprocess
 from subprocess import check_output as call
+import urllib.parse
 
 import appdirs
 from hotdoc.utils.utils import recursive_overwrite
@@ -42,6 +43,31 @@ to git a repository.
 
 It can be used to upload to github pages for example.
 """
+
+
+def _split_repo_url(repo_url):
+    sub_path = ''
+    addr = urllib.parse.urlparse(repo_url)
+
+    # Avoid blocking on password prompts
+    env = os.environ.copy()
+    env['GIT_ASKPASS'] = 'true'
+
+    while True:
+        if subprocess.call(['git', 'ls-remote', repo_url], env=env,
+                           stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL) == 0:
+            return repo_url, sub_path
+
+        sub_path = os.path.join(os.path.basename(addr.path), sub_path)
+        addr = urllib.parse.ParseResult(addr.scheme, addr.netloc,
+                                        os.path.dirname(addr.path),
+                                        addr.params, addr.query,
+                                        addr.fragment)
+        if repo_url == addr.geturl():
+            break
+        repo_url = addr.geturl()
+    return None, None
 
 
 class GitUploadExtension(Extension):
@@ -66,21 +92,26 @@ class GitUploadExtension(Extension):
 
     def __clone_and_update_repo(self):
         cachedir = appdirs.user_cache_dir("hotdoc", "hotdoc")
+
+        repo_url, repo_path = _split_repo_url(self.__repository)
+        if repo_url is None or repo_path is None:
+            warn("git-error", "%s doesn't seem to contain a repository URL" % (
+                self.__repository))
+            return None
+
+        sanitize = str.maketrans('/@:', '___')
         repo = os.path.join(cachedir, 'git-upload',
-                            self.__repository.replace(
-                                "/", "_").replace('@', '_').replace(
-                                    ':', '_'))
+                            repo_url.translate(sanitize))
         try:
             call(['git', 'rev-parse', '--show-toplevel'], cwd=repo,
                  stderr=subprocess.STDOUT)
         except (subprocess.CalledProcessError, FileNotFoundError):
-            print("cloning %s" % self.__repository)
+            print("cloning %s" % repo_url)
             try:
-                subprocess.check_call(['git', 'clone', self.__repository,
-                                       repo])
+                subprocess.check_call(['git', 'clone', repo_url, repo])
             except subprocess.CalledProcessError as exc:
                 warn("git-error", "Could not clone %s in %s: %s" % (
-                    self.__repository, repo, exc.output))
+                    repo_url, repo, exc.output))
 
                 return None
 
@@ -96,10 +127,10 @@ class GitUploadExtension(Extension):
             call(['git', 'pull'], cwd=repo, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as exc:
             warn("git-error", "Could not update %s (in %s) from remote %s" % (
-                self.__repository, repo, exc.output))
+                repo_url, repo, exc.output))
             return None
 
-        return repo
+        return os.path.join(repo, repo_path)
 
     def __formatted_cb(self, app):
         repo = self.__local_repo
@@ -176,8 +207,11 @@ class GitUploadExtension(Extension):
             default=None)
         group.add_argument(
             '--git-upload-repository',
-            help="Git repository to upload to.\n Will be used only if "
-            "--git-upload-local-repo is not available.\n", default=None)
+            help="Git repository to upload to.\n"
+                 "It can contain the path in which the html files reside.\n"
+                 "Will be used only if --git-upload-local-repo is not "
+                 "available.\n",
+            default=None)
         group.add_argument('--git-upload-remote-branch',
                            help="Remote/branch to push the update to",
                            default="origin/master")
