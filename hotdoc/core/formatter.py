@@ -449,10 +449,10 @@ class Formatter(Configurable):
             full_path = os.path.join(html_output, rel_path)
             if not os.path.exists(os.path.dirname(full_path)):
                 os.makedirs(os.path.dirname(full_path))
-            with open(cached_path, 'r') as _:
+            with open(cached_path, 'r', encoding='utf-8') as _:
                 doc_root = etree.HTML(_.read())
                 self.__validate_html(self.extension.project, page, doc_root)
-            with open(full_path, 'w') as _:
+            with open(full_path, 'w', encoding='utf-8') as _:
                 transformed = str(self.__page_transform(doc_root))
                 _.write(transformed)
 
@@ -466,7 +466,7 @@ class Formatter(Configurable):
         if not os.path.exists(os.path.dirname(full_path)):
             os.makedirs(os.path.dirname(full_path))
 
-        with open(full_path, 'w') as _:
+        with open(full_path, 'w', encoding='utf-8') as _:
             _.write(page.detailed_description)
 
         page.cached_paths.add(full_path)

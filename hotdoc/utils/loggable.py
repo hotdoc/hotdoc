@@ -24,6 +24,7 @@ Banana banana
 import os
 import re
 import sys
+import io
 from collections import defaultdict, namedtuple
 
 from hotdoc.utils.configurable import Configurable
@@ -148,26 +149,38 @@ TERMC = TerminalController()
 LogEntry = namedtuple('LogEntry', ['level', 'domain', 'code', 'message'])
 
 
+def force_print(out, msg):
+    try:
+        out.write(msg)
+    except UnicodeEncodeError:
+        iostr = io.StringIO()
+        kwargs['file'] = iostr
+        iostr.write(msg)
+        cleaned = iostr.getvalue().encode('ascii', 'replace').decode('ascii')
+        out.write(cleaned)
+
+
+
 def _print_entry(entry):
     out = sys.stdout
     if entry.level > INFO:
         out = sys.stderr
 
     if entry.level == DEBUG:
-        out.write(TERMC.CYAN + 'DEBUG' + TERMC.NORMAL)
+        force_print(out, TERMC.CYAN + 'DEBUG' + TERMC.NORMAL)
     elif entry.level == INFO:
-        out.write(TERMC.GREEN + 'INFO' + TERMC.NORMAL)
+        force_print(out, TERMC.GREEN + 'INFO' + TERMC.NORMAL)
     elif entry.level == WARNING:
-        out.write(TERMC.YELLOW + 'WARNING' + TERMC.NORMAL)
+        force_print(out, TERMC.YELLOW + 'WARNING' + TERMC.NORMAL)
     elif entry.level == ERROR:
-        out.write(TERMC.RED + 'ERROR' + TERMC.NORMAL)
+        force_print(out, TERMC.RED + 'ERROR' + TERMC.NORMAL)
 
-    out.write(': [%s]:' % entry.domain)
+    force_print(out, ': [%s]:' % entry.domain)
 
     if entry.code:
-        out.write(' (%s):' % entry.code)
+        force_print(out, ' (%s):' % entry.code)
 
-    out.write(' %s\n' % entry.message)
+    force_print(out, ' %s\n' % entry.message)
     out.flush()
 
 
