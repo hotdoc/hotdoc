@@ -536,13 +536,8 @@ class Formatter(Configurable):
 
         elif type(symbol) == FieldSymbol and symbol.member_name:
             out += self._format_type_tokens(symbol.qtype.type_tokens)
-            template = self.engine.get_template('inline_code.html')
-            member_name = template.render({'code': symbol.member_name})
             if symbol.is_function_pointer:
-                out = member_name
-                out += "()"
-            else:
-                out += ' ' + member_name
+                out = ""
 
         return out
 
@@ -716,10 +711,9 @@ class Formatter(Configurable):
             extra=parameter.extension_contents), False)
 
     def _format_field_symbol(self, field):
-        field_id = self._format_linked_symbol(field)
         template = self.engine.get_template('field_detail.html')
+        field.formatted_link = self._format_linked_symbol(field)
         return (template.render({'symbol': field,
-                                 'name': field_id,
                                  'detail': field.formatted_doc}), False)
 
     def _format_return_item_symbol(self, return_item):

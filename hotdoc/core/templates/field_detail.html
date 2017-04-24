@@ -1,9 +1,8 @@
-@require(symbol, name, detail)
+@require(symbol, detail)
 <tr id="@symbol.unique_name">
-	@if name:
 	<td>
 		<p>
-		<i><em><code>@name:</code></em></i>
+		<i><em><code>@symbol.link.get_title():</code></em></i>
 		</p>
 	</td>
 	@end

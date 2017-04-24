@@ -25,7 +25,6 @@ from collections import namedtuple
 from schema import Schema, SchemaError, And, Use, Optional
 
 from hotdoc.core.extension import Extension
-from hotdoc.core.formatter import Formatter
 from hotdoc.core.tree import Page
 from hotdoc.core.exceptions import HotdocException
 from hotdoc.utils.loggable import error, Logger
@@ -196,10 +195,10 @@ class LicenseExtension(Extension):
     def setup(self):
         super(LicenseExtension, self).setup()
         for ext in self.project.extensions.values():
-            ext.formatter.formatting_page_signal.connect(self.__formatting_page_cb)
-            ext.formatter.get_extra_files_signal.connect(self.__get_extra_files_cb)
-
-        for ext in list(self.project.extensions.values()):
+            ext.formatter.formatting_page_signal.connect(
+                self.__formatting_page_cb)
+            ext.formatter.get_extra_files_signal.connect(
+                self.__get_extra_files_cb)
             template_path = os.path.join(HERE, 'html_templates')
             ext.formatter.engine.loader.searchpath.append(template_path)
 
