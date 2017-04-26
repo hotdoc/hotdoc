@@ -66,6 +66,8 @@ Page.meta_schema[Optional('authors')] =\
 
 Page.meta_schema[Optional('license')] =\
     Schema(And(str, len))
+Page.meta_schema[Optional('code-samples-license')] =\
+    Schema(And(str, len))
 
 
 class License(object):
@@ -98,10 +100,14 @@ CCBYSA_4_0_LICENSE = License("CC-BY-SAv4.0",
                              "4.0 International",
                              "https://creativecommons.org/licenses/by-sa/4.0/")
 
+CC0_LICENSE = License("CC0-1.0",
+                      "Creative Commons Zero 1.0 Universal.",
+                      "http://spdx.org/licenses/CC0-1.0")
 
 ALL_LICENSES = {
     "CC-BY-SAv4.0": CCBYSA_4_0_LICENSE,
     "CC-BY-SA": CCBYSA_4_0_LICENSE,
+    "CC0-1.0": CC0_LICENSE,
 }
 
 
@@ -113,12 +119,17 @@ class LicenseExtension(Extension):
         Extension.__init__(self, app, project)
         self.__installed_assets = set()
         self.default_license = None
+        self.default_code_samples_license = None
         self.default_copyright_holders = []
         self.authors_hold_copyright = True
 
-    def __license_for_page(self, page):
-        if 'license' in page.meta:
-            short_name = page.meta['license']
+    def __license_for_page(self, page, code_samples=False):
+        if code_samples:
+            key = 'code-samples-license'
+        else:
+            key = 'license'
+        if key in page.meta:
+            short_name = page.meta[key]
             try:
                 license_ = ALL_LICENSES[short_name]
             except KeyError:
@@ -126,7 +137,10 @@ class LicenseExtension(Extension):
                       'In %s: no such license %s' % (page.source_file,
                                                      short_name))
         else:
-            license_ = self.default_license
+            if code_samples:
+                license_ = self.default_code_samples_license
+            else:
+                license_ = self.default_license
 
         return license_
 
@@ -156,6 +170,22 @@ class LicenseExtension(Extension):
         return (self.__authors_for_page(page) +
                 self.__extra_copyrights_for_page(page))
 
+    def license_content(self, formatter, page, license_, designation):
+        template = formatter.engine.get_template('license.html')
+        if license_.logo_path:
+            logo_path = os.path.join(
+                'assets', os.path.basename(license_.logo_path))
+        else:
+            logo_path = None
+
+        formatted = template.render(
+                {'license': license_, 'logo_path': logo_path, 'content_designation': designation})
+        page.output_attrs['html']['extra_footer_html'].insert(0, formatted)
+
+        self.__installed_assets.add(license_.plain_text_path)
+        if license_.logo_path:
+            self.__installed_assets.add(license_.logo_path)
+
     def __formatting_page_cb(self, formatter, page):
         # hotdoc doesn't claim a copyright
         if page.generated:
@@ -168,21 +198,15 @@ class LicenseExtension(Extension):
             page.output_attrs['html']['extra_footer_html'].insert(0, formatted)
 
         license_ = self.__license_for_page(page)
-        if license_:
-            template = formatter.engine.get_template('license.html')
-            if license_.logo_path:
-                logo_path = os.path.join(
-                    'assets', os.path.basename(license_.logo_path))
-            else:
-                logo_path = None
+        code_license = self.__license_for_page(page, code_samples=True)
 
-            formatted = template.render(
-                {'license': license_, 'logo_path': logo_path})
-            page.output_attrs['html']['extra_footer_html'].insert(0, formatted)
-
-            self.__installed_assets.add(license_.plain_text_path)
-            if license_.logo_path:
-                self.__installed_assets.add(license_.logo_path)
+        if license_ and (license_ == code_license or not code_license):
+            self.license_content(formatter, page, license_, 'All content in this page is')
+        else:
+            if code_license:
+                self.license_content(formatter, page, code_license, 'Code snippets in this page are')
+            if license_:
+                self.license_content(formatter, page, license_, 'Documentation in this page is')
 
     def __get_extra_files_cb(self, formatter):
         res = []
@@ -211,6 +235,11 @@ class LicenseExtension(Extension):
                            dest="default_license",
                            action='store',
                            default=None)
+        group.add_argument("--default-code-samples-license",
+                           help="Default license for code samples",
+                           dest="default_code_samples_license",
+                           action='store',
+                           default=None)
         group.add_argument("--authors-hold-copyright",
                            help="Whether authors hold a copyright by default."
                            "This can be overriden on a per-page basis",
@@ -224,6 +253,14 @@ class LicenseExtension(Extension):
                 self.default_license = ALL_LICENSES[short_name]
             except KeyError:
                 error('no-such-license', 'Unknown license : %s' % short_name)
+
+        short_name = config.get("default-code-samples-license")
+        if short_name is not None:
+            try:
+                self.default_code_samples_license = ALL_LICENSES[short_name]
+            except KeyError:
+                error('no-such-license', 'Unknown license : %s' % short_name)
+
         data = config.get("default-copyright-holders")
         if data:
             try:
