@@ -528,7 +528,8 @@ class Formatter(Configurable):
                                        'link_title': title})
         return out
 
-    def _format_type_tokens(self, type_tokens):
+    # pylint: disable=unused-argument
+    def _format_type_tokens(self, symbol, type_tokens):
         out = ''
         link_before = False
 
@@ -556,7 +557,7 @@ class Formatter(Configurable):
         out = ""
 
         if isinstance(symbol, QualifiedSymbol):
-            out += self._format_type_tokens(symbol.type_tokens)
+            out += self._format_type_tokens(symbol, symbol.type_tokens)
 
         # FIXME : ugly
         elif hasattr(symbol, "link") and type(symbol) != FieldSymbol:
@@ -568,7 +569,7 @@ class Formatter(Configurable):
             out += ' ' + symbol.argname
 
         elif type(symbol) == FieldSymbol and symbol.member_name:
-            out += self._format_type_tokens(symbol.qtype.type_tokens)
+            out += self._format_type_tokens(symbol, symbol.qtype.type_tokens)
             if symbol.is_function_pointer:
                 out = ""
 
