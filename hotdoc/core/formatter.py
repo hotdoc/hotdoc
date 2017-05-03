@@ -383,18 +383,19 @@ class Formatter(Configurable):
 
         main_node = doc_root.find('.//*[@data-hotdoc-role="main"]')
 
-        empty_links = main_node.xpath('.//a[not(text()) and not(*)]')
-        for link in empty_links:
+        links = main_node.xpath('.//a')
+        for link in links:
             href = link.attrib.get('href')
             if href and href.startswith('#'):
-                title = id_nodes.get(href.strip('#'))
-                if title:
-                    link.text = title
-                else:
-                    warn('bad-local-link',
-                         "Empty anchor link to %s in %s points nowhere" %
-                         (href, page.source_file))
-                    link.text = "FIXME broken link to %s" % href
+                if not link.text and not link.getchildren():
+                    title = id_nodes.get(href.strip('#'))
+                    if title:
+                        link.text = title
+                    else:
+                        warn('bad-local-link',
+                             "Empty anchor link to %s in %s points nowhere" %
+                             (href, page.source_file))
+                        link.text = "FIXME broken link to %s" % href
                 link.attrib["href"] = rel_path + href
 
         assets = main_node.xpath('.//*[@src]')
