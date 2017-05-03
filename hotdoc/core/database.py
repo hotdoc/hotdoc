@@ -168,7 +168,8 @@ class Database(object):
         if not sym:
             sym = self.__session.query(ProxySymbol).filter(
                 ProxySymbol.unique_name == name).first()
-            sym = self.get_symbol(sym.target)
+            if sym:
+                sym = self.get_symbol(sym.target)
 
         if sym:
             # Faster look up next time around
