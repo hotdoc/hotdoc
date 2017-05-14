@@ -24,6 +24,7 @@ import shutil
 import json
 import glob
 import threading
+import multiprocessing
 
 from concurrent import futures
 from collections import defaultdict
@@ -189,7 +190,8 @@ class SearchIndex(object):
         self.__new_index = defaultdict(list)
         self.__trie = Trie()
 
-        self.__filler = futures.ThreadPoolExecutor()
+        self.__filler = futures.ThreadPoolExecutor(
+            max_workers=multiprocessing.cpu_count() * 5)
         here = os.path.dirname(__file__)
         with open(os.path.join(here, 'stopwords.txt'), 'r') as _:
             self.__stop_words = set(_.read().split())
@@ -266,7 +268,6 @@ class SearchIndex(object):
             self.__indices_lock.release()
 
     def save(self):
-        print("Saving %s" % len(self.__new_index))
         self.__indices_lock.acquire()
         for key, value in sorted(self.__new_index.items()):
             self.__trie.insert(key)

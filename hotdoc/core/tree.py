@@ -117,7 +117,7 @@ class Page(object):
         self.output_attrs = None
         self.subpages = OrderedSet()
         self.symbols = []
-        self.typed_symbols = {}
+        self.typed_symbols = OrderedDict()
         self.by_parent_symbols = OrderedDict()
         self.is_stale = True
         self.formatted_contents = None
