@@ -20,7 +20,6 @@
 Utilities and baseclasses for extensions
 """
 import os
-from collections import defaultdict
 
 from hotdoc.core.inclusions import find_file
 from hotdoc.core.symbols import Symbol
@@ -28,7 +27,7 @@ from hotdoc.core.tree import Page, OverridePage
 from hotdoc.core.formatter import Formatter
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.loggable import debug, info, warn, error
-from hotdoc.utils.utils import OrderedSet
+from hotdoc.utils.utils import OrderedSet, DefaultOrderedDict
 
 
 # pylint: disable=too-few-public-methods
@@ -96,7 +95,7 @@ class Extension(Configurable):
         self.sources = set()
         self.index = None
         self.smart_index = False
-        self._created_symbols = defaultdict(OrderedSet)
+        self._created_symbols = DefaultOrderedDict(OrderedSet)
         self.__package_root = None
         self.__overriden_pages = []
 
@@ -153,7 +152,7 @@ class Extension(Configurable):
         This function is only useful for testing purposes, at least
         for now.
         """
-        self._created_symbols = defaultdict(OrderedSet)
+        self._created_symbols = DefaultOrderedDict(OrderedSet)
         self.__package_root = None
 
     def setup(self):
