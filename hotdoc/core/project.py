@@ -64,6 +64,14 @@ class CoreExtension(Extension):
             return super(CoreExtension, self).format_page(
                 page, link_resolver, output)
 
+    def write_out_page(self, output, page):
+        proj = self.project.subprojects.get(page.source_file)
+        if proj:
+            proj.tree.write_out(output)
+        else:
+            return super(CoreExtension, self).write_out_page(
+                output, page)
+
     def setup(self):
         super(CoreExtension, self).setup()
         inclusions.include_signal.disconnect(CoreExtension.include_file_cb)
@@ -355,19 +363,8 @@ class Project(Configurable):
         """Banana banana
         """
         ext = self.extensions.get(self.tree.root.extension_name)
-        html_sitemap = ext.formatter.format_navigation(self)
 
-        if html_sitemap:
-            escaped_sitemap = html_sitemap.replace(
-                '\\', '\\\\').replace('"', '\\"').replace('\n', '')
-            js_wrapper = 'sitemap_downloaded_cb("%s");' % escaped_sitemap
-            js_dir = os.path.join(output, 'html', 'assets', 'js')
-            if not os.path.exists(js_dir):
-                os.makedirs(js_dir)
-            with open(os.path.join(js_dir, 'sitemap.js'), 'w') as _:
-                _.write(js_wrapper)
-
-        self.write_out_tree(self.tree.root, output)
+        self.tree.write_out(output)
 
         self.__write_extra_assets(output)
         ext.formatter.copy_assets(os.path.join(output, 'html', 'assets'))
