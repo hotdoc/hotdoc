@@ -20,6 +20,7 @@
 Utilities and baseclasses for extensions
 """
 import os
+from collections import OrderedDict
 
 from hotdoc.core.inclusions import find_file
 from hotdoc.core.symbols import Symbol
@@ -80,6 +81,7 @@ class Extension(Configurable):
     argument_prefix = ''
     paths_arguments = {}
     path_arguments = {}
+    written_out_sitemaps = set()
 
     def __init__(self, app, project):
         """Constructor for `Extension`.
@@ -544,6 +546,56 @@ class Extension(Configurable):
         else:
             debug('Not formatting page %s, up to date' % page.link.ref,
                   'formatting')
+
+    def write_out_sitemap(self, opath):
+        """
+        Banana banana
+        """
+        if opath not in self.written_out_sitemaps:
+            Extension.formatted_sitemap = self.formatter.format_navigation(
+                self.app.project)
+            if Extension.formatted_sitemap:
+                escaped_sitemap = Extension.formatted_sitemap.replace(
+                    '\\', '\\\\').replace('"', '\\"').replace('\n', '')
+                js_wrapper = 'sitemap_downloaded_cb("%s");' % escaped_sitemap
+                with open(opath, 'w') as _:
+                    _.write(js_wrapper)
+
+        self.written_out_sitemaps.add(opath)
+
+    def write_out_page(self, output, page):
+        """
+        Banana banana
+        """
+        subpages = OrderedDict({})
+        all_pages = self.project.tree.get_pages()
+        subpage_names = self.get_subpages_sorted(all_pages, page)
+        for pagename in subpage_names:
+            proj = self.project.subprojects.get(pagename)
+
+            if not proj:
+                cpage = all_pages[pagename]
+                sub_formatter = self.project.extensions[
+                    cpage.extension_name].formatter
+            else:
+                cpage = proj.tree.root
+                sub_formatter = proj.extensions[cpage.extension_name].formatter
+
+            subpage_link = cpage.link.get_link(self.app.link_resolver)
+            prefix = sub_formatter.get_output_folder(cpage)
+            if prefix:
+                subpage_link = '%s/%s' % (prefix, subpage_link)
+            subpages[subpage_link] = cpage
+
+        html_subpages = self.formatter.format_subpages(page, subpages)
+
+        js_dir = os.path.join(output, 'html', 'assets', 'js')
+        if not os.path.exists(js_dir):
+            os.makedirs(js_dir)
+        sm_path = os.path.join(js_dir, 'sitemap.js')
+        self.write_out_sitemap(sm_path)
+
+        self.formatter.write_out(page, html_subpages, output)
 
     def get_subpages_sorted(self, pages, page):
         """Get @page subpages sorted appropriately."""

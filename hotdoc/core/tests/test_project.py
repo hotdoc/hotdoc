@@ -36,6 +36,7 @@ class TestProject(HotdocTest):
         self.extension_classes = {CoreExtension.extension_name: CoreExtension}
         self.private_folder = self.private_folder
         self.output = self._output_dir
+        self.project = self
         Logger.silent = True
 
     def test_basic(self):

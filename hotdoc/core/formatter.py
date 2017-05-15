@@ -474,19 +474,21 @@ class Formatter(Configurable):
         namespace = etree.FunctionNamespace('uri:hotdoc')
         namespace['subpages'] = subpages
         html_output = os.path.join(output, 'html')
-        for cached_path in page.cached_paths:
-            rel_path = os.path.relpath(cached_path, self.__cache_dir)
-            full_path = os.path.join(html_output, rel_path)
-            if not os.path.exists(os.path.dirname(full_path)):
-                os.makedirs(os.path.dirname(full_path))
-            with open(cached_path, 'r', encoding='utf-8') as _:
-                doc_root = etree.HTML(_.read())
-                self.__validate_html(self.extension.project, page, doc_root)
 
-            self.writing_page_signal(self, page, full_path, doc_root)
-            with open(full_path, 'w', encoding='utf-8') as _:
-                transformed = str(self.__page_transform(doc_root))
-                _.write(transformed)
+        rel_path = os.path.join(self.get_output_folder(page), page.link.ref)
+        cached_path = os.path.join(self.__cache_dir, rel_path)
+        full_path = os.path.join(html_output, rel_path)
+
+        if not os.path.exists(os.path.dirname(full_path)):
+            os.makedirs(os.path.dirname(full_path))
+        with open(cached_path, 'r', encoding='utf-8') as _:
+            doc_root = etree.HTML(_.read())
+            self.__validate_html(self.extension.project, page, doc_root)
+
+        self.writing_page_signal(self, page, full_path, doc_root)
+        with open(full_path, 'w', encoding='utf-8') as _:
+            transformed = str(self.__page_transform(doc_root))
+            _.write(transformed)
 
     def cache_page(self, page):
         """

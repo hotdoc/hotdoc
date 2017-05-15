@@ -721,6 +721,13 @@ class Tree(object):
         self.__extensions = None
         link_resolver.get_link_signal.disconnect(self.__get_link_cb)
 
+    def write_out(self, output):
+        """Banana banana
+        """
+        for page in self.walk():
+            ext = self.project.extensions[page.extension_name]
+            ext.write_out_page(output, page)
+
     def persist(self):
         """
         Banana banana
