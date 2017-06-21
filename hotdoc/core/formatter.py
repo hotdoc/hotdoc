@@ -488,7 +488,7 @@ class Formatter(Configurable):
         self.writing_page_signal(self, page, full_path, doc_root)
         with open(full_path, 'w', encoding='utf-8') as _:
             transformed = str(self.__page_transform(doc_root))
-            _.write(transformed)
+            _.write('<!DOCTYPE html>\n%s' % transformed)
 
     def cache_page(self, page):
         """
