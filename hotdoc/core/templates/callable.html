@@ -21,7 +21,7 @@
 \
 @for name, ex in extra.items():
 <p>
-	@name :\
+	<b>@name:</b>\
 	@ex
 </p>
 @end
@@ -29,7 +29,7 @@
 
 @for tag in tags.values():
 	<p>
-	@tag.name\
+	<b>@tag.name</b>\
 	@if tag.description:
 		: @tag.description
 	@end
