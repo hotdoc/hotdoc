@@ -829,7 +829,8 @@ class Formatter(Configurable):
 
     def _format_vfunction_symbol(self, vmethod):
         return self._format_callable(vmethod, "virtual method",
-                                     vmethod.link.title)
+                                     '%s.%s' %
+                                     (vmethod.parent_name, vmethod.link.title))
 
     def _format_property_symbol(self, prop):
         type_link = self._format_linked_symbol(prop.prop_type)
