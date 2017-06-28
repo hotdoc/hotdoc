@@ -33,6 +33,7 @@ import yaml
 from yaml.constructor import ConstructorError
 from schema import Schema, SchemaError, Optional, And
 
+from hotdoc.utils.utils import id_from_text
 from hotdoc.core.inclusions import find_file, resolve
 from hotdoc.core.symbols import Symbol, StructSymbol, ClassSymbol,\
     InterfaceSymbol, AliasSymbol
@@ -94,7 +95,8 @@ class Page(object):
                    Optional('short-description'): And(str, len),
                    Optional('render-subpages'): bool,
                    Optional('auto-sort'): bool,
-                   Optional('full-width'): bool}
+                   Optional('full-width'): bool,
+                   Optional('extra'): Schema({str: object})}
 
     # pylint: disable=too-many-arguments
     def __init__(self, source_file, ast, output_path, project_name, meta=None,
@@ -135,6 +137,9 @@ class Page(object):
                  '%s: Invalid metadata: \n%s' % (self.source_file,
                                                  str(_)))
             self.meta = meta
+
+        if not self.meta.get('extra'):
+            self.meta['extra'] = defaultdict()
 
         self.symbol_names = OrderedSet(meta.get('symbols') or [])
         self.short_description = meta.get('short-description')
@@ -255,7 +260,8 @@ class Page(object):
                 self.title = self.title[3:-4]
 
         if self.title:
-            self.formatted_contents += '<h1>%s</h1>' % self.title
+            self.formatted_contents += '<h1 id="%s-page">%s</h1>' % (
+                id_from_text(self.title), self.title)
 
         self.formatted_contents += formatter.format_comment(
             self.comment, link_resolver)

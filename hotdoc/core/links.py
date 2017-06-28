@@ -71,14 +71,7 @@ class Link(MutableObject):
         """
         Banana banana
         """
-        resolved_ref = link_resolver.resolving_link_signal(self)
-        resolved_ref = [elem for elem in resolved_ref if elem is not None]
-
-        res = self.ref
-        if resolved_ref:
-            res = str(resolved_ref[0])
-
-        return res
+        return link_resolver.resolving_link_signal(self) or self.ref
 
 
 class LinkResolver(object):
@@ -89,7 +82,7 @@ class LinkResolver(object):
         self.__links = {}
         self.__doc_db = database
         self.get_link_signal = Signal()
-        self.resolving_link_signal = Signal()
+        self.resolving_link_signal = Signal(optimized=True)
 
     # pylint: disable=too-many-return-statements
     def get_named_link(self, name):
