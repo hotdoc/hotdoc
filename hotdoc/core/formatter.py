@@ -33,7 +33,7 @@ import shutil
 import tarfile
 import hashlib
 
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 
 import appdirs
 
@@ -44,9 +44,7 @@ from wheezy.template.engine import Engine
 from wheezy.template.ext.core import CoreExtension
 from wheezy.template.ext.code import CodeExtension
 from wheezy.template.loader import FileLoader
-from schema import Schema, Optional
 
-from hotdoc.core.tree import Page
 from hotdoc.core.symbols import\
     (ConstructorSymbol, MethodSymbol, FunctionSymbol, CallbackSymbol,
      ParameterSymbol, ReturnItemSymbol, FieldSymbol, QualifiedSymbol,
@@ -61,10 +59,6 @@ from hotdoc.core.exceptions import HotdocException
 from hotdoc.utils.loggable import Logger, warn, debug
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.signals import Signal
-
-
-Page.meta_schema[Optional('extra', default=defaultdict())] = \
-    Schema({str: object})
 
 
 class FormatterBadLinkException(HotdocException):
@@ -828,8 +822,7 @@ class Formatter(Configurable):
 
     def _format_vfunction_symbol(self, vmethod):
         return self._format_callable(vmethod, "virtual method",
-                                     '%s.%s' %
-                                     (vmethod.parent_name, vmethod.link.title))
+                                     '%s' % vmethod.link.title)
 
     def _format_property_symbol(self, prop):
         type_link = self._format_linked_symbol(prop.prop_type)
@@ -892,7 +885,9 @@ class Formatter(Configurable):
             member.extension_attributes['order_by_section'] = \
                 self._order_by_parent and parent.parent_name
         return template.render({'members': members,
-                                'member_designation': member_designation})
+                                'member_designation': member_designation,
+                                'parent_is_class': isinstance(parent,
+                                                              ClassSymbol)})
 
     def _format_function(self, function):
         return self._format_callable(function, "method", function.link.title)

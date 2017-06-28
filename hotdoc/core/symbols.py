@@ -47,7 +47,6 @@ class Symbol(Base):
     lineno = Column(Integer)
     extent_start = Column(Integer)
     extent_end = Column(Integer)
-    language = Column(String)
     extra = Column(MutableDict.as_mutable(PickleType))
     _type_ = Column(String)
     extension_contents = Column(MutableDict.as_mutable(PickleType))
