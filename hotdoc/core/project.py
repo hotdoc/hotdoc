@@ -250,6 +250,12 @@ class Project(Configurable):
         proj.setup()
         self.subprojects[fname] = proj
 
+    def get_page_for_symbol(self, unique_name):
+        """
+        Banana banana
+        """
+        return self.dependency_map.get(unique_name)
+
     def __create_extensions(self):
         for ext_class in list(self.app.extension_classes.values()):
             ext = ext_class(self.app, self)
