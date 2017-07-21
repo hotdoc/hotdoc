@@ -125,7 +125,7 @@ class Project(Configurable):
     Banana banana
     """
 
-    def __init__(self, app, dependency_map=None):
+    def __init__(self, app, dependency_map=None, page_map=None):
         self.app = app
         self.tree = None
         self.include_paths = None
@@ -138,10 +138,16 @@ class Project(Configurable):
         self.subprojects = {}
         self.extra_asset_folders = OrderedSet()
         self.extra_assets = {}
+
         if dependency_map is None:
             self.dependency_map = {}
         else:
             self.dependency_map = dependency_map
+
+        if page_map is None:
+            self.page_map = {}
+        else:
+            self.page_map = page_map
 
         if os.name == 'nt':
             self.datadir = os.path.join(
@@ -201,6 +207,7 @@ class Project(Configurable):
 
         sitemap = SitemapParser().parse(self.sitemap_path)
         self.tree.parse_sitemap(sitemap)
+        self.page_map.update({p: self for p in self.tree.get_pages().values()})
 
         info("Resolving symbols", 'resolution')
         self.tree.resolve_symbols(self.app.database, self.app.link_resolver)
@@ -244,7 +251,9 @@ class Project(Configurable):
     def add_subproject(self, fname, conf_path):
         """Creates and adds a new subproject."""
         config = Config(conf_file=conf_path)
-        proj = Project(self.app, self.dependency_map)
+        proj = Project(self.app,
+                       dependency_map=self.dependency_map,
+                       page_map=self.page_map)
         proj.parse_name_from_config(config)
         proj.parse_config(config)
         proj.setup()
@@ -255,6 +264,12 @@ class Project(Configurable):
         Banana banana
         """
         return self.dependency_map.get(unique_name)
+
+    def get_project_for_page(self, page):
+        """
+        Banana banana
+        """
+        return self.page_map.get(page)
 
     def __create_extensions(self):
         for ext_class in list(self.app.extension_classes.values()):
