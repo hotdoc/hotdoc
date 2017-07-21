@@ -379,7 +379,8 @@ class Tree(object):
 
         self.__placeholders = {}
         self.root = None
-        self.__dep_map = self.__create_dep_map()
+        self.__dep_map = project.dependency_map
+        self.__fill_dep_map()
 
         cmark.hotdoc_to_ast(u'', self)
         self.__extensions = {}
@@ -388,12 +389,10 @@ class Tree(object):
         self.update_signal = Signal()
         self.resolving_symbol_signal = Signal()
 
-    def __create_dep_map(self):
-        dep_map = {}
+    def __fill_dep_map(self):
         for page in list(self.__all_pages.values()):
             for sym_name in page.symbol_names:
-                dep_map[sym_name] = page
-        return dep_map
+                self.__dep_map[sym_name] = page
 
     def __load_private(self, name):
         path = os.path.join(self.project.get_private_folder(), name)

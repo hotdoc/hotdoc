@@ -82,6 +82,8 @@ class TestTree(unittest.TestCase):
         self.include_paths = OrderedSet([self.__md_dir])
         self.include_paths.add(self.get_generated_doc_folder())
 
+        self.dependency_map = {}
+
         # Using the real doc database is too costly, tests should be lightning
         # fast (and they are)
         self.database = Database()

@@ -50,6 +50,7 @@ class HotdocTest(unittest.TestCase):
         os.mkdir(self._md_dir)
         os.mkdir(self.private_folder)
         os.mkdir(self._src_dir)
+        self.dependency_map = {}
         self.change_tracker = ChangeTracker()
         self.database = Database()
         self.link_resolver = LinkResolver(self.database)

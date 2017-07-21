@@ -125,7 +125,7 @@ class Project(Configurable):
     Banana banana
     """
 
-    def __init__(self, app):
+    def __init__(self, app, dependency_map=None):
         self.app = app
         self.tree = None
         self.include_paths = None
@@ -138,6 +138,10 @@ class Project(Configurable):
         self.subprojects = {}
         self.extra_asset_folders = OrderedSet()
         self.extra_assets = {}
+        if dependency_map is None:
+            self.dependency_map = {}
+        else:
+            self.dependency_map = dependency_map
 
         if os.name == 'nt':
             self.datadir = os.path.join(
@@ -240,7 +244,7 @@ class Project(Configurable):
     def add_subproject(self, fname, conf_path):
         """Creates and adds a new subproject."""
         config = Config(conf_file=conf_path)
-        proj = Project(self.app)
+        proj = Project(self.app, self.dependency_map)
         proj.parse_name_from_config(config)
         proj.parse_config(config)
         proj.setup()
