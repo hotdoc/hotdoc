@@ -665,12 +665,6 @@ class Tree(object):
         """
         return self.__all_pages
 
-    def get_page_for_symbol(self, unique_name):
-        """
-        Banana banana
-        """
-        return self.__dep_map.get(unique_name)
-
     def __update_dep_map(self, page, symbols):
         for sym in symbols:
             if not isinstance(sym, Symbol):
