@@ -32,6 +32,7 @@ from hotdoc.utils.loggable import Logger
 class TestProject(HotdocTest):
 
     def setUp(self):
+        self.dependency_map = {}
         super(TestProject, self).setUp()
         self.extension_classes = {CoreExtension.extension_name: CoreExtension}
         self.private_folder = self.private_folder
