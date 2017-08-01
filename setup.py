@@ -289,7 +289,7 @@ INSTALL_REQUIRES = [
     'appdirs',
     'wheezy.template==0.1.167',
     'sqlalchemy>=1.0.8',
-    'toposort==1.4']
+    'toposort>=1.4']
 
 EXTRAS_REQUIRE = {
     'dev': ['git-pylint-commit-hook',
