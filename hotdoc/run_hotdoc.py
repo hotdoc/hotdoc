@@ -36,7 +36,7 @@ from hotdoc.core.exceptions import HotdocException
 from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.database import Database
 from hotdoc.core.links import LinkResolver, Link
-from hotdoc.utils.utils import all_subclasses, get_installed_extension_classes, get_cat
+from hotdoc.utils.utils import all_subclasses, get_extension_classes, get_cat
 from hotdoc.utils.loggable import Logger, error, info
 from hotdoc.utils.setup_utils import VERSION
 from hotdoc.utils.configurable import Configurable
@@ -355,9 +355,23 @@ def run(args):
     """
     Banana banana
     """
+
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         add_help=False)
+    parser.add_argument("--extra-extension-path", action="append",
+                        default=[],
+                        dest="extra_extension_path",
+                        help="An extra extension path to use")
+    tmpargs, _args = parser.parse_known_args(args)
+
+    # We only get these once, doing this now means all
+    # installed extensions will show up as Configurable subclasses.
+    try:
+        ext_classes = get_extension_classes(
+            sort=True, extra_extension_paths=tmpargs.extra_extension_path)
+    except HotdocException:
+        return 1
 
     parser.add_argument('command', action="store",
                         choices=('run', 'conf', 'init', 'help'),
@@ -400,13 +414,6 @@ def run(args):
                         default=False,
                         dest="disable_incremental",
                         help="Disable incremental build")
-
-    # We only get these once, doing this now means all
-    # installed extensions will show up as Configurable subclasses.
-    try:
-        ext_classes = get_installed_extension_classes(sort=True)
-    except HotdocException:
-        return 1
 
     add_args_methods = set()
 

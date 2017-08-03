@@ -26,7 +26,7 @@ import shutil
 from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.config import Config
 from hotdoc.utils.utils import touch
-from hotdoc.utils.utils import get_installed_extension_classes
+from hotdoc.utils.utils import get_extension_classes
 from hotdoc.run_hotdoc import Application
 from hotdoc.core.database import Database
 from hotdoc.core.links import LinkResolver
@@ -138,6 +138,6 @@ class HotdocTest(unittest.TestCase):
 
     @staticmethod
     def create_application():
-        ext_classes = get_installed_extension_classes(sort=True)
+        ext_classes = get_extension_classes(sort=True)
 
         return Application(ext_classes)
