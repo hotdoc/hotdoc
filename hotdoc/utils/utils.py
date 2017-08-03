@@ -115,11 +115,11 @@ def get_mtime(filename):
     return mtime
 
 
-def get_extra_extension_classes(paths):
+def __get_extra_extension_classes(paths):
     """
     Banana banana
     """
-    extra_classes = {}
+    extra_classes = []
     wset = pkg_resources.WorkingSet([])
     distributions, _ = wset.find_plugins(pkg_resources.Environment(paths))
 
@@ -138,12 +138,13 @@ def get_extra_extension_classes(paths):
             continue
 
         for klass in classes:
-            extra_classes[klass.extension_name] = klass
+            extra_classes.append(klass)
 
     return extra_classes
 
 
-def get_installed_extension_classes(sort):
+# pylint: disable=too-many-locals
+def get_extension_classes(sort, extra_extension_paths=None):
     """
     Banana banana
     """
@@ -163,10 +164,13 @@ def get_installed_extension_classes(sort):
         for klass in classes:
             all_classes[klass.extension_name] = klass
 
-    if not sort:
-        return all_classes
+    if extra_extension_paths:
+        for klass in __get_extra_extension_classes(extra_extension_paths):
+            all_classes[klass.extension_name] = klass
 
     klass_list = list(all_classes.values())
+    if not sort:
+        return klass_list
 
     for i, klass in enumerate(klass_list):
         deps = klass.get_dependencies()
