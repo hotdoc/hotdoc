@@ -27,6 +27,30 @@ from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.loggable import error
 
 
+def load_config_json(conf_file):
+    """Banana?"""
+    try:
+        with open(conf_file) as _:
+            try:
+                json_conf = json.load(_)
+            except ValueError as ze_error:
+                error('invalid-config',
+                      'The provided configuration file %s is not valid json.\n'
+                      'The exact error was %s.\n'
+                      'This often happens because of missing or extra commas, '
+                      'but it may be something else, please fix it!\n' %
+                      (conf_file, str(ze_error)))
+
+    except FileNotFoundError:
+        json_conf = {}
+    except IOError as _err:
+        error('setup-issue',
+              'Passed config file %s could not be opened (%s)' %
+              (conf_file, _err))
+
+    return json_conf
+
+
 # pylint: disable=too-many-instance-attributes
 class Config(object):
     """
@@ -59,7 +83,8 @@ class Config(object):
     only be interesting for 'advanced' use cases.
     """
 
-    def __init__(self, command_line_args=None, conf_file=None, defaults=None):
+    def __init__(self, command_line_args=None, conf_file=None, defaults=None,
+                 json_conf=None):
         """
         Constructor for `ConfigParser`.
 
@@ -74,29 +99,18 @@ class Config(object):
 
         self.conf_file = None
         self.__conf_dir = None
-        contents = '{}'
+        self.__config = {}
 
         if conf_file:
             self.conf_file = os.path.abspath(conf_file)
             self.__conf_dir = os.path.dirname(self.conf_file)
-            try:
-                with open(self.conf_file, 'r') as _:
-                    contents = _.read()
-            except IOError:
-                pass
+
+            if not json_conf:
+                self.__config = load_config_json(self.conf_file)
+            else:
+                self.__config = json_conf
 
         self.__invoke_dir = os.getcwd()
-
-        try:
-            self.__config = json.loads(contents)
-        except ValueError as ze_error:
-            error('invalid-config',
-                  'The provided configuration file %s is not valid json.\n'
-                  'The exact error was %s.\n'
-                  'This often happens because of missing or extra commas, '
-                  'but it may be something else, please fix it!\n' %
-                  (conf_file, str(ze_error)))
-
         self.__cli = command_line_args or {}
         self.__defaults = defaults or {}
 
