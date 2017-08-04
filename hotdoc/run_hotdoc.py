@@ -33,7 +33,7 @@ from urllib.parse import urlparse
 from collections import OrderedDict
 
 from hotdoc.core.project import Project, CoreExtension
-from hotdoc.core.config import Config
+from hotdoc.core.config import Config, load_config_json
 from hotdoc.core.exceptions import HotdocException
 from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.database import Database
@@ -365,7 +365,14 @@ def run(args):
                         default=[],
                         dest="extra_extension_path",
                         help="An extra extension path to use")
+    parser.add_argument('--conf-file', help='Path to the config file',
+                        dest='conf_file')
     tmpargs, _args = parser.parse_known_args(args)
+
+    json_conf = None
+    if tmpargs.conf_file:
+        json_conf = load_config_json(tmpargs.conf_file)
+        tmpargs.extra_extension_path += json_conf.get('extra_extension_path', [])
 
     # We only get these once, doing this now means all
     # installed extensions will show up as Configurable subclasses.
@@ -378,8 +385,6 @@ def run(args):
     parser.add_argument('command', action="store",
                         choices=('run', 'conf', 'init', 'help'),
                         nargs="?")
-    parser.add_argument('--conf-file', help='Path to the config file',
-                        dest='conf_file')
     parser.add_argument('--output-conf-file',
                         help='Path where to save the updated conf'
                         ' file',
@@ -462,7 +467,8 @@ def run(args):
 
     config = Config(command_line_args=actual_args,
                     conf_file=conf_file,
-                    defaults=defaults)
+                    defaults=defaults,
+                    json_conf=json_conf)
 
     Logger.parse_config(config)
 
