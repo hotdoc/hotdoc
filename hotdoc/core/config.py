@@ -83,6 +83,8 @@ class Config(object):
     only be interesting for 'advanced' use cases.
     """
 
+    __pattern_cache = {}
+
     def __init__(self, command_line_args=None, conf_file=None, defaults=None,
                  json_conf=None):
         """
@@ -126,11 +128,21 @@ class Config(object):
             return os.path.abspath(os.path.join(self.__conf_dir, path))
         return os.path.abspath(os.path.join(self.__invoke_dir, path))
 
+    def __get_key(self, source_patterns, from_conf):
+        if from_conf:
+            return tuple([self.__conf_dir] + source_patterns)
+
+        return tuple([self.__invoke_dir] + source_patterns)
+
     def __resolve_patterns(self, source_patterns, from_conf):
         if source_patterns is None:
             return OrderedSet()
 
-        all_files = OrderedSet()
+        cache_key = self.__get_key(source_patterns, from_conf)
+        all_files = Config.__pattern_cache.get(cache_key, OrderedSet())
+        if all_files:
+            return all_files
+
         for item in source_patterns:
             item = self.__abspath(item, from_conf)
 
@@ -141,6 +153,8 @@ class Config(object):
                 all_files |= glob.glob(item)
             else:
                 all_files.add(item)
+
+        Config.__pattern_cache[cache_key] = all_files
 
         return all_files
 
