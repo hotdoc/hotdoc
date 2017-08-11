@@ -50,7 +50,7 @@ from hotdoc.core.symbols import\
      ParameterSymbol, ReturnItemSymbol, FieldSymbol, QualifiedSymbol,
      FunctionMacroSymbol, ConstantSymbol, ExportedVariableSymbol,
      StructSymbol, EnumSymbol, AliasSymbol, SignalSymbol, PropertySymbol,
-     VFunctionSymbol, ClassSymbol, InterfaceSymbol)
+     VFunctionSymbol, ClassSymbol, InterfaceSymbol, ClassMethodSymbol)
 from hotdoc.core.links import Link
 from hotdoc.parsers.gtk_doc import GtkDocStringFormatter
 from hotdoc.utils.utils import (
@@ -160,6 +160,8 @@ class Formatter(Configurable):
             FunctionSymbol: self._format_function,
             ConstructorSymbol: self._format_function,
             MethodSymbol: self._format_function,
+            ClassMethodSymbol: self._format_function,
+            ClassSymbol: self._format_function,
             FunctionMacroSymbol: self._format_function_macro,
             CallbackSymbol: self._format_callback,
             ConstantSymbol: self._format_constant,
@@ -178,10 +180,11 @@ class Formatter(Configurable):
         }
 
         self._ordering = [InterfaceSymbol, ClassSymbol, ConstructorSymbol,
-                          MethodSymbol, FunctionSymbol, FunctionMacroSymbol,
-                          SignalSymbol, PropertySymbol, StructSymbol,
-                          VFunctionSymbol, EnumSymbol, ConstantSymbol,
-                          ExportedVariableSymbol, AliasSymbol, CallbackSymbol]
+                          MethodSymbol, ClassMethodSymbol, FunctionSymbol,
+                          FunctionMacroSymbol, SignalSymbol, PropertySymbol,
+                          StructSymbol, VFunctionSymbol, EnumSymbol,
+                          ConstantSymbol, ExportedVariableSymbol, AliasSymbol,
+                          CallbackSymbol]
 
         self.all_scripts = set()
         self.all_stylesheets = set()
