@@ -305,6 +305,18 @@ class MethodSymbol(FunctionSymbol):
         return "Method"
 
 
+class ClassMethodSymbol(FunctionSymbol):
+    """Banana Banana"""
+    __tablename__ = 'class_methods'
+    id_ = Column(Integer, ForeignKey('functions.id_'), primary_key=True)
+    __mapper_args__ = {
+        'polymorphic_identity': 'class_methods',
+    }
+
+    def get_type_name(self):
+        return "Class method"
+
+
 class ConstructorSymbol(FunctionSymbol):
     """Banana Banana"""
     __tablename__ = 'constructors'
