@@ -344,7 +344,7 @@ class Formatter(Configurable):
 
     # pylint: disable=no-self-use
     def __update_section_number(self, target, section_numbers):
-        if target.tag not in section_numbers:
+        if not Formatter.number_headings or target.tag not in section_numbers:
             return None
 
         prev = section_numbers.get('prev')
@@ -380,6 +380,7 @@ class Formatter(Configurable):
             'self::h4 or self::h5 or self::img]')
 
         for target in targets:
+            is_symbol_heading = False
             section_number = self.__update_section_number(
                 target, section_numbers)
 
@@ -389,18 +390,27 @@ class Formatter(Configurable):
             if target.tag == 'img':
                 text = target.attrib.get('alt')
             else:
+                parent = target.getparent()
+                is_symbol_heading = 'base_symbol_container' in \
+                    parent.attrib.get('class', '').split()
                 text = "".join([x for x in target.itertext()])
 
             if not text:
                 continue
 
-            id_ = id_from_text(text)
-            ref_id = id_
-            index = 1
+            # This lets us avoid appending numbers on the id of the
+            # first heading for a symbol
+            if is_symbol_heading and parent.getchildren()[0] == target:
+                id_ = parent.attrib['id']
+                del parent.attrib['id']
+            else:
+                id_ = id_from_text(text)
+                ref_id = id_
+                index = 1
 
-            while id_ in id_nodes:
-                id_ = '%s%s' % (ref_id, index)
-                index += 1
+                while id_ in id_nodes:
+                    id_ = '%s%s' % (ref_id, index)
+                    index += 1
 
             if section_number:
                 target.text = '%s %s' % (section_number, target.text or '')
