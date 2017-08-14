@@ -110,12 +110,12 @@ class Symbol(Base):
             return
 
         for sym in self.get_children_symbols():
-            if type(sym) == ParameterSymbol:
+            if isinstance(sym, ParameterSymbol):
                 sym.comment = self.comment.params.get(sym.argname)
-            elif type(sym) == FieldSymbol:
+            elif isinstance(sym, FieldSymbol):
                 if not sym.comment or not sym.comment.description:
                     sym.comment = self.comment.params.get(sym.member_name)
-            elif type(sym) == ReturnItemSymbol:
+            elif isinstance(sym, ReturnItemSymbol):
                 tag = self.comment.tags.get('returns')
                 sym.comment = comment_from_tag(tag)
             elif type(sym) == Symbol:
