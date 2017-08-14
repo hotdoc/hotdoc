@@ -200,6 +200,9 @@ class QualifiedSymbol(MutableObject):
         self.type_link = None
         self.type_tokens = []
 
+        for child in self.get_children_symbols():
+            child.resolve_links(link_resolver)
+
         for tok in self.input_tokens:
             if isinstance(tok, Link):
                 self.type_link = link_resolver.upsert_link(tok)
