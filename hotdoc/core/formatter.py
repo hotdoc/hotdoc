@@ -569,15 +569,15 @@ class Formatter(Configurable):
             out += self._format_type_tokens(symbol, symbol.type_tokens)
 
         # FIXME : ugly
-        elif hasattr(symbol, "link") and type(symbol) != FieldSymbol:
+        elif hasattr(symbol, "link") and not isinstance(symbol, FieldSymbol):
             out += self._format_link(
                 symbol.link.get_link(self.extension.app.link_resolver),
                 symbol.link.title)
 
-        if type(symbol) == ParameterSymbol:
+        if isinstance(symbol, ParameterSymbol):
             out += ' ' + symbol.argname
 
-        elif type(symbol) == FieldSymbol and symbol.member_name:
+        elif isinstance(symbol, FieldSymbol) and symbol.member_name:
             out += self._format_type_tokens(symbol, symbol.qtype.type_tokens)
             if symbol.is_function_pointer:
                 out = ""
