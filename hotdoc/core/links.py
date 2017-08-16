@@ -71,7 +71,8 @@ class Link(MutableObject):
         """
         Banana banana
         """
-        return link_resolver.resolving_link_signal(self) or self.ref
+        res = link_resolver.resolving_link_signal(self) or self.ref
+        return res
 
 
 class LinkResolver(object):
