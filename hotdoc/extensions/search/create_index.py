@@ -124,7 +124,7 @@ def parse_file(root_dir, root, filename, stop_words, fragments_dir):
 
         for tok, text, id_ in parse_content(section, stop_words,
                                             selector=TITLE_SELECTOR):
-            if id_ and len(id_) < 30:  # Protect against unreasonably large ids
+            if id_:
                 section_id = '%s#%s' % (url, id_)
             else:
                 section_id = section_url
@@ -139,7 +139,7 @@ def parse_file(root_dir, root, filename, stop_words, fragments_dir):
                 yield tok.lower(), section_id, True
 
         for tok, text, id_ in parse_content(section, stop_words):
-            if id_ and len(id_) < 30:
+            if id_:
                 section_id = '%s#%s' % (url, id_)
             else:
                 section_id = section_url
