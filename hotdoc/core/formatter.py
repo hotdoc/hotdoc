@@ -402,7 +402,7 @@ class Formatter(Configurable):
             # first heading for a symbol
             if is_symbol_heading and parent.getchildren()[0] == target:
                 id_ = parent.attrib['id']
-                del parent.attrib['id']
+                parent.attrib['id'] = '%s-wrapper' % id_
             else:
                 id_ = id_from_text(text)
                 ref_id = id_
