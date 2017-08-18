@@ -202,7 +202,6 @@ class Project(Configurable):
         for extension in list(self.extensions.values()):
             info('Setting up %s' % extension.extension_name)
             extension.setup()
-            self.app.database.flush()
         self.app.database.comment_updated_signal.disconnect(
             self.__comment_updated_cb)
 
@@ -212,7 +211,6 @@ class Project(Configurable):
 
         info("Resolving symbols", 'resolution')
         self.tree.resolve_symbols(self.app.database, self.app.link_resolver)
-        self.app.database.flush()
 
     def format(self, link_resolver, output):
         """

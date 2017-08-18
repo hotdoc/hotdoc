@@ -21,11 +21,10 @@ Banana banana
 """
 import urllib.parse
 
-from hotdoc.utils.alchemy import MutableObject
 from hotdoc.utils.signals import Signal
 
 
-class Link(MutableObject):
+class Link:
     """
     Banana banana
     """
@@ -41,7 +40,6 @@ class Link(MutableObject):
             self.ref = str(ref)
 
         self.id_ = id_
-        MutableObject.__init__(self)
 
     @property
     def title(self):
@@ -73,6 +71,9 @@ class Link(MutableObject):
         """
         res = link_resolver.resolving_link_signal(self) or self.ref
         return res
+
+    def __repr__(self):
+        return "Link %s -> %s (%s)" % (self.id_, self.ref, self._title)
 
 
 class LinkResolver(object):

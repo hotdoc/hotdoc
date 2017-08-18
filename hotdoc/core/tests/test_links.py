@@ -38,8 +38,7 @@ class TestLinkResolver(unittest.TestCase):
         self.__remove_tmp_dirs()
         os.mkdir(self.__priv_dir)
 
-        self.database = Database()
-        self.database.setup(self.__priv_dir)
+        self.database = Database(self.__priv_dir)
         self.link_resolver = LinkResolver(self.database)
 
     def __remove_tmp_dirs(self):
@@ -54,7 +53,8 @@ class TestLinkResolver(unittest.TestCase):
 
         func.resolve_links(self.link_resolver)
 
-        self.assertEqual(param.get_type_link().get_link(self.link_resolver), None)
+        self.assertEqual(param.get_type_link().get_link(self.link_resolver),
+                         None)
 
         struct = self.database.get_or_create_symbol(
             StructSymbol, unique_name='test-struct', filename='test_a.x')
@@ -63,13 +63,12 @@ class TestLinkResolver(unittest.TestCase):
         func.resolve_links(self.link_resolver)
 
         # Not in a page but still
-        self.assertEqual(param.get_type_link().get_link(self.link_resolver), 'test-struct')
+        self.assertEqual(param.get_type_link().get_link(self.link_resolver),
+                         'test-struct')
 
         self.database.persist()
-        self.database.close()
 
-        self.database = Database()
-        self.database.setup(self.__priv_dir)
+        self.database = Database(self.__priv_dir)
         self.link_resolver = LinkResolver(self.database)
 
         param = ParameterSymbol(
@@ -79,4 +78,5 @@ class TestLinkResolver(unittest.TestCase):
             filename='text_b.x', parameters=[param])
 
         func.resolve_links(self.link_resolver)
-        self.assertEqual(param.get_type_link().get_link(self.link_resolver), 'test-struct')
+        self.assertEqual(param.get_type_link().get_link(self.link_resolver),
+                         'test-struct')

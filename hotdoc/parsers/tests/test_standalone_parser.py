@@ -148,7 +148,7 @@ class TestSitemapParser(unittest.TestCase):
 class TestStandaloneParser(unittest.TestCase):
 
     def setUp(self):
-        self.database = Database()
+        self.database = Database(None)
         self.link_resolver = LinkResolver(self.database)
 
     def test_page_title(self):

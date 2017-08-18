@@ -19,27 +19,23 @@
 """Banana banana
 """
 import os
+import pickle
 
 # pylint: disable=import-error
-from sqlalchemy import create_engine, Column, Integer, String
 # pylint: disable=import-error
-from sqlalchemy.orm import sessionmaker
-
 from hotdoc.core.symbols import Symbol
-
-from hotdoc.utils.alchemy import Base
 from hotdoc.utils.signals import Signal
 from hotdoc.utils.loggable import debug
 
 
 # pylint: disable=too-few-public-methods
-class ProxySymbol(Base):
+class ProxySymbol(Symbol):
     """A proxy type to handle aliased symbols"""
     __tablename__ = 'proxy_symbols'
 
-    id_ = Column(Integer, primary_key=True)
-    target = Column(String)
-    unique_name = Column(String)
+    def __init__(self, **kwargs):
+        self.target = None
+        Symbol.__init__(self, **kwargs)
 
 
 # pylint: disable=too-many-instance-attributes
@@ -51,16 +47,16 @@ class Database(object):
     `hotdoc.core.symbol.Symbol.unique_name`) to determine what goes into the
     generated documentation and how it is described.
     """
-    def __init__(self):
+    def __init__(self, private_folder):
         self.comment_added_signal = Signal()
         self.comment_updated_signal = Signal()
 
         self.__comments = {}
         self.__symbols = {}
-        self.__incremental = False
-        self.__session = None
-        self.__engine = None
         self.__aliases = {}
+        self.__symbol_folder = os.path.join(private_folder or '/tmp',
+                                            "symbols")
+        self.__incremental = os.path.exists(self.__symbol_folder)
 
     def add_comment(self, comment):
         """
@@ -121,7 +117,6 @@ class Database(object):
 
         if not symbol:
             symbol = type_()
-            self.__session.add(symbol)
             debug('Created symbol with unique name %s' % unique_name,
                   'symbols')
 
@@ -135,21 +130,22 @@ class Database(object):
 
         return symbol
 
+    def persist(self):
+        """
+        Banana banana
+        """
+        if not os.path.exists(self.__symbol_folder):
+            os.makedirs(self.__symbol_folder)
+        for name, sym in self.__symbols.items():
+            with open(os.path.join(self.__symbol_folder, name),
+                      'wb') as _:
+                pickle.dump(sym, _)
+
     def __get_aliases(self, name):
         aliases = self.__aliases.get(name, [])
 
         if aliases or not self.__incremental:
             return aliases
-
-        proxies = self.__session.query(ProxySymbol).filter(
-            ProxySymbol.unique_name == name)
-
-        for proxy in proxies:
-            aliases.append(proxy.unique_name)
-
-        self.__aliases[name] = aliases
-
-        return aliases
 
     # pylint: disable=unused-argument
     def get_symbol(self, name, prefer_class=False):
@@ -162,57 +158,18 @@ class Database(object):
             return sym
 
         if not sym:
-            sym = self.__session.query(Symbol).filter(Symbol.unique_name ==
-                                                      name).first()
-
-        if not sym:
-            sym = self.__session.query(ProxySymbol).filter(
-                ProxySymbol.unique_name == name).first()
-            if sym:
-                sym = self.get_symbol(sym.target)
+            path = os.path.join(self.__symbol_folder, name)
+            if os.path.exists(path):
+                with open(path, 'rb') as _:
+                    sym = pickle.load(_)
 
         if sym:
             # Faster look up next time around
             self.__symbols[name] = sym
+            if isinstance(sym, ProxySymbol):
+                return self.get_symbol(sym.target)
+
         return sym
-
-    def setup(self, db_folder):
-        """
-        Banana banana
-        """
-        db_path = os.path.join(db_folder, 'hotdoc.db')
-
-        if os.path.exists(db_path):
-            self.__incremental = True
-
-        self.__engine = create_engine('sqlite:///%s' % db_path)
-        self.__session = sessionmaker(self.__engine)()
-        self.__session.autoflush = False
-        Base.metadata.create_all(self.__engine)
-
-    def flush(self):
-        """
-        Banana banana
-        """
-        self.__session.flush()
-
-    def persist(self):
-        """
-        Banana banana
-        """
-        self.__session.commit()
-
-    def close(self):
-        """
-        Banana banana
-        """
-        self.__session.close()
-
-    def get_session(self):
-        """
-        Banana banana
-        """
-        return self.__session
 
     def __update_symbol_comment(self, comment):
         self.comment_updated_signal(self, comment)

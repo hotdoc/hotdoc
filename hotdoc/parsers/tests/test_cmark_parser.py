@@ -33,7 +33,7 @@ from hotdoc.core.links import LinkResolver, Link
 class TestParser(unittest.TestCase):
 
     def setUp(self):
-        self.database = Database()
+        self.database = Database(None)
         self.link_resolver = LinkResolver(self.database)
         self.link_resolver.add_link(Link("here.com", "foo", "foo"))
 
@@ -95,7 +95,7 @@ class TestGtkDocParser(unittest.TestCase):
         # Cruft, should be unnecessary soon
         self.tag_validators = {}
         self.parser = GtkDocParser(self)
-        self.database = Database()
+        self.database = Database(None)
         self.link_resolver = LinkResolver(self.database)
         self.formatter = GtkDocStringFormatter()
 
@@ -161,7 +161,7 @@ class TestGtkDocParser(unittest.TestCase):
 class TestGtkDocExtension(unittest.TestCase):
 
     def setUp(self):
-        self.database = Database()
+        self.database = Database(None)
         self.link_resolver = LinkResolver(self.database)
         self.link_resolver.add_link(Link("here.com", "foo", "foo"))
         self.link_resolver.add_link(Link("there.org", "there", "Test::test"))
@@ -369,7 +369,7 @@ class MockIncludeResolver(object):
 class TestIncludeExtension(unittest.TestCase):
 
     def setUp(self):
-        self.database = Database()
+        self.database = Database(None)
         self.link_resolver = LinkResolver(self.database)
         self.include_resolver = MockIncludeResolver()
 
@@ -431,7 +431,7 @@ class TestIncludeExtension(unittest.TestCase):
 
 class TestTableExtension(unittest.TestCase):
     def setUp(self):
-        self.database = Database()
+        self.database = Database(None)
         self.link_resolver = LinkResolver(self.database)
         self.include_resolver = MockIncludeResolver()
 
