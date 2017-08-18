@@ -288,7 +288,6 @@ INSTALL_REQUIRES = [
     'schema',
     'appdirs',
     'wheezy.template==0.1.167',
-    'sqlalchemy>=1.0.8',
     'toposort>=1.4']
 
 EXTRAS_REQUIRE = {

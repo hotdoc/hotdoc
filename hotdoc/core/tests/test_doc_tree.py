@@ -86,8 +86,7 @@ class TestTree(unittest.TestCase):
 
         # Using the real doc database is too costly, tests should be lightning
         # fast (and they are)
-        self.database = Database()
-        self.database.setup(self.private_folder)
+        self.database = Database(self.private_folder)
         self.link_resolver = LinkResolver(self.database)
 
         self.change_tracker = ChangeTracker()

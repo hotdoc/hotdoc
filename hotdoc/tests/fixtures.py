@@ -52,9 +52,8 @@ class HotdocTest(unittest.TestCase):
         os.mkdir(self._src_dir)
         self.dependency_map = {}
         self.change_tracker = ChangeTracker()
-        self.database = Database()
+        self.database = Database(self.private_folder)
         self.link_resolver = LinkResolver(self.database)
-        self.database.setup(self.private_folder)
         self.incremental = False
         self.sanitized_name = 'test-project-0.1'
         self.tree = Tree(self, self)

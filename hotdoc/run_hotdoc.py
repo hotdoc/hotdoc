@@ -48,6 +48,7 @@ class Application(Configurable):
     Banana banana
     """
     # pylint: disable=too-many-instance-attributes
+
     def __init__(self, extension_classes):
         self.extension_classes = OrderedDict(
             {CoreExtension.extension_name: CoreExtension})
@@ -86,7 +87,8 @@ class Application(Configurable):
         self.dry = config.get('dry')
         self.project = Project(self)
         self.project.parse_name_from_config(self.config)
-        self.private_folder = os.path.abspath('hotdoc-private-%s' % self.project.sanitized_name)
+        self.private_folder = os.path.abspath(
+            'hotdoc-private-%s' % self.project.sanitized_name)
         self.__create_change_tracker(self.config.get('disable_incremental'))
         self.project.parse_config(self.config, toplevel=True)
 
@@ -193,9 +195,6 @@ class Application(Configurable):
         """
         Banana banana
         """
-        if self.database is not None:
-            info('Closing database')
-            self.database.close()
         self.project.finalize()
 
     def __setup_private_folder(self):
@@ -207,8 +206,7 @@ class Application(Configurable):
             os.mkdir(self.private_folder)
 
     def __setup_database(self):
-        self.database = Database()
-        self.database.setup(self.private_folder)
+        self.database = Database(self.private_folder)
         self.link_resolver = LinkResolver(self.database)
 
     def __create_change_tracker(self, disable_incremental):
@@ -233,6 +231,9 @@ class Application(Configurable):
 
 
 def check_path(init_dir, name):
+    """
+    Banana banana
+    """
     path = os.path.join(init_dir, name)
     if os.path.exists(path):
         error('setup-issue', '%s already exists' % path)
@@ -240,11 +241,15 @@ def check_path(init_dir, name):
 
 
 def create_default_layout(config):
+    """
+    Banana banana
+    """
     project_name = config.get('project_name')
     project_version = config.get('project_version')
 
     if not project_name or not project_version:
-        error('setup-issue', '--project-name and --project-version must be specified')
+        error('setup-issue',
+              '--project-name and --project-version must be specified')
 
     init_dir = config.get_path('init_dir')
     if not init_dir:
@@ -252,7 +257,8 @@ def create_default_layout(config):
     else:
         if os.path.exists(init_dir) and not os.path.isdir(init_dir):
             error('setup-issue',
-                  'Init directory exists but is not a directory: %s' % init_dir)
+                  'Init directory exists but is not a directory: %s' %
+                  init_dir)
 
     sitemap_path = check_path(init_dir, 'sitemap.txt')
     conf_path = check_path(init_dir, 'hotdoc.json')
@@ -272,7 +278,8 @@ def create_default_layout(config):
         _.write(json.dumps({'project_name': project_name,
                             'project_version': project_version,
                             'sitemap': 'sitemap.txt',
-                            'index': os.path.join('markdown_files', 'index.md'),
+                            'index': os.path.join('markdown_files',
+                                                  'index.md'),
                             'output': 'built_doc',
                             'extra_assets': ['assets']}, indent=4))
 
@@ -282,11 +289,12 @@ def create_default_layout(config):
             get_cat(cat_path)
             _.write("\nIt's dangerous to go alone, take this\n")
             _.write('\n![](assets/cat.gif)')
-        except Exception:  # No cat, too bad
+        except:  # pylint: disable=bare-except
             pass
 
 
 # pylint: disable=too-many-branches
+# pylint: disable=too-many-statements
 def execute_command(parser, config, ext_classes):
     """
     Banana banana
@@ -351,6 +359,7 @@ def execute_command(parser, config, ext_classes):
 
 # pylint: disable=too-many-branches
 # pylint: disable=too-many-locals
+# pylint: disable=too-many-statements
 def run(args):
     """
     Banana banana
@@ -370,7 +379,8 @@ def run(args):
     json_conf = None
     if tmpargs.conf_file:
         json_conf = load_config_json(tmpargs.conf_file)
-        tmpargs.extra_extension_path += json_conf.get('extra_extension_path', [])
+        tmpargs.extra_extension_path += json_conf.get('extra_extension_path',
+                                                      [])
 
     # We only get these once, doing this now means all
     # installed extensions will show up as Configurable subclasses.
