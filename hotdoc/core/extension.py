@@ -63,6 +63,7 @@ class ExtDependency(object):
 
 
 # pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-public-methods
 class Extension(Configurable):
     """
     All extensions should inherit from this base class
@@ -237,6 +238,20 @@ class Extension(Configurable):
             setattr(self, dest, val)
 
         self.formatter.parse_config(config)
+
+    def add_attrs(self, symbol, **kwargs):
+        """
+        Helper for setting symbol extension attributes
+        """
+        for key, val in kwargs.items():
+            symbol.add_extension_attribute(self.extension_name, key, val)
+
+    def get_attr(self, symbol, attrname):
+        """
+        Helper for getting symbol extension attributes
+        """
+        return symbol.extension_attributes.get(self.extension_name, {}).get(
+            attrname, None)
 
     @staticmethod
     def add_arguments(parser):
