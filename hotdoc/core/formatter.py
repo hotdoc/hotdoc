@@ -222,6 +222,11 @@ class Formatter(Configurable):
         if not symbol:
             return ''
 
+        res = self.formatting_symbol_signal(self, symbol)
+
+        if False in res:
+            return False
+
         symbol.extension_attributes['order_by_section'] = \
             self._order_by_parent and symbol.parent_name
         for csym in symbol.get_children_symbols():
@@ -230,11 +235,6 @@ class Formatter(Configurable):
                 csym.extension_attributes['order_by_section'] = \
                     self._order_by_parent and symbol.parent_name
             self.format_symbol(csym, link_resolver)
-
-        res = self.formatting_symbol_signal(self, symbol)
-
-        if False in res:
-            return False
 
         symbol.formatted_doc = self.format_comment(symbol.comment,
                                                    link_resolver)
