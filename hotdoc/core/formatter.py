@@ -370,8 +370,8 @@ class Formatter(Configurable):
     # pylint: disable=too-many-statements
     def __validate_html(self, project, page, doc_root):
         rel_path = os.path.join(self.get_output_folder(page), page.link.ref)
-        id_nodes = {n.attrib['id']: "".join([x for x in n.itertext()])
-                    for n in doc_root.xpath('.//*[@id]')}
+
+        id_nodes = {n.attrib['id']: n for n in doc_root.xpath('.//*[@id]')}
 
         section_numbers = self.__init_section_numbers(doc_root)
 
@@ -416,7 +416,7 @@ class Formatter(Configurable):
                 target.text = '%s %s' % (section_number, target.text or '')
 
             target.attrib['id'] = id_
-            id_nodes[id_] = text
+            id_nodes[id_] = target
 
         main_node = doc_root.find('.//*[@data-hotdoc-role="main"]')
 
@@ -425,9 +425,9 @@ class Formatter(Configurable):
             href = link.attrib.get('href')
             if href and href.startswith('#'):
                 if not link.text and not link.getchildren():
-                    title = id_nodes.get(href.strip('#'))
-                    if title:
-                        link.text = title
+                    id_node = id_nodes.get(href.strip('#'))
+                    if id_node is not None:
+                        link.text = ''.join([x for x in id_node.itertext()])
                     else:
                         warn('bad-local-link',
                              "Empty anchor link to %s in %s points nowhere" %
