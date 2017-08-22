@@ -229,6 +229,9 @@ class FieldSymbol(Symbol):
         self.member_name = None
         Symbol.__init__(self, **kwargs)
 
+    def _make_name(self):
+        return self.member_name
+
     def get_children_symbols(self):
         return [self.qtype]
 
