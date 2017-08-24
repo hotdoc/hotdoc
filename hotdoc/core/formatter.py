@@ -365,16 +365,7 @@ class Formatter(Configurable):
 
         return section_number
 
-    # pylint: disable=too-many-locals
-    # pylint: disable=too-many-branches
-    # pylint: disable=too-many-statements
-    def __validate_html(self, project, page, doc_root):
-        rel_path = os.path.join(self.get_output_folder(page), page.link.ref)
-
-        id_nodes = {n.attrib['id']: n for n in doc_root.xpath('.//*[@id]')}
-
-        section_numbers = self.__init_section_numbers(doc_root)
-
+    def __update_targets(self, doc_root, section_numbers, id_nodes):
         targets = doc_root.xpath(
             './/*[self::h1 or self::h2 or self::h3 or '
             'self::h4 or self::h5 or self::img]')
@@ -418,9 +409,9 @@ class Formatter(Configurable):
             target.attrib['id'] = id_
             id_nodes[id_] = target
 
-        main_node = doc_root.find('.//*[@data-hotdoc-role="main"]')
-
-        links = main_node.xpath('.//a')
+    def __update_links(self, page, doc_root, id_nodes):
+        rel_path = os.path.join(self.get_output_folder(page), page.link.ref)
+        links = doc_root.xpath('.//*[@data-hotdoc-role="main"]//a')
         for link in links:
             href = link.attrib.get('href')
             if href and href.startswith('#'):
@@ -435,7 +426,16 @@ class Formatter(Configurable):
                         link.text = "FIXME broken link to %s" % href
                 link.attrib["href"] = rel_path + href
 
-        assets = main_node.xpath('.//*[@src]')
+    def __validate_html(self, project, page, doc_root):
+        id_nodes = {n.attrib['id']: n for n in doc_root.xpath('.//*[@id]')}
+
+        section_numbers = self.__init_section_numbers(doc_root)
+
+        self.__update_targets(doc_root, section_numbers, id_nodes)
+
+        self.__update_links(page, doc_root, id_nodes)
+
+        assets = doc_root.xpath('.//*[@data-hotdoc-role="main"]//*[@src]')
         # All required assets should now be in place
         for asset in assets:
             self.__lookup_asset(asset, project, page)
