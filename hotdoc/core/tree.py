@@ -240,8 +240,7 @@ class Page(object):
         if new_comment:
             sym.comment = new_comment
         elif old_comment:
-            if old_comment.filename not in (ChangeTracker.all_stale_files |
-                                            ChangeTracker.all_unlisted_files):
+            if old_comment.filename not in ChangeTracker.all_stale_files:
                 sym.comment = old_comment
 
     def __format_page_comment(self, formatter, link_resolver):
