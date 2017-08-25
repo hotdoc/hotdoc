@@ -275,9 +275,7 @@ class SearchIndex(object):
             metadata = {'token': key, 'urls': list(OrderedSet(value))}
 
             with open(os.path.join(self.__search_dir, key), 'w') as _:
-                _.write("urls_downloaded_cb(")
-                _.write(json.dumps(metadata))
-                _.write(");")
+                _.write('urls_downloaded_cb("%s");' % json.dumps(metadata))
 
         self.__trie.to_file(os.path.join(self.__private_dir, 'search.trie'),
                             os.path.join(self.__output_dir, 'trie_index.js'))
