@@ -34,7 +34,6 @@ class ChangeTracker(object):
     other utilities.
     """
     all_stale_files = set()
-    all_unlisted_files = set()
 
     def __init__(self):
         self.exts_mtimes = {}
@@ -63,8 +62,7 @@ class ChangeTracker(object):
 
         unlisted = set(previous_mtimes.keys())
 
-        ChangeTracker.all_stale_files |= stale
-        ChangeTracker.all_unlisted_files |= unlisted
+        ChangeTracker.all_stale_files |= stale | unlisted
 
         return stale, unlisted
 
