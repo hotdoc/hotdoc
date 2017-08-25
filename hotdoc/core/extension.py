@@ -407,7 +407,7 @@ class Extension(Configurable):
         return sym
 
     def _make_formatter(self):
-        return Formatter(self, [])
+        return Formatter(self)
 
     def __list_override_pages_cb(self, tree, include_paths):
         if not self.smart_index:

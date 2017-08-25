@@ -145,12 +145,13 @@ class Formatter(Configurable):
     extra_theme_path = None
     add_anchors = False
     number_headings = False
+    engine = None
+    ext_engine = None
 
-    def __init__(self, extension, searchpath):
+    def __init__(self, extension):
         """
         Args:
             extension (`extension.Extension`): The extension instance.
-            searchpath (str): Path where templates live.
         """
         Configurable.__init__(self)
 
@@ -190,11 +191,9 @@ class Formatter(Configurable):
         self.all_stylesheets = set()
         self._docstring_formatter = self._make_docstring_formatter()
         self._current_page = None
-        self.engine = None
         self.extra_assets = None
         self.add_anchors = False
         self.number_headings = False
-        self.searchpath = searchpath
         self.writing_page_signal = Signal()
         self.formatting_page_signal = Signal()
         self.get_extra_files_signal = Signal()
@@ -532,7 +531,7 @@ class Formatter(Configurable):
             print("Issue here plz check", title)
             return title
 
-        template = self.engine.get_template('link.html')
+        template = self.get_template('link.html')
         out += '%s' % template.render({'link': link,
                                        'link_title': title})
         return out
@@ -586,7 +585,7 @@ class Formatter(Configurable):
 
     def _format_callable_prototype(self, return_value, function_name,
                                    parameters, is_pointer):
-        template = self.engine.get_template('callable_prototype.html')
+        template = self.get_template('callable_prototype.html')
 
         return template.render({'return_value': return_value,
                                 'name': function_name,
@@ -595,7 +594,7 @@ class Formatter(Configurable):
 
     def __format_parameter_detail(self, name, detail, extra=None):
         extra = extra or {}
-        template = self.engine.get_template('parameter_detail.html')
+        template = self.get_template('parameter_detail.html')
         return template.render({'name': name,
                                 'detail': detail,
                                 'extra': extra})
@@ -625,7 +624,7 @@ class Formatter(Configurable):
         members_list = self._format_members_list(struct.members, 'Fields',
                                                  struct)
 
-        template = self.engine.get_template("struct.html")
+        template = self.get_template("struct.html")
         out = template.render({"symbol": struct,
                                "struct": struct,
                                "raw_code": raw_code,
@@ -634,7 +633,7 @@ class Formatter(Configurable):
 
     def _format_enum(self, enum):
         for member in enum.members:
-            template = self.engine.get_template("enum_member.html")
+            template = self.get_template("enum_member.html")
             member.detailed_description = template.render({
                 'link': member.link,
                 'detail': member.formatted_doc,
@@ -645,7 +644,7 @@ class Formatter(Configurable):
             raw_code = self._format_raw_code(enum.raw_text)
         members_list = self._format_members_list(enum.members, 'Members',
                                                  enum)
-        template = self.engine.get_template("enum.html")
+        template = self.get_template("enum.html")
         out = template.render({"symbol": enum,
                                "enum": enum,
                                "raw_code": raw_code,
@@ -708,7 +707,7 @@ class Formatter(Configurable):
                     by_sections.append(by_section_symbols(parent_name,
                                                           symbols_details))
 
-        template = self.engine.get_template('page.html')
+        template = self.get_template('page.html')
 
         scripts = []
         stylesheets = []
@@ -772,7 +771,7 @@ class Formatter(Configurable):
 
     def _format_raw_code(self, code):
         code = html.escape(code)
-        template = self.engine.get_template('raw_code.html')
+        template = self.get_template('raw_code.html')
         return template.render({'code': code})
 
     def _format_parameter_symbol(self, parameter):
@@ -782,18 +781,18 @@ class Formatter(Configurable):
             extra=parameter.extension_contents), False)
 
     def _format_field_symbol(self, field):
-        template = self.engine.get_template('field_detail.html')
+        template = self.get_template('field_detail.html')
         field.formatted_link = self._format_linked_symbol(field)
         return (template.render({'symbol': field,
                                  'detail': field.formatted_doc}), False)
 
     def _format_return_item_symbol(self, return_item):
-        template = self.engine.get_template('return_item.html')
+        template = self.get_template('return_item.html')
         return_item.formatted_link = self._format_linked_symbol(return_item)
         return (template.render({'return_item': return_item}), False)
 
     def _format_return_value_symbol(self, return_value, parent):
-        template = self.engine.get_template('multi_return_value.html')
+        template = self.get_template('multi_return_value.html')
         if return_value[0] is None:
             return_value = return_value[1:]
         for rval in return_value:
@@ -803,7 +802,7 @@ class Formatter(Configurable):
 
     def _format_callable(self, callable_, callable_type, title,
                          is_pointer=False):
-        template = self.engine.get_template('callable.html')
+        template = self.get_template('callable.html')
 
         parameters = [p.detailed_description for p in callable_.parameters if
                       p.detailed_description is not None]
@@ -839,10 +838,10 @@ class Formatter(Configurable):
 
     def _format_property_symbol(self, prop):
         type_link = self._format_linked_symbol(prop.prop_type)
-        template = self.engine.get_template('property_prototype.html')
+        template = self.get_template('property_prototype.html')
         prototype = template.render({'property_name': prop.link.title,
                                      'property_type': type_link})
-        template = self.engine.get_template('property.html')
+        template = self.get_template('property.html')
         res = template.render({'symbol': prop,
                                'prototype': prototype,
                                'property': prop,
@@ -858,7 +857,7 @@ class Formatter(Configurable):
             children.append(self._format_linked_symbol(_))
 
         if hierarchy or children:
-            template = self.engine.get_template("hierarchy.html")
+            template = self.get_template("hierarchy.html")
             hierarchy = template.render({'hierarchy': hierarchy,
                                          'children': children,
                                          'klass': klass})
@@ -866,7 +865,7 @@ class Formatter(Configurable):
 
     def _format_class_symbol(self, klass):
         hierarchy = self._format_hierarchy(klass)
-        template = self.engine.get_template('class.html')
+        template = self.get_template('class.html')
         raw_code = None
         if klass.raw_text is not None:
             raw_code = self._format_raw_code(klass.raw_text)
@@ -886,14 +885,14 @@ class Formatter(Configurable):
 
     def _format_interface_symbol(self, interface):
         hierarchy = self._format_hierarchy(interface)
-        template = self.engine.get_template('interface.html')
+        template = self.get_template('interface.html')
         return (template.render({'symbol': interface,
                                  'hierarchy': hierarchy}),
                 False)
 
     def _format_members_list(self, members, member_designation,
                              parent):
-        template = self.engine.get_template('member_list.html')
+        template = self.get_template('member_list.html')
         for member in members:
             member.extension_attributes['order_by_section'] = \
                 self._order_by_parent and parent.parent_name
@@ -910,7 +909,7 @@ class Formatter(Configurable):
                                      callback.link.title, is_pointer=True)
 
     def _format_function_macro(self, function_macro):
-        template = self.engine.get_template('callable.html')
+        template = self.get_template('callable.html')
         prototype = self._format_raw_code(function_macro.original_text)
 
         parameters = []
@@ -934,14 +933,14 @@ class Formatter(Configurable):
         return (out, False)
 
     def _format_alias(self, alias):
-        template = self.engine.get_template('alias.html')
+        template = self.get_template('alias.html')
         aliased_type = self._format_linked_symbol(alias.aliased_type)
         return (template.render({'symbol': alias,
                                  'alias': alias,
                                  'aliased_type': aliased_type}), False)
 
     def _format_constant(self, constant):
-        template = self.engine.get_template('constant.html')
+        template = self.get_template('constant.html')
         definition = self._format_raw_code(constant.original_text)
         out = template.render({'symbol': constant,
                                'definition': definition,
@@ -1069,37 +1068,42 @@ class Formatter(Configurable):
             html_theme = os.path.abspath(default_theme)
             debug("Using default theme")
 
-        Formatter.theme_path = html_theme
+        if Formatter.engine is None:
+            searchpath = []
+            self.__load_theme_templates(searchpath, HERE)
 
-        Formatter.extra_theme_path = config.get_path('html_extra_theme')
+            Formatter.theme_path = html_theme
+            if html_theme:
+                self.__load_theme_templates(searchpath, html_theme)
+
+            Formatter.extra_theme_path = config.get_path('html_extra_theme')
+            if Formatter.extra_theme_path:
+                self.__load_theme_templates(searchpath,
+                                            Formatter.extra_theme_path)
+
+            Formatter.engine = Engine(
+                loader=FileLoader(searchpath, encoding='UTF-8'),
+                extensions=[CoreExtension(), CodeExtension()])
+            Formatter.engine.global_vars.update({'e': html.escape})
+
+    def get_template(self, name):
+        """
+        Banana banana
+        """
+        return Formatter.engine.get_template(name)
 
     def parse_config(self, config):
         """Banana banana
         """
         self.add_anchors = bool(config.get("html_add_anchors"))
         self.number_headings = bool(config.get("html_number_headings"))
-
-        if self.theme_path:
-            self.__load_theme_templates(self.searchpath,
-                                        self.theme_path)
-        if self.extra_theme_path:
-            self.__load_theme_templates(self.searchpath,
-                                        self.extra_theme_path)
-
-        self.searchpath.append(os.path.join(HERE, "templates"))
-        self.engine = Engine(
-            loader=FileLoader(self.searchpath, encoding='UTF-8'),
-            extensions=[CoreExtension(), CodeExtension()]
-        )
-        self.engine.global_vars.update({'e': html.escape})
-
         self._docstring_formatter.parse_config(config)
 
     def format_navigation(self, project):
         """Banana banana
         """
         try:
-            template = self.engine.get_template('site_navigation.html')
+            template = self.get_template('site_navigation.html')
         except IOError:
             return None
 
@@ -1112,7 +1116,7 @@ class Formatter(Configurable):
             return None
 
         try:
-            template = self.engine.get_template('subpages.html')
+            template = self.get_template('subpages.html')
         except IOError:
             return None
 

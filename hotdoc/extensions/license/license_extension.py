@@ -25,6 +25,7 @@ from collections import namedtuple
 from schema import Schema, SchemaError, And, Use, Optional
 
 from hotdoc.core.extension import Extension
+from hotdoc.core.formatter import Formatter
 from hotdoc.core.tree import Page
 from hotdoc.core.exceptions import HotdocException
 from hotdoc.utils.loggable import error, Logger
@@ -170,8 +171,8 @@ class LicenseExtension(Extension):
         return (self.__authors_for_page(page) +
                 self.__extra_copyrights_for_page(page))
 
-    def license_content(self, formatter, page, license_, designation):
-        template = formatter.engine.get_template('license.html')
+    def license_content(self, page, license_, designation):
+        template = Formatter.engine.get_template('license.html')
         if license_.logo_path:
             logo_path = os.path.join(
                 'assets', os.path.basename(license_.logo_path))
@@ -179,7 +180,9 @@ class LicenseExtension(Extension):
             logo_path = None
 
         formatted = template.render(
-                {'license': license_, 'logo_path': logo_path, 'content_designation': designation})
+            {'license': license_,
+             'logo_path': logo_path,
+             'content_designation': designation})
         page.output_attrs['html']['extra_footer_html'].insert(0, formatted)
 
         self.__installed_assets.add(license_.plain_text_path)
@@ -193,7 +196,7 @@ class LicenseExtension(Extension):
 
         copyrights = self.__copyrights_for_page(page)
         if copyrights:
-            template = formatter.engine.get_template('copyrights.html')
+            template = Formatter.engine.get_template('copyrights.html')
             formatted = template.render({'copyrights': copyrights})
             page.output_attrs['html']['extra_footer_html'].insert(0, formatted)
 
@@ -201,12 +204,14 @@ class LicenseExtension(Extension):
         code_license = self.__license_for_page(page, code_samples=True)
 
         if license_ and (license_ == code_license or not code_license):
-            self.license_content(formatter, page, license_, 'All content in this page is')
+            self.license_content(page, license_, 'All content in this page is')
         else:
             if code_license:
-                self.license_content(formatter, page, code_license, 'Code snippets in this page are')
+                self.license_content(page, code_license,
+                                     'Code snippets in this page are')
             if license_:
-                self.license_content(formatter, page, license_, 'Documentation in this page is')
+                self.license_content(page, license_,
+                                     'Documentation in this page is')
 
     def __get_extra_files_cb(self, formatter):
         res = []
@@ -223,8 +228,6 @@ class LicenseExtension(Extension):
                 self.__formatting_page_cb)
             ext.formatter.get_extra_files_signal.connect(
                 self.__get_extra_files_cb)
-            template_path = os.path.join(HERE, 'html_templates')
-            ext.formatter.engine.loader.searchpath.append(template_path)
 
     @staticmethod
     def add_arguments(parser):
@@ -244,6 +247,11 @@ class LicenseExtension(Extension):
                            help="Whether authors hold a copyright by default."
                            "This can be overriden on a per-page basis",
                            dest="authors_hold_copyright", action='store')
+
+    def parse_toplevel_config(self, config):
+        super().parse_toplevel_config(config)
+        template_path = os.path.join(HERE, 'html_templates')
+        Formatter.engine.loader.searchpath.append(template_path)
 
     def parse_config(self, config):
         super(LicenseExtension, self).parse_config(config)
