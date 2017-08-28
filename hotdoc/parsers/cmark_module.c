@@ -51,6 +51,7 @@ void free_named_link(NamedLink *link) {
 
   free (link->title);
   free (link->ref);
+  free (link->extra_attrs);
   free (link);
 }
 
@@ -99,8 +100,10 @@ resolve_link(const char *id) {
 
     res = (NamedLink *) calloc(1, sizeof(NamedLink));
 
-    if (ref != Py_None) {
-      res->ref = strdup(PyUnicode_AsUTF8(ref));
+    if (PyTuple_GetItem(ref, 0) != Py_None) {
+      res->ref = strdup(PyUnicode_AsUTF8(PyTuple_GetItem(ref, 0)));
+      if (PyTuple_GetItem(ref, 1) != Py_None)
+        res->extra_attrs = strdup(PyUnicode_AsUTF8(PyTuple_GetItem(ref, 1)));
     }
 
     if (title != Py_None) {
@@ -335,13 +338,21 @@ static char *render_doc(CMarkDocument *doc)
           cmark_node_set_user_data(cur, strdup(url));
           cmark_node_set_user_data_free_func(cur, free);
 
-          if (named_link->ref)
+          if (named_link->ref) {
             cmark_node_set_url(cur, named_link->ref);
+          }
+
+          if (named_link->extra_attrs) {
+            cmark_node_set_html_attrs(cur, named_link->extra_attrs);
+          }
 
           if (named_link->title)
             cmark_node_set_literal(label, named_link->title);
         } else if (named_link->ref) {
             cmark_node_set_url(cur, named_link->ref);
+            if (named_link->extra_attrs) {
+              cmark_node_set_html_attrs(cur, named_link->extra_attrs);
+            }
         }
 
         free_named_link(named_link);
@@ -365,6 +376,10 @@ static char *render_doc(CMarkDocument *doc)
 
       if (named_link->ref)
         cmark_node_set_url(cur, named_link->ref);
+
+      if (named_link->extra_attrs) {
+        cmark_node_set_html_attrs(cur, named_link->extra_attrs);
+      }
 
       if (named_link->title)
         cmark_node_set_literal(label, named_link->title);

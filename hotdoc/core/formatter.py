@@ -524,7 +524,7 @@ class Formatter(Configurable):
 
         return page.project_name
 
-    def _format_link(self, link, title):
+    def _format_link(self, link, attrs, title):
         out = ''
         if not link:
             assert link
@@ -533,6 +533,7 @@ class Formatter(Configurable):
 
         template = self.get_template('link.html')
         out += '%s' % template.render({'link': link,
+                                       'attrs': attrs or '',
                                        'link_title': title})
         return out
 
@@ -543,9 +544,9 @@ class Formatter(Configurable):
 
         for tok in type_tokens:
             if isinstance(tok, Link):
-                ref = tok.get_link(self.extension.app.link_resolver)
+                ref, attrs = tok.get_link(self.extension.app.link_resolver)
                 if ref:
-                    out += self._format_link(ref, tok.title)
+                    out += self._format_link(ref, attrs, tok.title)
                     link_before = True
                 else:
                     if link_before:
@@ -569,8 +570,10 @@ class Formatter(Configurable):
 
         # FIXME : ugly
         elif hasattr(symbol, "link") and not isinstance(symbol, FieldSymbol):
+            ref, attrs = symbol.link.get_link(self.extension.app.link_resolver)
             out += self._format_link(
-                symbol.link.get_link(self.extension.app.link_resolver),
+                ref,
+                attrs,
                 symbol.link.title)
 
         if isinstance(symbol, ParameterSymbol):

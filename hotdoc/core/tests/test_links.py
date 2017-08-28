@@ -26,8 +26,9 @@ import os
 import shutil
 
 from hotdoc.core.database import Database
-from hotdoc.core.links import LinkResolver, Link
+from hotdoc.core.links import LinkResolver, Link, dict_to_html_attrs
 from hotdoc.core.symbols import (FunctionSymbol, ParameterSymbol, StructSymbol)
+from hotdoc.utils.utils import OrderedDict
 
 
 class TestLinkResolver(unittest.TestCase):
@@ -53,8 +54,9 @@ class TestLinkResolver(unittest.TestCase):
 
         func.resolve_links(self.link_resolver)
 
-        self.assertEqual(param.get_type_link().get_link(self.link_resolver),
-                         None)
+        ref, _ = param.get_type_link().get_link(self.link_resolver)
+
+        self.assertEqual(ref, None)
 
         struct = self.database.get_or_create_symbol(
             StructSymbol, unique_name='test-struct', filename='test_a.x')
@@ -62,9 +64,10 @@ class TestLinkResolver(unittest.TestCase):
         struct.resolve_links(self.link_resolver)
         func.resolve_links(self.link_resolver)
 
+        ref, _ = param.get_type_link().get_link(self.link_resolver)
+
         # Not in a page but still
-        self.assertEqual(param.get_type_link().get_link(self.link_resolver),
-                         'test-struct')
+        self.assertEqual(ref, 'test-struct')
 
         self.database.persist()
 
@@ -78,5 +81,17 @@ class TestLinkResolver(unittest.TestCase):
             filename='text_b.x', parameters=[param])
 
         func.resolve_links(self.link_resolver)
-        self.assertEqual(param.get_type_link().get_link(self.link_resolver),
-                         'test-struct')
+        ref, _ = param.get_type_link().get_link(self.link_resolver)
+        self.assertEqual(ref, 'test-struct')
+
+
+class TestLinkUtils(unittest.TestCase):
+    def test_dict_to_html_attrs(self):
+        self.assertEqual(dict_to_html_attrs({'foo': 'a.html#something'}),
+                         'foo="a.html#something"')
+        self.assertEqual(dict_to_html_attrs({'foo': None}),
+                         'foo="None"')
+        d = OrderedDict()
+        d['foo'] = None
+        d['bar'] = None
+        self.assertEqual(dict_to_html_attrs(d), 'foo="None" bar="None"')
