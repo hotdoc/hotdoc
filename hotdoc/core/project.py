@@ -374,7 +374,7 @@ class Project(Configurable):
                 sub_formatter = proj.extensions[cpage.extension_name].formatter
                 proj.write_out_tree(cpage, output)
 
-            subpage_link = cpage.link.get_link(self.app.link_resolver)
+            subpage_link, _ = cpage.link.get_link(self.app.link_resolver)
             prefix = sub_formatter.get_output_folder(cpage)
             if prefix:
                 subpage_link = '%s/%s' % (prefix, subpage_link)
@@ -395,9 +395,8 @@ class Project(Configurable):
 
         # Just in case the sitemap root isn't named index
         ext_folder = ext.formatter.get_output_folder(self.tree.root)
-        index_path = os.path.join(
-            ext_folder,
-            self.tree.root.link.get_link(self.app.link_resolver))
+        ref, _ = self.tree.root.link.get_link(self.app.link_resolver)
+        index_path = os.path.join(ext_folder, ref)
 
         default_index_path = os.path.join(output, 'html', 'index.html')
 

@@ -578,6 +578,7 @@ class Extension(Configurable):
 
         self.written_out_sitemaps.add(opath)
 
+    # pylint: disable=too-many-locals
     def write_out_page(self, output, page):
         """
         Banana banana
@@ -596,7 +597,7 @@ class Extension(Configurable):
                 cpage = proj.tree.root
                 sub_formatter = proj.extensions[cpage.extension_name].formatter
 
-            subpage_link = cpage.link.get_link(self.app.link_resolver)
+            subpage_link, _ = cpage.link.get_link(self.app.link_resolver)
             prefix = sub_formatter.get_output_folder(cpage)
             if prefix:
                 subpage_link = '%s/%s' % (prefix, subpage_link)

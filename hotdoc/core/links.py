@@ -24,6 +24,14 @@ import urllib.parse
 from hotdoc.utils.signals import Signal
 
 
+def dict_to_html_attrs(dict_):
+    """
+    Banana banana
+    """
+    res = ' '.join('%s="%s"' % (k, v) for k, v in dict_.items())
+    return res
+
+
 class Link:
     """
     Banana banana
@@ -69,8 +77,13 @@ class Link:
         """
         Banana banana
         """
-        res = link_resolver.resolving_link_signal(self) or self.ref
-        return res
+        res = link_resolver.resolving_link_signal(self)
+        if not res:
+            return self.ref, None
+        ref = res[0] or self.ref
+        if res[1]:
+            return ref, dict_to_html_attrs(res[1])
+        return ref, None
 
     def __repr__(self):
         return "Link %s -> %s (%s)" % (self.id_, self.ref, self._title)

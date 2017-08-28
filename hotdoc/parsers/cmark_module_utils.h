@@ -25,6 +25,7 @@
 typedef struct {
   char *ref;
   char *title;
+  char *extra_attrs;
 } NamedLink;
 
 void free_named_link(NamedLink *link);
