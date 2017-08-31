@@ -243,6 +243,13 @@ class FieldSymbol(Symbol):
         return "Attribute"
 
 
+class EnumMemberSymbol(Symbol):
+    """
+    Banana banana
+    """
+    __tablename__ = 'members'
+
+
 class FunctionSymbol(Symbol):
     """
     Banana banana

@@ -1,12 +1,6 @@
 @require(prototype, symbol, return_value, parameters, tags, extra)
 @extends('base_symbol.html')
 
-@def header():
-@(header_level = '4' if symbol.extension_attributes['order_by_section'] else '3')
-<h@header_level>
-	<span><code>@symbol.link.title</code></span>
-</h@header_level>
-@end
 @def content():
 @prototype
 @symbol.formatted_doc

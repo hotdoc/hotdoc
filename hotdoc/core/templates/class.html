@@ -1,14 +1,6 @@
 @require(klass, hierarchy, raw_code, members_list)
 @extends('base_symbol.html')
 
-@def header():
-@if not klass.extension_attributes['order_by_section']:
-<h@header_level>
-	@klass.link.title
-</h@header_level>
-@end
-@end
-
 @def content():
 \
 @if hierarchy:

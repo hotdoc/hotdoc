@@ -1,16 +1,6 @@
 @require(struct, raw_code, members_list)
 @extends('base_symbol.html')
 
-@def header():
-@(header_level = '4' if struct.extension_attributes['order_by_section'] else '3')
-<h@header_level>
-	@if struct.anonymous:
-	@struct.link.title
-	@else:
-	struct @struct.link.title
-	@end
-</h@header_level>
-@end
 @def content():
 \
 @if raw_code:

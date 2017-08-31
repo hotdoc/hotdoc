@@ -149,16 +149,14 @@ TERMC = TerminalController()
 LogEntry = namedtuple('LogEntry', ['level', 'domain', 'code', 'message'])
 
 
-def force_print(out, msg):
+def _force_print(out, msg):
     try:
         out.write(msg)
     except UnicodeEncodeError:
         iostr = io.StringIO()
-        kwargs['file'] = iostr
         iostr.write(msg)
         cleaned = iostr.getvalue().encode('ascii', 'replace').decode('ascii')
         out.write(cleaned)
-
 
 
 def _print_entry(entry):
@@ -167,20 +165,20 @@ def _print_entry(entry):
         out = sys.stderr
 
     if entry.level == DEBUG:
-        force_print(out, TERMC.CYAN + 'DEBUG' + TERMC.NORMAL)
+        _force_print(out, TERMC.CYAN + 'DEBUG' + TERMC.NORMAL)
     elif entry.level == INFO:
-        force_print(out, TERMC.GREEN + 'INFO' + TERMC.NORMAL)
+        _force_print(out, TERMC.GREEN + 'INFO' + TERMC.NORMAL)
     elif entry.level == WARNING:
-        force_print(out, TERMC.YELLOW + 'WARNING' + TERMC.NORMAL)
+        _force_print(out, TERMC.YELLOW + 'WARNING' + TERMC.NORMAL)
     elif entry.level == ERROR:
-        force_print(out, TERMC.RED + 'ERROR' + TERMC.NORMAL)
+        _force_print(out, TERMC.RED + 'ERROR' + TERMC.NORMAL)
 
-    force_print(out, ': [%s]:' % entry.domain)
+    _force_print(out, ': [%s]:' % entry.domain)
 
     if entry.code:
-        force_print(out, ' (%s):' % entry.code)
+        _force_print(out, ' (%s):' % entry.code)
 
-    force_print(out, ' %s\n' % entry.message)
+    _force_print(out, ' %s\n' % entry.message)
     out.flush()
 
 
@@ -369,3 +367,4 @@ if ENV_VERBOSITY is not None:
 Logger.register_error_code('invalid-config', ConfigError)
 Logger.register_error_code('setup-issue', ConfigError)
 Logger.register_warning_code('parsing-issue', ParsingException)
+Logger.silent = True

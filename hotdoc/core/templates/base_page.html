@@ -5,7 +5,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 
-@for key, value in meta:
+@for key, value in meta.items():
 <meta data-hd-key="@str(key)" data-hd-value="@str(value)" />
 @end
 
