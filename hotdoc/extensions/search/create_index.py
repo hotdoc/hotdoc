@@ -27,7 +27,7 @@ import threading
 import multiprocessing
 
 from concurrent import futures
-from collections import defaultdict
+from collections import defaultdict, namedtuple, OrderedDict
 
 import lxml.html
 
@@ -35,7 +35,9 @@ from hotdoc.core.exceptions import InvalidOutputException
 from hotdoc.utils.loggable import info as core_info, Logger
 
 from hotdoc.extensions.search.trie import Trie
-from hotdoc.utils.utils import OrderedSet
+
+
+ContextualizedURL = namedtuple('ContextualizedURL', ['url', 'context'])
 
 
 def info(message):
@@ -53,7 +55,8 @@ INITIAL_SELECTOR = (
 )
 
 TITLE_SELECTOR = (
-    './h1|h2|h2|h3|h4|h5|h6'
+    './/*[self::h1 or self::h2 or self::h3 or '
+    'self::h4 or self::h5 or self::h6]'
 )
 
 TOK_REGEX = re.compile(r'[a-zA-Z_][a-zA-Z0-9_\.]*[a-zA-Z0-9_]*')
@@ -65,29 +68,37 @@ def get_sections(root, selector='./div[@id]'):
 
 def parse_content(section, stop_words, selector='.//p'):
     for elem in section.xpath(selector):
+        context = {'gi-language': 'default'}
         text = lxml.html.tostring(elem, method="text",
                                   encoding='unicode')
 
-        id_ = elem.attrib.get('id')
-        if not id_:
-            elem = elem.xpath('preceding::*[@id]')[-1]
-            if elem is not None:
-                id_ = elem.attrib['id']
+        id_ = None
+        while id_ is None and elem is not None:
+            if context['gi-language'] == 'default':
+                klasses = elem.attrib.get('class', '').split(' ')
+                try:
+                    klasses.remove('gi-symbol')
+                    context['gi-language'] = klasses[0].split('-')[2]
+                except ValueError:
+                    pass
+
+            id_ = elem.attrib.get('id')
+            elem = elem.getparent()
 
         tokens = TOK_REGEX.findall(text)
 
         for token in tokens:
             original_token = token + ' '
-            if token in stop_words:
-                yield (None, original_token, id_)
+            if token.lower() in stop_words:
+                yield (None, original_token, id_, context)
                 continue
             if token.endswith('.'):
-                yield (token.rstrip('.'), original_token, id_)
+                yield (token.rstrip('.'), original_token, id_, context)
                 continue
 
-            yield (token, original_token, id_)
+            yield (token, original_token, id_, context)
 
-        yield (None, '\n', id_)
+        yield (None, '\n', id_, context)
 
 
 def write_fragment(fragments_dir, url, text):
@@ -122,8 +133,8 @@ def parse_file(root_dir, root, filename, stop_words, fragments_dir):
         section_url = '%s#%s' % (url, section.attrib.get('id', '').strip())
         subsections = defaultdict(str)
 
-        for tok, text, id_ in parse_content(section, stop_words,
-                                            selector=TITLE_SELECTOR):
+        for tok, text, id_, context in parse_content(section, stop_words,
+                                                     selector=TITLE_SELECTOR):
             if id_:
                 section_id = '%s#%s' % (url, id_)
             else:
@@ -134,11 +145,11 @@ def parse_file(root_dir, root, filename, stop_words, fragments_dir):
             if tok is None:
                 continue
 
-            yield tok, section_id, True
+            yield tok, section_id, True, context
             if any(c.isupper() for c in tok):
-                yield tok.lower(), section_id, True
+                yield tok.lower(), section_id, True, context
 
-        for tok, text, id_ in parse_content(section, stop_words):
+        for tok, text, id_, context in parse_content(section, stop_words):
             if id_:
                 section_id = '%s#%s' % (url, id_)
             else:
@@ -149,9 +160,9 @@ def parse_file(root_dir, root, filename, stop_words, fragments_dir):
             if tok is None:
                 continue
 
-            yield tok, section_id, False
+            yield tok, section_id, False, context
             if any(c.isupper() for c in tok):
-                yield tok.lower(), section_id, False
+                yield tok.lower(), section_id, False, context
 
         for section_id, section_text in subsections.items():
             write_fragment(fragments_dir,
@@ -229,29 +240,8 @@ class SearchIndex(object):
 
         return fragments
 
-    def load(self, stale_filenames):
-        to_remove = self.__get_fragments(stale_filenames)
-
-        trie_path = os.path.join(self.__private_dir, 'search.trie')
-        if os.path.exists(trie_path):
-            self.__trie = Trie.from_file(trie_path)
-
-        search_index_path = os.path.join(self.__private_dir, 'search.json')
-        if os.path.exists(search_index_path):
-            with open(search_index_path, 'r') as _:
-                previous_index = json.loads(_.read())
-
-            for token, fragment_urls in list(previous_index.items()):
-                new_set = list(OrderedSet(fragment_urls) - to_remove)
-
-                if new_set:
-                    self.__full_index[token] = new_set
-                else:
-                    self.__trie.remove(token)
-                    os.unlink(os.path.join(self.__search_dir, token))
-
     def fill(self, filename, lxml_tree):
-        for token, section_url, prioritize in parse_file(
+        for token, section_url, prioritize, context in parse_file(
                 self.__scan_dir,
                 lxml_tree,
                 filename,
@@ -259,12 +249,13 @@ class SearchIndex(object):
                 self.__fragments_dir):
 
             self.__indices_lock.acquire()
+            contextualized_url = ContextualizedURL(section_url, context)
             if not prioritize:
-                self.__full_index[token].append(section_url)
-                self.__new_index[token].append(section_url)
+                self.__full_index[token].append(contextualized_url)
+                self.__new_index[token].append(contextualized_url)
             else:
-                self.__full_index[token].insert(0, section_url)
-                self.__new_index[token].insert(0, section_url)
+                self.__full_index[token].insert(0, contextualized_url)
+                self.__new_index[token].insert(0, contextualized_url)
             self.__indices_lock.release()
 
     def save(self):
@@ -272,14 +263,32 @@ class SearchIndex(object):
         for key, value in sorted(self.__new_index.items()):
             self.__trie.insert(key)
 
-            metadata = {'token': key, 'urls': list(OrderedSet(value))}
+            deduped = OrderedDict()
+            for url in value:
+                try:
+                    context = deduped[url.url]
+                    for key_, val_ in url.context.items():
+                        try:
+                            vset = context[key_]
+                            vset.add(val_)
+                        except KeyError:
+                            context[key_] = set([val_])
+                except KeyError:
+                    deduped[url.url] = \
+                        {k: set([v]) for k, v in url.context.items()}
+
+            urls = []
+            for url, context in deduped.items():
+                for key_, val_ in context.items():
+                    context[key_] = list(val_)
+                urls.append({'url': url, 'context': context})
+
+            metadata = {'token': key, 'urls': urls}
 
             with open(os.path.join(self.__search_dir, key), 'w') as _:
-                _.write('urls_downloaded_cb("%s");' % json.dumps(metadata))
+                _.write('urls_downloaded_cb(%s);' % json.dumps(metadata))
 
         self.__trie.to_file(os.path.join(self.__private_dir, 'search.trie'),
                             os.path.join(self.__output_dir, 'trie_index.js'))
 
-        with open(os.path.join(self.__private_dir, 'search.json'), 'w') as _:
-            _.write(json.dumps(self.__full_index))
         self.__indices_lock.release()

@@ -320,7 +320,8 @@ class Page(object):
                 continue
             debug('Formatting symbol %s in page %s' % (
                 symbol.unique_name, self.source_file), 'formatting')
-            symbol.skip = not formatter.format_symbol(symbol, link_resolver)
+            symbol.detailed_description = formatter.format_symbol(
+                symbol, link_resolver)
 
     def __query_extra_symbols(self, sym, all_syms, tree, link_resolver,
                               database):

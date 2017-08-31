@@ -45,12 +45,9 @@ from wheezy.template.ext.core import CoreExtension
 from wheezy.template.ext.code import CodeExtension
 from wheezy.template.loader import FileLoader
 
-from hotdoc.core.symbols import\
-    (ConstructorSymbol, MethodSymbol, FunctionSymbol, CallbackSymbol,
-     ParameterSymbol, ReturnItemSymbol, FieldSymbol, QualifiedSymbol,
-     FunctionMacroSymbol, ConstantSymbol, ExportedVariableSymbol,
-     StructSymbol, EnumSymbol, AliasSymbol, SignalSymbol, PropertySymbol,
-     VFunctionSymbol, ClassSymbol, InterfaceSymbol, ClassMethodSymbol)
+# pylint: disable=wildcard-import
+# pylint: disable=unused-wildcard-import
+from hotdoc.core.symbols import *
 from hotdoc.core.links import Link
 from hotdoc.parsers.gtk_doc import GtkDocStringFormatter
 from hotdoc.utils.utils import (
@@ -170,6 +167,7 @@ class Formatter(Configurable):
             AliasSymbol: self._format_alias,
             StructSymbol: self._format_struct,
             EnumSymbol: self._format_enum,
+            EnumMemberSymbol: self._format_enum_member_symbol,
             ParameterSymbol: self._format_parameter_symbol,
             ReturnItemSymbol: self._format_return_item_symbol,
             FieldSymbol: self._format_field_symbol,
@@ -214,6 +212,7 @@ class Formatter(Configurable):
         """
         return 'assets'
 
+    # pylint: disable=unused-argument
     def format_symbol(self, symbol, link_resolver):
         """
         Format a symbols.Symbol
@@ -221,27 +220,16 @@ class Formatter(Configurable):
         if not symbol:
             return ''
 
-        res = self.formatting_symbol_signal(self, symbol)
+        if isinstance(symbol, FieldSymbol):
+            return ''
 
-        if False in res:
-            return False
-
-        symbol.extension_attributes['order_by_section'] = \
-            self._order_by_parent and symbol.parent_name
-        for csym in symbol.get_children_symbols():
-            if csym:
-                csym.parent_name = symbol.parent_name
-                csym.extension_attributes['order_by_section'] = \
-                    self._order_by_parent and symbol.parent_name
-            self.format_symbol(csym, link_resolver)
-
-        symbol.formatted_doc = self.format_comment(symbol.comment,
-                                                   link_resolver)
         # pylint: disable=unused-variable
-        out, standalone = self._format_symbol(symbol)
-        symbol.detailed_description = out
+        out = self._format_symbol(symbol)
+        template = self.get_template('symbol_wrapper.html')
 
-        return symbol.detailed_description
+        return template.render(
+            {'symbol': symbol,
+             'formatted_doc': out})
 
     # pylint: disable=too-many-function-args
     def format_comment(self, comment, link_resolver):
@@ -364,49 +352,43 @@ class Formatter(Configurable):
 
         return section_number
 
+    def _make_title_id(self, node, id_nodes):
+        if node.tag == 'img':
+            text = node.attrib.get('alt')
+        else:
+            text = "".join([x for x in node.itertext()])
+
+        if not text:
+            return None
+
+        id_ = id_from_text(text)
+        ref_id = id_
+        index = 1
+
+        while id_ in id_nodes:
+            id_ = '%s%s' % (ref_id, index)
+            index += 1
+
+        return id_
+
     def __update_targets(self, doc_root, section_numbers, id_nodes):
         targets = doc_root.xpath(
-            './/*[self::h1 or self::h2 or self::h3 or '
-            'self::h4 or self::h5 or self::img]')
+            './/*[@data-hotdoc-role="main"]//*[self::h1 or self::h2 or '
+            'self::h3 or self::h4 or self::h5 or self::img]')
 
         for target in targets:
-            is_symbol_heading = False
-            section_number = self.__update_section_number(
-                target, section_numbers)
-
             if 'id' in target.attrib:
                 continue
 
-            if target.tag == 'img':
-                text = target.attrib.get('alt')
-            else:
-                parent = target.getparent()
-                is_symbol_heading = 'base_symbol_container' in \
-                    parent.attrib.get('class', '').split()
-                text = "".join([x for x in target.itertext()])
+            id_ = self._make_title_id(target, id_nodes)
+            target.attrib['id'] = id_
+            id_nodes[id_] = target
 
-            if not text:
-                continue
-
-            # This lets us avoid appending numbers on the id of the
-            # first heading for a symbol
-            if is_symbol_heading and parent.getchildren()[0] == target:
-                id_ = parent.attrib['id']
-                parent.attrib['id'] = '%s-wrapper' % id_
-            else:
-                id_ = id_from_text(text)
-                ref_id = id_
-                index = 1
-
-                while id_ in id_nodes:
-                    id_ = '%s%s' % (ref_id, index)
-                    index += 1
+            section_number = self.__update_section_number(
+                target, section_numbers)
 
             if section_number:
                 target.text = '%s %s' % (section_number, target.text or '')
-
-            target.attrib['id'] = id_
-            id_nodes[id_] = target
 
     def __update_links(self, page, doc_root, id_nodes):
         rel_path = os.path.join(self.get_output_folder(page), page.link.ref)
@@ -489,7 +471,8 @@ class Formatter(Configurable):
             os.makedirs(os.path.dirname(full_path))
         with open(cached_path, 'r', encoding='utf-8') as _:
             doc_root = etree.HTML(_.read())
-            self.__validate_html(self.extension.project, page, doc_root)
+
+        self.__validate_html(self.extension.project, page, doc_root)
 
         self.writing_page_signal(self, page, full_path, doc_root)
         with open(full_path, 'w', encoding='utf-8') as _:
@@ -632,16 +615,16 @@ class Formatter(Configurable):
                                "struct": struct,
                                "raw_code": raw_code,
                                "members_list": members_list})
-        return (out, False)
+        return out
+
+    def _format_enum_member_symbol(self, member):
+        template = self.get_template("enum_member.html")
+        return template.render({
+            'link': member.link,
+            'detail': member.formatted_doc,
+            'value': str(member.enum_value)})
 
     def _format_enum(self, enum):
-        for member in enum.members:
-            template = self.get_template("enum_member.html")
-            member.detailed_description = template.render({
-                'link': member.link,
-                'detail': member.formatted_doc,
-                'value': str(member.enum_value)})
-
         raw_code = None
         if enum.raw_text is not None:
             raw_code = self._format_raw_code(enum.raw_text)
@@ -652,7 +635,7 @@ class Formatter(Configurable):
                                "enum": enum,
                                "raw_code": raw_code,
                                "members_list": members_list})
-        return (out, False)
+        return out
 
     def prepare_page_attributes(self, page):
         """
@@ -698,7 +681,7 @@ class Formatter(Configurable):
         symbols_details = []
         by_sections = []
         by_section_symbols = namedtuple('BySectionSymbols',
-                                        ['name', 'symbols_details'])
+                                        ['has_parent', 'symbols_details'])
 
         if not self._order_by_parent:
             symbols_details = self.__get_symbols_details(page)
@@ -707,7 +690,7 @@ class Formatter(Configurable):
                 symbols_details = self.__get_symbols_details(page, parent_name)
 
                 if symbols_details:
-                    by_sections.append(by_section_symbols(parent_name,
+                    by_sections.append(by_section_symbols(bool(parent_name),
                                                           symbols_details))
 
         template = self.get_template('page.html')
@@ -778,29 +761,26 @@ class Formatter(Configurable):
         return template.render({'code': code})
 
     def _format_parameter_symbol(self, parameter):
-        return (self.__format_parameter_detail(
+        return self.__format_parameter_detail(
             parameter.argname,
             parameter.formatted_doc,
-            extra=parameter.extension_contents), False)
+            extra=parameter.extension_contents)
 
     def _format_field_symbol(self, field):
         template = self.get_template('field_detail.html')
         field.formatted_link = self._format_linked_symbol(field)
-        return (template.render({'symbol': field,
-                                 'detail': field.formatted_doc}), False)
+        return template.render({'symbol': field,
+                                'detail': field.formatted_doc})
 
     def _format_return_item_symbol(self, return_item):
         template = self.get_template('return_item.html')
         return_item.formatted_link = self._format_linked_symbol(return_item)
-        return (template.render({'return_item': return_item}), False)
+        return template.render({'return_item': return_item})
 
     def _format_return_value_symbol(self, return_value, parent):
         template = self.get_template('multi_return_value.html')
         if return_value[0] is None:
             return_value = return_value[1:]
-        for rval in return_value:
-            rval.extension_attributes['order_by_section'] = \
-                self._order_by_parent and parent.parent_name
         return template.render({'return_items': return_value})
 
     def _format_callable(self, callable_, callable_type, title,
@@ -829,7 +809,7 @@ class Formatter(Configurable):
                                'tags': tags,
                                'extra': callable_.extension_contents})
 
-        return (out, False)
+        return out
 
     def _format_signal_symbol(self, signal):
         title = "%s_callback" % re.sub('-', '_', signal.link.title)
@@ -849,7 +829,7 @@ class Formatter(Configurable):
                                'prototype': prototype,
                                'property': prop,
                                'extra': prop.extension_contents})
-        return (res, False)
+        return res
 
     def _format_hierarchy(self, klass):
         hierarchy = []
@@ -873,32 +853,25 @@ class Formatter(Configurable):
         if klass.raw_text is not None:
             raw_code = self._format_raw_code(klass.raw_text)
 
-        for member in klass.members:
-            self.format_symbol(member, self.extension.app.link_resolver)
-
         members_list = self._format_members_list(klass.members, 'Members',
                                                  klass)
 
-        return (template.render({'symbol': klass,
-                                 'klass': klass,
-                                 'hierarchy': hierarchy,
-                                 'raw_code': raw_code,
-                                 'members_list': members_list}),
-                False)
+        klass.extension_attributes['is_section_head'] = self._order_by_parent
+        return template.render({'symbol': klass,
+                                'klass': klass,
+                                'hierarchy': hierarchy,
+                                'raw_code': raw_code,
+                                'members_list': members_list})
 
     def _format_interface_symbol(self, interface):
         hierarchy = self._format_hierarchy(interface)
         template = self.get_template('interface.html')
-        return (template.render({'symbol': interface,
-                                 'hierarchy': hierarchy}),
-                False)
+        return template.render({'symbol': interface,
+                                'hierarchy': hierarchy})
 
     def _format_members_list(self, members, member_designation,
                              parent):
         template = self.get_template('member_list.html')
-        for member in members:
-            member.extension_attributes['order_by_section'] = \
-                self._order_by_parent and parent.parent_name
         return template.render({'members': members,
                                 'member_designation': member_designation,
                                 'parent_is_class': isinstance(parent,
@@ -933,14 +906,14 @@ class Formatter(Configurable):
                                'tags': {},
                                'extra': function_macro.extension_contents})
 
-        return (out, False)
+        return out
 
     def _format_alias(self, alias):
         template = self.get_template('alias.html')
         aliased_type = self._format_linked_symbol(alias.aliased_type)
-        return (template.render({'symbol': alias,
-                                 'alias': alias,
-                                 'aliased_type': aliased_type}), False)
+        return template.render({'symbol': alias,
+                                'alias': alias,
+                                'aliased_type': aliased_type})
 
     def _format_constant(self, constant):
         template = self.get_template('constant.html')
@@ -948,13 +921,26 @@ class Formatter(Configurable):
         out = template.render({'symbol': constant,
                                'definition': definition,
                                'constant': constant})
-        return (out, False)
+        return out
 
     def _format_symbol(self, symbol):
+        order_by_section = self._order_by_parent and bool(symbol.parent_name)
+        symbol.extension_attributes['order_by_section'] = order_by_section
+        for csym in symbol.get_children_symbols():
+            if csym:
+                csym.parent_name = symbol.parent_name
+                csym.extension_attributes['order_by_section'] = \
+                    order_by_section
+                csym.detailed_description = self._format_symbol(csym)
+
+        symbol.formatted_doc = self.format_comment(
+            symbol.comment, self.extension.app.link_resolver)
+
         format_function = self._symbol_formatters.get(type(symbol))
         if format_function:
             return format_function(symbol)
-        return (None, False)
+
+        return None
 
     def _format_comment(self, comment, link_resolver):
         return self._docstring_formatter.translate_comment(

@@ -1,22 +1,26 @@
 @require(symbol)
 
+@def header_level():
 @(
-tags = {}
-if symbol.comment:
-    tags = symbol.comment.tags
-
-tags.pop('returns', None)
+if symbol.extension_attributes.get('is_section_head', False):
+	return '2'
+elif symbol.extension_attributes.get('order_by_section', False):
+	return '4'
+else:
+	return '3'
 )
-
-<div class="base_symbol_container" data-hotdoc-tags="\
-@for tag in tags.values():
-@tag.name.lower():@tag.value;\
 @end
-" id="@symbol.link.id_">
-	@def header():
-	@end
-	@header()
-	@def content():
-	@end
-	@content()
-</div>
+
+@(level = header_level())
+
+@def header():
+<h@level data-hotdoc-id="@symbol.link.id_">
+	<span><code>@symbol.link.title</code></span>
+</h@level>
+@end
+
+@header()
+
+@def content():
+@end
+@content()

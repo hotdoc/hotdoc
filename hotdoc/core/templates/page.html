@@ -4,16 +4,13 @@
 @def render_symbols(sdetails, section):
 
     @for symbols_detail in sdetails:
-        @(html_id = '')
         @if symbols_detail.name:
-            @(html_id = '_'.join(symbols_detail.name.split()))
-            @if section and section.name:
-                @(html_id = '_'.join(section.name.split()) + html_id)
+            @if section and section.has_parent:
                 @(header_level = '3')
             @else:
                 @(header_level = '2')
             @end
-            <h@header_level class="symbol_section" id="@html_id">@symbols_detail.name</h@header_level>
+            <h@header_level class="symbol_section">@symbols_detail.name</h@header_level>
         @end
         \
         @for i, description in enumerate(symbols_detail.descriptions):
@@ -25,10 +22,6 @@
 @def render_sections():
 
     @for section in sections_details:
-        @(html_id = '')
-        @if section.name:
-            <h2 class="symbol_section" id="@html_id">@section.name</h2>
-        @end
         @render_symbols(section.symbols_details, section)
     @end
 @end

@@ -1,16 +1,6 @@
 @require(enum, raw_code, members_list)
 @extends('base_symbol.html')
 
-@def header():
-@(header_level = '4' if enum.extension_attributes['order_by_section'] else '3')
-<h@header_level>
-	@if enum.anonymous:
-	@enum.link.title
-	@else:
-	enum @enum.link.title
-	@end
-</h@header_level>
-@end
 @def content():
 \
 @if raw_code:

@@ -1,13 +1,6 @@
 @require(symbol, hierarchy)
 @extends('base_symbol.html')
 
-@def header():
-@(header_level = '4' if symbol.extension_attributes['order_by_section'] else '3')
-<h@header_level>
-	@symbol.link.title
-</h@header_level>
-@end
-
 @def content():
 \
 @if hierarchy:
