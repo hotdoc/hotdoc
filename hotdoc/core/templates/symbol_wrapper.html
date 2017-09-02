@@ -1,0 +1,17 @@
+@require(symbol, formatted_doc)
+
+@(
+tags = {}
+if symbol.comment:
+    tags = symbol.comment.tags
+
+tags.pop('returns', None)
+)
+
+<div class="base_symbol_container" data-hotdoc-tags="\
+@for tag in tags.values():
+@tag.name.lower():@tag.value;\
+@end
+" id="@symbol.link.id_">
+	@formatted_doc
+</div>
