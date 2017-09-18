@@ -381,14 +381,18 @@ class Formatter(Configurable):
                 continue
 
             id_ = self._make_title_id(target, id_nodes)
-            target.attrib['id'] = id_
-            id_nodes[id_] = target
 
             section_number = self.__update_section_number(
                 target, section_numbers)
 
             if section_number:
                 target.text = '%s %s' % (section_number, target.text or '')
+
+            if id_ is None:
+                continue
+
+            target.attrib['id'] = id_
+            id_nodes[id_] = target
 
     def __update_links(self, page, doc_root, id_nodes):
         rel_path = os.path.join(self.get_output_folder(page), page.link.ref)
