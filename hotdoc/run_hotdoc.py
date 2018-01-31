@@ -17,15 +17,17 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Banana banana
+"""The main hotdoc application
 """
 
-import traceback
-import os
 import argparse
-import shutil
-import pickle
+import cProfile
 import json
+import os
+import pickle
+import shutil
+import sys
+import traceback
 
 from urllib.parse import urlparse
 from collections import OrderedDict
@@ -440,3 +442,17 @@ def run(args):
     Logger.parse_config(config)
 
     return execute_command(parser, config, ext_classes)
+
+
+def main():
+    run_profile = os.environ.get('HOTDOC_PROFILING', False)
+    res = 0
+
+    if run_profile:
+        prof = cProfile.Profile()
+        res = prof.runcall(run, sys.argv[1:])
+        prof.dump_stats('hotdoc-runstats')
+    else:
+        res = run(sys.argv[1:])
+
+    return res

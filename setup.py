@@ -323,8 +323,6 @@ if __name__ == '__main__':
                   'test': DiscoverTest,
                   'link_pre_commit_hook': LinkPreCommitHook,
                   'build_default_theme': BuildDefaultTheme},
-        scripts=['hotdoc/hotdoc',
-                 'hotdoc/hotdoc_dep_printer'],
         package_data={
             'hotdoc.core': ['templates/*', 'assets/*'],
             'hotdoc': [os.path.join(THEME_REL_DIR, 'templates', '*'),
@@ -352,7 +350,10 @@ if __name__ == '__main__':
         extras_require=EXTRAS_REQUIRE,
         entry_points={
             'hotdoc.extensions': ('get_extension_classes = '
-                                  'hotdoc.extensions:get_extension_classes')},
+                                  'hotdoc.extensions:get_extension_classes'),
+            'console_scripts': [
+                'hotdoc=hotdoc.run_hotdoc:main',
+                'hotdoc_dep_printer=hotdoc.hotdoc_dep_printer:main']},
         classifiers=[
             "Programming Language :: Python :: 3",
             "Programming Language :: Python :: 3.4",
