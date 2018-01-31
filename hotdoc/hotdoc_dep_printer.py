@@ -1,7 +1,8 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 #
-# Copyright 2015,2016 Mathieu Duponchelle <mathieu.duponchelle@opencreed.com>
-# Copyright 2015,2016 Collabora Ltd
+# Copyright © 2015,2016 Mathieu Duponchelle <mathieu.duponchelle@opencreed.com>
+# Copyright © 2015,2016 Collabora Ltd
 #
 # This library is free software; you can redistribute it and/or modify it under
 # the terms of the GNU Lesser General Public License as published by the Free
@@ -16,29 +17,18 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-"""The main hotdoc application
+"""A helper tool for hotdoc build system integration.
 """
 
-import cProfile
-import os
 import sys
 
-# pylint: disable=no-name-in-module
-from hotdoc.run_hotdoc import run
+from hotdoc.core.config import ConfigParser
 
+def main():
+    if len(sys.argv) != 2:
+        print "USAGE: %s path/to/conf/file" % sys.argv[0]
+        sys.exit(1)
 
-def _main():
-    run_profile = os.environ.get('HOTDOC_PROFILING', False)
-    res = 0
-
-    if run_profile:
-        prof = cProfile.Profile()
-        res = prof.runcall(run, sys.argv[1:])
-        prof.dump_stats('hotdoc-runstats')
-    else:
-        res = run(sys.argv[1:])
-
-    return res
-
-if __name__ == "__main__":
-    sys.exit(_main())
+    PARSER = ConfigParser(conf_file=sys.argv[1])
+    PARSER.print_make_dependencies()
+    sys.exit(0)
