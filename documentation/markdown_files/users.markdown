@@ -18,6 +18,10 @@ GStreamer's [documentation](https://gstreamer.freedesktop.org/documentation/) ha
 
 [Apertis](https://docs.apertis.org/) is a Debian-based distribution for In-Vehicle-Infotainment. The documentation for its individual libraries is currently listed with the default HTTP index, it will hopefully be ported to use hotdoc's nested subprojects at some point.
 
+## Endless Modular Framework documentation ##
+
+The [app development platform for Endless OS](http://endlessm.github.io/eos-knowledge-lib/) uses hotdoc for the [documentation](http://endlessm.github.io/eos-knowledge-lib/docs/master/) for its user interface tools. This hotdoc project uses a [custom extension](https://github.com/endlessm/hotdoc-modular-framework).
+
 ## A tiny test project
 
 The documentation generated for a project that tries to use as much of hotdoc and its extension's features while staying as tiny as possible can be found [here](https://people.collabora.com/~meh/test_hotdoc/), and its sources, which can be used as an example, live [there](https://github.com/hotdoc/test_hotdoc)
