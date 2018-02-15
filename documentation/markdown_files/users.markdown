@@ -20,4 +20,4 @@ GStreamer's [documentation](https://gstreamer.freedesktop.org/documentation/) ha
 
 ## A tiny test project
 
-The documentation generated for a project that tries to use as much of hotdoc and its extension's features while staying as tiny as possible can be found [here](https://people.collabora.com/~meh/test_hotdoc_hotdoc/html/index.html), and its sources, which can be used as an example, live [there](https://github.com/hotdoc/test_hotdoc)
+The documentation generated for a project that tries to use as much of hotdoc and its extension's features while staying as tiny as possible can be found [here](https://people.collabora.com/~meh/test_hotdoc/), and its sources, which can be used as an example, live [there](https://github.com/hotdoc/test_hotdoc)
