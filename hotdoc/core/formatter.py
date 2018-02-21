@@ -1016,6 +1016,7 @@ class Formatter(Configurable):
 
         print("Downloading %s" % uri.geturl())
         tarball = os.path.join(cachedir, "themes", os.path.basename(uri.path))
+        os.makedirs(os.path.dirname(tarball), exist_ok=True)
         try:
             urlretrieve(uri.geturl(), tarball, _download_progress_cb)
         except (TimeoutError, urllib.error.HTTPError) as exce:
