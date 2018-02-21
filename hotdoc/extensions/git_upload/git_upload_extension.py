@@ -27,7 +27,7 @@ import appdirs
 from hotdoc.utils.utils import recursive_overwrite
 from hotdoc.core.extension import Extension
 from hotdoc.core.exceptions import HotdocException
-from hotdoc.utils.loggable import Logger, warn
+from hotdoc.utils.loggable import Logger, info, warn
 
 Logger.register_warning_code('no-local-repository', HotdocException,
                              domain='git-uploader')
@@ -54,10 +54,15 @@ def _split_repo_url(repo_url):
     env['GIT_ASKPASS'] = 'true'
 
     while True:
-        if subprocess.call(['git', 'ls-remote', repo_url], env=env,
-                           stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL) == 0:
+        try:
+            args = ['git', 'ls-remote', repo_url]
+            info('Checking if {} is a git repo'.format(' '.join(args)),
+                  domain='git-uploader')
+            subprocess.check_output(args, env=env, stderr=subprocess.STDOUT)
             return repo_url, sub_path
+        except subprocess.CalledProcessError as e:
+            info('No; {}'.format(e.output.decode('utf-8')),
+                 domain='git-uploader')
 
         sub_path = os.path.join(os.path.basename(addr.path), sub_path)
         addr = urllib.parse.ParseResult(addr.scheme, addr.netloc,
