@@ -40,6 +40,7 @@ from hotdoc.parsers.sitemap import SitemapParser
 
 
 LANG_MAPPING = {
+    'js': 'javascript',
     'xml': 'markup',
     'html': 'markup',
     'py': 'python'
