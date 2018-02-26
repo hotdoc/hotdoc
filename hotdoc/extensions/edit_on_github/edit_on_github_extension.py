@@ -30,12 +30,12 @@ class EditOnGitHubExtension(Extension):
     @staticmethod
     def add_arguments(parser):
         group = parser.add_argument_group(
-            'Edit on github',
-            'Add links to edit markdown pages on github')
+            'Edit on github or gitlab',
+            'Add links to edit markdown pages on github or gitlab')
 
         group.add_argument(
             '--edit-on-github-repository',
-            help="Github repository to edit pages on",
+            help="Github or gitlab repository to edit pages on",
             default=None)
 
         group.add_argument(
@@ -96,9 +96,11 @@ class EditOnGitHubExtension(Extension):
         edit_link = self.__repo + '/edit/' + self.__branch + \
             '/' + os.path.relpath(page.source_file, root)
 
+        sitename = "github" if "github" in self.__repo else "GitLab"
+
         page.output_attrs['html']['edit_button'] = \
             '<a href=%s data-hotdoc-role="edit-button">' \
-            'Edit on github</a>' % edit_link
+            'Edit on %s</a>' % (edit_link, sitename)
 
 
 def get_extension_classes():
