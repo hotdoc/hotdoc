@@ -156,7 +156,7 @@ class BuildDefaultTheme(Command):
         with cd(THEME_SRC_DIR):
             try:
                 spawn.spawn(['npm', 'install'])
-                spawn.spawn(['./node_modules/bower/bin/bower', 'install'])
+                spawn.spawn(['./node_modules/bower/bin/bower', 'install', '--allow-root'])
                 os.environ['LESS_INCLUDE_PATH'] = os.path.join(
                     SOURCE_DIR, 'hotdoc', 'less')
                 spawn.spawn(['make'])
