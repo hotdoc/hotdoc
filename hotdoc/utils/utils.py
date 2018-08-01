@@ -133,8 +133,8 @@ def __get_extra_extension_classes(paths):
             activation_function = entry_point.load()
             classes = activation_function()
         # pylint: disable=broad-except
-        except Exception as _:
-            print("Failed to load %s" % entry_point.module_name, _)
+        except Exception as e:
+            print("Failed to load %s %s" % (entry_point.module_name, e))
             continue
 
         for klass in classes:
