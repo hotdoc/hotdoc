@@ -100,6 +100,9 @@ class Symbol:
             elif isinstance(sym, FieldSymbol):
                 if not sym.comment or not sym.comment.description:
                     sym.comment = self.comment.params.get(sym.member_name)
+            elif isinstance(sym, EnumMemberSymbol):
+                if not sym.comment or not sym.comment.description:
+                    sym.comment = self.comment.params.get(sym.unique_name)
             elif isinstance(sym, ReturnItemSymbol):
                 tag = self.comment.tags.get('returns')
                 sym.comment = comment_from_tag(tag)
@@ -378,7 +381,6 @@ class StructSymbol(Symbol):
     def __init__(self, **kwargs):
         self.members = {}
         self.anonymous = False
-        # pylint: disable=redefined-variable-type
         self.members = []
         self.raw_text = None
         Symbol.__init__(self, **kwargs)
