@@ -39,7 +39,7 @@ class ProxySymbol(Symbol):
 
 
 # pylint: disable=too-many-instance-attributes
-class Database(object):
+class Database:
     """
     A store of comments and symbols. Eventually, during the documentation
     generation phase, comments and symbols are matched up (using
@@ -56,7 +56,10 @@ class Database(object):
         self.__aliases = {}
         self.__symbol_folder = os.path.join(private_folder or '/tmp',
                                             "symbols")
-        self.__incremental = os.path.exists(self.__symbol_folder)
+        self.__aliases_folder = os.path.join(private_folder or '/tmp',
+                                             "aliases")
+        self.__incremental = os.path.exists(self.__symbol_folder) and \
+            os.path.exists(self.__aliases_folder)
 
     def add_comment(self, comment):
         """
@@ -136,16 +139,35 @@ class Database(object):
         """
         if not os.path.exists(self.__symbol_folder):
             os.makedirs(self.__symbol_folder)
+        if not os.path.exists(self.__aliases_folder):
+            os.makedirs(self.__aliases_folder)
         for name, sym in self.__symbols.items():
             with open(os.path.join(self.__symbol_folder, name),
                       'wb') as _:
                 pickle.dump(sym, _)
+        for name, aliases in self.__aliases.items():
+            if aliases:
+                with open(os.path.join(self.__aliases_folder, name),
+                          'wb') as _:
+                    pickle.dump(aliases, _)
 
     def __get_aliases(self, name):
         aliases = self.__aliases.get(name, [])
 
-        if aliases or not self.__incremental:
+        if not self.__incremental:
             return aliases
+
+        if not aliases:
+            path = os.path.join(self.__aliases_folder, name)
+            if os.path.exists(path):
+                with open(path, 'rb') as _:
+                    aliases = pickle.load(_)
+
+        if aliases:
+            # Faster look up next time around
+            self.__aliases[name] = aliases
+
+        return aliases
 
     # pylint: disable=unused-argument
     def get_symbol(self, name, prefer_class=False):
