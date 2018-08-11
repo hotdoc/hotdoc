@@ -28,6 +28,8 @@ from hotdoc.parsers import cmark
 from hotdoc.parsers.gtk_doc import GtkDocParser, GtkDocStringFormatter
 from hotdoc.core.database import Database
 from hotdoc.core.links import LinkResolver, Link
+from hotdoc.core.exceptions import HotdocSourceException
+from hotdoc.utils.loggable import Logger
 
 
 class TestParser(unittest.TestCase):
@@ -89,6 +91,11 @@ SECTION_GTKDOC_COMMENT = '''/**
  * @title: This page is not comming from a file.
  */'''
 
+NOT_A_GTKDOC_COMMENT = '''/**
+ * $param rd Pointer to vbi3_raw_decoder object allocated with
+ *   vbi3_raw_decoder_new().
+ */'''
+
 
 class TestGtkDocParser(unittest.TestCase):
     def setUp(self):
@@ -98,6 +105,12 @@ class TestGtkDocParser(unittest.TestCase):
         self.database = Database(None)
         self.link_resolver = LinkResolver(self.database)
         self.formatter = GtkDocStringFormatter()
+        Logger.silent = True
+        Logger.fatal_warnings = True
+
+    def tearDown(self):
+        Logger.silent = False
+        Logger.fatal_warnings = False
 
     def test_basic(self):
         raw = BASIC_GTKDOC_COMMENT
@@ -114,6 +127,17 @@ class TestGtkDocParser(unittest.TestCase):
         self.assertTrue('greeter' in comment.params)
         param = comment.params['greeter']
         self.assertEqual(param.description, 'a random greeter')
+
+    def test_not_a_gtkdoc_comment(self):
+        raw = NOT_A_GTKDOC_COMMENT
+        lineno = 10
+        end_lineno = len(raw.split('\n')) + 10 - 1
+        with self.assertRaises(HotdocSourceException):
+            self.parser.parse_comment(
+                raw,
+                None,
+                lineno,
+                end_lineno)
 
     def test_page_name_not_a_file(self):
         raw = SECTION_GTKDOC_COMMENT
@@ -352,16 +376,16 @@ class TestGtkDocExtension(unittest.TestCase):
         self.assertEqual(diag.column, 9)
 
 
-class MockIncludeResolver(object):
+class MockIncludeResolver:
 
     def resolve(self, filename):
         if filename == 'simple_file.md':
             return "simple file"
-        elif filename == 'empty_file.markdown':
+        if filename == 'empty_file.markdown':
             return ""
-        elif filename == 'opens_code_block.md':
+        if filename == 'opens_code_block.md':
             return "```"
-        elif filename == 'unicode_file.md':
+        if filename == 'unicode_file.md':
             return u"some Ünicode"
         return None
 
