@@ -58,6 +58,8 @@ class Database:
                                             "symbols")
         self.__aliases_folder = os.path.join(private_folder or '/tmp',
                                              "aliases")
+        self.__comments_folder = os.path.join(private_folder or '/tmp',
+                                              "comments")
         self.__incremental = os.path.exists(self.__symbol_folder) and \
             os.path.exists(self.__aliases_folder)
 
@@ -91,6 +93,13 @@ class Database:
             comment = self.__comments.get(alias)
             if comment:
                 return comment
+
+        if self.__incremental:
+            fname = self.__get_pickle_path(self.__comments_folder, name)
+            if os.path.exists(fname):
+                with open(fname, 'rb') as _:
+                    self.__comments[name] = pickle.load(_)
+                    return self.__comments[name]
 
         return None
 
@@ -133,23 +142,29 @@ class Database:
 
         return symbol
 
+    @staticmethod
+    def __get_pickle_path(folder, name, create_if_required=False):
+        fname = os.path.join(folder, name.lstrip('/'))
+        if create_if_required:
+            os.makedirs(os.path.dirname(fname), exist_ok=True)
+        return fname
+
     def persist(self):
         """
         Banana banana
         """
-        if not os.path.exists(self.__symbol_folder):
-            os.makedirs(self.__symbol_folder)
-        if not os.path.exists(self.__aliases_folder):
-            os.makedirs(self.__aliases_folder)
         for name, sym in self.__symbols.items():
-            with open(os.path.join(self.__symbol_folder, name),
-                      'wb') as _:
+            with open(self.__get_pickle_path(self.__symbol_folder, name, True), 'wb') as _:
                 pickle.dump(sym, _)
         for name, aliases in self.__aliases.items():
             if aliases:
-                with open(os.path.join(self.__aliases_folder, name),
-                          'wb') as _:
+                with open(self.__get_pickle_path(self.__aliases_folder, name, True), 'wb') as _:
                     pickle.dump(aliases, _)
+
+        for name, comment in self.__comments.items():
+            if comment:
+                with open(self.__get_pickle_path(self.__comments_folder, name, True), 'wb') as _:
+                    pickle.dump(comment, _)
 
     def __get_aliases(self, name):
         aliases = self.__aliases.get(name, [])
@@ -158,7 +173,7 @@ class Database:
             return aliases
 
         if not aliases:
-            path = os.path.join(self.__aliases_folder, name)
+            path = self.__get_pickle_path(self.__aliases_folder, name)
             if os.path.exists(path):
                 with open(path, 'rb') as _:
                     aliases = pickle.load(_)
