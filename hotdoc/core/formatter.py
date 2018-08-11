@@ -110,7 +110,7 @@ def _download_progress_cb(blocknum, blocksize, totalsize):
 
 
 # pylint: disable=too-few-public-methods
-class TocSection(object):
+class TocSection:
     """
     Banana banana
     """
@@ -122,7 +122,7 @@ class TocSection(object):
 
 
 # pylint: disable=too-few-public-methods
-class SymbolDescriptions(object):
+class SymbolDescriptions:
     """
     Banana banana
     """
@@ -823,11 +823,16 @@ class Formatter(Configurable):
         return self._format_callable(vmethod, "virtual method",
                                      '%s' % vmethod.link.title)
 
+    def _format_property_prototype(self, prop, title, type_link):
+        template = self.get_template('property_prototype.html')
+        prototype = template.render({'property_name': title,
+                                     'property_type': type_link})
+        return prototype
+
     def _format_property_symbol(self, prop):
         type_link = self._format_linked_symbol(prop.prop_type)
-        template = self.get_template('property_prototype.html')
-        prototype = template.render({'property_name': prop.link.title,
-                                     'property_type': type_link})
+        prototype = self._format_property_prototype(prop, prop.link.title,
+                                                    type_link)
         template = self.get_template('property.html')
         res = template.render({'symbol': prop,
                                'prototype': prototype,
