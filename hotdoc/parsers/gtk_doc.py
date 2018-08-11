@@ -51,7 +51,7 @@ def _grouper(iterable, n_args, fillvalue=None):
 
 
 # pylint: disable=too-few-public-methods
-class GtkDocParser(object):
+class GtkDocParser:
     """
     Banana banana
     """
@@ -99,15 +99,21 @@ class GtkDocParser(object):
             return section_name, []
 
         split = raw_title.split(': ', 1)
+
+        if not split[0].rstrip().endswith(':'):
+            raise HotdocSourceException(
+                message='Unexpected title in gtk-doc comment')
+
         title = split[0].rstrip(':')
         annotations = []
+
         if len(split) > 1:
             annotations = self.__parse_annotations(split[1])
         return title, annotations
 
     def __parse_key_value_annotation(self, name, string):
         kvs = self.kv_regex.findall(string)
-        kvs = dict([kv.split('=', 1) for kv in kvs])
+        kvs = {kv.split('=', 1)[0]: kv.split('=', 1)[1] for kv in kvs}
         return Annotation(name=name, argument=kvs)
 
     def __parse_annotation(self, string):
@@ -115,10 +121,9 @@ class GtkDocParser(object):
         name = split[0].strip()
         if len(split) == 1:
             return Annotation(name=name)
-        elif '=' in split[1]:
+        if '=' in split[1]:
             return self.__parse_key_value_annotation(name, split[1])
-        else:
-            return Annotation(name=name, argument=[split[1]])
+        return Annotation(name=name, argument=[split[1]])
 
     def __parse_annotations(self, string):
         parsed_annotations = []
@@ -132,7 +137,7 @@ class GtkDocParser(object):
 
             if par_level > 1:
                 return []
-            elif par_level == 1 and _ not in '()':
+            if par_level == 1 and _ not in '()':
                 current_annotation += _
             elif par_level == 0:
                 if _ not in ' \t\n\r()':
@@ -221,25 +226,25 @@ class GtkDocParser(object):
     def __parse_tag(self, name, desc):
         if name.lower() == "since":
             return self.__parse_since_tag(name, desc)
-        elif name.lower() == "returns":
+        if name.lower() == "returns":
             return self.__parse_returns_tag(name, desc)
-        elif name.lower() == "return value":
+        if name.lower() == "return value":
             return self.__parse_returns_tag("returns", desc)
-        elif name.lower() == "stability":
+        if name.lower() == "stability":
             return self.__parse_stability_tag("stability", desc)
-        elif name.lower() == "deprecated":
+        if name.lower() == "deprecated":
             return self.__parse_deprecated_tag("deprecated", desc)
-        elif name.lower() == "topic":
+        if name.lower() == "topic":
             return self.__parse_topic_tag("topic", desc)
-        else:
-            validator = self.project.tag_validators.get(name)
-            if not validator:
-                print("FIXME no tag validator")
-                return None
-            if not validator.validate(desc):
-                print("invalid value for tag %s : %s" % name, desc)
-                return None
-            return Tag(name=name, description=desc, value=desc)
+
+        validator = self.project.tag_validators.get(name)
+        if not validator:
+            print("FIXME no tag validator")
+            return None
+        if not validator.validate(desc):
+            print("invalid value for tag %s : %s" % name, desc)
+            return None
+        return Tag(name=name, description=desc, value=desc)
 
     def __parse_description_and_tags(self, desc_and_tags):
         dts = self.tag_validation_regex.split(desc_and_tags)
@@ -401,6 +406,7 @@ class GtkDocStringFormatter(Configurable):
             text = re.sub('<.*?>', '', text)
 
         if self.escape_html:
+            # pylint: disable=deprecated-method
             text = cgi.escape(text)
         ast, diagnostics = cmark.gtkdoc_to_ast(text, link_resolver)
 
