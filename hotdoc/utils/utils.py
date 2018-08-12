@@ -26,8 +26,8 @@ import os
 import shutil
 import math
 import sys
-import subprocess
 import re
+import pathlib
 
 from urllib.request import urlretrieve
 
@@ -49,7 +49,7 @@ def splitall(path):
     """
     head, tail = os.path.split(os.path.normpath(path))
     components = []
-    while len(tail) > 0:
+    while tail:
         components.insert(0, tail)
         head, tail = os.path.split(head)
     return components
@@ -103,16 +103,9 @@ def get_mtime(filename):
     Banana banana
     """
     try:
-        stat = os.stat(filename)
-    except OSError:
+        return os.path.getmtime(filename)
+    except FileNotFoundError:
         return -1
-
-    # Check the modification time.  We need to adjust on Windows.
-    mtime = stat.st_mtime
-    if WIN32:
-        mtime -= stat.st_ctime
-
-    return mtime
 
 
 def __get_extra_extension_classes(paths):
@@ -133,8 +126,8 @@ def __get_extra_extension_classes(paths):
             activation_function = entry_point.load()
             classes = activation_function()
         # pylint: disable=broad-except
-        except Exception as e:
-            print("Failed to load %s %s" % (entry_point.module_name, e))
+        except Exception as exc:
+            print("Failed to load %s %s" % (entry_point.module_name, exc))
             continue
 
         for klass in classes:
@@ -214,6 +207,7 @@ class OrderedSet(collections.MutableSet):
     def __contains__(self, key):
         return key in self.map
 
+    # pylint: disable=arguments-differ
     def add(self, key):
         if key not in self.map:
             end = self.end
@@ -221,7 +215,7 @@ class OrderedSet(collections.MutableSet):
             curr[2] = end[1] = self.map[key] = [key, curr, end]
 
     def __getstate__(self):
-        if len(self) == 0:
+        if not self:
             # The state can't be an empty list.
             # We need to return a truthy value, or else
             # __setstate__ won't be run.
@@ -230,8 +224,7 @@ class OrderedSet(collections.MutableSet):
             # the state in a tuple, but this way is backwards- and forwards-
             # compatible with previous versions of OrderedSet.
             return (None,)
-        else:
-            return list(self)
+        return list(self)
 
     def __setstate__(self, state):
         if state == (None,):
@@ -239,6 +232,7 @@ class OrderedSet(collections.MutableSet):
         else:
             self.__init__(state)
 
+    # pylint: disable=arguments-differ
     def discard(self, key):
         if key in self.map:
             key, prev, nxt = self.map.pop(key)
@@ -280,9 +274,13 @@ class OrderedSet(collections.MutableSet):
 
 def touch(fname):
     """
-    Wraps the `touch` command
+    Mimics the `touch` command
+
+    Busy loops until the mtime has actually been changed, use for tests only
     """
-    subprocess.call(['touch', fname])
+    orig_mtime = get_mtime(fname)
+    while get_mtime(fname) == orig_mtime:
+        pathlib.Path(fname).touch()
 
 
 def _round8(num):
@@ -336,8 +334,7 @@ def id_from_text(text, add_hash=False):
     id_ = re.sub(r"\s+", '-', id_)
     if add_hash:
         return '#%s' % id_
-    else:
-        return id_
+    return id_
 
 
 def get_cat(path):
@@ -355,6 +352,7 @@ class DefaultOrderedDict(OrderedDict):
     Banana banana
     """
     # Source: http://stackoverflow.com/a/6190500/562769
+    # pylint: disable=keyword-arg-before-vararg
     def __init__(self, default_factory=None, *a, **kw):
         if (default_factory is not None and
                 not isinstance(default_factory, Callable)):
@@ -378,7 +376,7 @@ class DefaultOrderedDict(OrderedDict):
         if self.default_factory is None:
             args = tuple()
         else:
-            args = self.default_factory,
+            args = (self.default_factory,)
         return type(self), args, None, None, self.items()
 
     def copy(self):

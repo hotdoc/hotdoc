@@ -43,9 +43,6 @@ class TestExtension(Extension):
     extension_name = 'test-extension'
     argument_prefix = 'test'
 
-    def __init__(self, app, project):
-        super(TestExtension, self).__init__(app, project)
-
     # pylint: disable=arguments-differ
     def setup(self, smart=True):
         super(TestExtension, self).setup()
@@ -104,7 +101,9 @@ class TestTree(unittest.TestCase):
 
         cfg = Config()
 
+        self.test_ext.parse_toplevel_config(cfg)
         self.test_ext.parse_config(cfg)
+        self.core_ext.parse_toplevel_config(cfg)
         self.core_ext.parse_config(cfg)
         self.subprojects = {}
         self.is_toplevel = True

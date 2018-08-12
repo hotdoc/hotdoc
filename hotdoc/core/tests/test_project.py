@@ -37,11 +37,12 @@ class TestProject(HotdocTest):
         self.extension_classes = {CoreExtension.extension_name: CoreExtension}
         self.private_folder = self.private_folder
         self.output = self._output_dir
-        self.project = self
         Logger.silent = True
+        self.project = None
 
     def test_basic(self):
         proj = Project(self)
+        self.project = proj
 
         conf = Config({})
         with self.assertRaises(ConfigError):
@@ -72,6 +73,7 @@ class TestProject(HotdocTest):
 
     def test_subproject(self):
         proj = Project(self)
+        self.project = proj
         sm_path = self._create_sitemap(
             'sitemap.txt', 'index.markdown\n\tsubproject.json')
         index_path = self._create_md_file('index.markdown', '# Project')
@@ -92,7 +94,7 @@ class TestProject(HotdocTest):
                        'project_version': '0.1',
                        'output': self._output_dir})
         proj.parse_name_from_config(conf)
-        proj.parse_config(conf)
+        proj.parse_config(conf, toplevel=True)
         proj.setup()
 
         self.assertEqual(len(proj.tree.get_pages()), 2)
@@ -100,6 +102,7 @@ class TestProject(HotdocTest):
 
     def test_subproject_extra_assets(self):
         proj = Project(self)
+        self.project = proj
         sm_path = self._create_sitemap(
             'sitemap.txt', 'index.markdown\n\tsubproject.json')
         index_path = self._create_md_file('index.markdown', '# Project')
@@ -125,7 +128,7 @@ class TestProject(HotdocTest):
                        'extra_assets': [os.path.dirname(extra_assets)],
                        'output': self._output_dir})
         proj.parse_name_from_config(conf)
-        proj.parse_config(conf)
+        proj.parse_config(conf, toplevel=True)
         proj.setup()
 
         self.assertEqual(len(proj.tree.get_pages()), 2)
