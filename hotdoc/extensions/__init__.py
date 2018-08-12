@@ -36,6 +36,20 @@ def get_extension_classes():
     """
     Hotdoc's setuptools entry point
     """
-    return [SyntaxHighlightingExtension, SearchExtension, TagExtension,
-            DevhelpExtension, LicenseExtension, GitUploadExtension,
-            EditOnGitHubExtension]
+    res = [SyntaxHighlightingExtension, SearchExtension, TagExtension,
+           DevhelpExtension, LicenseExtension, GitUploadExtension,
+           EditOnGitHubExtension]
+
+    try:
+        from hotdoc.extensions.c.c_extension import CExtension
+        res += [CExtension]
+    except ImportError:
+        pass
+
+    try:
+        from hotdoc.extensions.gi.gi_extension import GIExtension
+        res += [GIExtension]
+    except ImportError:
+        pass
+
+    return res

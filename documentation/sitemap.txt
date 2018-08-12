@@ -10,4 +10,3 @@ index.markdown
 	setting-up-a-project.markdown
 	running.markdown
 	cleaning.markdown
-	python-index

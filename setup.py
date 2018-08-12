@@ -25,9 +25,12 @@ import sys
 import errno
 import unittest
 import contextlib
+import argparse
 from distutils.command.build import build
 from distutils.command.build_ext import build_ext
 from distutils.core import Command
+from distutils.errors import DistutilsExecError
+from distutils.dep_util import newer_group
 import distutils.spawn as spawn
 
 from setuptools import find_packages, setup, Extension
@@ -49,6 +52,8 @@ CMARK_INCLUDE_DIRS = [CMARK_SRCDIR, CMARK_BUILT_SRCDIR]
 
 require_clean_submodules(SOURCE_DIR, ['cmark'])
 
+def src(filename):
+    return os.path.join(SOURCE_DIR, filename)
 
 # pylint: disable=invalid-name
 # pylint: disable=missing-docstring
@@ -301,6 +306,93 @@ SYN_EXT_DIR = os.path.join(SOURCE_DIR, 'hotdoc', 'extensions',
                            'syntax_highlighting')
 require_clean_submodules(SYN_EXT_DIR, ['prism'])
 
+ext_modules = [CMARK_MODULE]
+
+PACKAGE_DATA = {
+    'hotdoc.core': ['templates/*', 'assets/*'],
+    'hotdoc': [os.path.join(THEME_REL_DIR, 'templates', '*'),
+               os.path.join(THEME_REL_DIR, 'js', '*'),
+               os.path.join(THEME_REL_DIR, 'css', '*'),
+               os.path.join(THEME_REL_DIR, 'images', '*'),
+               os.path.join(THEME_REL_DIR, 'fonts', '*'),
+               'VERSION.txt'],
+    'hotdoc.utils': ['hotdoc.m4', 'hotdoc.mk'],
+    'hotdoc.extensions.syntax_highlighting': [
+        'prism/components/*',
+        'prism/themes/*',
+        'prism/plugins/autoloader/prism-autoloader.js',
+        'prism_autoloader_path_override.js'],
+    'hotdoc.extensions.search': [
+        '*.js',
+        'stopwords.txt'],
+    'hotdoc.extensions.devhelp': [
+        'devhelp.css'],
+    'hotdoc.extensions.license': [
+        'data/*',
+        'html_templates/*']
+}
+
+build_c_extension = os.environ.get('HOTDOC_BUILD_C_EXTENSION', 'auto')
+
+print (build_c_extension)
+
+class FlexExtension (Extension):
+    def __init__(self, flex_sources, *args, **kwargs):
+        Extension.__init__(self, *args, **kwargs)
+        self.__flex_sources = [src(s) for s in flex_sources]
+
+    def __build_flex(self):
+        src_dir = os.path.dirname (self.__flex_sources[0])
+        built_scanner_path = src(os.path.join (src_dir, 'scanner.c'))
+
+        self.sources.append(built_scanner_path)
+        if newer_group(self.__flex_sources, built_scanner_path):
+            cmd = ['flex', '-o', built_scanner_path]
+            for s in self.__flex_sources:
+                cmd.append (s)
+            spawn.spawn(cmd, verbose=1)
+
+    def build_custom (self):
+        if self.__flex_sources:
+            self.__build_flex()
+
+
+if build_c_extension not in ('enabled', 'disabled', 'auto'):
+    print ('HOTDOC_BUILD_C_EXTENSION environment variable must be one of [enabled, disabled, auto]')
+    sys.exit(1)
+
+def check_c_extension():
+    if spawn.find_executable('flex') is None:
+        print ('Flex not installed on your system')
+        return False
+
+    return True
+
+if build_c_extension != 'disabled':
+    if not check_c_extension():
+        if build_c_extension == 'enabled':
+            print ('Requirements for C extension not met')
+            sys.exit(1)
+        print ('Not enabling C extension')
+    else:
+        print ('Enabling C extension')
+        ext_modules += [FlexExtension(
+                            ['hotdoc/parsers/c_comment_scanner/scanner.l'],
+                            'hotdoc.parsers.c_comment_scanner.c_comment_scanner',
+                            sources =
+                            ['hotdoc/parsers/c_comment_scanner/scannermodule.c'],
+                            depends =
+                            ['hotdoc/parsers/c_comment_scanner/scanner.l',
+                            'hotdoc/parsers/c_comment_scanner/scanner.h'])]
+        INSTALL_REQUIRES += [
+            'pkgconfig==1.1.0',
+            'cchardet',
+            'networkx==1.11'
+        ]
+        PACKAGE_DATA['hotdoc.extensions.gi'] = ['html_templates/*']
+        PACKAGE_DATA['hotdoc.extensions.gi.transition_scripts'] = ['translate_sections.sh']
+
+
 if __name__ == '__main__':
     setup(
         name='hotdoc',
@@ -312,7 +404,7 @@ if __name__ == '__main__':
         author_email='mathieu.duponchelle@opencreed.com',
         license='LGPLv2.1+',
         packages=find_packages(),
-        ext_modules=[CMARK_MODULE],
+        ext_modules=ext_modules,
 
         cmdclass={'build': CustomBuild,
                   'build_ext': CustomBuildExt,
@@ -322,29 +414,7 @@ if __name__ == '__main__':
                   'test': DiscoverTest,
                   'link_pre_commit_hook': LinkPreCommitHook,
                   'build_default_theme': BuildDefaultTheme},
-        package_data={
-            'hotdoc.core': ['templates/*', 'assets/*'],
-            'hotdoc': [os.path.join(THEME_REL_DIR, 'templates', '*'),
-                       os.path.join(THEME_REL_DIR, 'js', '*'),
-                       os.path.join(THEME_REL_DIR, 'css', '*'),
-                       os.path.join(THEME_REL_DIR, 'images', '*'),
-                       os.path.join(THEME_REL_DIR, 'fonts', '*'),
-                       'VERSION.txt'],
-            'hotdoc.utils': ['hotdoc.m4', 'hotdoc.mk'],
-            'hotdoc.extensions.syntax_highlighting': [
-                'prism/components/*',
-                'prism/themes/*',
-                'prism/plugins/autoloader/prism-autoloader.js',
-                'prism_autoloader_path_override.js'],
-            'hotdoc.extensions.search': [
-                '*.js',
-                'stopwords.txt'],
-            'hotdoc.extensions.devhelp': [
-                'devhelp.css'],
-            'hotdoc.extensions.license': [
-                'data/*',
-                'html_templates/*']
-        },
+        package_data=PACKAGE_DATA,
         install_requires=INSTALL_REQUIRES,
         extras_require=EXTRAS_REQUIRE,
         entry_points={

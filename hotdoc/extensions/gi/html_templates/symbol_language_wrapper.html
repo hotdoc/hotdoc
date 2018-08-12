@@ -1,0 +1,15 @@
+@require(symbol, c_doc, python_doc, js_doc)
+
+<div class="gi-symbol gi-symbol-c">
+	@c_doc
+</div>
+@if python_doc:
+<div class="gi-symbol gi-symbol-python">
+	@python_doc
+</div>
+@end
+@if js_doc:
+<div class="gi-symbol gi-symbol-javascript">
+	@js_doc
+</div>
+@end

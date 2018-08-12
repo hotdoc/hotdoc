@@ -1,0 +1,17 @@
+@require(flags)
+
+@if flags:
+\
+	@for i, flag in enumerate (flags):
+
+		@if i != 0:
+		/\
+		@end
+
+		@if flag.link:
+		<a href="@flag.link">@flag.nick</a>
+		@else:
+		@flag.nick
+		@end
+	@end
+@end

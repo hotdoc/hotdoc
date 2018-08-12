@@ -18,6 +18,14 @@ For now, hotdoc bundles its own version of [libcmark](https://github.com/jgm/cma
 
 Hotdoc uses pyyaml to parse yaml ‘front-matter’ metadata in markdown pages, it depends on libyaml.
 
+### flex
+
+flex is an optional dependency, which enables the C and GI extensions. See [][Build options] for more info.
+
+### clang and llvm-config
+
+Clang and llvm-config are runtime dependencies for the C extension. 
+
 ### Command-line install
 
 On Fedora you can install all these dependencies with:
@@ -51,6 +59,16 @@ You are now in a virtual environment, to exit it you may call `deactivate`, to e
 
 ## Hotdoc itself
 
+### Build options
+
+To ensure that extensions with optional dependencies are enabled when installing hotdoc, the setup script will look at the following environment variables:
+
+- `HOTDOC_BUILD_C_EXTENSION`: one of `enabled`, `disabled` or `auto`. Default is `auto`
+
+This awkward way of passing options is due to setuptools' limitations.
+
+### Install methods
+
 Three main alternatives are available:
 
 * Using pip to get the last released version of hotdoc:
@@ -71,5 +89,3 @@ Three main alternatives are available:
   cd hotdoc
   python3 -m pip install -e .[dev]
   ```
-
-Congratulations, you have successfully installed hotdoc! You may now want to check the [list of available extensions](https://github.com/hotdoc).

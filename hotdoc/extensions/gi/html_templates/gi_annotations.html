@@ -1,0 +1,13 @@
+@require(annotations)
+
+@for annotation in annotations:
+<span class="annotation">[\
+<abbr title="@annotation.help_text">\
+<span class="acronym">@annotation.nick</span>\
+</abbr>\
+@if annotation.value:
+ @annotation.value\
+@end
+]\
+</span>
+@end

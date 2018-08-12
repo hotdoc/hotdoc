@@ -1,0 +1,121 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# Copyright © 2016 Mathieu Duponchelle <mathieu.duponchelle@opencreed.com>
+# Copyright © 2016 Collabora Ltd
+#
+# This library is free software; you can redistribute it and/or modify it under
+# the terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation; either version 2.1 of the License, or (at your option)
+# any later version.
+#
+# This library is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+import os
+import fileinput
+import argparse
+import shutil
+
+from hotdoc.core.config import ConfigParser
+from hotdoc.utils.utils import OrderedSet
+
+def _parse_cflags(line):
+    extra_flags = set()
+    incdirs = set()
+
+    for arg in line.split():
+        if arg.startswith('-I'):
+            incdir = arg[2:]
+            if not os.path.isabs(incdir):
+                incdirs.add(incdir)
+        elif arg.startswith(('-D', '-W', '-U')):
+            extra_flags.add(arg)
+
+    return extra_flags, incdirs
+
+def _walk_source_dir(source_dir, ignored):
+    sources = OrderedSet()
+    for root, dirs, files in os.walk(source_dir):
+        if os.path.basename(root) in ignored:
+            continue
+        for fname in files:
+            if not fname.endswith(('.c', '.h')):
+                continue
+            if fname in ignored:
+                continue
+
+            sources.add(os.path.join(root, fname))
+    return sources
+
+def _parse_sources(line):
+    line = line.replace("'", ' ')
+    line = line.replace('=', ' ')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--source-dir', dest="source_dir", action='append')
+    parser.add_argument('--ignore-headers', nargs='*', dest="ignore_headers")
+    args = parser.parse_known_args(line.split())
+
+    ignored = args[0].ignore_headers or []
+
+    all_sources = OrderedSet()
+
+    for source_dir in args[0].source_dir:
+        all_sources |= _walk_source_dir(source_dir, ignored)
+
+    return all_sources
+
+def _create_basic_index():
+    shutil.rmtree('markdown_files', ignore_errors=True)
+    os.mkdir('markdown_files')
+    with open(os.path.join('markdown_files', 'index.markdown'), 'w') as _:
+        _.write('## Welcome to our documentation!\n\n'
+                '### [API Reference](gobject-api)\n')
+
+if __name__=='__main__':
+    if len(sys.argv) != 2:
+        print "USAGE : %s gir_file" % sys.argv[0]
+        sys.exit(1)
+
+    extra_cflags = []
+    incdirs = []
+    sources = None
+    for line in fileinput.input(('-',)):
+        if line.startswith('++ gcc') and not extra_cflags:
+            extra_cflags, incdirs = _parse_cflags(line)
+        elif line.strip().startswith('CC=') and \
+                not extra_cflags:
+            line = line.replace('"', ' ')
+            extra_cflags, incdirs = _parse_cflags(line)
+        elif line.startswith('+ gtkdoc-scan') and 'source-dir' in line:
+            sources = _parse_sources(line)
+
+    if sources is None:
+        print "Error running script, sorry it's just a funny hack"
+        sys.exit(1)
+
+    _create_basic_index()
+
+    with open('markdown_files/gi-index.markdown', 'w') as _:
+        _.write('# Placeholder')
+
+    with open('sitemap.txt', 'w') as _:
+        _.write('index.markdown\n')
+        _.write('\tgi-index\n')
+
+    conf = {'index': 'markdown_files/index.markdown',
+            'gi_index': 'gi-index.markdown',
+            'gi_sources': [sys.argv[1]],
+            'c_sources': list(sources),
+            'extra_c_flags': list(extra_cflags),
+            'sitemap': 'sitemap.txt',
+            'c_include_directories': list(incdirs)}
+
+    cp = ConfigParser(command_line_args=conf)
+    cp.dump('hotdoc.json')

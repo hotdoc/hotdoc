@@ -146,6 +146,8 @@ def get_extension_classes(sort, extra_extension_paths=None):
 
     for entry_point in pkg_resources.iter_entry_points(
             group='hotdoc.extensions', name='get_extension_classes'):
+        if entry_point.module_name == 'hotdoc_c_extension.extensions':
+            continue
         try:
             activation_function = entry_point.load()
             classes = activation_function()

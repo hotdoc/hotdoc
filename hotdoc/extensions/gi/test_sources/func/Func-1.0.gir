@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<!-- This file was automatically generated from C sources - DO NOT EDIT!
+To affect the contents of this file, edit the original C definitions,
+and/or use gtk-doc annotations.  -->
+<repository version="1.2"
+            xmlns="http://www.gtk.org/introspection/core/1.0"
+            xmlns:c="http://www.gtk.org/introspection/c/1.0"
+            xmlns:glib="http://www.gtk.org/introspection/glib/1.0">
+  <namespace name="Func"
+             version="1.0"
+             shared-library="libgobject-2.0.so.0,libglib-2.0.so.0,libfunclib.so"
+             c:identifier-prefixes="Func"
+             c:symbol-prefixes="func">
+    <record name="Struct" c:type="FuncStruct">
+      <field name="obj" introspectable="0" writable="1">
+        <type c:type="ObjObj*"/>
+      </field>
+    </record>
+    <function name="f1" c:identifier="func_f1">
+      <return-value transfer-ownership="none">
+        <type name="none" c:type="void"/>
+      </return-value>
+      <parameters>
+        <parameter name="str" transfer-ownership="none">
+          <type name="Struct" c:type="FuncStruct*"/>
+        </parameter>
+      </parameters>
+    </function>
+    <function name="no_out_arg" c:identifier="func_no_out_arg">
+      <return-value transfer-ownership="full">
+        <doc xml:space="preserve">some string.</doc>
+        <type name="utf8" c:type="char*"/>
+      </return-value>
+      <parameters>
+        <parameter name="str" transfer-ownership="none">
+          <doc xml:space="preserve">in argument</doc>
+          <type name="Struct" c:type="FuncStruct*"/>
+        </parameter>
+      </parameters>
+    </function>
+    <function name="out_arg" c:identifier="func_out_arg">
+      <return-value transfer-ownership="full">
+        <doc xml:space="preserve">some string.</doc>
+        <type name="utf8" c:type="char*"/>
+      </return-value>
+      <parameters>
+        <parameter name="str"
+                   direction="out"
+                   caller-allocates="1"
+                   transfer-ownership="none">
+          <doc xml:space="preserve">out argument</doc>
+          <type name="Struct" c:type="FuncStruct*"/>
+        </parameter>
+      </parameters>
+    </function>
+  </namespace>
+</repository>

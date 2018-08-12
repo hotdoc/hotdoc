@@ -1,0 +1,15 @@
+@require(symbol, members_list)
+@extends('base_symbol.html')
+
+@def header():
+<h3>
+	@symbol.link.title
+</h3>
+@end
+@def content():
+\
+@if symbol.formatted_doc:
+@symbol.formatted_doc
+@end
+@members_list
+@end

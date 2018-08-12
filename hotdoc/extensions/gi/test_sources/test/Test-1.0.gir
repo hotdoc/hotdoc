@@ -1,0 +1,468 @@
+<?xml version="1.0"?>
+<!-- This file was automatically generated from C sources - DO NOT EDIT!
+To affect the contents of this file, edit the original C definitions,
+and/or use gtk-doc annotations.  -->
+<repository version="1.2"
+            xmlns="http://www.gtk.org/introspection/core/1.0"
+            xmlns:c="http://www.gtk.org/introspection/c/1.0"
+            xmlns:glib="http://www.gtk.org/introspection/glib/1.0">
+  <include name="GObject" version="2.0"/>
+  <package name="test"/>
+  <namespace name="Test"
+             version="1.0"
+             shared-library="libglib-2.0.so.0,libgobject-2.0.so.0,libtestlib.so"
+             c:identifier-prefixes="Test"
+             c:symbol-prefixes="test">
+    <alias name="GreeterCountUnit" c:type="TestGreeterCountUnit">
+      <doc xml:space="preserve">The unit in which greets are counted.</doc>
+      <type name="gint" c:type="gint"/>
+    </alias>
+    <alias name="GreeterThing" c:type="TestGreeterThing">
+      <doc xml:space="preserve">A thing.</doc>
+      <type name="GObject.Object" c:type="const GObject*"/>
+    </alias>
+    <class name="Derivable"
+           c:symbol-prefix="derivable"
+           c:type="TestDerivable"
+           parent="GObject.Object"
+           glib:type-name="TestDerivable"
+           glib:get-type="test_derivable_get_type"
+           glib:type-struct="DerivableClass">
+      <doc xml:space="preserve">A derivable class.</doc>
+      <constructor name="new" c:identifier="test_derivable_new">
+        <return-value transfer-ownership="full">
+          <doc xml:space="preserve">A newly built derivable object</doc>
+          <type name="Derivable" c:type="TestDerivable*"/>
+        </return-value>
+      </constructor>
+      <field name="parent_instance">
+        <type name="GObject.Object" c:type="GObject"/>
+      </field>
+    </class>
+    <record name="DerivableClass"
+            c:type="TestDerivableClass"
+            glib:is-gtype-struct-for="Derivable">
+      <field name="parent_class">
+        <type name="GObject.ObjectClass" c:type="GObjectClass"/>
+      </field>
+      <field name="_padding">
+        <array zero-terminated="0" c:type="gpointer" fixed-size="10">
+          <type name="gpointer" c:type="gpointer"/>
+        </array>
+      </field>
+    </record>
+    <class name="Final"
+           c:symbol-prefix="final"
+           c:type="TestFinal"
+           parent="GObject.Object"
+           glib:type-name="TestFinal"
+           glib:get-type="test_final_get_type"
+           glib:type-struct="FinalClass">
+      <doc xml:space="preserve">A final class, not meant to be inherited from, declared with convenience
+macros.</doc>
+      <constructor name="new" c:identifier="test_final_new">
+        <return-value transfer-ownership="full">
+          <type name="Final" c:type="TestFinal*"/>
+        </return-value>
+      </constructor>
+    </class>
+    <record name="FinalClass"
+            c:type="TestFinalClass"
+            glib:is-gtype-struct-for="Final">
+      <field name="parent_class">
+        <type name="GObject.ObjectClass" c:type="GObjectClass"/>
+      </field>
+    </record>
+    <constant name="GREETER_VERSION" value="1.0" c:type="TEST_GREETER_VERSION">
+      <doc xml:space="preserve">The current version of the #TestGreeter</doc>
+      <type name="utf8" c:type="gchar*"/>
+    </constant>
+    <class name="Greeter"
+           c:symbol-prefix="greeter"
+           c:type="TestGreeter"
+           parent="GObject.Object"
+           glib:type-name="TestGreeter"
+           glib:get-type="test_greeter_get_type"
+           glib:type-struct="GreeterClass">
+      <function name="do_foo_bar"
+                c:identifier="test_greeter_do_foo_bar"
+                version="0.8">
+        <doc xml:space="preserve">This function is here to test that out parameters
+are correctly interpreted as return values for python and javascript.
+
+This function also checks that referring to signals that way:
+#TestGreeter::greeted works correctly</doc>
+        <doc-version xml:space="preserve">
+Topic: A topic
+my_tag: bar</doc-version>
+        <return-value transfer-ownership="none">
+          <doc xml:space="preserve">A nice number</doc>
+          <type name="guint" c:type="guint"/>
+        </return-value>
+        <parameters>
+          <parameter name="foo"
+                     direction="out"
+                     caller-allocates="0"
+                     transfer-ownership="full">
+            <doc xml:space="preserve">something to foo</doc>
+            <type name="gint" c:type="gint*"/>
+          </parameter>
+          <parameter name="bar" transfer-ownership="none">
+            <doc xml:space="preserve">something to bar</doc>
+            <type name="utf8" c:type="gchar*"/>
+          </parameter>
+        </parameters>
+      </function>
+      <virtual-method name="do_greet" introspectable="0">
+        <doc xml:space="preserve">Doing great greetings</doc>
+        <return-value transfer-ownership="none">
+          <type name="none" c:type="void"/>
+        </return-value>
+        <parameters>
+          <instance-parameter name="greeter" transfer-ownership="none">
+            <type name="Greeter" c:type="TestGreeter*"/>
+          </instance-parameter>
+          <parameter name="name" transfer-ownership="none">
+            <type name="utf8" c:type="const gchar*"/>
+          </parameter>
+          <parameter name="func" transfer-ownership="none">
+            <type name="GreeterTranslateFunction"
+                  c:type="TestGreeterTranslateFunction"/>
+          </parameter>
+        </parameters>
+      </virtual-method>
+      <virtual-method name="do_nothing">
+        <return-value transfer-ownership="none">
+          <type name="none" c:type="void"/>
+        </return-value>
+        <parameters>
+          <instance-parameter name="greeter" transfer-ownership="none">
+            <type name="Greeter" c:type="TestGreeter*"/>
+          </instance-parameter>
+          <parameter name="name" transfer-ownership="none">
+            <type name="utf8" c:type="const gchar*"/>
+          </parameter>
+        </parameters>
+      </virtual-method>
+      <method name="deprecated_function"
+              c:identifier="test_greeter_deprecated_function"
+              deprecated="1"
+              deprecated-version="0.7">
+        <doc xml:space="preserve">This is just a function that we will mark as deprecated
+because it really sucked.
+
+Mentioning %TEST_GREETER_ENGLISH by the way
+THIS SHOULD NOT RAISE A WARNING
+Not linking here as we escape \#not-a-link</doc>
+        <return-value transfer-ownership="none">
+          <type name="none" c:type="void"/>
+        </return-value>
+        <parameters>
+          <instance-parameter name="greeter" transfer-ownership="none">
+            <doc xml:space="preserve">a random greeter</doc>
+            <type name="Greeter" c:type="TestGreeter*"/>
+          </instance-parameter>
+        </parameters>
+      </method>
+      <method name="get_translate_function"
+              c:identifier="test_greeter_get_translate_function"
+              introspectable="0"
+              stability="Unstable">
+        <doc xml:space="preserve">This function is also here to check that piped tables work.
+
+|  First column that is pretty long really don't you think? |  Second one |
+|-----------------------------------------------------------|-------------|
+| First content that can take quite some room               | And second  |
+| a | b |</doc>
+        <return-value transfer-ownership="none">
+          <doc xml:space="preserve">a #TestGreeterTranslateFunction for the target @language or %NULL.</doc>
+          <type name="GreeterTranslateFunction"
+                c:type="TestGreeterTranslateFunction"/>
+        </return-value>
+        <parameters>
+          <instance-parameter name="greeter" transfer-ownership="none">
+            <doc xml:space="preserve">The #TestGreeter</doc>
+            <type name="Greeter" c:type="TestGreeter*"/>
+          </instance-parameter>
+          <parameter name="language" transfer-ownership="none">
+            <doc xml:space="preserve">The target #TestGreeterLanguage</doc>
+            <type name="GreeterLanguage" c:type="TestGreeterLanguage"/>
+          </parameter>
+        </parameters>
+      </method>
+      <method name="greet" c:identifier="test_greeter_greet" version="0.5">
+        <doc xml:space="preserve">Will greet whoever you want, you can specify a function
+to translate the greetings.
+
+This will greet you through the
+
+{{ includeme.markdown }}
+
+Just {{include something .markdown}} at the middle of a line
+
+And here we have a C example included from a symbol name
+
+{{../greeter_example.c#include_an_example_symbol[1:4][8:9]}}</doc>
+        <doc-version xml:space="preserve">
+my_tag: baz</doc-version>
+        <return-value transfer-ownership="none">
+          <type name="none" c:type="void"/>
+        </return-value>
+        <parameters>
+          <instance-parameter name="self" transfer-ownership="none">
+            <doc xml:space="preserve">The #TestGreeter</doc>
+            <type name="Greeter" c:type="TestGreeter*"/>
+          </instance-parameter>
+          <parameter name="name" transfer-ownership="none">
+            <doc xml:space="preserve">The name to greet</doc>
+            <type name="utf8" c:type="const gchar*"/>
+          </parameter>
+          <parameter name="translator"
+                     transfer-ownership="none"
+                     nullable="1"
+                     allow-none="1"
+                     scope="async">
+            <doc xml:space="preserve">A function that will need
+to translate "hello", or %NULL .</doc>
+            <type name="GreeterTranslateFunction"
+                  c:type="TestGreeterTranslateFunction"/>
+          </parameter>
+        </parameters>
+      </method>
+      <property name="count-greets"
+                stability="Stable"
+                writable="1"
+                transfer-ownership="none">
+        <doc xml:space="preserve">Set to %FALSE if you don't want the greeter to count its greets</doc>
+        <type name="gboolean" c:type="gboolean"/>
+      </property>
+      <field name="parent">
+        <type name="GObject.Object" c:type="GObject"/>
+      </field>
+      <field name="greet_count">
+        <type name="GreeterCountUnit" c:type="TestGreeterCountUnit"/>
+      </field>
+      <field name="peer">
+        <type name="Greeter" c:type="TestGreeter*"/>
+      </field>
+      <field name="count_greets" readable="0" private="1">
+        <type name="gboolean" c:type="gboolean"/>
+      </field>
+      <glib:signal name="greeted"
+                   when="last"
+                   version="0.9"
+                   stability="Unstable">
+        <doc xml:space="preserve">Signals that the greeter greeted somebody.
+
+THIS WARNING IS EXPECTED!
+Linking to a symbol that #does-not-exist</doc>
+        <return-value transfer-ownership="full">
+          <doc xml:space="preserve">A random string</doc>
+          <type name="utf8" c:type="gchar*"/>
+        </return-value>
+        <parameters>
+          <parameter name="name" transfer-ownership="none">
+            <doc xml:space="preserve">the name that was greeted</doc>
+            <type name="utf8" c:type="gchar*"/>
+          </parameter>
+          <parameter name="object" transfer-ownership="none">
+            <doc xml:space="preserve">A random GObject</doc>
+            <type name="GObject.Object"/>
+          </parameter>
+          <parameter name="other_greeter" transfer-ownership="none">
+            <doc xml:space="preserve">A peer greeter, greeting is better done together</doc>
+            <type name="Greeter"/>
+          </parameter>
+        </parameters>
+      </glib:signal>
+    </class>
+    <record name="GreeterClass"
+            c:type="TestGreeterClass"
+            glib:is-gtype-struct-for="Greeter">
+      <field name="parent_class" readable="0" private="1">
+        <type name="GObject.ObjectClass" c:type="GObjectClass"/>
+      </field>
+      <field name="do_greet" introspectable="0">
+        <callback name="do_greet" introspectable="0">
+          <return-value transfer-ownership="none">
+            <type name="none" c:type="void"/>
+          </return-value>
+          <parameters>
+            <parameter name="greeter" transfer-ownership="none">
+              <type name="Greeter" c:type="TestGreeter*"/>
+            </parameter>
+            <parameter name="name" transfer-ownership="none">
+              <type name="utf8" c:type="const gchar*"/>
+            </parameter>
+            <parameter name="func" transfer-ownership="none">
+              <type name="GreeterTranslateFunction"
+                    c:type="TestGreeterTranslateFunction"/>
+            </parameter>
+          </parameters>
+        </callback>
+      </field>
+      <field name="do_nothing">
+        <callback name="do_nothing">
+          <return-value transfer-ownership="none">
+            <type name="none" c:type="void"/>
+          </return-value>
+          <parameters>
+            <parameter name="greeter" transfer-ownership="none">
+              <type name="Greeter" c:type="TestGreeter*"/>
+            </parameter>
+            <parameter name="name" transfer-ownership="none">
+              <type name="utf8" c:type="const gchar*"/>
+            </parameter>
+          </parameters>
+        </callback>
+      </field>
+    </record>
+    <enumeration name="GreeterLanguage" c:type="TestGreeterLanguage">
+      <doc xml:space="preserve">A language for greeting.</doc>
+      <member name="english" value="0" c:identifier="TEST_GREETER_ENGLISH">
+        <doc xml:space="preserve">Shakespeare language</doc>
+      </member>
+      <member name="french" value="1" c:identifier="TEST_GREETER_FRENCH">
+        <doc xml:space="preserve">Moliere Language</doc>
+      </member>
+    </enumeration>
+    <callback name="GreeterTranslateFunction"
+              c:type="TestGreeterTranslateFunction">
+      <doc xml:space="preserve">This function shall return the translation of @word in any target language,
+so that @greeter knows how to greet properly.
+
+Trying to link to a unrelated $ymbol that uses a markdown override: #test_bar_ze_bar</doc>
+      <return-value transfer-ownership="full">
+        <doc xml:space="preserve">The translation of @word</doc>
+        <type name="utf8" c:type="gchar*"/>
+      </return-value>
+      <parameters>
+        <parameter name="greeter" transfer-ownership="none">
+          <doc xml:space="preserve">The #TestGreeter asking for translation</doc>
+          <type name="Greeter" c:type="TestGreeter*"/>
+        </parameter>
+        <parameter name="word" transfer-ownership="none">
+          <doc xml:space="preserve">The word to translate</doc>
+          <type name="utf8" c:type="const gchar*"/>
+        </parameter>
+      </parameters>
+    </callback>
+    <interface name="Interface"
+               c:symbol-prefix="interface"
+               c:type="TestInterface"
+               glib:type-name="TestInterface"
+               glib:get-type="test_interface_get_type"
+               glib:type-struct="InterfaceInterface">
+      <doc xml:space="preserve">Opaque #TestInterface data structure.</doc>
+      <prerequisite name="Greeter"/>
+      <virtual-method name="do_something" invoker="do_something" throws="1">
+        <doc xml:space="preserve">This will make @self do something, can't swear what.</doc>
+        <return-value transfer-ownership="none">
+          <type name="none" c:type="void"/>
+        </return-value>
+        <parameters>
+          <instance-parameter name="self" transfer-ownership="none">
+            <doc xml:space="preserve">the instance</doc>
+            <type name="Interface" c:type="TestInterface*"/>
+          </instance-parameter>
+        </parameters>
+      </virtual-method>
+      <method name="do_something"
+              c:identifier="test_interface_do_something"
+              throws="1">
+        <doc xml:space="preserve">This will make @self do something, can't swear what.</doc>
+        <return-value transfer-ownership="none">
+          <type name="none" c:type="void"/>
+        </return-value>
+        <parameters>
+          <instance-parameter name="self" transfer-ownership="none">
+            <doc xml:space="preserve">the instance</doc>
+            <type name="Interface" c:type="TestInterface*"/>
+          </instance-parameter>
+        </parameters>
+      </method>
+    </interface>
+    <record name="InterfaceInterface"
+            c:type="TestInterfaceInterface"
+            glib:is-gtype-struct-for="Interface">
+      <doc xml:space="preserve">#TestInterface interface.</doc>
+      <field name="parent_iface">
+        <type name="GObject.TypeInterface" c:type="GTypeInterface"/>
+      </field>
+      <field name="do_something">
+        <callback name="do_something" throws="1">
+          <return-value transfer-ownership="none">
+            <type name="none" c:type="void"/>
+          </return-value>
+          <parameters>
+            <parameter name="self" transfer-ownership="none">
+              <doc xml:space="preserve">the instance</doc>
+              <type name="Interface" c:type="TestInterface*"/>
+            </parameter>
+          </parameters>
+        </callback>
+      </field>
+    </record>
+    <record name="SomeStruct" c:type="TestSomeStruct">
+      <field name="plop" writable="1">
+        <type name="gboolean" c:type="gboolean"/>
+      </field>
+    </record>
+    <bitfield name="UndocumentedFlag" c:type="TestUndocumentedFlag">
+      <member name="0" value="1" c:identifier="TEST_UNDOCUMENTED_0">
+      </member>
+      <member name="1" value="2" c:identifier="TEST_UNDOCUMENTED_1">
+      </member>
+      <member name="2" value="4" c:identifier="TEST_UNDOCUMENTED_2">
+      </member>
+    </bitfield>
+    <function name="bar_ze_bar" c:identifier="test_bar_ze_bar">
+      <doc xml:space="preserve">This function will bar ze wack bar with a nicer bar
+
+Linking to %TEST_GREETER_ENGLISH
+
+Linking to #TestGreeter.peer
+
+Linking to #TestGreeter</doc>
+      <return-value transfer-ownership="none">
+        <doc xml:space="preserve">A really barred bar</doc>
+        <type name="gint" c:type="gint"/>
+      </return-value>
+      <parameters>
+        <parameter name="bar" transfer-ownership="none">
+          <doc xml:space="preserve">a wack bar</doc>
+          <type name="gint" c:type="gint"/>
+        </parameter>
+        <parameter name="other_bar" transfer-ownership="none">
+          <doc xml:space="preserve">another, nicer bar</doc>
+          <type name="gint" c:type="gint"/>
+        </parameter>
+      </parameters>
+    </function>
+    <function name="bar_ze_foo" c:identifier="test_bar_ze_foo">
+      <doc xml:space="preserve">This function will @bar ze @foo, provided
+the foo is nice and not a la wack bar.</doc>
+      <return-value transfer-ownership="none">
+        <doc xml:space="preserve">A barred foo</doc>
+        <type name="gint" c:type="gint"/>
+      </return-value>
+      <parameters>
+        <parameter name="bar" transfer-ownership="none">
+          <doc xml:space="preserve">a nice bar</doc>
+          <type name="gint" c:type="gint"/>
+        </parameter>
+        <parameter name="foo" transfer-ownership="none">
+          <doc xml:space="preserve">a nicer foo</doc>
+          <type name="gint" c:type="gint"/>
+        </parameter>
+      </parameters>
+    </function>
+    <function name="c_function_in_subfolder"
+              c:identifier="test_c_function_in_subfolder">
+      <doc xml:space="preserve">Just a function, linking to #test_greeter_greet tho.</doc>
+      <return-value transfer-ownership="none">
+        <type name="none" c:type="void"/>
+      </return-value>
+    </function>
+  </namespace>
+</repository>
