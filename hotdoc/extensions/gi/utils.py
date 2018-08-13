@@ -60,7 +60,6 @@ def get_gi_name (node):
 def get_klass_name(klass):
     klass_name = klass.attrib.get('{%s}type' % NS_MAP['c'])
     if not klass_name:
-        print ('lol')
         klass_name = klass.attrib.get('{%s}type-name' % NS_MAP['glib'])
     return klass_name
 
