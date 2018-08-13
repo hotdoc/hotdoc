@@ -293,7 +293,9 @@ INSTALL_REQUIRES = [
     'schema',
     'appdirs',
     'wheezy.template==0.1.167',
-    'toposort>=1.4']
+    'toposort>=1.4',
+    'dbus-deviation>=0.4.0',
+]
 
 EXTRAS_REQUIRE = {
     'dev': ['git-pylint-commit-hook',

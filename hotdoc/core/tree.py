@@ -434,6 +434,7 @@ class Tree(object):
                 source_file = find_file(fname, self.project.include_paths)
                 source_files.append(source_file)
                 if source_file is None:
+                    print ('Lol')
                     error(
                         'no-such-subpage',
                         'No markdown file found for %s' % fname,

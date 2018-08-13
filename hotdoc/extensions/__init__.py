@@ -30,6 +30,7 @@ from hotdoc.extensions.git_upload.git_upload_extension import (
     GitUploadExtension)
 from hotdoc.extensions.edit_on_github.edit_on_github_extension import (
     EditOnGitHubExtension)
+from hotdoc.extensions.dbus.dbus_extension import DBusExtension
 
 
 def get_extension_classes():
@@ -38,7 +39,7 @@ def get_extension_classes():
     """
     res = [SyntaxHighlightingExtension, SearchExtension, TagExtension,
            DevhelpExtension, LicenseExtension, GitUploadExtension,
-           EditOnGitHubExtension]
+           EditOnGitHubExtension, DBusExtension]
 
     try:
         from hotdoc.extensions.c.c_extension import CExtension
