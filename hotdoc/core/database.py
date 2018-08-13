@@ -153,6 +153,9 @@ class Database:
         """
         Banana banana
         """
+        os.makedirs(self.__symbol_folder, exist_ok=True)
+        os.makedirs(self.__aliases_folder, exist_ok=True)
+        os.makedirs(self.__comments_folder, exist_ok=True)
         for name, sym in self.__symbols.items():
             with open(self.__get_pickle_path(self.__symbol_folder, name, True), 'wb') as _:
                 pickle.dump(sym, _)
