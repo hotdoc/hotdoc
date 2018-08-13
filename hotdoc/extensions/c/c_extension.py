@@ -397,19 +397,40 @@ class ClangScanner(object):
                     delimiters.append((False, tok.location.line))
         return had_public
 
+    def __create_field(self, members, field, namespace, parent_name=None, last_record=None):
+        if field.type.kind == cindex.TypeKind.RECORD:
+            return field
+
+        if field.type.get_declaration().kind == cindex.CursorKind.UNION_DECL:
+            if last_record:
+                for child in last_record.get_children():
+                    self.__create_field(members, child, namespace + '.' + field.spelling, field.spelling, None)
+
+            return None
+
+        type_tokens = self.make_c_style_type_name (field.type)
+        is_function_pointer = ast_node_is_function_pointer (field.type)
+        qtype = QualifiedSymbol(type_tokens=type_tokens)
+        name = '%s.%s' % (namespace, field.spelling)
+        member_name = field.spelling
+        if parent_name:
+            member_name = parent_name + '.' + member_name
+        member = self.__doc_db.get_or_create_symbol(FieldSymbol, is_function_pointer=is_function_pointer,
+                member_name=member_name, qtype=qtype, filename=str(field.location.file),
+                display_name=name, unique_name=name)
+        members.append (member)
+
+        return last_record
+
     def __create_struct_symbol (self, node, spelling=None):
         spelling = spelling or node.spelling
         raw_text, public_fields = self.__parse_public_fields (node)
         members = []
+
+        last_record = None
         for field in public_fields:
-            type_tokens = self.make_c_style_type_name (field.type)
-            is_function_pointer = ast_node_is_function_pointer (field.type)
-            qtype = QualifiedSymbol(type_tokens=type_tokens)
-            name = '%s.%s' % (spelling, field.spelling)
-            member = self.__doc_db.get_or_create_symbol(FieldSymbol, is_function_pointer=is_function_pointer,
-                    member_name=field.spelling, qtype=qtype, filename=str(node.location.file),
-                    display_name=name, unique_name=name)
-            members.append (member)
+            last_record = self.__create_field(members, field, spelling,
+                last_record=last_record)
 
         if not public_fields:
             raw_text = None
