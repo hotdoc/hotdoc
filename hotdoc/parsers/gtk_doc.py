@@ -37,6 +37,7 @@ from hotdoc.parsers import cmark
 from hotdoc.utils.loggable import Logger, warn
 
 
+Logger.register_warning_code('gtk-doc', HotdocSourceException)
 Logger.register_warning_code('gtk-doc-bad-link', HotdocSourceException)
 Logger.register_warning_code('gtk-doc-bad-syntax', HotdocSourceException)
 
@@ -239,10 +240,10 @@ class GtkDocParser:
 
         validator = self.project.tag_validators.get(name)
         if not validator:
-            print("FIXME no tag validator")
+            warn('gtk-doc', "FIXME no tag validator")
             return None
         if not validator.validate(desc):
-            print("invalid value for tag %s : %s" % name, desc)
+            warn('gtk-doc', "invalid value for tag %s : %s" % (name, desc))
             return None
         return Tag(name=name, description=desc, value=desc)
 

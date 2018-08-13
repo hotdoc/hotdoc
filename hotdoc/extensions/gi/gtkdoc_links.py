@@ -1,6 +1,7 @@
 import os
 from lxml import etree
 from hotdoc.extensions.gi.utils import DATADIR
+from hotdoc.utils.loggable import info
 
 
 GTKDOC_HREFS = {}
@@ -61,7 +62,7 @@ def parse_sgml_index(dir_):
                 filename = split_line[3].split('/', 1)[-1]
                 title = split_line[1].replace('-', '_')
 
-                if title.endswith (":CAPS"):
+                if title.endswith(":CAPS"):
                     title = title [:-5]
                 if remote_prefix:
                     href = '%s/%s' % (remote_prefix, filename)
@@ -75,7 +76,7 @@ def parse_sgml_index(dir_):
 def gather_gtk_doc_links ():
     gtkdoc_dir = os.path.join(DATADIR, "gtk-doc", "html")
     if not os.path.exists(gtkdoc_dir):
-        print("no gtk doc to gather links from in %s" % gtkdoc_dir)
+        info("no gtk doc to gather links from in %s" % gtkdoc_dir)
         return
 
     for node in os.listdir(gtkdoc_dir):

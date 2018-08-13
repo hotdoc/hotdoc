@@ -513,10 +513,7 @@ class Formatter(Configurable):
 
     def _format_link(self, link, attrs, title):
         out = ''
-        if not link:
-            assert link
-            print("Issue here plz check", title)
-            return title
+        assert link
 
         template = self.get_template('link.html')
         out += '%s' % template.render({'link': link,
