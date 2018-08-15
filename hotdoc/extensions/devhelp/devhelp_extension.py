@@ -26,7 +26,8 @@ from lxml import etree
 from hotdoc.core.symbols import (
     FunctionSymbol, ClassSymbol, StructSymbol, EnumSymbol, PropertySymbol,
     SignalSymbol, ConstantSymbol, FunctionMacroSymbol, CallbackSymbol,
-    InterfaceSymbol, AliasSymbol, VFunctionSymbol, ExportedVariableSymbol)
+    InterfaceSymbol, AliasSymbol, VFunctionSymbol, ExportedVariableSymbol,
+    FieldSymbol, MethodSymbol, EnumMemberSymbol, ConstructorSymbol)
 from hotdoc.core.extension import Extension
 from hotdoc.utils.utils import recursive_overwrite
 
@@ -53,6 +54,7 @@ TYPE_MAP = {
     ClassSymbol: 'class',
     StructSymbol: 'struct',
     EnumSymbol: 'enum',
+    EnumMemberSymbol: 'member',
     PropertySymbol: 'property',
     SignalSymbol: 'signal',
     ConstantSymbol: 'macro',
@@ -62,6 +64,9 @@ TYPE_MAP = {
     AliasSymbol: 'alias',
     VFunctionSymbol: 'vfunc',
     ExportedVariableSymbol: 'extern',
+    FieldSymbol: 'field',
+    MethodSymbol: 'function',
+    ConstructorSymbol: 'function',
 }
 
 
@@ -155,7 +160,7 @@ class DevhelpExtension(Extension):
 
         return opath
 
-    def __project_formatted_cb(self, project):
+    def __project_written_out_cb(self, project):
         self.__format(project)
 
     # pylint: disable=no-self-use
@@ -191,8 +196,8 @@ class DevhelpExtension(Extension):
         if DevhelpExtension.__connected:
             return
 
-        self.project.formatted_signal.connect_after(
-            self.__project_formatted_cb)
+        self.project.written_out_signal.connect_after(
+            self.__project_written_out_cb)
         self.app.formatted_signal.connect_after(self.__formatted_cb)
         DevhelpExtension.__connected = True
 

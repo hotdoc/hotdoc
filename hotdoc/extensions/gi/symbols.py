@@ -16,6 +16,7 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from hotdoc.core.symbols import *
+from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
 
 class GIClassSymbol(ClassSymbol):
     def __init__(self, **kwargs):
@@ -24,3 +25,5 @@ class GIClassSymbol(ClassSymbol):
 
     def get_children_symbols(self):
         return [self.class_struct_symbol] + super().get_children_symbols()
+
+TYPE_MAP[GIClassSymbol] = 'class'
