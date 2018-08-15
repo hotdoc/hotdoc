@@ -28,6 +28,7 @@ import math
 import sys
 import re
 import pathlib
+import traceback
 
 from urllib.request import urlretrieve
 
@@ -128,6 +129,7 @@ def __get_extra_extension_classes(paths):
         # pylint: disable=broad-except
         except Exception as exc:
             print("Failed to load %s %s" % (entry_point.module_name, exc))
+            traceback.print_exc()
             continue
 
         for klass in classes:
@@ -152,8 +154,9 @@ def get_extension_classes(sort, extra_extension_paths=None):
             activation_function = entry_point.load()
             classes = activation_function()
         # pylint: disable=broad-except
-        except Exception as _:
-            print("Failed to load %s" % entry_point.module_name, _)
+        except Exception as exc:
+            print("Failed to load %s" % entry_point.module_name, exc)
+            traceback.print_exc()
             continue
 
         for klass in classes:
