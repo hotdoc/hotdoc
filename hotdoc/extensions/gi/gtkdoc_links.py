@@ -15,6 +15,7 @@ def parse_devhelp_index(dir_):
     dh_root = etree.parse(path).getroot()
     online = dh_root.attrib.get('online')
     name = dh_root.attrib.get('name')
+    author = dh_root.attrib.get('author')
     if not online:
         if not name:
             return False
@@ -36,11 +37,14 @@ def parse_devhelp_index(dir_):
                 name = split[0]
         elif type_ in ['signal', 'property']:
             anchor = link.split('#', 1)[1]
-            split = anchor.split('-', 1)
-            if type_ == 'signal':
-                name = '%s::%s' % (split[0], split[1].lstrip('-'))
+            if author == 'hotdoc':
+                name = anchor
             else:
-                name = '%s:%s' % (split[0], split[1].lstrip('-'))
+                split = anchor.split('-', 1)
+                if type_ == 'signal':
+                    name = '%s::%s' % (split[0], split[1].lstrip('-'))
+                else:
+                    name = '%s:%s' % (split[0], split[1].lstrip('-'))
 
         GTKDOC_HREFS[name] = online + link
 
