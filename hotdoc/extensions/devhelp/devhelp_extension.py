@@ -176,7 +176,7 @@ class DevhelpExtension(Extension):
 
     def setup(self):
         super(DevhelpExtension, self).setup()
-        if not DevhelpExtension.activated or DevhelpExtension.__connected:
+        if not DevhelpExtension.activated:
             return
 
         # FIXME update the index someday.
@@ -187,6 +187,9 @@ class DevhelpExtension(Extension):
             ext.formatter.writing_page_signal.connect(self.__writing_page_cb)
             ext.formatter.formatting_page_signal.connect(
                 self.__formatting_page_cb)
+
+        if DevhelpExtension.__connected:
+            return
 
         self.project.formatted_signal.connect_after(
             self.__project_formatted_cb)
