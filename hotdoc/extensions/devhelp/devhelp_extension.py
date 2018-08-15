@@ -88,19 +88,29 @@ class DevhelpExtension(Extension):
                             sym.link.title)
             for sym in page.symbols]
 
-    def __format_subs(self, tree, pnode, page):
+    def __format_subs(self, tree, pnode, page, subproject=None):
         for name in page.subpages:
             cpage = tree.get_pages()[name]
-            if cpage.extension_name == 'gi-extension':
-                ref = 'c/%s' % cpage.link.ref
-            else:
-                ref = cpage.link.ref
 
+            subtree = None
+            ext = os.path.splitext(cpage.source_file)[1]
+            if ext.endswith('.json'):
+                subproject = tree.project.subprojects[cpage.source_file]
+                subtree = subproject.tree
+                cpage = subtree.root
+
+            ref = cpage.link.ref
+            if subproject:
+                ref = os.path.join(subproject.sanitized_name, ref)
             node = etree.Element('sub',
                                  attrib={'name': cpage.title,
                                          'link': ref})
+
             pnode.append(node)
-            self.__format_subs(tree, node, cpage)
+            if subtree:
+                self.__format_subs(subtree, node, cpage, subproject)
+            else:
+                self.__format_subs(tree, node, cpage)
 
     def __format(self, project):
         oname = project.sanitized_name
