@@ -76,18 +76,18 @@ class DevhelpExtension(Extension):
 
     activated = False
     __connected = False
+    __resolved_symbols_map = {}
 
     def __init__(self, app, project):
         Extension.__init__(self, app, project)
         self.__ext_languages = defaultdict(set)
-        self.__resolved_symbols_map = {}
 
     def __writing_page_cb(self, formatter, page, path, lxml_tree):
         html_path = os.path.join(self.app.output, 'html')
         relpath = os.path.relpath(path, html_path)
 
         dirname = os.path.dirname(relpath)
-        self.__resolved_symbols_map[relpath] = [
+        DevhelpExtension.__resolved_symbols_map[relpath] = [
             FormattedSymbol(TYPE_MAP.get(type(sym)),
                             os.path.join(dirname, sym.link.ref),
                             sym.link.title)
@@ -137,7 +137,7 @@ class DevhelpExtension(Extension):
         root.append(chapter_node)
 
         funcs_node = etree.Element('functions')
-        for _, symbols in self.__resolved_symbols_map.items():
+        for _, symbols in DevhelpExtension.__resolved_symbols_map.items():
             for sym in symbols:
                 if sym.type_ is None:
                     continue
