@@ -37,7 +37,6 @@ An extension to generate devhelp indexes.
 
 BOILERPLATE =\
     u"""<?xml version="1.0"?>
-<!DOCTYPE book PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "">
 <book xmlns="http://www.devhelp.net/book" title="%s" link="%s" \
 author="hotdoc" name="%s" version="2" language="%s"/>
 """
