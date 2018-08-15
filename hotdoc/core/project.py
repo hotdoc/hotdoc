@@ -355,34 +355,6 @@ class Project(Configurable):
                 os.makedirs(destdir)
             shutil.copyfile(src, dest)
 
-    def write_out_tree(self, page, output):
-        """Banana banana
-        """
-        subpages = OrderedDict({})
-        ext = self.extensions[page.extension_name]
-        subpage_names = ext.get_subpages_sorted(self.tree.get_pages(), page)
-        formatter = ext.formatter
-        for pagename in subpage_names:
-            proj = self.subprojects.get(pagename)
-
-            if not proj:
-                cpage = self.tree.get_pages()[pagename]
-                sub_formatter = self.extensions[cpage.extension_name].formatter
-                self.write_out_tree(cpage, output)
-            else:
-                cpage = proj.tree.root
-                sub_formatter = proj.extensions[cpage.extension_name].formatter
-                proj.write_out_tree(cpage, output)
-
-            subpage_link, _ = cpage.link.get_link(self.app.link_resolver)
-            prefix = sub_formatter.get_output_folder(cpage)
-            if prefix:
-                subpage_link = '%s/%s' % (prefix, subpage_link)
-            subpages[subpage_link] = cpage
-
-        html_subpages = formatter.format_subpages(page, subpages)
-        formatter.write_out(page, html_subpages, output)
-
     def write_out(self, output):
         """Banana banana
         """
