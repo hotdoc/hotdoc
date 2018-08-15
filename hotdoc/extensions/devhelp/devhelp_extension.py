@@ -86,11 +86,9 @@ class DevhelpExtension(Extension):
         html_path = os.path.join(self.app.output, 'html')
         relpath = os.path.relpath(path, html_path)
 
-        dirname = os.path.dirname(relpath)
         DevhelpExtension.__resolved_symbols_map[relpath] = [
             FormattedSymbol(TYPE_MAP.get(type(sym)),
-                            os.path.join(dirname, sym.link.ref),
-                            sym.link.title)
+                            sym.link.ref, sym.link.title)
             for sym in page.symbols]
 
     def __format_subs(self, tree, pnode, page, subproject=None):
