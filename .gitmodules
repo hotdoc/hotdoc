@@ -9,4 +9,4 @@
 [submodule "hotdoc/hotdoc_bootstrap_theme"]
 	path = hotdoc/hotdoc_bootstrap_theme
 	url = https://github.com/hotdoc/hotdoc_bootstrap_theme.git
-	branch = gst
+	branch = master
