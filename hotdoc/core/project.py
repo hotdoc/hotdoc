@@ -157,6 +157,7 @@ class Project(Configurable):
             self.datadir = "/usr/share"
 
         self.formatted_signal = Signal()
+        self.written_out_signal = Signal()
 
         self.is_toplevel = False
 
@@ -376,3 +377,5 @@ class Project(Configurable):
             with open(default_index_path, 'w', encoding='utf8') as _:
                 _.write('<meta http-equiv="refresh" content="0; url=%s"/>' %
                         index_path)
+
+        self.written_out_signal(self)
