@@ -71,6 +71,10 @@ BASIC_GTKDOC_COMMENT = '''/**
  * This is just a function.
  */'''
 
+SKIP_GTKDOC_COMMENT = '''/**
+ * test_greeter_greet: (skip)
+ */'''
+
 LINENOS_GTKDOC_COMMENT = '''/**
  *
  *
@@ -127,6 +131,17 @@ class TestGtkDocParser(unittest.TestCase):
         self.assertTrue('greeter' in comment.params)
         param = comment.params['greeter']
         self.assertEqual(param.description, 'a random greeter')
+
+    def test_skip_gtkdoc_comment(self):
+        raw = SKIP_GTKDOC_COMMENT
+        lineno = 10
+        end_lineno = len(raw.split('\n')) + 10 - 1
+        comment = self.parser.parse_comment(
+            raw,
+            None,
+            lineno,
+            end_lineno)
+        self.assertIn('skip', comment.annotations)
 
     def test_not_a_gtkdoc_comment(self):
         raw = NOT_A_GTKDOC_COMMENT
