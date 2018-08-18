@@ -221,6 +221,7 @@ static cmark_node *function_link_match(cmark_syntax_extension *self,
   delimiter *tmp_delim;
   int offset;
   int start;
+  int tmp_pos;
   ParsingContext context;
 
   context.parser = inline_parser;
@@ -255,12 +256,14 @@ static cmark_node *function_link_match(cmark_syntax_extension *self,
   if (!ret)
     goto done;
 
+  tmp_pos = cmark_inline_parser_get_offset (inline_parser);
   tmp_delim = cmark_inline_parser_get_last_delimiter(inline_parser);
 
   while (tmp_delim) {
     delimiter *prev = tmp_delim->previous;
+    tmp_pos -= tmp_delim->length;
 
-    if (tmp_delim->position < start + 1) {
+    if (tmp_pos < start + 1) {
       break;
     }
 
