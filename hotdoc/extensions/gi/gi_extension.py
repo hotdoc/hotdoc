@@ -758,6 +758,11 @@ class GIExtension(Extension):
 
         if 'moved-to' in node.attrib:
             return False
+
+        for attr in node.findall(core_ns('attribute')):
+            if attr.attrib['name'] == 'doc.skip':
+                return False
+
         if node.tag == core_ns('class'):
             self.__create_structure(GIClassSymbol, node, gi_name)
         elif node.tag in (core_ns('function'), core_ns('method'), core_ns('constructor')):
