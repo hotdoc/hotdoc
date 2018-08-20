@@ -29,7 +29,7 @@ def parse_devhelp_index(dir_):
 
         if type_ in ['macro', 'function']:
             name = name.rstrip(u' ()')
-        elif type_ in ['struct', 'enum']:
+        elif type_ in ['struct', 'enum', 'union']:
             split = name.split(' ', 1)
             if len(split) == 2:
                 name = split[1]
