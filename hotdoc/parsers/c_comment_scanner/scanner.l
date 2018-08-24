@@ -34,8 +34,8 @@
 extern int yylex (PyObject *comments);
 #define YY_DECL int yylex (PyObject *comments)
 static int yywrap (void);
-static void parse_comment ();
-static void parse_define ();
+static int parse_comment ();
+static int parse_define ();
 %}
 
 %option nounput
@@ -46,8 +46,8 @@ SPACE   [ \t]
 
 %%
 
-"/*"                            { parse_comment (comments); }
-{HASH}{SPACE}*"define"{SPACE}*  { parse_define (comments); }
+"/*"                            { return parse_comment (comments);}
+{HASH}{SPACE}*"define"{SPACE}*  { return parse_define (comments); }
 
 .|\n		  { }
 
@@ -76,7 +76,7 @@ realloc_and_concat(char *str, char *s2)
 
 #define BUFSIZE 1024
 
-static void
+static int
 parse_define (PyObject *comments)
 {
   int c = input();
@@ -86,7 +86,7 @@ parse_define (PyObject *comments)
   int cursor = 0;
   int define_lineno = yylineno - 1;
 
-  while (c != EOF) {
+  while (c > 0) {
     buf[cursor++] = c;
 
     if (cursor >= BUFSIZE - 1) {
@@ -116,9 +116,13 @@ parse_define (PyObject *comments)
         yylineno,
         0);
   PyList_Append (comments, item);
+
+  if (c <= 0)
+    return 0;
+  return 1;
 }
 
-static void
+static int
 parse_comment (PyObject *comments)
 {
   int c1, c2;
@@ -126,10 +130,14 @@ parse_comment (PyObject *comments)
   int cursor;
 
   c1 = input();
+
+  if (c1 <= 0)
+    return 0;
+
   c2 = input();
 
   comment_lineno = yylineno - 1;
-  if (c2 != EOF && (c1 != '/' && c2 != '*' && c2 != '/')) {
+  if (c2 > 0 && (c1 != '/' && c2 != '*' && c2 != '/')) {
     char *comment = (char *) malloc(sizeof(char) * 3);
     char buf[BUFSIZE];
     cursor = 0;
@@ -137,7 +145,7 @@ parse_comment (PyObject *comments)
     comment[0] = '/';
     comment[1] = '*';
     comment[2] = '\0';
-    while (c2 != EOF && !(c1 == '*' && c2 == '/'))
+    while (c2 > 0 && !(c1 == '*' && c2 == '/'))
     {
       buf[cursor++] = c1;
 
@@ -161,14 +169,16 @@ parse_comment (PyObject *comments)
         1);
     PyList_Append (comments, item);
   } else {
-    while (c2 != EOF && !(c1 == '*' && c2 == '/'))
+    while (c2 > 0 && !(c1 == '*' && c2 == '/'))
     {
       c1 = c2;
       c2 = input();
     }
-
-    return;
   }
+
+  if (c2 <= 0)
+    return 0;
+  return 1;
 }
 
 int
@@ -178,7 +188,7 @@ scan_comments (const char *contents, PyObject *comments)
 
   yy_scan_string(contents);
 
-  yylex (comments);
+  while (yylex (comments));
 
   return 0;
 }
