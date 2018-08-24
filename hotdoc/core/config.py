@@ -52,7 +52,7 @@ def load_config_json(conf_file):
 
 
 # pylint: disable=too-many-instance-attributes
-class Config(object):
+class Config:
     """
     Helper class to help deal with common extension dependencies.
 
@@ -121,12 +121,13 @@ class Config(object):
             return None
 
         if os.path.isabs(path):
-            return path
+            return os.path.realpath(path)
         if path.startswith('~'):
-            return os.path.expanduser(path)
+            return os.path.realpath(os.path.expanduser(path))
         if from_conf:
-            return os.path.abspath(os.path.join(self.__conf_dir, path))
-        return os.path.abspath(os.path.join(self.__invoke_dir, path))
+            return os.path.realpath(os.path.join(self.__conf_dir, path))
+
+        return os.path.realpath(os.path.join(self.__invoke_dir, path))
 
     def __get_key(self, source_patterns, from_conf):
         if from_conf:
@@ -254,7 +255,7 @@ class Config(object):
 
         if rel_to_cwd:
             return os.path.relpath(res, self.__invoke_dir)
-        elif rel_to_conf:
+        if rel_to_conf:
             return os.path.relpath(res, self.__conf_dir)
 
         return self.__abspath(path, from_conf)
