@@ -141,6 +141,8 @@ class TestTree(unittest.TestCase):
 
     def __create_src_file(self, name, symbols):
         path = os.path.join(self.__md_dir, name)
+        if os.path.dirname(name):
+            os.makedirs(os.path.join(self.__md_dir, os.path.dirname(name)))
         with open(path, 'w') as _:
             for symbol in symbols:
                 _.write('%s\n' % symbol)
@@ -254,7 +256,8 @@ class TestTree(unittest.TestCase):
             stale_pages.pop(pagename)
         self.assertEqual(len(stale_pages), 0)
 
-    def __create_test_layout(self, with_ext_index=True, sitemap=None):
+    def __create_test_layout(self, with_ext_index=True, sitemap=None,
+                             sources=None):
         if not sitemap:
             inp = (u'index.markdown\n'
                    '\ttest-index\n'
@@ -266,7 +269,8 @@ class TestTree(unittest.TestCase):
         else:
             inp = sitemap
 
-        sources = []
+        if sources is None:
+            sources = []
 
         sources.append(self.__create_src_file(
             'source_a.test',
@@ -735,3 +739,22 @@ class TestTree(unittest.TestCase):
         self.assertEqual(
             out,
             u'<h1>My override</h1>\n')
+
+    def test_extension_file_include_dirs(self):
+        sitemap = (u'index.markdown\n'
+                   '\ttest-index\n'
+                   '\t\ttest-section.markdown\n'
+                   '\t\t\tsource1.test\n'
+                   '\t\t\tsource2.test\n')
+
+        self.include_paths.add(os.path.join(self.__md_dir, 'a'))
+        self.include_paths.add(os.path.join(self.__md_dir, 'b'))
+        sources = [
+            self.__create_src_file(
+                'a/source1.test',
+                ['symbol_a']),
+            self.__create_src_file(
+                'b/source2.test',
+                ['symbol_b'])
+        ]
+        _ = self.__create_test_layout(sitemap=sitemap, sources=sources)
