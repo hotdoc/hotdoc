@@ -490,9 +490,7 @@ class Formatter(Configurable):
         full_path = os.path.join(self.__cache_dir,
                                  self.get_output_folder(page),
                                  page.link.ref)
-        if not os.path.exists(os.path.dirname(full_path)):
-            os.makedirs(os.path.dirname(full_path))
-
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
         with open(full_path, 'w', encoding='utf-8') as _:
             _.write(page.detailed_description)
 
