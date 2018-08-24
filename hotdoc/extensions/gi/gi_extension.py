@@ -154,13 +154,13 @@ class GIExtension(Extension):
 
         super(GIExtension, self).setup()
 
+        self.app.link_resolver.resolving_link_signal.connect_after(self.__translate_link_ref, 'default')
         if not self.sources:
             return
 
         self.__scan_comments()
         self.__scan_sources()
         self.__create_macro_symbols()
-        self.app.link_resolver.resolving_link_signal.connect_after(self.__translate_link_ref, 'default')
 
     def format_page(self, page, link_resolver, output):
         link_resolver.get_link_signal.connect(self.search_online_links)
