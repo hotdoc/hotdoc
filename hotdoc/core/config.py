@@ -24,6 +24,7 @@ import json
 import glob
 
 from hotdoc.utils.utils import OrderedSet
+from hotdoc.utils.utils import flatten_list
 from hotdoc.utils.loggable import error
 
 
@@ -279,7 +280,7 @@ class Config:
             paths = self.__config.get(key) or []
             from_conf = True
 
-        for path in paths:
+        for path in flatten_list(paths):
             final_path = self.__abspath(path, from_conf)
             if final_path:
                 final_paths.append(final_path)

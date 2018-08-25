@@ -53,16 +53,13 @@ class CoreExtension(Extension):
     """
     extension_name = 'core'
 
-    def __init__(self, app, project):
-        super(CoreExtension, self).__init__(app, project)
-
     def format_page(self, page, link_resolver, output):
         proj = self.project.subprojects.get(page.source_file)
         if proj:
             proj.format(link_resolver, output)
             page.title = proj.tree.root.title
         else:
-            return super(CoreExtension, self).format_page(
+            super(CoreExtension, self).format_page(
                 page, link_resolver, output)
 
     def write_out_page(self, output, page):
@@ -70,7 +67,7 @@ class CoreExtension(Extension):
         if proj:
             proj.tree.write_out(output)
         else:
-            return super(CoreExtension, self).write_out_page(
+            super(CoreExtension, self).write_out_page(
                 output, page)
 
     def setup(self):
@@ -78,18 +75,18 @@ class CoreExtension(Extension):
         inclusions.include_signal.disconnect(CoreExtension.include_file_cb)
         inclusions.include_signal.connect_after(CoreExtension.include_file_cb)
 
-    def _resolve_placeholder(self, tree, fname, include_paths):
-        ext = os.path.splitext(fname)[1]
+    def _resolve_placeholder(self, tree, name, include_paths):
+        ext = os.path.splitext(name)[1]
         if ext != '.json':
             return None
 
-        conf_path = inclusions.find_file(fname, include_paths)
+        conf_path = inclusions.find_file(name, include_paths)
         if not conf_path:
             error('invalid-config',
                   '(%s) Could not find subproject config file %s' % (
-                      self.project.sanitized_name, fname))
+                      self.project.sanitized_name, name))
 
-        self.project.add_subproject(fname, conf_path)
+        self.project.add_subproject(name, conf_path)
         return True, None
 
     @staticmethod
@@ -239,7 +236,7 @@ class Project(Configurable):
         group.add_argument("--sitemap", action="store",
                            dest="sitemap",
                            help="Location of the sitemap file")
-        group.add_argument('--include-paths',
+        group.add_argument('--include-paths', nargs="+",
                            help='paths to look up included files in',
                            dest='include_paths', action='append',
                            default=[])
