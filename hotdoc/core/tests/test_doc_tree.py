@@ -747,8 +747,6 @@ class TestTree(unittest.TestCase):
                    '\t\t\tsource1.test\n'
                    '\t\t\tsource2.test\n')
 
-        self.include_paths.add(os.path.join(self.__md_dir, 'a'))
-        self.include_paths.add(os.path.join(self.__md_dir, 'b'))
         sources = [
             self.__create_src_file(
                 'a/source1.test',
@@ -757,4 +755,14 @@ class TestTree(unittest.TestCase):
                 'b/source2.test',
                 ['symbol_b'])
         ]
+
+        self.test_ext.source_roots.add(os.path.join(self.__md_dir, 'a'))
+        self.test_ext.source_roots.add(os.path.join(self.__md_dir, 'b'))
         _ = self.__create_test_layout(sitemap=sitemap, sources=sources)
+
+        print(self.tree.get_pages())
+        source1 = self.tree.get_pages()['source1.test']
+        self.assertEqual(source1.symbol_names, ['symbol_a'])
+
+        source2 = self.tree.get_pages()['source2.test']
+        self.assertEqual(source2.symbol_names, ['symbol_b'])
