@@ -24,7 +24,7 @@ class CCommentExtractor:
 
     def parse_comments(self, filenames):
         for filename in filenames:
-            with open (filename, 'rb') as f:
+            with open(filename, 'rb') as f:
                 debug('Getting comments in %s' % filename)
                 lines = []
                 header = filename.endswith('.h')
@@ -36,27 +36,29 @@ class CCommentExtractor:
                     if skip_next_symbol and l.startswith("#pragma once"):
                         skip_next_symbol = False
 
-                cs = extract_comments (''.join(lines))
+                cs = extract_comments(''.join(lines))
                 for c in cs:
                     if c[3]:
                         line = lines[c[1] - 1]
 
-                        comment = (len(line) - len(line.lstrip(' '))) * ' ' + c[0]
+                        comment = (len(line) - len(line.lstrip(' '))
+                                   ) * ' ' + c[0]
                         block = self.__raw_comment_parser.parse_comment(comment,
-                            filename, c[1], c[2], self.project.include_paths)
+                                                                        filename, c[1], c[2], self.project.include_paths)
                         if block is not None:
                             self.app.database.add_comment(block)
                     elif not skip_next_symbol:
                         if header:
                             self.__raw_macros.append(RawMacro(c, filename))
-                            #self.__create_macro_from_raw_text(c, filename, filter_names)
+                            # self.__create_macro_from_raw_text(c, filename, filter_names)
                     else:
                         skip_next_symbol = False
 
     def create_macro_symbols(self, filter_names=None):
         filter_names = filter_names or {}
         for raw_macro in self.__raw_macros:
-            self.__create_macro_from_raw_text(raw_macro.raw, raw_macro.filename, filter_names)
+            self.__create_macro_from_raw_text(
+                raw_macro.raw, raw_macro.filename, filter_names)
 
     def __create_macro_from_raw_text(self, raw, filename, filter_names):
         mcontent = raw[0].replace('\t', ' ')
@@ -70,13 +72,16 @@ class CCommentExtractor:
             if args:
                 stripped_name = name.strip()
                 return self.__create_function_macro_symbol(stripped_name,
-                    filename, raw[1], raw[0])
+                                                           filename, raw[1], raw[0])
 
         name = mcontent.split(' ', 1)[0]
+        comment = self.app.database.get_comment(name)
+        if comment and comment.filename:
+            filename = comment.filename
         stripped_name = name.strip()
         return self.__create_constant_symbol(stripped_name, filename, raw[1], raw[0])
 
-    def __create_function_macro_symbol (self, name, filename, lineno, original_text):
+    def __create_function_macro_symbol(self, name, filename, lineno, original_text):
         if name in self.extension.created_symbols:
             return None
 
@@ -84,16 +89,18 @@ class CCommentExtractor:
 
         return_value = [None]
         if comment:
-            return_tag = comment.tags.get ('returns')
+            return_tag = comment.tags.get('returns')
             if return_tag:
-                return_value = [ReturnItemSymbol ()]
+                return_value = [ReturnItemSymbol()]
 
         parameters = []
 
         if comment:
             for param_name in comment.params:
-                parameter = ParameterSymbol (argname=param_name)
-                parameters.append (parameter)
+                parameter = ParameterSymbol(argname=param_name)
+                parameters.append(parameter)
+            if comment.filename:
+                filename = comment.filename
 
         sym = self.extension.get_or_create_symbol(
             FunctionMacroSymbol, return_value=return_value,
@@ -102,11 +109,11 @@ class CCommentExtractor:
 
         return sym
 
-    def __create_constant_symbol (self, name, filename, lineno, original_text):
+    def __create_constant_symbol(self, name, filename, lineno, original_text):
         if name in self.extension.created_symbols:
             return None
 
         return self.extension.get_or_create_symbol(ConstantSymbol,
-                original_text=original_text,
-                display_name=name, filename=filename,
-                lineno=lineno)
+                                                   original_text=original_text,
+                                                   display_name=name, filename=filename,
+                                                   lineno=lineno)

@@ -119,7 +119,8 @@ class GIExtension(Extension):
         group.add_argument("--languages", action="store",
                            nargs='*',
                            help="Languages to translate documentation in %s"
-                           ", default is to make all languages" % str(OUTPUT_LANGUAGES))
+                           ", default is to make all languages" % str(
+                               OUTPUT_LANGUAGES))
 
     @staticmethod
     def get_dependencies():
