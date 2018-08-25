@@ -628,7 +628,7 @@ class CExtension(Extension):
     def add_arguments (parser):
         group = parser.add_argument_group('C extension', DESCRIPTION)
         CExtension.add_index_argument(group)
-        CExtension.add_sources_argument(group)
+        CExtension.add_sources_argument(group, add_root_paths=True)
         CExtension.add_paths_argument(group, "include-directories",
                 help_="List extra include directories here")
         group.add_argument ("--pkg-config-packages", action="store", nargs="+",

@@ -113,7 +113,7 @@ class GIExtension(Extension):
                 DESCRIPTION)
         GIExtension.add_index_argument(group)
         GIExtension.add_sources_argument(group, allow_filters=False)
-        GIExtension.add_sources_argument(group, prefix='gi-c')
+        GIExtension.add_sources_argument(group, prefix='gi-c', add_root_paths=True)
         group.add_argument ("--languages", action="store",
                 nargs='*',
                 help="Languages to translate documentation in %s"
@@ -129,6 +129,7 @@ class GIExtension(Extension):
         super(GIExtension, self).parse_config(config)
         ALL_GIRS.update ({os.path.basename(s): s for s in self.sources})
         self.c_sources = config.get_sources('gi-c')
+        self.source_roots = OrderedSet(config.get_paths('gi_c_source_roots'))
         self.languages = [l.lower() for l in config.get(
             'languages', [])]
         # Make sure C always gets formatted first

@@ -32,7 +32,7 @@ from hotdoc.utils.utils import OrderedSet, DefaultOrderedDict
 
 
 # pylint: disable=too-few-public-methods
-class ExtDependency(object):
+class ExtDependency:
     """
     Represents a dependency on another extension.
 
@@ -98,6 +98,7 @@ class Extension(Configurable):
         self.sources = set()
         self.index = None
         self.smart_index = False
+        self.source_roots = OrderedSet()
         self._created_symbols = DefaultOrderedDict(OrderedSet)
         self.__package_root = None
         self.__overriden_pages = []
@@ -228,6 +229,7 @@ class Extension(Configurable):
         self.index = config.get_index(prefix)
         self.smart_index = bool(config.get('%s_smart_index' %
                                            self.argument_prefix))
+        self.source_roots = OrderedSet(config.get_paths('%s_source_roots' % prefix))
 
         for arg, dest in list(self.paths_arguments.items()):
             val = config.get_paths(arg)
@@ -305,7 +307,7 @@ class Extension(Configurable):
                     cls.extension_name))
 
     @classmethod
-    def add_sources_argument(cls, group, allow_filters=True, prefix=None):
+    def add_sources_argument(cls, group, allow_filters=True, prefix=None, add_root_paths=False):
         """
         Subclasses may call this to add sources and source_filters arguments.
 
@@ -328,6 +330,14 @@ class Extension(Configurable):
                                dest="%s_source_filters" % prefix.replace(
                                    '-', '_'),
                                help="%s source files to ignore" % prefix)
+
+        if add_root_paths:
+            group.add_argument("--%s-source-roots" % prefix,
+                               action="store", nargs="+",
+                               dest="%s_source_roots" % prefix.replace(
+                                   '-', '_'),
+                               help="%s source root directories allowing files "
+                                    "to be referenced relatively to those" % prefix)
 
     @classmethod
     def add_path_argument(cls, group, argname, dest=None, help_=None):
@@ -411,7 +421,7 @@ class Extension(Configurable):
 
     def __list_override_pages_cb(self, tree, include_paths):
         if not self.smart_index:
-            return
+            return None
 
         self.__find_package_root()
         for source in self._get_all_sources():
@@ -432,7 +442,6 @@ class Extension(Configurable):
     def _resolve_placeholder(self, tree, name, include_paths):
         self.__find_package_root()
 
-        override_path = os.path.join(self.__package_root, name)
         if name == '%s-index' % self.argument_prefix:
             if self.index:
                 path = find_file(self.index, include_paths)
@@ -441,9 +450,16 @@ class Extension(Configurable):
                                "Could not find index file %s" % self.index)
                 return path, self.extension_name
             return True, self.extension_name
-        elif self.smart_index and override_path in self._get_all_sources():
-            path = find_file('%s.markdown' % name, include_paths)
-            return path or True, None
+
+        if self.smart_index:
+            for path in OrderedSet([self.__package_root]) | self.source_roots:
+                possible_path = os.path.join(path, name)
+                if possible_path in self._get_all_sources():
+                    override_path = find_file('%s.markdown' % name, include_paths)
+                    debug(possible_path)
+
+                    return override_path or True, None
+
         return None
 
     def __update_tree_cb(self, tree, unlisted_sym_names):
@@ -482,7 +498,7 @@ class Extension(Configurable):
         if self.__package_root:
             return
 
-        commonprefix = os.path.commonprefix(list(self._get_all_sources()))
+        commonprefix = os.path.commonprefix(list(self._get_all_sources()) + list(self.source_roots))
         self.__package_root = os.path.dirname(commonprefix)
 
     def __get_index_page(self, tree):
@@ -491,7 +507,12 @@ class Extension(Configurable):
 
     def __add_subpage(self, tree, index, source_file, symbols):
         page_name = self.__get_rel_source_path(source_file)
-        page = tree.get_pages().get(page_name)
+        for path in OrderedSet([self.__package_root]) | self.source_roots:
+            possible_name = os.path.relpath(source_file, path)
+            page = tree.get_pages().get(possible_name)
+            if page:
+                page_name = possible_name
+                break
 
         needs_comment = False
         if not page:
@@ -618,13 +639,13 @@ class Extension(Configurable):
 
         sorted_pages = []
         to_sort = []
-        for page in page.subpages:
+        for subpage in page.subpages:
             # Do not resort subprojects even if they are
             # 'generated'.
-            if pages[page].pre_sorted:
-                sorted_pages.append(page)
+            if pages[subpage].pre_sorted:
+                sorted_pages.append(subpage)
             else:
-                to_sort.append(page)
+                to_sort.append(subpage)
 
         return sorted_pages + sorted(
             to_sort, key=lambda p: pages[p].get_title().lower())
