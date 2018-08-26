@@ -741,7 +741,7 @@ class TestTree(unittest.TestCase):
             u'<h1>My override</h1>\n')
 
     def test_extension_file_include_dirs(self):
-        sitemap = (u'index.markdown\n'
+        sitemap = ('index.markdown\n'
                    '\ttest-index\n'
                    '\t\ttest-section.markdown\n'
                    '\t\t\tsource1.test\n'
@@ -760,7 +760,6 @@ class TestTree(unittest.TestCase):
         self.test_ext.source_roots.add(os.path.join(self.__md_dir, 'b'))
         _ = self.__create_test_layout(sitemap=sitemap, sources=sources)
 
-        print(self.tree.get_pages())
         source1 = self.tree.get_pages()['source1.test']
         self.assertEqual(source1.symbol_names, ['symbol_a'])
 

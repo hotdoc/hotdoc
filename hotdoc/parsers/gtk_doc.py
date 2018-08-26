@@ -28,6 +28,8 @@ import cgi
 from collections import OrderedDict
 from itertools import zip_longest
 
+import yaml
+from yaml.constructor import ConstructorError
 
 from hotdoc.core.comment import (Comment, Annotation, Tag,
                                  comment_from_tag)
@@ -97,7 +99,7 @@ class GtkDocParser:
                 else:
                     section_name = rel_filename
 
-            return section_name, []
+            return section_name, [], True
 
         split = raw_title.split(': ', 1)
 
@@ -110,7 +112,7 @@ class GtkDocParser:
 
         if len(split) > 1:
             annotations = self.__parse_annotations(split[1])
-        return title, annotations
+        return title, annotations, False
 
     def __parse_key_value_annotation(self, name, string):
         kvs = self.kv_regex.findall(string)
@@ -170,16 +172,17 @@ class GtkDocParser:
 
     def __parse_parameter(self, name, desc):
         name = name.strip()[1:-1].strip()
+        raw_comment = '%s:%s' % (name, desc)
         desc = desc.strip()
         desc, annotations = self.__extract_annotations(desc)
         annotations = {annotation.name: annotation for annotation in
                        annotations}
         return Comment(name=name, annotations=annotations,
-                       description=desc)
+                       meta={'description': desc}, raw_comment=raw_comment)
 
     def __parse_title_and_parameters(self, filename, title_and_params):
         tps = re.split(r'(\n[ \t]*@[\S]+[ \t]*:)', title_and_params)
-        title, annotations = self.__parse_title(filename, tps[0])
+        title, annotations, is_section = self.__parse_title(filename, tps[0])
         parameters = []
         for name, desc in _grouper(tps[1:], 2):
             n_chars = len(name.strip()) + len(desc)
@@ -187,7 +190,7 @@ class GtkDocParser:
             param.line_offset = len(desc.split('\n'))
             parameters.append(param)
             param.initial_col_offset = n_chars - len(param.description)
-        return title, parameters, annotations
+        return title, parameters, annotations, is_section
 
     # pylint: disable=no-self-use
     def __parse_since_tag(self, name, desc):
@@ -277,9 +280,23 @@ class GtkDocParser:
         return re.match(r'(/\*\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/)$',
                         comment) is not None
 
+    def __parse_yaml_comment(self, comment, filename):
+        res = {}
+        try:
+            blocks = yaml.load_all(comment.raw_comment)
+            for block in blocks:
+                if block:
+                    res.update(block)
+        except (ConstructorError, yaml.parser.ParserError) as exception:
+            warn('invalid-page-metadata',
+                 '%s: Invalid metadata: \n%s' % (filename, str(exception)))
+        return res
+
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
     # pylint: disable=unused-argument
+    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-statements
     def parse_comment(self, comment, filename, lineno, endlineno,
                       include_paths=None, stripped=False):
         """
@@ -304,7 +321,7 @@ class GtkDocParser:
         split = re.split(r'\n[\W]*\n', comment, maxsplit=1)
 
         try:
-            block_name, parameters, annotations = \
+            block_name, parameters, annotations, is_section = \
                 self.__parse_title_and_parameters(filename, split[0])
         except HotdocSourceException as _:
             warn('gtk-doc-bad-syntax',
@@ -326,22 +343,21 @@ class GtkDocParser:
             return None
 
         description_offset = 0
-        description = ""
+        meta = {}
         tags = []
         if len(split) > 1:
             n_lines = len(comment.split('\n'))
             description_offset = (title_offset + n_lines -
                                   len(split[1].split('\n')))
-            description, tags = self.__parse_description_and_tags(split[1])
+            meta['description'], tags = self.__parse_description_and_tags(split[1])
 
-        title = None
-        short_description = None
         actual_parameters = OrderedDict({})
         for param in parameters:
-            if param.name.lower() == 'short_description':
-                short_description = param
-            elif param.name.lower() == 'title':
-                title = param
+            if is_section:
+                if param.name in ['symbols', 'auto-sort']:
+                    meta.update(self.__parse_yaml_comment(param, filename))
+                else:
+                    meta[param.name] = param.description
             else:
                 actual_parameters[param.name] = param
 
@@ -352,9 +368,8 @@ class GtkDocParser:
         block = Comment(name=block_name, filename=filename, lineno=lineno,
                         endlineno=endlineno,
                         annotations=annotations, params=actual_parameters,
-                        description=description,
-                        short_description=short_description,
-                        title=title, tags=tags, raw_comment=raw_comment)
+                        tags=tags, raw_comment=raw_comment,
+                        meta=meta)
         block.line_offset = description_offset
         block.col_offset = column_offset
 

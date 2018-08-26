@@ -95,6 +95,15 @@ SECTION_GTKDOC_COMMENT = '''/**
  * @title: This page is not comming from a file.
  */'''
 
+SECTION_GTKDOC_WITH_SYMBOLS = '''/**
+ * SECTION: notafile
+ * @title: This page is not comming from a file.
+ * @auto-sort: true
+ * @symbols:
+ * - symbol_a
+ * - symbol_b
+ */'''
+
 NOT_A_GTKDOC_COMMENT = '''/**
  * $param rd Pointer to vbi3_raw_decoder object allocated with
  *   vbi3_raw_decoder_new().
@@ -164,6 +173,17 @@ class TestGtkDocParser(unittest.TestCase):
             lineno,
             end_lineno)
         self.assertEqual(comment.name, "notafile")
+
+    def test_symbols_list(self):
+        raw_lines = SECTION_GTKDOC_WITH_SYMBOLS.split("\n")
+
+        comment = self.parser.parse_comment(
+            SECTION_GTKDOC_WITH_SYMBOLS,
+            'some-file.c',
+            0,
+            len(raw_lines) - 1)
+        self.assertEqual(comment.meta['auto-sort'], True)
+        self.assertEqual(comment.meta['symbols'], ['symbol_a', 'symbol_b'])
 
     def test_page_name_filename(self):
         raw_lines = SECTION_GTKDOC_COMMENT.split("\n")

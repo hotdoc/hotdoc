@@ -1,3 +1,4 @@
+import os
 from collections import namedtuple
 import cchardet
 from hotdoc.parsers.c_comment_scanner.c_comment_scanner import extract_comments
@@ -77,7 +78,7 @@ class CCommentExtractor:
         name = mcontent.split(' ', 1)[0]
         comment = self.app.database.get_comment(name)
         if comment and comment.filename:
-            filename = comment.filename
+            filename = '%s.h' % os.path.splitext(comment.filename)[0]
         stripped_name = name.strip()
         return self.__create_constant_symbol(stripped_name, filename, raw[1], raw[0])
 
@@ -100,7 +101,7 @@ class CCommentExtractor:
                 parameter = ParameterSymbol(argname=param_name)
                 parameters.append(parameter)
             if comment.filename:
-                filename = comment.filename
+                filename = '%s.h' % os.path.splitext(comment.filename)[0]
 
         sym = self.extension.get_or_create_symbol(
             FunctionMacroSymbol, return_value=return_value,

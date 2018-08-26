@@ -31,7 +31,7 @@ from hotdoc.core import inclusions
 from hotdoc.core.extension import Extension
 from hotdoc.core.comment import Tag
 from hotdoc.core.config import Config
-from hotdoc.core.tree import Tree
+from hotdoc.core.tree import Tree, PageResolutionResult
 from hotdoc.utils.loggable import info, error
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.utils import OrderedSet
@@ -87,7 +87,7 @@ class CoreExtension(Extension):
                       self.project.sanitized_name, name))
 
         self.project.add_subproject(name, conf_path)
-        return True, None
+        return PageResolutionResult(True, None, None, None)
 
     @staticmethod
     def include_file_cb(include_path, line_ranges, symbol):
