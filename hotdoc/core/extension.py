@@ -24,7 +24,7 @@ from collections import OrderedDict
 
 from hotdoc.core.inclusions import find_file
 from hotdoc.core.symbols import Symbol
-from hotdoc.core.tree import Page, OverridePage
+from hotdoc.core.tree import Page, OverridePage, PageResolutionResult
 from hotdoc.core.formatter import Formatter
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.loggable import debug, info, warn, error
@@ -448,17 +448,20 @@ class Extension(Configurable):
                 if path is None:
                     self.error("invalid-config",
                                "Could not find index file %s" % self.index)
-                return path, self.extension_name
-            return True, self.extension_name
+                return PageResolutionResult(True, path, None, self.extension_name)
+            return PageResolutionResult(True, None, None, self.extension_name)
 
         if self.smart_index:
             for path in OrderedSet([self.__package_root]) | self.source_roots:
                 possible_path = os.path.join(path, name)
                 if possible_path in self._get_all_sources():
                     override_path = find_file('%s.markdown' % name, include_paths)
-                    debug(possible_path)
 
-                    return override_path or True, None
+                    if override_path:
+                        return PageResolutionResult(True, override_path, None, None)
+
+                    return PageResolutionResult(True, None,
+                                                self.__get_rel_source_path(possible_path), None)
 
         return None
 
@@ -484,9 +487,7 @@ class Extension(Configurable):
             if sym and sym.filename in self._get_all_sources():
                 self._created_symbols[self._get_smart_key(sym)].add(sym_name)
 
-        user_pages = [p for p in tree.walk(index) if not p.generated]
-        user_symbols = self.__get_user_symbols(user_pages)
-
+        user_symbols = self.__get_user_symbols(tree, index)
         for source_file, symbols in list(self._created_symbols.items()):
             gen_symbols = symbols - user_symbols
             if not gen_symbols:
@@ -505,42 +506,56 @@ class Extension(Configurable):
         placeholder = '%s-index' % self.argument_prefix
         return tree.get_pages().get(placeholder)
 
-    def __add_subpage(self, tree, index, source_file, symbols):
+    def __get_comment_for_page(self, source_file, page_name):
+        source_abs = os.path.abspath(source_file)
+        if os.path.exists(source_abs):
+            return self.app.database.get_comment(source_abs)
+        return self.app.database.get_comment(page_name)
+
+    def __get_page(self, tree, source_file):
         page_name = self.__get_rel_source_path(source_file)
         for path in OrderedSet([self.__package_root]) | self.source_roots:
             possible_name = os.path.relpath(source_file, path)
             page = tree.get_pages().get(possible_name)
             if page:
-                page_name = possible_name
-                break
+                return page, page_name
 
-        needs_comment = False
+        return page, page_name
+
+    def __add_subpage(self, tree, index, source_file, symbols):
+        page, page_name = self.__get_page(tree, source_file)
+
         if not page:
+            comment = self.__get_comment_for_page(source_file, page_name)
             page = Page(page_name, None, os.path.dirname(page_name),
                         tree.project.sanitized_name)
+            page.set_comment(comment)
             page.extension_name = self.extension_name
             page.generated = True
             tree.add_page(index, page_name, page)
-            needs_comment = True
         else:
             if not source_file.endswith(('.markdown', '.md')) and not \
                     page.comment:
-                needs_comment = True
+                page.set_comment(self.__get_comment_for_page(source_file, page_name))
             page.is_stale = True
-
-        if needs_comment:
-            source_abs = os.path.abspath(source_file)
-            if os.path.exists(source_abs):
-                page.comment = self.app.database.get_comment(source_abs)
-            else:
-                page.comment = self.app.database.get_comment(page_name)
 
         page.symbol_names |= symbols
 
-    def __get_user_symbols(self, pages):
+    def __get_user_symbols(self, tree, index):
         symbols = set()
-        for page in pages:
-            symbols |= page.symbol_names
+        for page in tree.walk(index):
+            symbols |= page.listed_symbols
+
+        for source_file, _ in list(self._created_symbols.items()):
+            if source_file.endswith(('.markdown', '.md')):
+                continue
+
+            _, page_name = self.__get_page(tree, source_file)
+            comment = self.__get_comment_for_page(source_file, page_name)
+            if not comment:
+                continue
+            symbols |= comment.meta.get("symbols", OrderedSet())
+
         return symbols
 
     def __get_rel_source_path(self, source_file):

@@ -588,7 +588,7 @@ class GIExtension(Extension):
             if (param_comment):
                 self.app.database.add_comment(
                     Comment(name=unique_name,
-                            description=param_comment.description,
+                            meta={'description': param_comment.description},
                             annotations=param_comment.annotations))
 
         parameters, retval = self.__create_parameters_and_retval(node)

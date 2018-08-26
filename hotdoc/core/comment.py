@@ -25,7 +25,7 @@ from collections import defaultdict
 
 
 # pylint: disable=too-few-public-methods
-class TagValidator(object):
+class TagValidator:
     """
     Tag validators may be created by extensions that wish
     to add custom tags. (Returns, Since, etc...)
@@ -41,7 +41,7 @@ class TagValidator(object):
         raise NotImplementedError
 
 
-class Comment(object):
+class Comment:
     """
     Represents a piece of markup text, optionally tied to a particular symbol.
     Code-parsing extensions should add instances of this class to
@@ -56,21 +56,19 @@ class Comment(object):
         lineno (int): Line number where this comment starts.
         endlineno (int): Line number where this comment ends.
         annotations (dict): FIXME
-        description (str): Markup text of the comment.
-        short_description (Comment): Another comment containing a short
-            description of the symbol that can be used in indices, etc.
         tags (dict): FIXME
         raw_comment (str): The text of the comment as it appears in the source
             file.
         topics (dict): FIXME
+        meta (dict): Metadata
     """
     # This constructor is convenient
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-arguments
     def __init__(self, name=u'', title=None, params=None, filename=u'',
                  lineno=-1, endlineno=-1, annotations=None,
-                 description=u'', short_description=None, tags=None,
-                 raw_comment=u'', topics=None):
+                 tags=None, raw_comment=u'', topics=None, meta=None,
+                 description=None, short_description=None):
         self.name = name
         self.title = title
         self.params = params or {}
@@ -85,10 +83,19 @@ class Comment(object):
         self.col_offset = 0
         self.initial_col_offset = 0
         self.annotations = annotations or {}
-        self.description = str(description)
-        self.short_description = short_description
+
+        meta = meta or {}
+        self.description = description or meta.get('description', '')
+        if short_description:
+            self.short_description = short_description
+        elif meta.get('short_description'):
+            self.short_description = Comment(name='short_description',
+                                             description=meta.get('short_description'))
+        else:
+            self.short_description = ''
         self.extension_attrs = defaultdict(lambda: defaultdict(dict))
         self.tags = tags or {}
+        self.meta = meta or {}
         self.raw_comment = raw_comment
 
     def __getstate__(self):
@@ -103,7 +110,7 @@ class Comment(object):
         self.extension_attrs = defaultdict(lambda: defaultdict(dict))
 
 
-class Annotation(object):
+class Annotation:
     """
     An annotation is extra information that may or may not be displayed
     to the end-user, depending on the context.
@@ -115,7 +122,7 @@ class Annotation(object):
         self.argument = argument
 
 
-class Tag(object):
+class Tag:
     """
     A tag is extra information that shall always be displayed
     to the end-user, independent of the context.
@@ -137,6 +144,6 @@ def comment_from_tag(tag):
     if not tag:
         return None
     comment = Comment(name=tag.name,
-                      description=tag.description,
+                      meta={'description': tag.description},
                       annotations=tag.annotations)
     return comment

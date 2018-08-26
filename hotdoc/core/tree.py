@@ -87,15 +87,22 @@ Logger.register_warning_code('invalid-page-metadata', InvalidPageMetadata,
 Logger.register_warning_code('markdown-bad-link', HotdocSourceException)
 
 
+PageResolutionResult = namedtuple('PageResolutionResult',
+                                  ['found', 'source', 'generation_source',
+                                   'extension_name'])
+
+
 # pylint: disable=too-many-instance-attributes
 class Page:
     "Banana banana"
     meta_schema = {Optional('title'): And(str, len),
                    Optional('symbols'): Schema([And(str, len)]),
                    Optional('short-description'): And(str, len),
+                   Optional('description'): And(str, len),
                    Optional('render-subpages'): bool,
                    Optional('auto-sort'): bool,
                    Optional('full-width'): bool,
+                   Optional('see-also'): And(str, len),
                    Optional('extra'): Schema({str: object}),
                    Optional('thumbnail'): And(str, len)}
 
@@ -130,27 +137,35 @@ class Page:
         self.cached_paths = OrderedSet()
 
         meta = meta or {}
+        self.listed_symbols = []
+        self.symbol_names = []
+        self.short_description = None
+        self.render_subpages = True
+        self.title = ''
+        self.meta = Schema(Page.meta_schema).validate({})
+        self.__update_meta(meta)
+        self.__discover_title(meta)
+        self.link = Link(pagename, self.title or name, ref)
 
-        try:
-            self.meta = Schema(Page.meta_schema).validate(meta)
-        except SchemaError as _:
-            warn('invalid-page-metadata',
-                 '%s: Invalid metadata: \n%s, discarding all metadata' %
-                 (self.source_file, str(_)))
-            self.meta = meta
-            print (meta)
+    def __update_meta(self, meta):
+        for key, value in meta.items():
+            try:
+                self.meta.update(Schema(Page.meta_schema).validate({
+                    key.replace('_', '-').lower(): value}))
+            except SchemaError as _:
+                warn('invalid-page-metadata',
+                     '%s: Invalid metadata: \n%s, discarding metadata' %
+                     (self.source_file, str(_)))
 
         if not self.meta.get('extra'):
             self.meta['extra'] = defaultdict()
 
+        self.title = meta.get('title', self.title)
         self.thumbnail = meta.get('thumbnail')
-        self.symbol_names = OrderedSet(meta.get('symbols') or [])
-        self.short_description = meta.get('short-description')
-        self.render_subpages = meta.get('render-subpages', True)
-
-        self.title = None
-        self.__discover_title(meta)
-        self.link = Link(pagename, self.title or name, ref)
+        self.listed_symbols = OrderedSet(meta.get('symbols') or self.symbol_names)
+        self.symbol_names = OrderedSet(meta.get('symbols') or self.symbol_names)
+        self.short_description = meta.get('short-description', self.short_description)
+        self.render_subpages = meta.get('render-subpages', self.render_subpages)
 
     def __getstate__(self):
         return {'ast': None,
@@ -172,11 +187,15 @@ class Page:
                 'typed_symbols': {},
                 'by_parent_symbols': {},
                 'subpages': self.subpages,
+                'listed_symbols': self.listed_symbols,
                 'symbol_names': self.symbol_names,
                 'project_name': self.project_name,
                 'pre_sorted': self.pre_sorted,
                 'cached_paths': self.cached_paths,
                 'render_subpages': self.render_subpages}
+
+    def __repr__(self):
+        return "<Page %s>" % self.source_file
 
     @staticmethod
     def __get_empty_typed_symbols():
@@ -189,6 +208,15 @@ class Page:
                 subclass.get_plural_name(), [])
 
         return empty_typed_symbols
+
+    def set_comment(self, comment):
+        """
+        Sets @comment as main comment for @self.
+        """
+        if comment:
+            self.__update_meta(comment.meta)
+
+        self.comment = comment
 
     def resolve_symbols(self, tree, database, link_resolver):
         """
@@ -208,6 +236,8 @@ class Page:
         else:
             page_path = self.project_name + '/' + self.link.ref
 
+        if self.meta.get("auto-sort", True):
+            all_syms = sorted(all_syms, key=lambda x: x.unique_name)
         for sym in all_syms:
             sym.update_children_comments()
             self.__resolve_symbol(sym, link_resolver, page_path)
@@ -433,7 +463,7 @@ class Tree:
         for i, fname in enumerate(sitemap.get_all_sources().keys()):
             resolved = self.resolve_placeholder_signal(
                 self, fname, self.project.include_paths)
-            if resolved is None:
+            if not resolved:
                 source_file = find_file(fname, self.project.include_paths)
                 source_files.append(source_file)
                 if source_file is None:
@@ -445,18 +475,21 @@ class Tree:
                         column=0)
                 source_map[source_file] = fname
             else:
-                resolved, ext_name = resolved
-                if ext_name:
-                    self.__placeholders[fname] = ext_name
-                if resolved is not True:
-                    source_files.append(resolved)
-                    source_map[resolved] = fname
+                if resolved.extension_name:
+                    self.__placeholders[fname] = resolved.extension_name
+                if resolved.source:
+                    source_files.append(resolved.source)
+                    source_map[resolved.source] = fname
                 else:
                     if fname not in self.__all_pages:
-                        page = Page(fname, None, '',
+                        source_name = fname
+                        if resolved.generation_source:
+                            source_name = resolved.generation_source
+                        page = Page(source_name, None, '',
                                     self.project.sanitized_name)
                         page.generated = True
                         self.__all_pages[fname] = page
+                        self.__all_pages[source_name] = page
                         placeholders.append(fname)
 
         stale, unlisted = change_tracker.get_stale_files(
