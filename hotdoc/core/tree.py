@@ -134,9 +134,9 @@ class Page(object):
             self.meta = Schema(Page.meta_schema).validate(meta)
         except SchemaError as _:
             warn('invalid-page-metadata',
-                 '%s: Invalid metadata: \n%s' % (self.source_file,
+                 '%s: Invalid metadata: \n%s, discarding all metadata' % (self.source_file,
                                                  str(_)))
-            self.meta = meta
+            self.meta = {}
 
         if not self.meta.get('extra'):
             self.meta['extra'] = defaultdict()
