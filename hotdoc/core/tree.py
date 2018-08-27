@@ -25,7 +25,7 @@ import io
 import re
 import os
 from urllib.parse import urlparse
-import pickle as pickle
+import pickle
 from collections import namedtuple, defaultdict, OrderedDict
 
 # pylint: disable=import-error
@@ -88,7 +88,7 @@ Logger.register_warning_code('markdown-bad-link', HotdocSourceException)
 
 
 # pylint: disable=too-many-instance-attributes
-class Page(object):
+class Page:
     "Banana banana"
     meta_schema = {Optional('title'): And(str, len),
                    Optional('symbols'): Schema([And(str, len)]),
@@ -363,7 +363,7 @@ class Page(object):
 
 
 # pylint: disable=too-many-instance-attributes
-class Tree(object):
+class Tree:
     "Banana banana"
 
     def __init__(self, project, app):
