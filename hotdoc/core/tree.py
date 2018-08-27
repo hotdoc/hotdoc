@@ -96,7 +96,8 @@ class Page:
                    Optional('render-subpages'): bool,
                    Optional('auto-sort'): bool,
                    Optional('full-width'): bool,
-                   Optional('extra'): Schema({str: object})}
+                   Optional('extra'): Schema({str: object}),
+                   Optional('thumbnail'): And(str, len)}
 
     # pylint: disable=too-many-arguments
     def __init__(self, source_file, ast, output_path, project_name, meta=None,
@@ -134,13 +135,14 @@ class Page:
             self.meta = Schema(Page.meta_schema).validate(meta)
         except SchemaError as _:
             warn('invalid-page-metadata',
-                 '%s: Invalid metadata: \n%s, discarding all metadata' % (self.source_file,
-                                                 str(_)))
+                 '%s: Invalid metadata: \n%s, discarding all metadata' %
+                 (self.source_file, str(_)))
             self.meta = {}
 
         if not self.meta.get('extra'):
             self.meta['extra'] = defaultdict()
 
+        self.thumbnail = meta.get('thumbnail')
         self.symbol_names = OrderedSet(meta.get('symbols') or [])
         self.short_description = meta.get('short-description')
         self.render_subpages = meta.get('render-subpages', True)
