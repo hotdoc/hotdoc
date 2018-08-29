@@ -39,7 +39,6 @@ class Symbol:
     def __init__(self):
         self.extension_contents = {}
         self.extension_attributes = {}
-        self.skip = False
 
         self.extra = {}
         self.comment = None
