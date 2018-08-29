@@ -193,6 +193,11 @@ class GIExtension(Extension):
         aliases = kwargs.get('aliases', [])
 
         unique_name = kwargs.get('unique_name', kwargs.get('display_name'))
+        comment = self.app.database.get_comment(unique_name)
+        if comment:
+            if 'attributes' in comment.annotations:
+                if comment.annotations['attributes'].argument.get('doc.skip') is not None:
+                    return None
 
         if self.smart_index:
             name = kwargs['display_name']
@@ -465,7 +470,8 @@ class GIExtension(Extension):
             return_value=retval, display_name=name,
             filename=filename, parent_name=parent_name)
 
-        self.__sort_parameters(sym, retval, parameters)
+        if sym:
+            self.__sort_parameters(sym, retval, parameters)
 
         return sym
 
@@ -761,6 +767,8 @@ class GIExtension(Extension):
                                          filename=self.__get_symbol_filename(
                                              name),
                                          parent_name=parent_name)
+        if not func:
+            return None
 
         self.__sort_parameters(func, func.return_value, func.parameters)
         return func
@@ -782,10 +790,6 @@ class GIExtension(Extension):
 
         if 'moved-to' in node.attrib:
             return False
-
-        for attr in node.findall(core_ns('attribute')):
-            if attr.attrib['name'] == 'doc.skip':
-                return False
 
         if node.tag == core_ns('class'):
             self.__create_structure(GIClassSymbol, node, gi_name)
