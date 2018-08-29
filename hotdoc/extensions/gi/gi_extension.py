@@ -235,12 +235,24 @@ class GIExtension(Extension):
             # Working with a Class Structure, not adding it anywhere
             return None
 
-        return symbol.extra.get('implementation_filename',
-                                super()._get_smart_key(symbol))
+        key = symbol.extra.get('implementation_filename')
+        if key:
+            return key
+
+        if symbol.filename != self.__default_page and \
+                symbol.filename not in self._get_all_sources():
+            if symbol.filename.endswith('.h'):
+                cfilename = symbol.filename.replace('.h', '.c')
+                if cfilename in self._get_all_sources():
+                    return cfilename
+
+        return super()._get_smart_key(symbol)
 
     def _get_all_sources(self):
         if not self.__all_sources:
-            self.__all_sources = list({s.replace('.c', '.h') for s in self.c_sources})
+            self.__all_sources = list({
+                s for s in self.c_sources if s.endswith('.h') or
+                s.replace('.c', '.h') not in self.c_sources})
 
         return self.__all_sources
 
