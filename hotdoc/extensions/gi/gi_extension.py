@@ -98,6 +98,7 @@ class GIExtension(Extension):
 
         self.languages = None
 
+        self.__all_sources = None
         self.__current_output_filename = None
         self.__class_gtype_structs = {}
         self.__default_page = DEFAULT_PAGE
@@ -233,7 +234,10 @@ class GIExtension(Extension):
                                 super()._get_smart_key(symbol))
 
     def _get_all_sources(self):
-        return [s for s in self.c_sources if s.endswith('.h')]
+        if not self.__all_sources:
+            self.__all_sources = list({s.replace('.c', '.h') for s in self.c_sources})
+
+        return self.__all_sources
 
     # Exposed API for dependent extensions
 
