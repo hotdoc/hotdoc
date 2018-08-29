@@ -27,8 +27,12 @@ from hotdoc.core.symbols import Symbol
 from hotdoc.core.tree import Page, OverridePage, PageResolutionResult
 from hotdoc.core.formatter import Formatter
 from hotdoc.utils.configurable import Configurable
-from hotdoc.utils.loggable import debug, info, warn, error
+from hotdoc.core.exceptions import InvalidOutputException
+from hotdoc.utils.loggable import debug, info, warn, error, Logger
 from hotdoc.utils.utils import OrderedSet, DefaultOrderedDict
+
+
+Logger.register_warning_code('unavailable-symbol-listed', InvalidOutputException, 'extension')
 
 
 # pylint: disable=too-few-public-methods
@@ -554,8 +558,18 @@ class Extension(Configurable):
             comment = self.__get_comment_for_page(source_file, page_name)
             if not comment:
                 continue
-            symbols |= comment.meta.get("symbols", OrderedSet())
 
+            for symname in comment.meta.get("symbols", OrderedSet()):
+                symbol = self.app.database.get_symbol(symname)
+                if not symbol:
+                    self.warn('unavailable-symbol-listed',
+                              "Symbol %s listed on %s but we have no reference to it."
+                              % (symname, page_name))
+                    continue
+                for child in symbol.get_children_symbols():
+                    if isinstance(child, Symbol):
+                        symbols.add(child.unique_name)
+                symbols.add(symname)
         return symbols
 
     def __get_rel_source_path(self, source_file):
