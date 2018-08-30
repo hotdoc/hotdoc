@@ -354,7 +354,8 @@ class GtkDocParser:
         actual_parameters = OrderedDict({})
         for param in parameters:
             if is_section:
-                if param.name in ['symbols', 'auto-sort']:
+                if param.name.lower().replace('_', '-') in [
+                        'symbols', 'private-symbols', 'auto-sort']:
                     meta.update(self.__parse_yaml_comment(param, filename))
                 else:
                     meta[param.name] = param.description
