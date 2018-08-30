@@ -97,6 +97,7 @@ class Page:
     "Banana banana"
     meta_schema = {Optional('title'): And(str, len),
                    Optional('symbols'): Schema([And(str, len)]),
+                   Optional('private-symbols'): Schema([And(str, len)]),
                    Optional('short-description'): And(str, len),
                    Optional('description'): And(str, len),
                    Optional('render-subpages'): bool,
@@ -127,6 +128,7 @@ class Page:
         self.output_attrs = None
         self.subpages = OrderedSet()
         self.symbols = []
+        self.private_symbols = []
         self.typed_symbols = OrderedDict()
         self.by_parent_symbols = OrderedDict()
         self.is_stale = True
@@ -163,6 +165,7 @@ class Page:
         self.title = meta.get('title', self.title)
         self.thumbnail = meta.get('thumbnail')
         self.listed_symbols = OrderedSet(meta.get('symbols') or self.symbol_names)
+        self.private_symbols = OrderedSet(meta.get('private-symbols') or self.private_symbols)
         self.symbol_names = OrderedSet(meta.get('symbols') or self.symbol_names)
         self.short_description = meta.get('short-description', self.short_description)
         self.render_subpages = meta.get('render-subpages', self.render_subpages)
@@ -184,6 +187,7 @@ class Page:
                 'detailed_description': None,
                 'output_attrs': None,
                 'symbols': [],
+                'private_symbols': {},
                 'typed_symbols': {},
                 'by_parent_symbols': {},
                 'subpages': self.subpages,

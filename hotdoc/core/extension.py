@@ -491,9 +491,9 @@ class Extension(Configurable):
             if sym and sym.filename in self._get_all_sources():
                 self._created_symbols[self._get_smart_key(sym)].add(sym_name)
 
-        user_symbols = self.__get_user_symbols(tree, index)
+        user_symbols, private_symbols = self.__get_user_symbols(tree, index)
         for source_file, symbols in list(self._created_symbols.items()):
-            gen_symbols = symbols - user_symbols
+            gen_symbols = symbols - user_symbols - private_symbols
             if not gen_symbols:
                 continue
             self.__add_subpage(tree, index, source_file, gen_symbols)
@@ -547,6 +547,7 @@ class Extension(Configurable):
 
     def __get_user_symbols(self, tree, index):
         symbols = set()
+        private_symbols = set()
         for page in tree.walk(index):
             symbols |= page.listed_symbols
 
@@ -559,6 +560,9 @@ class Extension(Configurable):
             if not comment:
                 continue
 
+            for symname in comment.meta.get("private-symbols", OrderedSet()):
+                private_symbols.add(symname)
+
             for symname in comment.meta.get("symbols", OrderedSet()):
                 symbol = self.app.database.get_symbol(symname)
                 if not symbol:
@@ -570,7 +574,8 @@ class Extension(Configurable):
                     if isinstance(child, Symbol):
                         symbols.add(child.unique_name)
                 symbols.add(symname)
-        return symbols
+
+        return symbols, private_symbols
 
     def __get_rel_source_path(self, source_file):
         return os.path.relpath(source_file, self.__package_root)
