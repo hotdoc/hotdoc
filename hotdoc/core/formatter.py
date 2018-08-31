@@ -1114,5 +1114,10 @@ class Formatter(Configurable):
         except IOError:
             return None
 
-        return etree.XML(template.render({'page': page,
-                                          'subpages': subpages}))
+        ret = etree.XML(template.render({'page': page,
+                                         'subpages': subpages}))
+        assets = ret.xpath('.//*[@src]')
+        for asset in assets:
+            self.__lookup_asset(asset, self.extension.project, page)
+
+        return ret
