@@ -43,11 +43,11 @@ class EditOnGitHubExtension(Extension):
             help="Branch onto which to link for editing",
             default="master")
 
-    def parse_toplevel_config(self, config):
+    def parse_config(self, config):
         super().parse_toplevel_config(config)
 
         self.__repo = config.get('edit_on_github_repository')
-        self.__branch = config.get('edit_on_github_branch')
+        self.__branch = config.get('edit_on_github_branch', 'master')
         self.__repo_root = None
 
     def setup(self):
