@@ -115,10 +115,11 @@ ALL_LICENSES = {
 class LicenseExtension(Extension):
     extension_name = 'license-extension'
     argument_prefix = 'license'
+    connected = False
+    installed_assets = set()
 
     def __init__(self, app, project):
         Extension.__init__(self, app, project)
-        self.__installed_assets = set()
         self.default_license = None
         self.default_code_samples_license = None
         self.default_copyright_holders = []
@@ -185,9 +186,9 @@ class LicenseExtension(Extension):
              'content_designation': designation})
         page.output_attrs['html']['extra_footer_html'].insert(0, formatted)
 
-        self.__installed_assets.add(license_.plain_text_path)
+        LicenseExtension.installed_assets.add(license_.plain_text_path)
         if license_.logo_path:
-            self.__installed_assets.add(license_.logo_path)
+            LicenseExtension.installed_assets.add(license_.logo_path)
 
     def __formatting_page_cb(self, formatter, page):
         # hotdoc doesn't claim a copyright
@@ -215,7 +216,7 @@ class LicenseExtension(Extension):
 
     def __get_extra_files_cb(self, formatter):
         res = []
-        for asset in self.__installed_assets:
+        for asset in LicenseExtension.installed_assets:
             src = asset
             dest = os.path.basename(src)
             res.append((src, dest))
@@ -226,8 +227,11 @@ class LicenseExtension(Extension):
         for ext in self.project.extensions.values():
             ext.formatter.formatting_page_signal.connect(
                 self.__formatting_page_cb)
-            ext.formatter.get_extra_files_signal.connect(
+
+        if not LicenseExtension.connected:
+            Formatter.get_extra_files_signal.connect(
                 self.__get_extra_files_cb)
+            LicenseExtension.connected = True
 
     @staticmethod
     def add_arguments(parser):

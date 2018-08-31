@@ -348,13 +348,16 @@ class Project(Configurable):
             return ext.formatter
         return None
 
-    def __write_extra_assets(self, output):
+    def write_extra_assets(self, output):
         for dest, src in self.extra_assets.items():
             dest = os.path.join(output, 'html', dest)
             destdir = os.path.dirname(dest)
             if not os.path.exists(destdir):
                 os.makedirs(destdir)
             shutil.copyfile(src, dest)
+
+        for proj in self.subprojects.values():
+            proj.write_extra_assets(output)
 
     def write_out(self, output):
         """Banana banana
@@ -363,7 +366,7 @@ class Project(Configurable):
 
         self.tree.write_out(output)
 
-        self.__write_extra_assets(output)
+        self.write_extra_assets(output)
         ext.formatter.copy_assets(os.path.join(output, 'html', 'assets'))
 
         # Just in case the sitemap root isn't named index

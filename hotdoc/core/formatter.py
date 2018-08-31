@@ -144,6 +144,9 @@ class Formatter(Configurable):
     number_headings = False
     engine = None
     ext_engine = None
+    all_scripts = set()
+    all_stylesheets = set()
+    get_extra_files_signal = Signal()
 
     def __init__(self, extension):
         """
@@ -185,8 +188,6 @@ class Formatter(Configurable):
                           ConstantSymbol, ExportedVariableSymbol, AliasSymbol,
                           CallbackSymbol]
 
-        self.all_scripts = set()
-        self.all_stylesheets = set()
         self._docstring_formatter = self._make_docstring_formatter()
         self._current_page = None
         self.extra_assets = None
@@ -194,7 +195,6 @@ class Formatter(Configurable):
         self.number_headings = False
         self.writing_page_signal = Signal()
         self.formatting_page_signal = Signal()
-        self.get_extra_files_signal = Signal()
         self.formatting_symbol_signal = Signal()
         self._order_by_parent = False
 
@@ -271,7 +271,7 @@ class Formatter(Configurable):
 
         extra_files = self._get_extra_files()
 
-        for ex_files in self.get_extra_files_signal(self):
+        for ex_files in Formatter.get_extra_files_signal(self):
             extra_files.extend(ex_files)
 
         for src, dest in extra_files:
@@ -723,8 +723,8 @@ class Formatter(Configurable):
         stylesheets_basenames = [os.path.basename(stylesheet)
                                  for stylesheet in stylesheets]
 
-        self.all_stylesheets.update(stylesheets)
-        self.all_scripts.update(scripts)
+        Formatter.all_stylesheets.update(stylesheets)
+        Formatter.all_scripts.update(scripts)
 
         out = template.render(
             {'page': page,
@@ -964,16 +964,16 @@ class Formatter(Configurable):
     def _get_extra_files(self):
         res = []
 
-        if self.theme_path:
-            res.extend(self.__get_theme_files(self.theme_path))
-        if self.extra_theme_path:
-            res.extend(self.__get_theme_files(self.extra_theme_path))
+        if Formatter.theme_path:
+            res.extend(self.__get_theme_files(Formatter.theme_path))
+        if Formatter.extra_theme_path:
+            res.extend(self.__get_theme_files(Formatter.extra_theme_path))
 
-        for script_path in self.all_scripts:
+        for script_path in Formatter.all_scripts:
             dest = os.path.join('js', os.path.basename(script_path))
             res.append((script_path, dest))
 
-        for stylesheet_path in self.all_stylesheets:
+        for stylesheet_path in Formatter.all_stylesheets:
             dest = os.path.join('css', os.path.basename(stylesheet_path))
             res.append((stylesheet_path, dest))
 

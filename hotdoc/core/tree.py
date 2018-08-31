@@ -137,7 +137,8 @@ class Page:
             warn('invalid-page-metadata',
                  '%s: Invalid metadata: \n%s, discarding all metadata' %
                  (self.source_file, str(_)))
-            self.meta = {}
+            self.meta = meta
+            print (meta)
 
         if not self.meta.get('extra'):
             self.meta['extra'] = defaultdict()
