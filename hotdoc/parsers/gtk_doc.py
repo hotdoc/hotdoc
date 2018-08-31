@@ -92,10 +92,11 @@ class GtkDocParser:
 
             if not os.path.exists(section_name):
                 fname, ext = os.path.splitext(source_filename)
-                if self.__section_file_matching and os.path.exists(
-                        source_filename) and ((ext == ".c" and os.path.exists(
-                            fname + '.h')) or ext == '.h'):
-                    section_name = source_filename[:-2] + '.h'
+                if self.__section_file_matching and os.path.exists(source_filename):
+                    if ext == ".c" and os.path.exists(fname + '.h'):
+                        section_name = source_filename[:-2] + '.h'
+                    else:
+                        section_name = source_filename
                 else:
                     section_name = rel_filename
 

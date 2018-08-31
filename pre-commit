@@ -5,6 +5,7 @@ RCFILE=$TOPLEVEL/docs/pylint.rc
 IGNORED_FILES="
 hotdoc/extensions/gi/gi_extension.py
 hotdoc/extensions/c/utils.py
+hotdoc/extensions/gi/transition_scripts/hotdoc_gtk_doc_porter
 "
 
 IGNORE_ARGS=""

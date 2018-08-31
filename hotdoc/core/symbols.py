@@ -39,6 +39,7 @@ class Symbol:
     def __init__(self):
         self.extension_contents = {}
         self.extension_attributes = {}
+        self.skip = False
 
         self.extra = {}
         self.comment = None
@@ -49,7 +50,6 @@ class Symbol:
         self.extent_start = -1
         self.extent_end = -1
         self.link = None
-        self.skip = False
         self.project_name = None
         self.parent_name = None
 
