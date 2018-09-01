@@ -21,6 +21,7 @@ Toolbox
 """
 
 import collections
+# pylint: disable=no-name-in-module
 from collections import OrderedDict, Callable
 import os
 import shutil
@@ -99,6 +100,21 @@ def all_subclasses(cls):
                                    for g in all_subclasses(s)]
 
 
+def flatten_list(list_):
+    """
+    Banana banana
+    """
+    res = []
+
+    for elem in list_:
+        if isinstance(elem, list):
+            res.extend(flatten_list(elem))
+        else:
+            res.append(elem)
+
+    return res
+
+
 def get_mtime(filename):
     """
     Banana banana
@@ -139,6 +155,7 @@ def __get_extra_extension_classes(paths):
 
 
 # pylint: disable=too-many-locals
+# pylint: disable=too-many-branches
 def get_extension_classes(sort, extra_extension_paths=None):
     """
     Banana banana
@@ -214,6 +231,9 @@ class OrderedSet(collections.MutableSet):
 
     # pylint: disable=arguments-differ
     def add(self, key):
+        """
+        Banana banana
+        """
         if key not in self.map:
             end = self.end
             curr = end[1]
@@ -239,6 +259,9 @@ class OrderedSet(collections.MutableSet):
 
     # pylint: disable=arguments-differ
     def discard(self, key):
+        """
+        Banana banana
+        """
         if key in self.map:
             key, prev, nxt = self.map.pop(key)
             prev[2] = nxt
@@ -260,6 +283,9 @@ class OrderedSet(collections.MutableSet):
 
     # pylint: disable=arguments-differ
     def pop(self, last=True):
+        """
+        Banana banana
+        """
         if not self:
             raise KeyError('set is empty')
         key = self.end[1][0] if last else self.end[2][0]
