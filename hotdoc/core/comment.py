@@ -70,7 +70,6 @@ class Comment:
                  tags=None, raw_comment=u'', topics=None, meta=None,
                  description=None, short_description=None):
         self.name = name
-        self.title = title
         self.params = params or {}
         self.topics = topics or {}
         if filename:
@@ -84,8 +83,16 @@ class Comment:
         self.initial_col_offset = 0
         self.annotations = annotations or {}
 
-        meta = meta or {}
+        meta = self.__cleanup_meta(meta)
         self.description = description or meta.get('description', '')
+        if title:
+            self.title = title
+        elif meta.get('title'):
+            self.title = Comment(name='title',
+                                 description=meta.get('title'))
+        else:
+            self.title = None
+
         if short_description:
             self.short_description = short_description
         elif meta.get('short_description'):
@@ -93,10 +100,18 @@ class Comment:
                                              description=meta.get('short_description'))
         else:
             self.short_description = ''
+
         self.extension_attrs = defaultdict(lambda: defaultdict(dict))
         self.tags = tags or {}
         self.meta = meta or {}
         self.raw_comment = raw_comment
+
+    @staticmethod
+    def __cleanup_meta(meta):
+        cleaned_meta = {}
+        for key, value in (meta or {}).items():
+            cleaned_meta[key.replace('_', '-').lower()] = value
+        return cleaned_meta
 
     def __getstate__(self):
         # Return a copy
