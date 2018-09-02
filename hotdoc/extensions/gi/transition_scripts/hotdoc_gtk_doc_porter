@@ -188,7 +188,7 @@ class DocRepoMonitor(object):
             if not bname.startswith('gen-'):
                 continue
 
-            if bname == 'gen-gi-extension-index.markdown':
+            if bname == 'gen-gi-extension-index.md':
                 continue
 
             bname = bname[4:]
@@ -490,12 +490,12 @@ class DTDResolver(etree.Resolver):
         return etree.Resolver.resolve(self, url, id, context)
 
 def get_free_md_path(md_paths, name):
-    path = os.path.join (MD_OUTPUT_PATH, name + ".markdown")
+    path = os.path.join (MD_OUTPUT_PATH, name + ".md")
 
     n = 0
     while path in md_paths:
         n += 1
-        path = os.path.join (MD_OUTPUT_PATH, name + '_' * n + ".markdown")
+        path = os.path.join (MD_OUTPUT_PATH, name + '_' * n + ".md")
 
     md_paths[name] = path
 
@@ -543,7 +543,7 @@ def dump_gi_index(page, standalones, md_paths):
             with open(md_path, 'w') as f:
                 f.write(sub_md_content)
 
-    md_path = os.path.join(MD_OUTPUT_PATH, 'gi-index.markdown')
+    md_path = os.path.join(MD_OUTPUT_PATH, 'gi-index.md')
     with open(md_path, 'w') as f:
         f.write (md_content)
 
@@ -571,7 +571,7 @@ def collect_xrefs(app, filename, root):
         else:
             title = "".join([x for x in title.itertext()]).strip()
 
-        ref = stripped_basename(filename) + '.markdown'
+        ref = stripped_basename(filename) + '.md'
         if node != root:
             ref += '#' + title.lower().replace(' ', '-')
         link = Link(ref, title, id_)
@@ -716,7 +716,7 @@ def translate(docstring):
 def write_symbols(monitor, section):
     not_found = 0
     found = 0
-    opath = os.path.join(MD_OUTPUT_PATH, section.ofile + '.markdown')
+    opath = os.path.join(MD_OUTPUT_PATH, section.ofile + '.md')
     contents = ''
 
     with io.open(opath, 'w', encoding='utf-8') as f:
@@ -759,7 +759,7 @@ def translate_sections(monitor, sections):
     for sname, section in list(sections.items()):
         not_found += write_symbols(monitor, section)
         n_symbols += len(section.symbols)
-        gi_subpages.append(section.ofile + '.markdown')
+        gi_subpages.append(section.ofile + '.md')
 
     if not_found:
         warn('section-symbol-not-found',
@@ -800,7 +800,7 @@ def sections_from_naive_pages(monitor):
         section = Section(None)
         relpath = os.path.relpath(nname,
             monitor.doc_repo.get_generated_doc_folder())
-        if relpath == 'gen-gi-extension-index.markdown':
+        if relpath == 'gen-gi-extension-index.md':
             continue
         dname = os.path.dirname(relpath)
         fname = os.path.basename(relpath)[4:]
@@ -943,8 +943,8 @@ if __name__=='__main__':
                                 f.write('%s\n\n' % translate(section_comment.description))
 
         resolver = DTDResolver(args.extra_dtd_paths)
-        md_paths = {'gi-index': os.path.join(MD_OUTPUT_PATH, 'gi-index.markdown')}
-        md_paths['index'] = os.path.join(MD_OUTPUT_PATH, 'index.markdown')
+        md_paths = {'gi-index': os.path.join(MD_OUTPUT_PATH, 'gi-index.md')}
+        md_paths['index'] = os.path.join(MD_OUTPUT_PATH, 'index.md')
 
         files_to_render = {}
         sitemap_root = {}
@@ -966,7 +966,7 @@ if __name__=='__main__':
                 list(monitor.section_comments.values()))
 
         extra_conf = {
-            'gi_index': 'gi-index.markdown',
+            'gi_index': 'gi-index.md',
             'languages': ['c', 'python', 'javascript'],
             'output': 'built_doc',
             'gtk_doc_escape_html': True,
