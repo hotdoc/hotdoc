@@ -21,6 +21,7 @@ Utilities and baseclasses for extensions
 """
 import os
 from collections import OrderedDict
+from collections import defaultdict
 
 from hotdoc.core.inclusions import find_file
 from hotdoc.core.symbols import Symbol
@@ -492,10 +493,11 @@ class Extension(Configurable):
                 self._created_symbols[self._get_smart_key(sym)].add(sym_name)
 
         user_symbols, private_symbols = self.__get_user_symbols(tree, index)
-        for source_file, symbols in list(self._created_symbols.items()):
+        for source_file, symbols in self._created_symbols.items():
             gen_symbols = symbols - user_symbols - private_symbols
             if not gen_symbols:
                 continue
+
             self.__add_subpage(tree, index, source_file, gen_symbols)
             tree.stale_symbol_pages(symbols)
 
@@ -545,35 +547,67 @@ class Extension(Configurable):
 
         page.symbol_names |= symbols
 
-    def __get_user_symbols(self, tree, index):
-        symbols = set()
-        private_symbols = set()
-        for page in tree.walk(index):
-            symbols |= page.listed_symbols
+    def __list_symbols_in_comment(self, comment, parented_symbols, source_file, page_name):
+        located_parented_symbols = []
+        symbols = {}
 
-        for source_file, _ in list(self._created_symbols.items()):
+        for symname in comment.meta.get("symbols", OrderedSet()):
+            symbol = self.app.database.get_symbol(symname)
+            if not symbol:
+                self.warn('unavailable-symbol-listed',
+                          "Symbol %s listed on %s but we have no reference to it."
+                          % (symname, page_name))
+                continue
+            symbols[symname] = source_file
+            for child in symbol.get_children_symbols():
+                if isinstance(child, Symbol):
+                    symbols[child.unique_name] = source_file
+            for related_symbol in parented_symbols[symname]:
+                symbols[related_symbol] = source_file
+                located_parented_symbols.append(related_symbol)
+
+        return symbols, located_parented_symbols
+
+    def __get_listed_symbols_in_markdown(self, tree, index):
+        symbols = {}
+        for page in tree.walk(index):
+            for sym in page.listed_symbols:
+                symbols[sym] = page.source_file
+
+        return symbols
+
+    def __get_user_symbols(self, tree, index):
+        symbols = self.__get_listed_symbols_in_markdown(tree, index)
+        private_symbols = {}
+        parented_symbols = defaultdict(list)
+
+        for source_file, symbols_names in list(self._created_symbols.items()):
             if source_file.endswith(('.markdown', '.md')):
                 continue
 
-            _, page_name = self.__get_page(tree, source_file)
+            for symname in symbols_names:
+                symbol = self.app.database.get_symbol(symname)
+                if not symbol.parent_name:
+                    continue
+
+                if symbol.parent_name in symbols:
+                    symbols[symbol.unique_name] = symbols[symbol.parent_name]
+                else:
+                    parented_symbols[symbol.parent_name].append(symname)
+
+            page_name = self.__get_page(tree, source_file)[1]
             comment = self.__get_comment_for_page(source_file, page_name)
             if not comment:
                 continue
 
             for symname in comment.meta.get("private-symbols", OrderedSet()):
-                private_symbols.add(symname)
+                private_symbols[symname] = source_file
 
-            for symname in comment.meta.get("symbols", OrderedSet()):
-                symbol = self.app.database.get_symbol(symname)
-                if not symbol:
-                    self.warn('unavailable-symbol-listed',
-                              "Symbol %s listed on %s but we have no reference to it."
-                              % (symname, page_name))
-                    continue
-                for child in symbol.get_children_symbols():
-                    if isinstance(child, Symbol):
-                        symbols.add(child.unique_name)
-                symbols.add(symname)
+            comment_syms, located_parented_symbols = self.__list_symbols_in_comment(
+                comment, parented_symbols, source_file, page_name)
+            if comment_syms:
+                comment.meta['symbols'].extend(located_parented_symbols)
+                symbols.update(comment_syms)
 
         return symbols, private_symbols
 
