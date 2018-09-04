@@ -26,4 +26,14 @@ class GIClassSymbol(ClassSymbol):
     def get_children_symbols(self):
         return [self.class_struct_symbol] + super().get_children_symbols()
 
+
+class GIStructSymbol(ClassSymbol):
+    """Boxed types are pretty much handled like classes with a possible
+       constructors, methods, etc... we render them as such.
+    """
+    def __init__(self, **kwargs):
+        self.class_struct_symbol = None
+        ClassSymbol.__init__(self, **kwargs)
+
+
 TYPE_MAP[GIClassSymbol] = 'class'

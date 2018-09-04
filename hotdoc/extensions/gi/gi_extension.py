@@ -50,7 +50,7 @@ from hotdoc.extensions.gi.node_cache import (
     get_klass_children, cache_nodes, type_description_from_node,
     is_introspectable)
 from hotdoc.extensions.gi.gtkdoc_links import GTKDOC_HREFS
-from hotdoc.extensions.gi.symbols import GIClassSymbol
+from hotdoc.extensions.gi.symbols import GIClassSymbol, GIStructSymbol
 
 
 DESCRIPTION =\
@@ -678,7 +678,7 @@ class GIExtension(Extension):
             class_struct = node.attrib.get(glib_ns('type-struct'))
             if class_struct:
                 self.__class_gtype_structs[class_struct] = res
-        elif symbol_type == StructSymbol:
+        elif symbol_type == GIStructSymbol:
             # If we are working with a Class structure,
             class_symbol = self.__class_gtype_structs.get(node.attrib['name'])
             if class_symbol:
@@ -735,12 +735,13 @@ class GIExtension(Extension):
             parent_name=struct_name)
 
         if not parent_name:
-            return self.get_or_create_symbol(StructSymbol, node,
+            return self.get_or_create_symbol(GIStructSymbol, node,
                                              display_name=struct_name,
                                              unique_name=struct_name,
                                              anonymous=False,
                                              filename=filename,
-                                             members=members)
+                                             members=members,
+                                             parent_name=struct_name)
         else:
             res = StructSymbol()
             res.display_name = struct_name
@@ -753,6 +754,7 @@ class GIExtension(Extension):
         return self.get_or_create_symbol(InterfaceSymbol, node,
                                          display_name=unique_name,
                                          unique_name=unique_name,
+                                         parent_name=unique_name,
                                          filename=filename)
 
     def __create_function_symbol(self, node, parent_name):
@@ -769,7 +771,6 @@ class GIExtension(Extension):
             type_ = ConstructorSymbol
         else:
             type_ = FunctionSymbol
-            parent_name = None
         func = self.get_or_create_symbol(type_, node,
                                          parameters=gi_params,
                                          return_value=retval,
@@ -816,7 +817,7 @@ class GIExtension(Extension):
         elif node.tag == core_ns('alias'):
             self.__create_alias_symbol(node, gi_name, parent_name)
         elif node.tag == core_ns('record'):
-            self.__create_structure(StructSymbol, node, gi_name)
+            self.__create_structure(GIStructSymbol, node, gi_name)
         elif node.tag == core_ns('interface'):
             self.__create_structure(InterfaceSymbol, node, gi_name)
         elif node.tag == core_ns('enumeration'):
