@@ -492,10 +492,10 @@ class Extension(Configurable):
             if sym and sym.filename in self._get_all_sources():
                 self._created_symbols[self._get_smart_key(sym)].add(sym_name)
 
-        user_symbols, private_symbols = self.__get_user_symbols(tree, index)
+        user_symbols, user_symbol_pages, private_symbols = self.__get_user_symbols(tree, index)
         for source_file, symbols in self._created_symbols.items():
             gen_symbols = symbols - user_symbols - private_symbols
-            if not gen_symbols:
+            if not gen_symbols and source_file not in user_symbol_pages:
                 continue
 
             self.__add_subpage(tree, index, source_file, gen_symbols)
@@ -578,7 +578,7 @@ class Extension(Configurable):
 
     def __get_user_symbols(self, tree, index):
         symbols = self.__get_listed_symbols_in_markdown(tree, index)
-        private_symbols = {}
+        private_symbols = set()
         parented_symbols = defaultdict(list)
 
         for source_file, symbols_names in list(self._created_symbols.items()):
@@ -601,7 +601,7 @@ class Extension(Configurable):
                 continue
 
             for symname in comment.meta.get("private-symbols", OrderedSet()):
-                private_symbols[symname] = source_file
+                private_symbols.add(symname)
 
             comment_syms, located_parented_symbols = self.__list_symbols_in_comment(
                 comment, parented_symbols, source_file, page_name)
@@ -609,7 +609,7 @@ class Extension(Configurable):
                 comment.meta['symbols'].extend(located_parented_symbols)
                 symbols.update(comment_syms)
 
-        return symbols, private_symbols
+        return set(symbols.keys()), set(symbols.values()), private_symbols
 
     def __get_rel_source_path(self, source_file):
         return os.path.relpath(source_file, self.__package_root)
