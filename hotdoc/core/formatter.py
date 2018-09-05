@@ -870,6 +870,7 @@ class Formatter(Configurable):
     def _format_interface_symbol(self, interface):
         hierarchy = self._format_hierarchy(interface)
         template = self.get_template('interface.html')
+        interface.extension_attributes['is_section_head'] = self._order_by_parent
         return template.render({'symbol': interface,
                                 'hierarchy': hierarchy})
 
