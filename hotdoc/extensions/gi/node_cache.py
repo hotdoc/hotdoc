@@ -206,12 +206,15 @@ def cache_nodes(gir_root, all_girs):
         make_translations (node.attrib[id_key], node)
 
     id_type = c_ns('type')
+    glib_type = glib_ns('type-name')
     class_tag = core_ns('class')
     interface_tag = core_ns('interface')
-    for node in gir_root.xpath(
-            './/*[not(self::core:type) and not (self::core:array)][@c:type]',
+    for node in gir_root.xpath('.//*[not(self::core:type) and not (self::core:array)][@c:type or @glib:type-name]',
             namespaces=NS_MAP):
-        name = node.attrib[id_type]
+        try:
+            name = node.attrib[id_type]
+        except KeyError:
+            name = node.attrib[glib_type]
         make_translations (name, node)
         gi_name = '.'.join(get_gi_name_components(node))
         ALL_GI_TYPES[gi_name] = get_klass_name(node)
