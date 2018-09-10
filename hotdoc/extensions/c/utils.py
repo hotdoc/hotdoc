@@ -12,7 +12,10 @@ RawMacro = namedtuple('RawMacro', ['raw', 'filename'])
 
 def unicode_dammit(data):
     encoding = cchardet.detect(data)['encoding']
-    return data.decode(encoding, errors='replace')
+    try:
+        return data.decode(encoding, errors='replace')
+    except LookupError:
+        return data.decode('utf8', errors='replace')
 
 
 class CCommentExtractor:
