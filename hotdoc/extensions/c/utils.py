@@ -69,9 +69,12 @@ class CCommentExtractor:
         mcontent = mcontent.split(' ', 1)[1]
         split = mcontent.split('(', 1)
         name = split[0]
+
+        if name.strip() in filter_names:
+            return None
+
+        # `#define foo (x) ...` is *not* a function macro
         if not (' ' in name or '\t' in name) and len(split) == 2:
-            if name in filter_names:
-                return None
             args = split[1].split(')', 1)[0].split(',')
             if args:
                 stripped_name = name.strip()
