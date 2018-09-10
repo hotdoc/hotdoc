@@ -540,9 +540,6 @@ class Extension(Configurable):
             page.generated = True
             tree.add_page(index, page_name, page)
         else:
-            if not source_file.endswith(('.markdown', '.md')) and not \
-                    page.comment:
-                page.set_comment(self.__get_comment_for_page(source_file, page_name))
             page.is_stale = True
 
         page.symbol_names |= symbols
@@ -568,16 +565,19 @@ class Extension(Configurable):
 
         return symbols, located_parented_symbols
 
-    def __get_listed_symbols_in_markdown(self, tree, index):
+    def __get_listed_symbols_in_listed_pages(self, tree, index):
         symbols = {}
         for page in tree.walk(index):
+            if not page.source_file.endswith(('.markdown', '.md')) and not page.comment:
+                page_name = self.__get_page(tree, page.source_file)[1]
+                page.set_comment(self.__get_comment_for_page(page.source_file, page_name))
             for sym in page.listed_symbols:
                 symbols[sym] = page.source_file
 
         return symbols
 
     def __get_user_symbols(self, tree, index):
-        symbols = self.__get_listed_symbols_in_markdown(tree, index)
+        symbols = self.__get_listed_symbols_in_listed_pages(tree, index)
         private_symbols = set()
         parented_symbols = defaultdict(list)
 
