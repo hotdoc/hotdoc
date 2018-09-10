@@ -152,6 +152,10 @@ class SitemapParser(object):
         for line in lines:
             try:
                 level, line = dedent(line)
+                if line.startswith('#'):
+                    continue
+                elif line.startswith('\\#'):
+                    line = line[1:]
             except IndentError as exc:
                 error('bad-indent', 'Invalid indentation', filename=filename,
                       lineno=lineno, column=exc.column)
