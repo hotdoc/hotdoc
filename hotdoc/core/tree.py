@@ -481,15 +481,16 @@ class Tree:
             else:
                 if resolved.extension_name:
                     self.__placeholders[fname] = resolved.extension_name
-                if resolved.source:
+                if resolved.source and not resolved.generation_source:
                     source_files.append(resolved.source)
                     source_map[resolved.source] = fname
                 else:
                     if fname not in self.__all_pages:
+                        source_path = resolved.source
                         source_name = fname
                         if resolved.generation_source:
                             source_name = resolved.generation_source
-                        page = Page(source_name, None, '',
+                        page = Page(source_path or source_name, None, '',
                                     self.project.sanitized_name)
                         page.generated = True
                         self.__all_pages[fname] = page

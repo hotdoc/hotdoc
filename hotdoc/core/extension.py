@@ -465,8 +465,9 @@ class Extension(Configurable):
                     if override_path:
                         return PageResolutionResult(True, override_path, None, None)
 
-                    return PageResolutionResult(True, None,
-                                                self.__get_rel_source_path(possible_path), None)
+                    return PageResolutionResult(True, possible_path,
+                                                self.__get_rel_source_path(possible_path),
+                                                None)
 
         return None
 
