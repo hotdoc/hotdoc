@@ -10,5 +10,6 @@
     "syntax_highlighting_activate": true,
     "devhelp_activate": true,
     "default-license": "CC-BY-SAv4.0",
-    "git_upload_repository": "git@github.com:hotdoc/hotdoc.github.io.git"
+    "git_upload_repository": "git@github.com:hotdoc/hotdoc.github.io.git",
+    "edit_on_github_repository": "http://github.com/hotdoc/hotdoc/"
 }
