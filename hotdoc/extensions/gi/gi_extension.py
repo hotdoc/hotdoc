@@ -48,7 +48,7 @@ from hotdoc.extensions.gi.utils import *
 from hotdoc.extensions.gi.node_cache import (
     SMART_FILTERS, make_translations, get_translation, get_klass_parents,
     get_klass_children, cache_nodes, type_description_from_node,
-    is_introspectable)
+    is_introspectable, is_callback_type)
 from hotdoc.extensions.gi.gtkdoc_links import GTKDOC_HREFS
 from hotdoc.extensions.gi.symbols import GIClassSymbol, GIStructSymbol
 
@@ -307,8 +307,11 @@ class GIExtension(Extension):
             if field.attrib.get('private', False):
                 continue
 
-            type_gi_name = None
             if children[0].tag == core_ns('callback'):
+                continue
+
+            type_desc = type_description_from_node(field)
+            if is_callback_type(type_desc.c_name):
                 continue
 
             field_name = field.attrib['name']
@@ -318,7 +321,6 @@ class GIExtension(Extension):
 
             name = "%s.%s" % (parent_name, field_name)
 
-            type_desc = type_description_from_node(field)
             qtype = QualifiedSymbol(type_tokens=type_desc.type_tokens)
             self.add_attrs(qtype, type_desc=type_desc)
 
@@ -493,10 +495,10 @@ class GIExtension(Extension):
         filename = self.__get_symbol_filename(name)
         members = []
         for field in node.findall(core_ns('member')):
+            unique_name = field.attrib[c_ns('identifier')]
             member = self.get_or_create_symbol(
-                EnumMemberSymbol, field, display_name=field.attrib[c_ns(
-                    'identifier')],
-                filename=filename)
+                EnumMemberSymbol, field, display_name=unique_name,
+                filename=filename, parent_name=name)
             member.enum_value = field.attrib['value']
             members.append(member)
 
@@ -796,7 +798,7 @@ class GIExtension(Extension):
         self.__c_comment_extractor.parse_comments(stale_c)
 
     def __create_macro_symbols(self):
-        self.__c_comment_extractor.create_macro_symbols(SMART_FILTERS)
+        self.__c_comment_extractor.create_macro_symbols(SMART_FILTERS, self.c_sources)
 
     def __scan_node(self, node, parent_name=None):
         gi_name = get_gi_name(node)

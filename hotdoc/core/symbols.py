@@ -53,6 +53,11 @@ class Symbol:
         self.project_name = None
         self.parent_name = None
 
+    def __repr__(self):
+        return "%s(unique_name=%s, filename=%s, project=%s)" % (
+            type(self).__name__, self.unique_name, self.filename,
+            self.project_name)
+
     @classmethod
     def get_plural_name(cls):
         """Default implementation of the vmethod

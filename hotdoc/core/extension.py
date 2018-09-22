@@ -414,10 +414,12 @@ class Extension(Configurable):
             kwargs['project_name'] = self.project.project_name
 
         sym = self.app.database.get_or_create_symbol(*args, **kwargs)
-        # pylint: disable=unidiomatic-typecheck
-        smart_key = self._get_smart_key(sym)
-        if sym and type(sym) != Symbol and smart_key:
-            self._created_symbols[smart_key].add(sym.unique_name)
+        if sym:
+            smart_key = self._get_smart_key(sym)
+
+            # pylint: disable=unidiomatic-typecheck
+            if type(sym) != Symbol and smart_key:
+                self._created_symbols[smart_key].add(sym.unique_name)
 
         return sym
 

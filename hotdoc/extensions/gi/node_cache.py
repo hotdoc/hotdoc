@@ -34,6 +34,7 @@ __HIERARCHY_GRAPH = nx.DiGraph()
 
 
 ALL_GI_TYPES = {}
+ALL_CALLBACK_TYPES = set()
 
 
 # Avoid parsing gir files multiple times
@@ -208,6 +209,7 @@ def cache_nodes(gir_root, all_girs):
     id_type = c_ns('type')
     glib_type = glib_ns('type-name')
     class_tag = core_ns('class')
+    callback_tag = core_ns('callback')
     interface_tag = core_ns('interface')
     for node in gir_root.xpath('.//*[not(self::core:type) and not (self::core:array)][@c:type or @glib:type-name]',
             namespaces=NS_MAP):
@@ -222,6 +224,8 @@ def cache_nodes(gir_root, all_girs):
             __update_hierarchies (ns_node.attrib.get('name'), node, gi_name)
             make_translations('%s::%s' % (name, name), node)
             __generate_smart_filters(id_prefixes, sym_prefixes, node)
+        elif node.tag in (callback_tag,):
+            ALL_CALLBACK_TYPES.add(node.attrib[c_ns('type')])
 
     for field in gir_root.xpath('.//self::core:field', namespaces=NS_MAP):
         unique_name = get_field_c_name(field)
@@ -297,6 +301,10 @@ def __type_tokens_from_cdecl(cdecl):
         tokens.append ('*')
 
     return tokens
+
+
+def is_callback_type(c_name):
+    return c_name in ALL_CALLBACK_TYPES
 
 
 def type_description_from_node(gi_node):

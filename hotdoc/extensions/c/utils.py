@@ -58,13 +58,25 @@ class CCommentExtractor:
                     else:
                         skip_next_symbol = False
 
-    def create_macro_symbols(self, filter_names=None):
+    def create_macro_symbols(self, filter_names=None, filenames=None):
+        filenames = filenames or set()
         filter_names = filter_names or {}
         for raw_macro in self.__raw_macros:
             self.__create_macro_from_raw_text(
-                raw_macro.raw, raw_macro.filename, filter_names)
+                raw_macro.raw, raw_macro.filename, filter_names, filenames)
 
-    def __create_macro_from_raw_text(self, raw, filename, filter_names):
+    def __get_comment_filename(self, name, filenames):
+        comment = self.app.database.get_comment(name)
+        if comment and comment.filename:
+            header = '%s.h' % os.path.splitext(comment.filename)[0]
+            if header in filenames:
+                return header
+            elif comment.filename in filenames:
+                return comment.filename
+
+        return ""
+
+    def __create_macro_from_raw_text(self, raw, filename, filter_names, filenames):
         mcontent = raw[0].replace('\t', ' ')
         mcontent = mcontent.split(' ', 1)[1]
         split = mcontent.split('(', 1)
@@ -78,14 +90,14 @@ class CCommentExtractor:
             args = split[1].split(')', 1)[0].split(',')
             if args:
                 stripped_name = name.strip()
+                filename = self.__get_comment_filename(stripped_name, filenames)
                 return self.__create_function_macro_symbol(stripped_name,
                                                            filename, raw[1], raw[0])
 
         name = mcontent.split(' ', 1)[0]
-        comment = self.app.database.get_comment(name)
-        if comment and comment.filename:
-            filename = '%s.h' % os.path.splitext(comment.filename)[0]
         stripped_name = name.strip()
+        filename = self.__get_comment_filename(stripped_name, filenames)
+
         return self.__create_constant_symbol(stripped_name, filename, raw[1], raw[0])
 
     def __create_function_macro_symbol(self, name, filename, lineno, original_text):

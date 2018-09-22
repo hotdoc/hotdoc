@@ -23,12 +23,17 @@ import pickle
 
 # pylint: disable=import-error
 # pylint: disable=import-error
+from hotdoc.core.exceptions import HotdocException
 from hotdoc.core.symbols import Symbol
 from hotdoc.utils.signals import Signal
-from hotdoc.utils.loggable import debug
+from hotdoc.utils.loggable import debug, warn, Logger
 
+
+Logger.register_warning_code('symbol-redefined', HotdocException, 'extension')
 
 # pylint: disable=too-few-public-methods
+
+
 class ProxySymbol(Symbol):
     """A proxy type to handle aliased symbols"""
     __tablename__ = 'proxy_symbols'
@@ -47,6 +52,7 @@ class Database:
     `hotdoc.core.symbol.Symbol.unique_name`) to determine what goes into the
     generated documentation and how it is described.
     """
+
     def __init__(self, private_folder):
         self.comment_added_signal = Signal()
         self.comment_updated_signal = Signal()
@@ -114,7 +120,19 @@ class Database:
 
         filename = kwargs.get('filename')
         if filename:
+            filename = os.path.abspath(filename)
             kwargs['filename'] = os.path.abspath(filename)
+
+        prev_sym = self.__symbols.get(unique_name)
+        if prev_sym:
+            # pylint: disable=unidiomatic-typecheck
+            if (prev_sym.filename and filename and prev_sym.filename != filename) or (
+                    prev_sym.project_name != kwargs.get('project_name')) or (
+                        type(prev_sym) != type_):
+                warn('symbol-redefined', "%s(unique_name=%s, filename=%s, project=%s)"
+                     " has already been defined: %s" % (type_.__name__, unique_name, filename,
+                                                        kwargs.get('project_name'), prev_sym))
+                return None
 
         aliases = kwargs.pop('aliases', [])
         for alias in aliases:
