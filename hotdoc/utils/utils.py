@@ -38,7 +38,7 @@ from toposort import toposort_flatten
 
 from hotdoc.core.exceptions import HotdocSourceException
 from hotdoc.utils.setup_utils import symlink
-from hotdoc.utils.loggable import error
+from hotdoc.utils.loggable import info, debug, error
 
 WIN32 = (sys.platform == 'win32')
 
@@ -144,8 +144,8 @@ def __get_extra_extension_classes(paths):
             classes = activation_function()
         # pylint: disable=broad-except
         except Exception as exc:
-            print("Failed to load %s %s" % (entry_point.module_name, exc))
-            traceback.print_exc()
+            info("Failed to load %s %s" % (entry_point.module_name, exc))
+            debug(traceback.format_exc())
             continue
 
         for klass in classes:
@@ -172,8 +172,8 @@ def get_extension_classes(sort, extra_extension_paths=None):
             classes = activation_function()
         # pylint: disable=broad-except
         except Exception as exc:
-            print("Failed to load %s" % entry_point.module_name, exc)
-            traceback.print_exc()
+            info("Failed to load %s" % entry_point.module_name, exc)
+            debug(traceback.format_exc())
             continue
 
         for klass in classes:
