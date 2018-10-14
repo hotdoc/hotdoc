@@ -493,6 +493,23 @@ class GIExtension(Extension):
         name = node.attrib[c_ns('type')]
 
         filename = self.__get_symbol_filename(name)
+        psymbol = self.app.database.get_symbol(name)
+        is_genum = node.attrib.get(glib_ns('type'), False)
+        if psymbol:
+            if not isinstance(psymbol, EnumSymbol):
+                self.warn('symbol-redefined', "EnumSymbol(unique_name=%s, filename=%s, project=%s)"
+                    " has already been defined: %s" % (name, filename, self.project.project_name, psymbol))
+                return None
+
+            psymbol_is_genum = self.get_attr(psymbol, "is_genum")
+            if psymbol_is_genum is None or psymbol_is_genum == is_genum:
+                self.warn('symbol-redefined', "EnumSymbol(unique_name=%s, filename=%s, project=%s)"
+                     " has already been defined: %s" % (name, filename, self.project.project_name, psymbol))
+                return None
+
+            # FIXME Handle nicks in GEnums
+            return None
+
         members = []
         for field in node.findall(core_ns('member')):
             unique_name = field.attrib[c_ns('identifier')]
@@ -506,6 +523,9 @@ class GIExtension(Extension):
             EnumSymbol, node, members=members,
             anonymous=False, display_name=name,
             filename=filename, raw_text=None)
+
+        if res:
+            self.add_attrs(res, is_genum=is_genum)
 
         for cnode in node:
             self.__scan_node(cnode, parent_name=res.unique_name)
