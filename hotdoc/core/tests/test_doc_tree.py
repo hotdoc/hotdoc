@@ -217,7 +217,7 @@ class TestTree(unittest.TestCase):
             set([u'index.markdown',
                  u'section.markdown']))
 
-        self.tree.persist()
+        self._simulate_new_run()
 
         self.incremental = True
         self.tree = Tree(self, self)
@@ -250,11 +250,7 @@ class TestTree(unittest.TestCase):
             self.assertEqual(ext_name, page.extension_name)
 
     def __assert_stale(self, expected_stale):
-        stale_pages = self.tree.get_stale_pages()
-        for pagename in expected_stale:
-            self.assertIn(pagename, stale_pages)
-            stale_pages.pop(pagename)
-        self.assertEqual(len(stale_pages), 0)
+        self.assertEqual(set(self.tree.get_stale_pages().keys()), set(expected_stale))
 
     def __create_test_layout(self, with_ext_index=True, sitemap=None,
                              sources=None):
@@ -480,10 +476,15 @@ class TestTree(unittest.TestCase):
             u'<h1>My section</h1>\n'
             '<p><a href="index.html#subsection">My documentation</a></p>\n')
 
+    def _simulate_new_run(self):
+        self.tree.persist()
+        self.database.persist()
+        self.database = Database(self.private_folder)
+
     # pylint: disable=too-many-statements
     def test_extension_incremental(self):
         sitemap = self.__create_test_layout()
-        self.tree.persist()
+        self._simulate_new_run()
 
         self.incremental = True
 
@@ -493,7 +494,7 @@ class TestTree(unittest.TestCase):
         self.__touch_src_file('source_a.test')
         self.__update_test_layout(sitemap)
         self.__assert_stale(set(['source_a.test']))
-        self.tree.persist()
+        self._simulate_new_run()
 
         # We now touch source_b.test, which symbols are contained
         # both in a generated page and a user-provided one.
@@ -502,7 +503,7 @@ class TestTree(unittest.TestCase):
         self.__update_test_layout(sitemap)
         self.__assert_stale(set(['source_b.test',
                                  'page_x.markdown']))
-        self.tree.persist()
+        self._simulate_new_run()
 
         # This one is trickier: we unlist symbol_3 from
         # page_x, which means the symbol should now be
@@ -513,8 +514,8 @@ class TestTree(unittest.TestCase):
             'page_x.markdown',
             (u'# Page X\n'))
         self.__update_test_layout(sitemap)
-        self.__assert_stale(set(['source_b.test',
-                                 'page_x.markdown']))
+        self.__assert_stale(['source_b.test',
+                             'page_x.markdown'])
 
         page_x = self.tree.get_pages()['page_x.markdown']
         self.assertEqual(page_x.symbol_names, OrderedSet())
@@ -524,7 +525,7 @@ class TestTree(unittest.TestCase):
             source_b_page.symbol_names,
             OrderedSet(['symbol_4', 'symbol_3']))
 
-        self.tree.persist()
+        self._simulate_new_run()
 
         # Let's make sure the opposite use case works as well,
         # we relocate symbol_3 in page_x , both page_x and
@@ -550,7 +551,7 @@ class TestTree(unittest.TestCase):
             source_b_page.symbol_names,
             OrderedSet(['symbol_4']))
 
-        self.tree.persist()
+        self._simulate_new_run()
 
         # We now move the definition of symbol_3 to source_a.test,
         # we thus expect the generated page for source_a.test to be
@@ -586,7 +587,7 @@ class TestTree(unittest.TestCase):
             OrderedSet(['symbol_1',
                         'symbol_2']))
 
-        self.tree.persist()
+        self._simulate_new_run()
 
         # And we rollback again
         self.__create_src_file(
@@ -617,7 +618,7 @@ class TestTree(unittest.TestCase):
             OrderedSet(['symbol_1',
                         'symbol_2']))
 
-        self.tree.persist()
+        self._simulate_new_run()
 
         # Now we'll try removing page_x altogether
         self.__remove_md_file('page_x.markdown')
@@ -635,7 +636,7 @@ class TestTree(unittest.TestCase):
         self.assertEqual(
             source_b_page.symbol_names,
             OrderedSet(['symbol_4', 'symbol_3']))
-        self.tree.persist()
+        self._simulate_new_run()
 
         # And rollback again
         self.__create_md_file(
@@ -656,11 +657,11 @@ class TestTree(unittest.TestCase):
             source_b_page.symbol_names,
             OrderedSet(['symbol_4']))
 
-        self.tree.persist()
+        self._simulate_new_run()
 
     def test_index_override_incremental(self):
         sitemap = self.__create_test_layout()
-        self.tree.persist()
+        self._simulate_new_run()
         index_page = self.tree.get_pages()['test-index']
         self.assertIn('source_b.test', index_page.subpages)
 
@@ -670,7 +671,7 @@ class TestTree(unittest.TestCase):
         self.__update_test_layout(sitemap)
         index_page = self.tree.get_pages()['test-index']
         self.assertIn('source_b.test', index_page.subpages)
-        self.tree.persist()
+        self._simulate_new_run()
 
     def test_extension_index_only(self):
         inp = (u'test-index\n'
