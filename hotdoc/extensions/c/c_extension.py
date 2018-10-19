@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, sys, linecache, pkgconfig, glob, subprocess
+import os, sys, linecache, pkgconfig, glob, subprocess, shutil
 
 from hotdoc.extensions.c.clang import cindex
 from ctypes import *
@@ -34,6 +34,11 @@ from hotdoc.extensions.c.utils import CCommentExtractor
 
 from hotdoc.utils.loggable import (info as core_info, warn, Logger,
     debug as core_debug)
+
+
+if shutil.which('llvm-config') is None:
+    raise ImportError()
+
 
 def ast_node_is_function_pointer (ast_node):
     if ast_node.kind == cindex.TypeKind.POINTER and \
