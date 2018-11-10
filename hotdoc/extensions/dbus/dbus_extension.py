@@ -139,7 +139,7 @@ class DBusScanner(object):
                 unique_name=unique_name,
                 filename=self.__current_filename)
 
-        if flags:
+        if sym and flags:
             sym.extension_contents['Flags'] = flags
 
     def __create_signal_symbol (self, node):

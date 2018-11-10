@@ -215,10 +215,10 @@ class GIExtension(Extension):
         if res:
             self.created_symbols.add(res.unique_name)
 
-        if node is not None and res:
-            make_translations(res.unique_name, node)
-            for alias in aliases:
-                make_translations(alias, node)
+            if node is not None:
+                make_translations(res.unique_name, node)
+                for alias in aliases:
+                    make_translations(alias, node)
 
         return res
 
@@ -329,8 +329,10 @@ class GIExtension(Extension):
                 member_name=field_name, qtype=qtype,
                 filename=filename, display_name=name,
                 unique_name=name, parent_name=parent_name)
-            self.add_attrs(member, type_desc=type_desc, in_union=in_union)
-            members.append(member)
+
+            if member:
+                self.add_attrs(member, type_desc=type_desc, in_union=in_union)
+                members.append(member)
 
         return members
 
@@ -516,8 +518,10 @@ class GIExtension(Extension):
             member = self.get_or_create_symbol(
                 EnumMemberSymbol, field, display_name=unique_name,
                 filename=filename, parent_name=name)
-            member.enum_value = field.attrib['value']
-            members.append(member)
+
+            if member:
+                member.enum_value = field.attrib['value']
+                members.append(member)
 
         res = self.get_or_create_symbol(
             EnumSymbol, node, members=members,
@@ -527,8 +531,8 @@ class GIExtension(Extension):
         if res:
             self.add_attrs(res, is_genum=is_genum)
 
-        for cnode in node:
-            self.__scan_node(cnode, parent_name=res.unique_name)
+            for cnode in node:
+                self.__scan_node(cnode, parent_name=res.unique_name)
 
         return res
 
@@ -561,25 +565,26 @@ class GIExtension(Extension):
                                             klass_name),
                                         parent_name=parent_name)
 
-        flags = []
+        if res:
+            flags = []
 
-        when = node.attrib.get('when')
-        if when == "first":
-            flags.append(RunFirstFlag())
-        elif when == "last":
-            flags.append(RunLastFlag())
-        elif when == "cleanup":
-            flags.append(RunCleanupFlag())
+            when = node.attrib.get('when')
+            if when == "first":
+                flags.append(RunFirstFlag())
+            elif when == "last":
+                flags.append(RunLastFlag())
+            elif when == "cleanup":
+                flags.append(RunCleanupFlag())
 
-        no_hooks = node.attrib.get('no-hooks')
-        if no_hooks == '1':
-            flags.append(NoHooksFlag())
+            no_hooks = node.attrib.get('no-hooks')
+            if no_hooks == '1':
+                flags.append(NoHooksFlag())
 
-        # This is incorrect, it's not yet format time
-        extra_content = self.formatter._format_flags(flags)
-        res.extension_contents['Flags'] = extra_content
+            # This is incorrect, it's not yet format time
+            extra_content = self.formatter._format_flags(flags)
+            res.extension_contents['Flags'] = extra_content
 
-        self.__sort_parameters(res, retval, parameters)
+            self.__sort_parameters(res, retval, parameters)
 
         return res
 
@@ -611,8 +616,9 @@ class GIExtension(Extension):
                                             klass_name),
                                         parent_name=parent_name)
 
-        extra_content = self.formatter._format_flags(flags)
-        res.extension_contents['Flags'] = extra_content
+        if res:
+            extra_content = self.formatter._format_flags(flags)
+            res.extension_contents['Flags'] = extra_content
 
         return res
 
@@ -645,7 +651,8 @@ class GIExtension(Extension):
                                            parent_name=parent_name,
                                            aliases=[unique_name.replace('::', '.')])
 
-        self.__sort_parameters(symbol, retval, parameters)
+        if symbol:
+            self.__sort_parameters(symbol, retval, parameters)
 
         return symbol
 
@@ -738,7 +745,7 @@ class GIExtension(Extension):
                                                klass_name,
                                                unique_name)
 
-        res = self.get_or_create_symbol(GIClassSymbol, node,
+        return self.get_or_create_symbol(GIClassSymbol, node,
                                         hierarchy=hierarchy,
                                         children=children,
                                         display_name=klass_name,
@@ -746,8 +753,6 @@ class GIExtension(Extension):
                                         filename=filename,
                                         members=members,
                                         parent_name=unique_name)
-
-        return res
 
     def __create_struct_symbol(self, node, struct_name, filename,
                                parent_name):
@@ -793,6 +798,7 @@ class GIExtension(Extension):
             type_ = ConstructorSymbol
         else:
             type_ = FunctionSymbol
+
         func = self.get_or_create_symbol(type_, node,
                                          parameters=gi_params,
                                          return_value=retval,
@@ -802,10 +808,10 @@ class GIExtension(Extension):
                                          filename=self.__get_symbol_filename(
                                              name),
                                          parent_name=parent_name)
-        if not func:
-            return None
 
-        self.__sort_parameters(func, func.return_value, func.parameters)
+        if func:
+            self.__sort_parameters(func, func.return_value, func.parameters)
+
         return func
 
     def __scan_comments(self):

@@ -237,6 +237,7 @@ class ClangScanner(object):
 
             if sym is not None:
                 self.symbols[sym.unique_name] = sym
+
             self.__create_symbols(node.get_children(), tu)
 
     def __getFunctionDeclNode(self, node):
@@ -313,10 +314,9 @@ class ClangScanner(object):
         if not return_value:
             return_value = [ReturnItemSymbol(type_tokens=[])]
 
-        sym = self.__doc_db.get_or_create_symbol(CallbackSymbol, parameters=parameters,
+        return self.__doc_db.get_or_create_symbol(CallbackSymbol, parameters=parameters,
                 return_value=return_value, display_name=node.spelling,
                 filename=str(node.location.file), lineno=node.location.line)
-        return sym
 
     def __parse_public_fields (self, decl):
         tokens = decl.translation_unit.get_tokens(extent=decl.extent)
@@ -423,7 +423,9 @@ class ClangScanner(object):
         member = self.__doc_db.get_or_create_symbol(FieldSymbol, is_function_pointer=is_function_pointer,
                 member_name=member_name, qtype=qtype, filename=str(field.location.file),
                 display_name=name, unique_name=name)
-        members.append (member)
+
+        if member:
+            members.append (member)
 
         return last_record
 
@@ -456,8 +458,10 @@ class ClangScanner(object):
             member = self.__doc_db.get_or_create_symbol(EnumMemberSymbol, display_name=member.spelling,
                     filename=str(member.location.file),
                     lineno=member.location.line)
-            member.enum_value = member_value
-            members.append (member)
+
+            if member:
+                member.enum_value = member_value
+                members.append (member)
 
         anonymous = not node.spelling
 
@@ -484,7 +488,7 @@ class ClangScanner(object):
 
         filename = str(node.location.file)
 
-        symb = self.__doc_db.get_or_create_symbol(AliasSymbol, aliased_type=aliased_type,
+        return self.__doc_db.get_or_create_symbol(AliasSymbol, aliased_type=aliased_type,
                 display_name=node.spelling, filename=filename,
                 lineno=node.location.line, extra=extra)
 
@@ -492,15 +496,13 @@ class ClangScanner(object):
         t = node.underlying_typedef_type
         decl = t.get_declaration()
         if ast_node_is_function_pointer (t):
-            sym = self.__create_callback_symbol (node)
+            return self.__create_callback_symbol (node)
         elif not decl.spelling and decl.kind == cindex.CursorKind.STRUCT_DECL: # typedef struct {} foo;
-            sym = self.__create_struct_symbol (decl, spelling=node.spelling)
+            return self.__create_struct_symbol (decl, spelling=node.spelling)
         elif not decl.spelling and decl.kind == cindex.CursorKind.ENUM_DECL: # typedef enum {} bar;
-            sym = self.__create_enum_symbol (decl, spelling=node.spelling)
+            return self.__create_enum_symbol (decl, spelling=node.spelling)
         else:
-            sym = self.__create_alias_symbol (node)
-
-        return sym
+            return self.__create_alias_symbol (node)
 
     def __create_function_symbol (self, node):
         parameters = []
@@ -514,13 +516,11 @@ class ClangScanner(object):
                     type_tokens=type_tokens)
             parameters.append (parameter)
 
-        sym = self.__doc_db.get_or_create_symbol(FunctionSymbol, parameters=parameters,
+        return self.__doc_db.get_or_create_symbol(FunctionSymbol, parameters=parameters,
                 return_value=return_value, display_name=node.spelling,
                 filename=str(node.location.file), lineno=node.location.line,
                 extent_start=node.extent.start.line,
                 extent_end=node.extent.end.line)
-
-        return sym
 
     def __create_exported_variable_symbol (self, node):
         l = linecache.getline (str(node.location.file), node.location.line)
@@ -536,10 +536,9 @@ class ClangScanner(object):
         type_tokens = self.make_c_style_type_name(node.type)
         type_qs = QualifiedSymbol(type_tokens=type_tokens)
 
-        sym = self.__doc_db.get_or_create_symbol(ExportedVariableSymbol, original_text=original_text,
+        return self.__doc_db.get_or_create_symbol(ExportedVariableSymbol, original_text=original_text,
                 display_name=node.spelling, filename=str(node.location.file),
                 lineno=node.location.line, type_qs=type_qs)
-        return sym
 
 
 def flags_from_config(config):
