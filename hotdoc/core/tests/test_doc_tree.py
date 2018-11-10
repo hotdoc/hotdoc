@@ -36,6 +36,7 @@ from hotdoc.parsers import cmark
 from hotdoc.core.tree import Tree
 from hotdoc.core.extension import Extension
 from hotdoc.utils.utils import OrderedSet, touch
+from hotdoc.utils.loggable import Logger
 from hotdoc.core.config import Config
 
 
@@ -108,10 +109,14 @@ class TestTree(unittest.TestCase):
         self.subprojects = {}
         self.is_toplevel = True
 
+        Logger.fatal_warnings = True
+
     def tearDown(self):
         self.__remove_tmp_dirs()
         del self.test_ext
         del self.core_ext
+
+        Logger.fatal_warnings = False
 
     def get_generated_doc_folder(self):
         return os.path.join(self.private_folder, 'generated')
@@ -703,6 +708,8 @@ class TestTree(unittest.TestCase):
         pages = self.tree.get_pages()
         self.assertTrue(pages['source_a.test'].pre_sorted)
         self.assertFalse(pages['source_b.test'].pre_sorted)
+
+        self._simulate_new_run()
 
         self.__create_md_file(
             'source_b.test.markdown',

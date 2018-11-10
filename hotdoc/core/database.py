@@ -29,7 +29,13 @@ from hotdoc.utils.signals import Signal
 from hotdoc.utils.loggable import debug, warn, Logger
 
 
-Logger.register_warning_code('symbol-redefined', HotdocException, 'extension')
+class RedefinedSymbolException(HotdocException):
+    '''
+    Exception raised when a symbol is defined twice in the same run
+    '''
+    pass
+
+Logger.register_warning_code('symbol-redefined', RedefinedSymbolException, 'extension')
 
 # pylint: disable=too-few-public-methods
 
@@ -59,6 +65,9 @@ class Database:
 
         self.__comments = {}
         self.__symbols = {}
+        # This is a set of unique names, used to determine whether a symbol
+        # was added to this database instance's lifetime
+        self.__created_symbols = set()
         self.__aliases = {}
         self.__symbol_folder = os.path.join(private_folder or '/tmp',
                                             "symbols")
@@ -123,16 +132,12 @@ class Database:
             filename = os.path.abspath(filename)
             kwargs['filename'] = os.path.abspath(filename)
 
-        prev_sym = self.__symbols.get(unique_name)
-        if prev_sym:
-            # pylint: disable=unidiomatic-typecheck
-            if (prev_sym.filename and filename and prev_sym.filename != filename) or (
-                    prev_sym.project_name != kwargs.get('project_name')) or (
-                        type(prev_sym) != type_):
-                warn('symbol-redefined', "%s(unique_name=%s, filename=%s, project=%s)"
-                     " has already been defined: %s" % (type_.__name__, unique_name, filename,
-                                                        kwargs.get('project_name'), prev_sym))
-                return None
+        if unique_name in self.__created_symbols:
+            warn('symbol-redefined', "%s(unique_name=%s, filename=%s, project=%s)"
+                 " has already been defined: %s" % (type_.__name__, unique_name, filename,
+                                                    kwargs.get('project_name'),
+                                                    self.get_symbol(unique_name)))
+            return None
 
         aliases = kwargs.pop('aliases', [])
         for alias in aliases:
@@ -157,6 +162,8 @@ class Database:
         for alias in aliases:
             self.__symbols[alias] = symbol
         self.__aliases[unique_name] = aliases
+
+        self.__created_symbols.add(unique_name)
 
         return symbol
 
