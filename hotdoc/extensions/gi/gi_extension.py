@@ -470,6 +470,12 @@ class GIExtension(Extension):
             if direction != 'in':
                 out_parameters.append(param)
 
+        if node.attrib.get('throws') == '1':
+            type_desc = SymbolTypeDesc([Link(None, 'GError', 'GError'), '*', '*'], 'GLib.Error', 'GError**', 0)
+            param = ParameterSymbol(argname='error', type_tokens=type_desc.type_tokens)
+            parameters.append(param)
+            self.add_attrs(param, type_desc=type_desc, direction='out')
+
         retval = node.find(
             '{http://www.gtk.org/introspection/core/1.0}return-value')
         retval = self.__create_return_value_symbol(retval, out_parameters)
