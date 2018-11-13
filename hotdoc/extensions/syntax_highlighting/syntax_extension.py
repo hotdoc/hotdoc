@@ -21,9 +21,12 @@ A syntax highlighting module
 """
 import os
 
+from hotdoc.core.formatter import Formatter
 from hotdoc.core.extension import Extension
 
 from hotdoc.utils.utils import recursive_overwrite
+from hotdoc.utils.loggable import warn, Logger
+from hotdoc.core.exceptions import ConfigError
 
 DESCRIPTION = """
 This extension uses prism to syntax highlight code
@@ -32,6 +35,10 @@ snippets.
 
 
 HERE = os.path.dirname(__file__)
+
+
+Logger.register_warning_code('syntax-invalid-theme', ConfigError,
+                             'syntax-extension')
 
 
 class SyntaxHighlightingExtension(Extension):
@@ -47,8 +54,14 @@ class SyntaxHighlightingExtension(Extension):
         self.activated = False
 
     def __formatting_page_cb(self, formatter, page):
-        page.output_attrs['html']['stylesheets'].add(
-            os.path.join(HERE, 'prism', 'themes', 'prism-tomorrow.css'))
+        prism_theme = Formatter.theme_meta.get('prism-theme', 'prism.css')
+        prism_theme_path = '%s.css' % os.path.join(HERE, 'prism', 'themes', prism_theme)
+
+        if os.path.exists(prism_theme_path):
+            page.output_attrs['html']['stylesheets'].add(prism_theme_path)
+        else:
+            warn('syntax-invalid-theme', 'Prism has no theme named %s' %
+                 prism_theme)
 
         page.output_attrs['html']['scripts'].add(
             os.path.join(HERE, 'prism', 'components', 'prism-core.js'))

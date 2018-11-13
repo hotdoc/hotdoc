@@ -27,6 +27,7 @@ By design, hotdoc only supports html output.
 import os
 import html
 import re
+import json
 import urllib.parse
 from urllib.request import urlretrieve
 import shutil
@@ -139,6 +140,7 @@ class Formatter(Configurable):
     pages.
     """
     theme_path = None
+    theme_meta = {}
     extra_theme_path = None
     add_anchors = False
     number_headings = False
@@ -147,6 +149,7 @@ class Formatter(Configurable):
     all_scripts = set()
     all_stylesheets = set()
     get_extra_files_signal = Signal()
+    initialized = False
 
     def __init__(self, extension):
         """
@@ -1046,24 +1049,30 @@ class Formatter(Configurable):
 
     def parse_toplevel_config(self, config):
         """Parse @config to setup @self state."""
-        html_theme = config.get('html_theme', 'default')
+        if not Formatter.initialized:
+            html_theme = config.get('html_theme', 'default')
 
-        if html_theme != 'default':
-            uri = urllib.parse.urlparse(html_theme)
-            if not uri.scheme:
-                html_theme = config.get_path('html_theme')
-                debug("Using theme located at %s" % html_theme)
-            elif uri.scheme.startswith('http'):
-                html_theme = self.__download_theme(uri)
+            if html_theme != 'default':
+                uri = urllib.parse.urlparse(html_theme)
+                if not uri.scheme:
+                    html_theme = config.get_path('html_theme')
+                    debug("Using theme located at %s" % html_theme)
+                elif uri.scheme.startswith('http'):
+                    html_theme = self.__download_theme(uri)
 
-        if html_theme == 'default':
-            default_theme = os.path.join(HERE, os.pardir,
-                                         'hotdoc_bootstrap_theme', 'dist')
+            if html_theme == 'default':
+                default_theme = os.path.join(HERE, os.pardir,
+                                             'hotdoc_bootstrap_theme', 'dist')
 
-            html_theme = os.path.abspath(default_theme)
-            debug("Using default theme")
+                html_theme = os.path.abspath(default_theme)
+                debug("Using default theme")
 
-        if Formatter.engine is None:
+            theme_meta_path = os.path.join(html_theme, 'theme.json')
+
+            if os.path.exists(theme_meta_path):
+                with open(theme_meta_path, 'r') as _:
+                    Formatter.theme_meta = json.loads(_.read())
+
             searchpath = []
             self.__load_theme_templates(searchpath, HERE)
 
@@ -1080,6 +1089,8 @@ class Formatter(Configurable):
                 loader=FileLoader(searchpath, encoding='UTF-8'),
                 extensions=[CoreExtension(), CodeExtension()])
             Formatter.engine.global_vars.update({'e': html.escape})
+
+            Formatter.initialized = True
 
     def get_template(self, name):
         """

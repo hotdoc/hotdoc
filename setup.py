@@ -26,6 +26,7 @@ import errno
 import unittest
 import contextlib
 import argparse
+import json
 from distutils.command.build import build
 from distutils.command.build_ext import build_ext
 from distutils.core import Command
@@ -166,6 +167,8 @@ class BuildDefaultTheme(Command):
                     SOURCE_DIR, 'hotdoc', 'less')
                 spawn.spawn(['make'])
                 del os.environ['LESS_INCLUDE_PATH']
+                with open(os.path.join(THEME_DIST_DIR, 'theme.json'), 'w') as _:
+                    _.write(json.dumps({'prism-theme': 'prism-tomorrow', 'hotdoc-version': VERSION}))
             except spawn.DistutilsExecError as e:
                 print("Error while building default theme", e)
                 sys.exit(-1)
