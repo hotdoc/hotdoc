@@ -54,7 +54,7 @@ class SyntaxHighlightingExtension(Extension):
         self.activated = False
 
     def __formatting_page_cb(self, formatter, page):
-        prism_theme = Formatter.theme_meta.get('prism-theme', 'prism.css')
+        prism_theme = Formatter.theme_meta.get('prism-theme', 'prism')
         prism_theme_path = '%s.css' % os.path.join(HERE, 'prism', 'themes', prism_theme)
 
         if os.path.exists(prism_theme_path):
