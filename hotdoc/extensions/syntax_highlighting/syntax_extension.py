@@ -48,7 +48,7 @@ class SyntaxHighlightingExtension(Extension):
 
     def __formatting_page_cb(self, formatter, page):
         page.output_attrs['html']['stylesheets'].add(
-            os.path.join(HERE, 'prism', 'themes', 'prism.css'))
+            os.path.join(HERE, 'prism', 'themes', 'prism-tomorrow.css'))
 
         page.output_attrs['html']['scripts'].add(
             os.path.join(HERE, 'prism', 'components', 'prism-core.js'))
