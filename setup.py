@@ -320,6 +320,7 @@ PACKAGE_DATA = {
                os.path.join(THEME_REL_DIR, 'css', '*'),
                os.path.join(THEME_REL_DIR, 'images', '*'),
                os.path.join(THEME_REL_DIR, 'fonts', '*'),
+               os.path.join(THEME_REL_DIR, 'theme.json'),
                'VERSION.txt'],
     'hotdoc.utils': ['hotdoc.m4', 'hotdoc.mk'],
     'hotdoc.extensions.syntax_highlighting': [
