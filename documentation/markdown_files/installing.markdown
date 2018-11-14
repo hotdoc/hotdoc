@@ -31,13 +31,13 @@ Clang and llvm-config are runtime dependencies for the C extension.
 On Fedora you can install all these dependencies with:
 
 ```
-dnf install python3-devel libxml2-devel libxslt-devel cmake libyaml-devel llvm-devel
+dnf install python3-devel libxml2-devel libxslt-devel cmake libyaml-devel libclang-devel llvm-devel
 ```
 
 And on ubuntu / debian:
 
 ```
-apt-get install python3-dev libxml2-dev libxslt1-dev cmake libyaml-dev llvm-dev
+apt-get install python3-dev libxml2-dev libxslt1-dev cmake libyaml-dev libclang-dev llvm-dev
 ```
 
 We'll be happy to merge updates to this list if you have successfully built hotdoc on another platform.
