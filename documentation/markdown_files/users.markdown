@@ -2,17 +2,23 @@
 short-description: A list of projects using hotdoc
 ...
 
-# Examples
+# Users
 
 ## Hotdoc's own bootstrapped documentation
-
-> This is a *very* alpha work in progress, as the API isn't stable yet, docstrings are only partially filled out, and the python extension itself is also in an alpha state.
 
 You're looking at it, check <https://github.com/hotdoc/hotdoc/tree/master/documentation> for the sources.
 
 ## GStreamer's documentation
 
-GStreamer's [documentation](https://gstreamer.freedesktop.org/documentation/) has been ported from docbook to hotdoc + markdown. Its API reference is currently being ported as well, using hotdoc's subproject nesting capabilities.
+GStreamer's [documentation](https://gstreamer.freedesktop.org/documentation/) has been ported from docbook to hotdoc + markdown. Its API reference is currently being ported as well, using hotdoc's subproject nesting capabilities, see [here](https://thiblahute.pages.freedesktop.org/gst-docs/?gi-language=c) for a snapshot.
+
+## Meson documentation
+
+The [meson documentation](https://mesonbuild.com) is a nice showcase of hotdoc for a simple standalone project.
+
+## WIP GNOME developer portal
+
+Some initial work has been done to port over the GNOME developer portal, with WIP ports of GLib and GStreamer nested as subprojects, see [here](https://thiblahute.pages.gitlab.gnome.org/gnome-devel-docs/index.html?gi-language=c) for a snapshot.
 
 ## Apertis' documentation
 

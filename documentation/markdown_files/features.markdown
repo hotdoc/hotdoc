@@ -10,12 +10,8 @@ Hotdoc is designed as an incremental documentation system. Along with
 its final output, it produces a database of symbols and a dependency
 graph, which can be reused at the next run.
 
-For example, [hotdoc_server](https://github.com/hotdoc/hotdoc_server) uses
-hotdoc to provide (for now basic) wiki-like functionalities: users
-can edit and preview the documentation, and the server patches the sources it was
-extracted from.
-
-> See [disabling incremental build](running.markdown#disabling-incremental-build) if you do not wish / need to use this feature.
+See [disabling incremental build](running.markdown#disabling-incremental-build)
+if you do not wish / need to use this feature.
 
 ## Simple yet powerful syntax
 
@@ -27,6 +23,8 @@ This format was chosen because it is very simple to edit, yet allows
 a great amount of control over the resulting layout, and the main
 design requirement behind the choice of the format was to lower as
 much as possible the barrier to contribute to documentation.
+
+See [](syntax-extensions.markdown) for more information.
 
 ## Themeability
 
@@ -47,5 +45,3 @@ Hotdoc 1.0 will expose a (reasonably) stable API, its intended users being:
   documentation-related tasks, ranging from retrieving the raw docstring
   for a given symbol, to showing a live preview during editing of any
   documentation snippet.
-
-> See [the bootstraped documentation](users.markdown#hotdocs-own-bootstrapped-documentation) to get a first taste of the API.

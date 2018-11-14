@@ -1,7 +1,9 @@
 ## HotDoc documentation
 
-Hotdoc is a documentation micro-framework. It provides an interface for
+Hotdoc is a documentation framework. It provides an interface for
 extensions to plug upon, along with some base objects (formatters, ...)
 
-Please check the packages listed at [https://github.com/hotdoc](https://github.com/hotdoc) to
-pick the extensions you are interested in.
+Hotdoc is distributed with a set of extensions that perform various tasks,
+such as parsing C and extracting symbols with `clang`, parsing
+`gobject-introspection` (gir) files, highlighting the syntax of code snippets
+with `prism`, etc.
