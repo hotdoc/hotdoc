@@ -135,6 +135,7 @@ class Page:
         self.formatted_contents = None
         self.detailed_description = None
         self.build_path = None
+        self.thumbnail = None
         self.project_name = project_name
         self.cached_paths = OrderedSet()
 
@@ -196,7 +197,8 @@ class Page:
                 'project_name': self.project_name,
                 'pre_sorted': self.pre_sorted,
                 'cached_paths': self.cached_paths,
-                'render_subpages': self.render_subpages}
+                'render_subpages': self.render_subpages,
+                'thumbnail': self.thumbnail}
 
     def __repr__(self):
         return "<Page %s>" % self.source_file
