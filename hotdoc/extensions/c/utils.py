@@ -90,13 +90,13 @@ class CCommentExtractor:
             args = split[1].split(')', 1)[0].split(',')
             if args:
                 stripped_name = name.strip()
-                filename = self.__get_comment_filename(stripped_name, filenames)
+                filename = self.__get_comment_filename(stripped_name, filenames) or filename
                 return self.__create_function_macro_symbol(stripped_name,
                                                            filename, raw[1], raw[0])
 
         name = mcontent.split(' ', 1)[0]
         stripped_name = name.strip()
-        filename = self.__get_comment_filename(stripped_name, filenames)
+        filename = self.__get_comment_filename(stripped_name, filenames) or filename
 
         return self.__create_constant_symbol(stripped_name, filename, raw[1], raw[0])
 
