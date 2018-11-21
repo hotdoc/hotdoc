@@ -31,7 +31,7 @@ Clang and llvm-config are runtime dependencies for the C extension.
 On Fedora you can install all these dependencies with:
 
 ```
-dnf install python3-devel libxml2-devel libxslt-devel cmake libyaml-devel libclang-devel llvm-devel
+dnf install python3-devel libxml2-devel libxslt-devel cmake libyaml-devel clang-devel llvm-devel
 ```
 
 And on ubuntu / debian:
