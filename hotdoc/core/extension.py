@@ -102,7 +102,6 @@ class Extension(Configurable):
         self.app = app
         self.sources = set()
         self.index = None
-        self.smart_index = False
         self.source_roots = OrderedSet()
         self._created_symbols = DefaultOrderedDict(OrderedSet)
         self.__package_root = None
@@ -219,7 +218,6 @@ class Extension(Configurable):
         The default implementation will set attributes on the extension:
         - 'sources': a set of absolute paths to source files for this extension
         - 'index': absolute path to the index for this extension
-        - 'smart_index': bool, depending on whether a smart index was enabled
 
         Additionally, it will set an attribute for each argument added with
         `Extension.add_path_argument` or `Extension.add_paths_argument`, with
@@ -232,8 +230,6 @@ class Extension(Configurable):
         prefix = self.argument_prefix
         self.sources = config.get_sources(prefix)
         self.index = config.get_index(prefix)
-        self.smart_index = bool(config.get('%s_smart_index' %
-                                           self.argument_prefix))
         self.source_roots = OrderedSet(config.get_paths('%s_source_roots' % prefix))
 
         for arg, dest in list(self.paths_arguments.items()):
@@ -286,15 +282,13 @@ class Extension(Configurable):
         pass
 
     @classmethod
-    def add_index_argument(cls, group, prefix=None, smart=True):
+    def add_index_argument(cls, group, prefix=None):
         """
         Subclasses may call this to add an index argument.
 
         Args:
             group: arparse.ArgumentGroup, the extension argument group
             prefix: str, arguments have to be namespaced
-            smart: bool, whether smart index generation should be exposed
-                for this extension
         """
         prefix = prefix or cls.argument_prefix
 
@@ -303,13 +297,6 @@ class Extension(Configurable):
             dest="%s_index" % prefix,
             help=("Name of the %s root markdown file, can be None" % (
                 cls.extension_name)))
-
-        if smart:
-            group.add_argument(
-                '--%s-smart-index' % prefix, action="store_true",
-                dest="%s_smart_index" % prefix,
-                help="Smart symbols list generation in %s" % (
-                    cls.extension_name))
 
     @classmethod
     def add_sources_argument(cls, group, allow_filters=True, prefix=None, add_root_paths=False):
@@ -427,9 +414,6 @@ class Extension(Configurable):
         return Formatter(self)
 
     def __list_override_pages_cb(self, tree, include_paths):
-        if not self.smart_index:
-            return None
-
         self.__find_package_root()
         for source in self._get_all_sources():
             source_rel = self.__get_rel_source_path(source)
@@ -458,25 +442,21 @@ class Extension(Configurable):
                 return PageResolutionResult(True, path, None, self.extension_name)
             return PageResolutionResult(True, None, None, self.extension_name)
 
-        if self.smart_index:
-            for path in OrderedSet([self.__package_root]) | self.source_roots:
-                possible_path = os.path.join(path, name)
-                if possible_path in self._get_all_sources():
-                    override_path = find_file('%s.markdown' % name, include_paths)
+        for path in OrderedSet([self.__package_root]) | self.source_roots:
+            possible_path = os.path.join(path, name)
+            if possible_path in self._get_all_sources():
+                override_path = find_file('%s.markdown' % name, include_paths)
 
-                    if override_path:
-                        return PageResolutionResult(True, override_path, None, None)
+                if override_path:
+                    return PageResolutionResult(True, override_path, None, None)
 
-                    return PageResolutionResult(True, possible_path,
-                                                self.__get_rel_source_path(possible_path),
-                                                None)
+                return PageResolutionResult(True, possible_path,
+                                            self.__get_rel_source_path(possible_path),
+                                            None)
 
         return None
 
     def __update_tree_cb(self, tree, unlisted_sym_names):
-        if not self.smart_index:
-            return
-
         self.__find_package_root()
         index = self.__get_index_page(tree)
         if index is None:

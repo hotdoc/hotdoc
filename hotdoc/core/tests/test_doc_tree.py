@@ -45,9 +45,8 @@ class TestExtension(Extension):
     argument_prefix = 'test'
 
     # pylint: disable=arguments-differ
-    def setup(self, smart=True):
+    def setup(self):
         super(TestExtension, self).setup()
-        self.smart_index = smart
         stale, _ = self.get_stale_files(self.sources)
         for source in stale:
             with open(source, 'r') as _:

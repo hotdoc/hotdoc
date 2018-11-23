@@ -33,7 +33,6 @@ class HotdocTestExtension(Extension):
     use_custom_key = False
 
     def __init__(self, app, project):
-        self.smart_index = True
         self.name = 'test'
         super(HotdocTestExtension, self).__init__(app, project)
 

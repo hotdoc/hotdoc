@@ -385,8 +385,7 @@ class Config:
             final_conf[key] = value
 
         for key, value in list(self.__cli.items()):
-            if (key.endswith('index') and not key.endswith('smart_index')) or \
-                    key in ['sitemap', 'output']:
+            if key.endswith('index') or key in ['sitemap', 'output']:
                 path = self.__abspath(value, from_conf=False)
                 if path:
                     relpath = os.path.relpath(path, conf_dir)
