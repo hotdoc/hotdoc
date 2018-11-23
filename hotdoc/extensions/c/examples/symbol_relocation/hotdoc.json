@@ -1,0 +1,14 @@
+{
+  "project_name": "Symbol relocation C Example",
+  "project_version": "1.0",
+  "sitemap": "sitemap.txt",
+  "include_paths": ["markdown/"],
+  "c_index": "markdown/index.md",
+  "c_sources": [
+    "simple.c",
+    "simple.h",
+    "relocate.c",
+    "relocate.h"
+  ],
+  "output": "built_docs/"
+}
