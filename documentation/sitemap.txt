@@ -10,3 +10,12 @@ index.markdown
 	setting-up-a-project.markdown
 	running.markdown
 	cleaning.markdown
+	extensions.markdown
+		c-extension.markdown
+		gi-extension.markdown
+		dbus-extension.markdown
+		devhelp-extension.markdown
+		edit-on-github-extension.markdown
+		git-upload.markdown
+		license-extension.markdown
+		syntax-highlighting-extension.markdown
