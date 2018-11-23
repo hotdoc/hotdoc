@@ -1,0 +1,12 @@
+{
+  "project_name": "Simple C Example",
+  "project_version": "1.0",
+  "sitemap": "sitemap.txt",
+  "include_paths": ["markdown/"],
+  "c_index": "markdown/index.md",
+  "c_sources": [
+    "simple.c",
+    "simple.h"
+  ],
+  "output": "built_docs/"
+}
