@@ -182,10 +182,6 @@ class DevhelpExtension(Extension):
         if not DevhelpExtension.activated:
             return
 
-        # FIXME update the index someday.
-        if self.app.incremental:
-            return
-
         for ext in self.project.extensions.values():
             ext.formatter.writing_page_signal.connect(self.__writing_page_cb)
             ext.formatter.formatting_page_signal.connect(

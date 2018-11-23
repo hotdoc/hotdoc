@@ -81,10 +81,6 @@ class SearchExtension(Extension):
         SearchExtension.__index.process(path, lxml_tree)
 
     def __build_index(self, app):  # pylint: disable=unused-argument
-        # pylint: disable=too-many-locals
-        if self.app.incremental:
-            return
-
         output = os.path.join(self.app.output, 'html')
         assets_path = os.path.join(output, 'assets')
         dest = os.path.join(assets_path, 'js')

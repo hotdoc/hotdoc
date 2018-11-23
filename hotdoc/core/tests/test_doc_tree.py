@@ -26,7 +26,6 @@ import shutil
 import io
 import os
 
-from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.database import Database
 from hotdoc.core.project import CoreExtension
 from hotdoc.core.symbols import FunctionSymbol
@@ -35,7 +34,7 @@ from hotdoc.parsers.sitemap import SitemapParser
 from hotdoc.parsers import cmark
 from hotdoc.core.tree import Tree
 from hotdoc.core.extension import Extension
-from hotdoc.utils.utils import OrderedSet, touch
+from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.loggable import Logger
 from hotdoc.core.config import Config
 
@@ -47,12 +46,11 @@ class TestExtension(Extension):
     # pylint: disable=arguments-differ
     def setup(self):
         super(TestExtension, self).setup()
-        stale, _ = self.get_stale_files(self.sources)
-        for source in stale:
+        for source in self.sources:
             with open(source, 'r') as _:
                 for l in _.readlines():
                     l = l.strip()
-                    self.get_or_create_symbol(
+                    self.create_symbol(
                         FunctionSymbol,
                         unique_name=l, filename=source)
 
@@ -86,13 +84,10 @@ class TestTree(unittest.TestCase):
         self.database = Database(self.private_folder)
         self.link_resolver = LinkResolver(self.database)
 
-        self.change_tracker = ChangeTracker()
-
         self.sitemap_parser = SitemapParser()
 
         self.project_name = 'test-project'
         self.sanitized_name = 'test-project-0.1'
-        self.incremental = False
 
         self.tree = Tree(self, self)
 
@@ -137,12 +132,6 @@ class TestTree(unittest.TestCase):
         with open(path, 'w') as _:
             _.write(contents)
 
-        # Just making sure we don't hit a race condition,
-        # in real world situations it is assumed users
-        # will not update source files twice in the same
-        # microsecond
-        touch(path)
-
     def __create_src_file(self, name, symbols):
         path = os.path.join(self.__md_dir, name)
         if os.path.dirname(name):
@@ -150,12 +139,6 @@ class TestTree(unittest.TestCase):
         with open(path, 'w') as _:
             for symbol in symbols:
                 _.write('%s\n' % symbol)
-
-        # Just making sure we don't hit a race condition,
-        # in real world situations it is assumed users
-        # will not update source files twice in the same
-        # microsecond
-        touch(path)
 
         return path
 
@@ -166,10 +149,6 @@ class TestTree(unittest.TestCase):
     def __remove_md_file(self, name):
         path = os.path.join(self.__md_dir, name)
         os.unlink(path)
-
-    def __touch_src_file(self, name):
-        path = os.path.join(self.__md_dir, name)
-        touch(path)
 
     def __remove_tmp_dirs(self):
         shutil.rmtree(self.__md_dir, ignore_errors=True)
@@ -202,59 +181,11 @@ class TestTree(unittest.TestCase):
         index = pages.get('index.markdown')
         self.assertEqual(index.title, u'My documentation')
 
-    def test_basic_incremental(self):
-        inp = (u'index.markdown\n'
-               '\tsection.markdown')
-        sitemap = self.__parse_sitemap(inp)
-        self.__create_md_file(
-            'index.markdown',
-            (u'# My documentation\n'))
-        self.__create_md_file(
-            'section.markdown',
-            (u'# My section\n'))
-
-        self.tree.parse_sitemap(sitemap)
-
-        # Building from scratch, all pages are stale
-        self.assertSetEqual(
-            set(self.tree.get_stale_pages()),
-            set([u'index.markdown',
-                 u'section.markdown']))
-
-        self._simulate_new_run()
-
-        self.incremental = True
-        self.tree = Tree(self, self)
-        self.tree.parse_sitemap(sitemap)
-
-        # Nothing changed, no page is stale
-        self.assertSetEqual(
-            set(self.tree.get_stale_pages()),
-            set({}))
-
-        # But we still have our pages
-        self.assertSetEqual(
-            set(self.tree.get_pages()),
-            set([u'index.markdown',
-                 u'section.markdown']))
-
-        touch(os.path.join(self.__md_dir, u'section.markdown'))
-
-        self.tree = Tree(self, self)
-        self.tree.parse_sitemap(sitemap)
-
-        self.assertSetEqual(
-            set(self.tree.get_stale_pages()),
-            set([u'section.markdown']))
-
     def __assert_extension_names(self, tree, name_map):
         pages = tree.get_pages()
         for name, ext_name in list(name_map.items()):
             page = pages[name]
             self.assertEqual(ext_name, page.extension_name)
-
-    def __assert_stale(self, expected_stale):
-        self.assertEqual(set(self.tree.get_stale_pages().keys()), set(expected_stale))
 
     def __create_test_layout(self, with_ext_index=True, sitemap=None,
                              sources=None):
@@ -340,7 +271,6 @@ class TestTree(unittest.TestCase):
 
         all_pages = self.tree.get_pages()
         self.assertEqual(len(all_pages), 8)
-        self.__assert_stale(all_pages)
         self.assertNotIn('source_a.test', all_pages['test-index'].subpages)
         self.assertIn('source_a.test',
                       all_pages['test-section.markdown'].subpages)
@@ -480,203 +410,6 @@ class TestTree(unittest.TestCase):
             u'<h1>My section</h1>\n'
             '<p><a href="index.html#subsection">My documentation</a></p>\n')
 
-    def _simulate_new_run(self):
-        self.tree.persist()
-        self.database.persist()
-        self.database = Database(self.private_folder)
-
-    # pylint: disable=too-many-statements
-    def test_extension_incremental(self):
-        sitemap = self.__create_test_layout()
-        self._simulate_new_run()
-
-        self.incremental = True
-
-        # Here we touch source_a.test, as its symbols were
-        # all contained in a generated page, only that page
-        # should now be stale
-        self.__touch_src_file('source_a.test')
-        self.__update_test_layout(sitemap)
-        self.__assert_stale(set(['source_a.test']))
-        self._simulate_new_run()
-
-        # We now touch source_b.test, which symbols are contained
-        # both in a generated page and a user-provided one.
-        # We expect both pages to be stale
-        self.__touch_src_file('source_b.test')
-        self.__update_test_layout(sitemap)
-        self.__assert_stale(set(['source_b.test',
-                                 'page_x.markdown']))
-        self._simulate_new_run()
-
-        # This one is trickier: we unlist symbol_3 from
-        # page_x, which means the symbol should now be
-        # documented in the generated page for source_b.test.
-        # We expect both pages to be stale, and make sure
-        # they contain the right symbols
-        self.__create_md_file(
-            'page_x.markdown',
-            (u'# Page X\n'))
-        self.__update_test_layout(sitemap)
-        self.__assert_stale(['source_b.test',
-                             'page_x.markdown'])
-
-        page_x = self.tree.get_pages()['page_x.markdown']
-        self.assertEqual(page_x.symbol_names, OrderedSet())
-
-        source_b_page = self.tree.get_pages()['source_b.test']
-        self.assertEqual(
-            source_b_page.symbol_names,
-            OrderedSet(['symbol_4', 'symbol_3']))
-
-        self._simulate_new_run()
-
-        # Let's make sure the opposite use case works as well,
-        # we relocate symbol_3 in page_x , both page_x and
-        # the generated page for source_b.test should be stale
-        # and the symbols should be back to their original
-        # layout.
-        self.__create_md_file(
-            'page_x.markdown',
-            (u'---\n'
-             'symbols: [symbol_3]\n'
-             '...\n'
-             '# Page X\n'))
-
-        self.__update_test_layout(sitemap)
-        self.__assert_stale(set(['source_b.test',
-                                 'page_x.markdown']))
-
-        page_x = self.tree.get_pages()['page_x.markdown']
-        self.assertEqual(page_x.symbol_names, OrderedSet(['symbol_3']))
-
-        source_b_page = self.tree.get_pages()['source_b.test']
-        self.assertEqual(
-            source_b_page.symbol_names,
-            OrderedSet(['symbol_4']))
-
-        self._simulate_new_run()
-
-        # We now move the definition of symbol_3 to source_a.test,
-        # we thus expect the generated page for source_a.test to be
-        # stale because its source changed, same for source_b.test,
-        # and page_x.markdown should be stale as well because the
-        # definition of symbol_3 may have changed. The final
-        # symbol layout should not have changed however.
-        self.__create_src_file(
-            'source_a.test',
-            ['symbol_1',
-             'symbol_2',
-             'symbol_3'])
-        self.__create_src_file(
-            'source_b.test',
-            ['symbol_4'])
-        self.__update_test_layout(sitemap)
-
-        self.__assert_stale(set(['source_a.test',
-                                 'source_b.test',
-                                 'page_x.markdown']))
-
-        page_x = self.tree.get_pages()['page_x.markdown']
-        self.assertEqual(page_x.symbol_names, OrderedSet(['symbol_3']))
-
-        source_b_page = self.tree.get_pages()['source_b.test']
-        self.assertEqual(
-            source_b_page.symbol_names,
-            OrderedSet(['symbol_4']))
-
-        source_a_page = self.tree.get_pages()['source_a.test']
-        self.assertEqual(
-            source_a_page.symbol_names,
-            OrderedSet(['symbol_1',
-                        'symbol_2']))
-
-        self._simulate_new_run()
-
-        # And we rollback again
-        self.__create_src_file(
-            'source_a.test',
-            ['symbol_1',
-             'symbol_2'])
-        self.__create_src_file(
-            'source_b.test',
-            ['symbol_3',
-             'symbol_4'])
-        self.__update_test_layout(sitemap)
-
-        self.__assert_stale(set(['source_a.test',
-                                 'source_b.test',
-                                 'page_x.markdown']))
-
-        page_x = self.tree.get_pages()['page_x.markdown']
-        self.assertEqual(page_x.symbol_names, OrderedSet(['symbol_3']))
-
-        source_b_page = self.tree.get_pages()['source_b.test']
-        self.assertEqual(
-            source_b_page.symbol_names,
-            OrderedSet(['symbol_4']))
-
-        source_a_page = self.tree.get_pages()['source_a.test']
-        self.assertEqual(
-            source_a_page.symbol_names,
-            OrderedSet(['symbol_1',
-                        'symbol_2']))
-
-        self._simulate_new_run()
-
-        # Now we'll try removing page_x altogether
-        self.__remove_md_file('page_x.markdown')
-        inp = (u'index.markdown\n'
-               '\ttest-index\n'
-               '\t\ttest-section.markdown\n'
-               '\t\t\tsource_a.test\n'
-               '\t\tpage_y.markdown\n'
-               '\tcore_page.markdown\n')
-
-        new_sitemap = self.__parse_sitemap(inp)
-        self.__update_test_layout(new_sitemap)
-        self.__assert_stale(set(['source_b.test']))
-        source_b_page = self.tree.get_pages()['source_b.test']
-        self.assertEqual(
-            source_b_page.symbol_names,
-            OrderedSet(['symbol_4', 'symbol_3']))
-        self._simulate_new_run()
-
-        # And rollback again
-        self.__create_md_file(
-            'page_x.markdown',
-            (u'---\n'
-             'symbols: [symbol_3]\n'
-             '...\n'
-             '# Page X\n'))
-        self.__update_test_layout(sitemap)
-        self.__assert_stale(set(['page_x.markdown',
-                                 'source_b.test']))
-
-        page_x = self.tree.get_pages()['page_x.markdown']
-        self.assertEqual(page_x.symbol_names, OrderedSet(['symbol_3']))
-
-        source_b_page = self.tree.get_pages()['source_b.test']
-        self.assertEqual(
-            source_b_page.symbol_names,
-            OrderedSet(['symbol_4']))
-
-        self._simulate_new_run()
-
-    def test_index_override_incremental(self):
-        sitemap = self.__create_test_layout()
-        self._simulate_new_run()
-        index_page = self.tree.get_pages()['test-index']
-        self.assertIn('source_b.test', index_page.subpages)
-
-        self.incremental = True
-
-        self.__touch_src_file('test-index.markdown')
-        self.__update_test_layout(sitemap)
-        index_page = self.tree.get_pages()['test-index']
-        self.assertIn('source_b.test', index_page.subpages)
-        self._simulate_new_run()
-
     def test_extension_index_only(self):
         inp = (u'test-index\n'
                '\ttest-section.markdown\n')
@@ -707,24 +440,6 @@ class TestTree(unittest.TestCase):
         pages = self.tree.get_pages()
         self.assertTrue(pages['source_a.test'].pre_sorted)
         self.assertFalse(pages['source_b.test'].pre_sorted)
-
-        self._simulate_new_run()
-
-        self.__create_md_file(
-            'source_b.test.markdown',
-            (u'# My override\n'))
-        sitemap = (u'index.markdown\n'
-                   '\ttest-index\n'
-                   '\t\ttest-section.markdown\n'
-                   '\t\t\tsource_b.test\n'
-                   '\t\t\tsource_a.test\n'
-                   '\t\tpage_x.markdown\n'
-                   '\t\tpage_y.markdown\n'
-                   '\tcore_page.markdown\n')
-        _ = self.__create_test_layout(sitemap=sitemap)
-        pages = self.tree.get_pages()
-        self.assertTrue(pages['source_a.test'].pre_sorted)
-        self.assertTrue(pages['source_b.test'].pre_sorted)
 
     def test_extension_implicit_override(self):
         self.__create_md_file(

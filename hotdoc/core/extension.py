@@ -180,20 +180,6 @@ class Extension(Configurable):
             self.__list_override_pages_cb)
         self.project.tree.update_signal.connect(self.__update_tree_cb)
 
-    def get_stale_files(self, all_files, prefix=None):
-        """
-        Shortcut function to `change_tracker.ChangeTracker.get_stale_files`
-        for the tracker of this instance's `Extension.project`
-
-        Args:
-            all_files: see `change_tracker.ChangeTracker.get_stale_files`
-        """
-        prefix = prefix or self.extension_name
-        prefix += '-%s' % self.project.sanitized_name
-        return self.app.change_tracker.get_stale_files(
-            all_files,
-            prefix)
-
     @staticmethod
     def get_dependencies():
         """
@@ -381,18 +367,18 @@ class Extension(Configurable):
                            dest=dest, help=help_)
         cls.paths_arguments[dest] = final_dest
 
-    def get_or_create_symbol(self, *args, **kwargs):
+    def create_symbol(self, *args, **kwargs):
         """
         Extensions that discover and create instances of `symbols.Symbol`
         should do this through this method, as it will keep an index
         of these which can be used when generating a "naive index".
 
-        See `database.Database.get_or_create_symbol` for more
+        See `database.Database.create_symbol` for more
         information.
 
         Args:
-            args: see `database.Database.get_or_create_symbol`
-            kwargs: see `database.Database.get_or_create_symbol`
+            args: see `database.Database.create_symbol`
+            kwargs: see `database.Database.create_symbol`
 
         Returns:
             symbols.Symbol: the created symbol, or `None`.
@@ -400,7 +386,7 @@ class Extension(Configurable):
         if not kwargs.get('project_name'):
             kwargs['project_name'] = self.project.project_name
 
-        sym = self.app.database.get_or_create_symbol(*args, **kwargs)
+        sym = self.app.database.create_symbol(*args, **kwargs)
         if sym:
             smart_key = self._get_smart_key(sym)
 
@@ -456,7 +442,7 @@ class Extension(Configurable):
 
         return None
 
-    def __update_tree_cb(self, tree, unlisted_sym_names):
+    def __update_tree_cb(self, tree):
         self.__find_package_root()
         index = self.__get_index_page(tree)
         if index is None:
@@ -470,19 +456,13 @@ class Extension(Configurable):
             page.extension_name = self.extension_name
             tree.add_page(index, override.source_file, page)
 
-        for sym_name in unlisted_sym_names:
-            sym = self.app.database.get_symbol(sym_name)
-            if sym and sym.filename in self._get_all_sources():
-                self._created_symbols[self._get_smart_key(sym)].add(sym_name)
-
         user_symbols, user_symbol_pages, private_symbols = self.__get_user_symbols(tree, index)
         for source_file, symbols in self._created_symbols.items():
-            gen_symbols = symbols - user_symbols - private_symbols
-            if not gen_symbols and source_file not in user_symbol_pages:
+            symbols = symbols - user_symbols - private_symbols
+            if not symbols and source_file not in user_symbol_pages:
                 continue
 
-            self.__add_subpage(tree, index, source_file, gen_symbols)
-            tree.stale_symbol_pages(symbols)
+            self.__add_subpage(tree, index, source_file, symbols)
 
     def __find_package_root(self):
         if self.__package_root:
@@ -522,8 +502,6 @@ class Extension(Configurable):
             page.extension_name = self.extension_name
             page.generated = True
             tree.add_page(index, page_name, page)
-        else:
-            page.is_stale = True
 
         page.symbol_names |= symbols
 
@@ -618,21 +596,17 @@ class Extension(Configurable):
                 for resolving links potentially mentioned in `page`
             output: str, path to the output directory.
         """
-        if page.is_stale:
-            debug('Formatting page %s' % page.link.ref, 'formatting')
+        debug('Formatting page %s' % page.link.ref, 'formatting')
 
-            if output:
-                actual_output = os.path.join(output,
-                                             'html')
-                if not os.path.exists(actual_output):
-                    os.makedirs(actual_output)
-            else:
-                actual_output = None
-
-            page.format(self.formatter, link_resolver, actual_output)
+        if output:
+            actual_output = os.path.join(output,
+                                         'html')
+            if not os.path.exists(actual_output):
+                os.makedirs(actual_output)
         else:
-            debug('Not formatting page %s, up to date' % page.link.ref,
-                  'formatting')
+            actual_output = None
+
+        page.format(self.formatter, link_resolver, actual_output)
 
     def write_out_sitemap(self, opath):
         """

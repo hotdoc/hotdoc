@@ -31,60 +31,6 @@ from hotdoc.core.symbols import (FunctionSymbol, ParameterSymbol, StructSymbol)
 from hotdoc.utils.utils import OrderedDict
 
 
-class TestLinkResolver(unittest.TestCase):
-    def setUp(self):
-        here = os.path.dirname(__file__)
-        self.__priv_dir = os.path.abspath(os.path.join(
-            here, 'tmp-private'))
-        self.__remove_tmp_dirs()
-        os.mkdir(self.__priv_dir)
-
-        self.database = Database(self.__priv_dir)
-        self.link_resolver = LinkResolver(self.database)
-
-    def __remove_tmp_dirs(self):
-        shutil.rmtree(self.__priv_dir, ignore_errors=True)
-
-    def test_incremental(self):
-        param = ParameterSymbol(
-            type_tokens=[Link(None, 'test-struct', 'test-struct')])
-        func = self.database.get_or_create_symbol(
-            FunctionSymbol, unique_name='test-symbol', filename='text_b.x',
-            parameters=[param])
-
-        func.resolve_links(self.link_resolver)
-
-        ref, _ = param.get_type_link().get_link(self.link_resolver)
-
-        self.assertEqual(ref, None)
-
-        struct = self.database.get_or_create_symbol(
-            StructSymbol, unique_name='test-struct', filename='test_a.x')
-
-        struct.resolve_links(self.link_resolver)
-        func.resolve_links(self.link_resolver)
-
-        ref, _ = param.get_type_link().get_link(self.link_resolver)
-
-        # Not in a page but still
-        self.assertEqual(ref, 'test-struct')
-
-        self.database.persist()
-
-        self.database = Database(self.__priv_dir)
-        self.link_resolver = LinkResolver(self.database)
-
-        param = ParameterSymbol(
-            type_tokens=[Link(None, 'test-struct', 'test-struct')])
-        func = self.database.get_or_create_symbol(
-            FunctionSymbol, unique_name='test-symbol',
-            filename='text_b.x', parameters=[param])
-
-        func.resolve_links(self.link_resolver)
-        ref, _ = param.get_type_link().get_link(self.link_resolver)
-        self.assertEqual(ref, 'test-struct')
-
-
 class TestLinkUtils(unittest.TestCase):
     def test_dict_to_html_attrs(self):
         self.assertEqual(dict_to_html_attrs({'foo': 'a.html#something'}),

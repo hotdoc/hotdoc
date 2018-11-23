@@ -42,8 +42,7 @@ class HotdocTestExtension(Extension):
         return symbol.extra['custom-key']
 
     def setup(self):
-        stale, _ = self.get_stale_files(self.sources)
-        for source in stale:
+        for source in self.sources:
             with open(source, 'r') as _:
                 lines = _.readlines()
                 if self.use_custom_key:
@@ -52,7 +51,7 @@ class HotdocTestExtension(Extension):
                     custom_key = None
                 for l in lines:
                     l = l.strip()
-                    self.get_or_create_symbol(
+                    self.create_symbol(
                         FunctionSymbol,
                         unique_name=l,
                         filename=source,

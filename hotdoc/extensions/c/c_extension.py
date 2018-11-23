@@ -103,7 +103,7 @@ class ClangScanner(object):
         self.__doc_db = doc_db
         self.__all_sources = []
 
-    def scan(self, filenames, options, incremental, full_scan,
+    def scan(self, filenames, options, full_scan,
              full_scan_patterns, fail_fast=False, all_sources=None):
         if all_sources is None:
             self.__all_sources = []
@@ -314,7 +314,7 @@ class ClangScanner(object):
         if not return_value:
             return_value = [ReturnItemSymbol(type_tokens=[])]
 
-        return self.__doc_db.get_or_create_symbol(CallbackSymbol, parameters=parameters,
+        return self.__doc_db.create_symbol(CallbackSymbol, parameters=parameters,
                 return_value=return_value, display_name=node.spelling,
                 filename=str(node.location.file), lineno=node.location.line)
 
@@ -420,7 +420,7 @@ class ClangScanner(object):
         member_name = field.spelling
         if parent_name:
             member_name = parent_name + '.' + member_name
-        member = self.__doc_db.get_or_create_symbol(FieldSymbol, is_function_pointer=is_function_pointer,
+        member = self.__doc_db.create_symbol(FieldSymbol, is_function_pointer=is_function_pointer,
                 member_name=member_name, qtype=qtype, filename=str(field.location.file),
                 display_name=name, unique_name=name)
 
@@ -444,7 +444,7 @@ class ClangScanner(object):
 
         anonymous = not node.spelling
 
-        return self.__doc_db.get_or_create_symbol(StructSymbol, raw_text=raw_text,
+        return self.__doc_db.create_symbol(StructSymbol, raw_text=raw_text,
                 members=members, anonymous=anonymous,
                 display_name=spelling,
                 filename=str(node.location.file), lineno=node.location.line)
@@ -455,7 +455,7 @@ class ClangScanner(object):
         for member in node.get_children():
             member_value = member.enum_value
             # FIXME: this is pretty much a macro symbol ?
-            member = self.__doc_db.get_or_create_symbol(EnumMemberSymbol, display_name=member.spelling,
+            member = self.__doc_db.create_symbol(EnumMemberSymbol, display_name=member.spelling,
                     filename=str(member.location.file),
                     lineno=member.location.line)
 
@@ -471,7 +471,7 @@ class ClangScanner(object):
             end)]
         raw_text = '\n'.join(original_lines)
 
-        return self.__doc_db.get_or_create_symbol(EnumSymbol, members=members,
+        return self.__doc_db.create_symbol(EnumSymbol, members=members,
                 anonymous=anonymous, raw_text=raw_text, display_name=spelling,
                 filename=str(node.location.file), lineno=node.location.line)
 
@@ -488,7 +488,7 @@ class ClangScanner(object):
 
         filename = str(node.location.file)
 
-        return self.__doc_db.get_or_create_symbol(AliasSymbol, aliased_type=aliased_type,
+        return self.__doc_db.create_symbol(AliasSymbol, aliased_type=aliased_type,
                 display_name=node.spelling, filename=filename,
                 lineno=node.location.line, extra=extra)
 
@@ -516,7 +516,7 @@ class ClangScanner(object):
                     type_tokens=type_tokens)
             parameters.append (parameter)
 
-        return self.__doc_db.get_or_create_symbol(FunctionSymbol, parameters=parameters,
+        return self.__doc_db.create_symbol(FunctionSymbol, parameters=parameters,
                 return_value=return_value, display_name=node.spelling,
                 filename=str(node.location.file), lineno=node.location.line,
                 extent_start=node.extent.start.line,
@@ -536,7 +536,7 @@ class ClangScanner(object):
         type_tokens = self.make_c_style_type_name(node.type)
         type_qs = QualifiedSymbol(type_tokens=type_tokens)
 
-        return self.__doc_db.get_or_create_symbol(ExportedVariableSymbol, original_text=original_text,
+        return self.__doc_db.create_symbol(ExportedVariableSymbol, original_text=original_text,
                 display_name=node.spelling, filename=str(node.location.file),
                 lineno=node.location.line, type_qs=type_qs)
 
@@ -585,8 +585,7 @@ class CExtension(Extension):
 
         if not symbol:
             scanner = ClangScanner(self.app, self.project, self)
-            scanner.scan([include_path], self.flags,
-                         self.app.incremental, True, ['*.c', '*.h'])
+            scanner.scan([include_path], self.flags, True, ['*.c', '*.h'])
             symbol = self.app.database.get_symbol(symbol_name)
 
             if not symbol:
@@ -617,15 +616,13 @@ class CExtension(Extension):
     def _get_smart_index_title(self):
         return 'C API Reference'
 
-    def get_or_create_symbol(self, *args, **kwargs):
+    def create_symbol(self, *args, **kwargs):
         kwargs['language'] = 'c'
-        return super(CExtension, self).get_or_create_symbol(*args, **kwargs)
+        return super(CExtension, self).create_symbol(*args, **kwargs)
 
     def setup(self):
         super(CExtension, self).setup()
-        stale, unlisted = self.get_stale_files(self.sources)
-        self.scanner.scan(stale, self.flags,
-                          self.app.incremental, False, ['*.h'],
+        self.scanner.scan(self.sources, self.flags, False, ['*.h'],
                           all_sources=self.sources)
 
     @staticmethod

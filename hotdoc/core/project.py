@@ -195,13 +195,9 @@ class Project(Configurable):
         """
         info('Setting up %s' % self.project_name, 'project')
 
-        self.app.database.comment_updated_signal.connect(
-            self.__comment_updated_cb)
         for extension in list(self.extensions.values()):
             info('Setting up %s' % extension.extension_name)
             extension.setup()
-        self.app.database.comment_updated_signal.disconnect(
-            self.__comment_updated_cb)
 
         sitemap = SitemapParser().parse(self.sitemap_path)
         self.tree.parse_sitemap(sitemap)
@@ -273,9 +269,6 @@ class Project(Configurable):
             ext = ext_class(self.app, self)
             self.extensions[ext.extension_name] = ext
 
-    def __comment_updated_cb(self, doc_db, comment):
-        self.tree.stale_comment_pages(comment)
-
     def parse_name_from_config(self, config):
         """
         Banana banana
@@ -323,9 +316,6 @@ class Project(Configurable):
             if toplevel:
                 extension.parse_toplevel_config(config)
             extension.parse_config(config)
-
-        if not toplevel and config.conf_file:
-            self.app.change_tracker.add_hard_dependency(config.conf_file)
 
         self.extra_asset_folders = OrderedSet(config.get_paths('extra_assets'))
 

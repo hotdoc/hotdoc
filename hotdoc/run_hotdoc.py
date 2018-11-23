@@ -35,7 +35,6 @@ from collections import OrderedDict
 from hotdoc.core.project import Project, CoreExtension
 from hotdoc.core.config import Config, load_config_json
 from hotdoc.core.exceptions import HotdocException
-from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.database import Database
 from hotdoc.core.links import LinkResolver, Link
 from hotdoc.utils.utils import all_subclasses, get_extension_classes, get_cat
@@ -58,11 +57,9 @@ class Application(Configurable):
             self.extension_classes[ext_class.extension_name] = ext_class
         self.output = None
         self.private_folder = None
-        self.change_tracker = None
         self.database = None
         self.link_resolver = None
         self.dry = False
-        self.incremental = False
         self.config = None
         self.project = None
         self.formatted_signal = Signal()
@@ -91,7 +88,7 @@ class Application(Configurable):
         self.project.parse_name_from_config(self.config)
         self.private_folder = os.path.abspath(
             'hotdoc-private-%s' % self.project.sanitized_name)
-        self.__create_change_tracker(self.config.get('disable_incremental'))
+        shutil.rmtree(self.private_folder, ignore_errors=True)
         self.project.parse_config(self.config, toplevel=True)
 
         self.__setup_private_folder()
@@ -102,9 +99,6 @@ class Application(Configurable):
         Banana banana
         """
         res = 0
-
-        if self.config.conf_file:
-            self.change_tracker.add_hard_dependency(self.config.conf_file)
 
         self.project.setup()
         self.__retrieve_all_projects(self.project)
@@ -143,55 +137,13 @@ class Application(Configurable):
         for subproj in project.subprojects.values():
             self.__retrieve_all_projects(subproj)
 
-    def __dump_project_deps_file(self, project, deps_file, empty_targets):
-        for page in list(project.tree.get_pages().values()):
-            if not page.generated:
-                empty_targets.append(page.source_file)
-                deps_file.write(u'%s ' % page.source_file)
-
-        for subproj in project.subprojects.values():
-            self.__dump_project_deps_file(subproj, deps_file, empty_targets)
-
-    def __dump_deps_file(self, project):
-        dest = self.config.get('deps_file_dest', None)
-        target = self.config.get('deps_file_target')
-
-        if dest is None:
-            info("Not dumping deps file")
-            return
-
-        info("Dumping deps file to %s with target %s" %
-             (dest, target))
-
-        destdir = os.path.dirname(dest)
-        if not os.path.exists(destdir):
-            os.makedirs(destdir)
-
-        empty_targets = []
-        with open(dest, 'w', encoding='utf-8') as _:
-            _.write(u'%s: ' % target)
-
-            for dep in self.config.get_dependencies():
-                empty_targets.append(dep)
-                _.write(u'%s ' % dep)
-
-            self.__dump_project_deps_file(project, _, empty_targets)
-
-            for empty_target in empty_targets:
-                _.write(u'\n\n%s:' % empty_target)
-
     def __persist(self, project):
         if self.dry:
             return
 
         info('Persisting database and private files', 'persisting')
 
-        project.persist()
         self.database.persist()
-        with open(os.path.join(self.private_folder,
-                               'change_tracker.p'), 'wb') as _:
-            _.write(pickle.dumps(self.change_tracker))
-        self.__dump_deps_file(project)
 
     def finalize(self):
         """
@@ -210,26 +162,6 @@ class Application(Configurable):
     def __setup_database(self):
         self.database = Database(self.private_folder)
         self.link_resolver = LinkResolver(self.database)
-
-    def __create_change_tracker(self, disable_incremental):
-        if not disable_incremental:
-            try:
-                with open(os.path.join(self.private_folder,
-                                       'change_tracker.p'), 'rb') as _:
-                    self.change_tracker = pickle.loads(_.read())
-
-                if self.change_tracker.hard_dependencies_are_stale():
-                    raise IOError
-                self.incremental = True
-                info("Building incrementally")
-            # pylint: disable=broad-except
-            except Exception:
-                pass
-
-        if not self.incremental:
-            info("Building from scratch")
-            shutil.rmtree(self.private_folder, ignore_errors=True)
-            self.change_tracker = ChangeTracker()
 
 
 def check_path(init_dir, name):
@@ -427,10 +359,6 @@ def run(args):
                         help="Separator to allow finishing a list"
                         " of arguments before a command",
                         dest="whatever")
-    parser.add_argument("--disable-incremental-build", action="store_true",
-                        default=False,
-                        dest="disable_incremental",
-                        help="Disable incremental build")
 
     add_args_methods = set()
 

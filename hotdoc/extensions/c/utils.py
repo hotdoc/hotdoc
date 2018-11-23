@@ -121,7 +121,7 @@ class CCommentExtractor:
             if comment.filename:
                 filename = '%s.h' % os.path.splitext(comment.filename)[0]
 
-        sym = self.extension.get_or_create_symbol(
+        sym = self.extension.create_symbol(
             FunctionMacroSymbol, return_value=return_value,
             parameters=parameters, original_text=original_text,
             display_name=name, filename=filename, lineno=lineno)
@@ -132,7 +132,7 @@ class CCommentExtractor:
         if name in self.extension.created_symbols:
             return None
 
-        return self.extension.get_or_create_symbol(ConstantSymbol,
+        return self.extension.create_symbol(ConstantSymbol,
                                                    original_text=original_text,
                                                    display_name=name, filename=filename,
                                                    lineno=lineno)

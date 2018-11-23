@@ -23,7 +23,6 @@ import os
 import json
 import shutil
 
-from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.config import Config
 from hotdoc.utils.utils import touch
 from hotdoc.utils.utils import get_extension_classes
@@ -51,10 +50,8 @@ class HotdocTest(unittest.TestCase):
         os.mkdir(self.private_folder)
         os.mkdir(self._src_dir)
         self.dependency_map = {}
-        self.change_tracker = ChangeTracker()
         self.database = Database(self.private_folder)
         self.link_resolver = LinkResolver(self.database)
-        self.incremental = False
         self.sanitized_name = 'test-project-0.1'
         self.tree = Tree(self, self)
 

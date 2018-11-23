@@ -103,7 +103,7 @@ class DBusScanner(object):
         self.app.database.add_comment(comment)
         parameters = self.__create_parameters (node.arguments)
 
-        self.__ext.get_or_create_symbol(FunctionSymbol,
+        self.__ext.create_symbol(FunctionSymbol,
                 parameters=parameters,
                 display_name=node.name,
                 filename=self.__current_filename,
@@ -113,7 +113,7 @@ class DBusScanner(object):
         self.__current_class_name = node.name
         comment = self.__comment_from_node(node, node.name)
         self.app.database.add_comment(comment)
-        self.__ext.get_or_create_symbol(ClassSymbol,
+        self.__ext.create_symbol(ClassSymbol,
                 display_name=node.name,
                 filename=self.__current_filename)
 
@@ -133,7 +133,7 @@ class DBusScanner(object):
         elif node.access == node.ACCESS_READWRITE:
             flags = 'Read / Write'
 
-        sym = self.__ext.get_or_create_symbol(PropertySymbol,
+        sym = self.__ext.create_symbol(PropertySymbol,
                 prop_type=type_,
                 display_name=node.name,
                 unique_name=unique_name,
@@ -150,7 +150,7 @@ class DBusScanner(object):
         parameters = self.__create_parameters (node.arguments,
                 omit_direction=True)
 
-        self.__ext.get_or_create_symbol(SignalSymbol,
+        self.__ext.create_symbol(SignalSymbol,
                 parameters=parameters,
                 display_name=node.name, unique_name=unique_name,
                 filename=self.__current_filename)
@@ -170,16 +170,15 @@ class DBusExtension(Extension):
 
     def setup (self):
         super(DBusExtension, self).setup()
-        stale, unlisted = self.get_stale_files(self.sources)
 
-        if not stale:
+        if not self.sources:
             return
 
-        self.scanner = DBusScanner (self.app, self.project, self, stale)
+        self.scanner = DBusScanner (self.app, self.project, self, self.sources)
 
-    def get_or_create_symbol(self, *args, **kwargs):
+    def create_symbol(self, *args, **kwargs):
         kwargs['language'] = 'dbus'
-        return super(DBusExtension, self).get_or_create_symbol(*args,
+        return super(DBusExtension, self).create_symbol(*args,
             **kwargs)
 
     def _get_smart_index_title(self):

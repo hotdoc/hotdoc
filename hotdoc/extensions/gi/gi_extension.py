@@ -185,7 +185,7 @@ class GIExtension(Extension):
         page.meta['extra']['gi-language'] = 'c'
         Extension.write_out_page(self, output, page)
 
-    def get_or_create_symbol(self, *args, **kwargs):
+    def create_symbol(self, *args, **kwargs):
         args = list(args)
         node = None
         if len(args) > 1:
@@ -209,7 +209,7 @@ class GIExtension(Extension):
                           " Document the symbol for smart indexing to work" % (
                               name, os.path.basename(self.__default_page)))
 
-        res = super(GIExtension, self).get_or_create_symbol(*args, **kwargs)
+        res = super(GIExtension, self).create_symbol(*args, **kwargs)
 
         if res:
             self.created_symbols.add(res.unique_name)
@@ -323,7 +323,7 @@ class GIExtension(Extension):
             qtype = QualifiedSymbol(type_tokens=type_desc.type_tokens)
             self.add_attrs(qtype, type_desc=type_desc)
 
-            member = self.get_or_create_symbol(
+            member = self.create_symbol(
                 FieldSymbol,
                 member_name=field_name, qtype=qtype,
                 filename=filename, display_name=name,
@@ -486,7 +486,7 @@ class GIExtension(Extension):
         parameters, retval = self.__create_parameters_and_retval(node)
 
         filename = self.__get_symbol_filename(name)
-        sym = self.get_or_create_symbol(
+        sym = self.create_symbol(
             CallbackSymbol, node, parameters=parameters,
             return_value=retval, display_name=name,
             filename=filename, parent_name=parent_name)
@@ -520,7 +520,7 @@ class GIExtension(Extension):
         members = []
         for field in node.findall(core_ns('member')):
             unique_name = field.attrib[c_ns('identifier')]
-            member = self.get_or_create_symbol(
+            member = self.create_symbol(
                 EnumMemberSymbol, field, display_name=unique_name,
                 filename=filename, parent_name=name)
 
@@ -528,7 +528,7 @@ class GIExtension(Extension):
                 member.enum_value = field.attrib['value']
                 members.append(member)
 
-        res = self.get_or_create_symbol(
+        res = self.create_symbol(
             EnumSymbol, node, members=members,
             anonymous=False, display_name=name,
             filename=filename, raw_text=None)
@@ -563,7 +563,7 @@ class GIExtension(Extension):
         self.add_attrs(udata_param, type_desc=type_desc, direction='in')
         parameters.append(udata_param)
 
-        res = self.get_or_create_symbol(SignalSymbol, node,
+        res = self.create_symbol(SignalSymbol, node,
                                         parameters=parameters, return_value=retval,
                                         display_name=name, unique_name=unique_name,
                                         filename=self.__get_symbol_filename(
@@ -613,7 +613,7 @@ class GIExtension(Extension):
         elif construct == '1':
             flags.append(ConstructFlag())
 
-        res = self.get_or_create_symbol(PropertySymbol, node,
+        res = self.create_symbol(PropertySymbol, node,
                                         prop_type=type_,
                                         display_name=name,
                                         unique_name=unique_name,
@@ -647,7 +647,7 @@ class GIExtension(Extension):
                             annotations=param_comment.annotations))
 
         parameters, retval = self.__create_parameters_and_retval(node)
-        symbol = self.get_or_create_symbol(VFunctionSymbol, node,
+        symbol = self.create_symbol(VFunctionSymbol, node,
                                            parameters=parameters,
                                            return_value=retval, display_name=name,
                                            unique_name=unique_name,
@@ -679,7 +679,7 @@ class GIExtension(Extension):
                 if alias_link:
                     ALIASED_LINKS[lang][name] = alias_link[0]
 
-        return self.get_or_create_symbol(AliasSymbol, node,
+        return self.create_symbol(AliasSymbol, node,
                                          aliased_type=aliased_type,
                                          display_name=name,
                                          filename=filename,
@@ -750,7 +750,7 @@ class GIExtension(Extension):
                                                klass_name,
                                                unique_name)
 
-        return self.get_or_create_symbol(GIClassSymbol, node,
+        return self.create_symbol(GIClassSymbol, node,
                                         hierarchy=hierarchy,
                                         children=children,
                                         display_name=klass_name,
@@ -767,7 +767,7 @@ class GIExtension(Extension):
             parent_name=struct_name)
 
         if not parent_name:
-            return self.get_or_create_symbol(GIStructSymbol, node,
+            return self.create_symbol(GIStructSymbol, node,
                                              display_name=struct_name,
                                              unique_name=struct_name,
                                              anonymous=False,
@@ -783,7 +783,7 @@ class GIExtension(Extension):
             return res
 
     def __create_interface_symbol(self, node, unique_name, filename):
-        return self.get_or_create_symbol(InterfaceSymbol, node,
+        return self.create_symbol(InterfaceSymbol, node,
                                          display_name=unique_name,
                                          unique_name=unique_name,
                                          parent_name=unique_name,
@@ -804,7 +804,7 @@ class GIExtension(Extension):
         else:
             type_ = FunctionSymbol
 
-        func = self.get_or_create_symbol(type_, node,
+        func = self.create_symbol(type_, node,
                                          parameters=gi_params,
                                          return_value=retval,
                                          display_name=name,
@@ -825,8 +825,7 @@ class GIExtension(Extension):
                                                         DEFAULT_PAGE, 0, 0)
         self.app.database.add_comment(block)
 
-        stale_c, unlisted = self.get_stale_files(self.c_sources)
-        self.__c_comment_extractor.parse_comments(stale_c)
+        self.__c_comment_extractor.parse_comments(self.c_sources)
 
     def __create_macro_symbols(self):
         self.__c_comment_extractor.create_macro_symbols(SMART_FILTERS, self.c_sources)

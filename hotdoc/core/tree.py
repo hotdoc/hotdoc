@@ -38,7 +38,6 @@ from hotdoc.core.inclusions import find_file, resolve
 from hotdoc.core.symbols import Symbol, StructSymbol, ClassSymbol,\
     InterfaceSymbol, AliasSymbol
 from hotdoc.core.links import Link
-from hotdoc.core.filesystem import ChangeTracker
 from hotdoc.core.exceptions import HotdocSourceException, InvalidPageMetadata
 from hotdoc.core.comment import Comment
 # pylint: disable=no-name-in-module
@@ -171,35 +170,6 @@ class Page:
         self.short_description = meta.get('short-description', self.short_description)
         self.render_subpages = meta.get('render-subpages', self.render_subpages)
 
-    def __getstate__(self):
-        return {'ast': None,
-                'build_path': None,
-                'title': self.title,
-                'raw_contents': self.raw_contents,
-                'short_description': self.short_description,
-                'extension_name': self.extension_name,
-                'link': self.link,
-                'meta': self.meta,
-                'source_file': self.source_file,
-                'comment': self.comment,
-                'generated': self.generated,
-                'is_stale': False,
-                'formatted_contents': None,
-                'detailed_description': None,
-                'output_attrs': None,
-                'symbols': [],
-                'private_symbols': {},
-                'typed_symbols': {},
-                'by_parent_symbols': {},
-                'subpages': self.subpages,
-                'listed_symbols': self.listed_symbols,
-                'symbol_names': self.symbol_names,
-                'project_name': self.project_name,
-                'pre_sorted': self.pre_sorted,
-                'cached_paths': self.cached_paths,
-                'render_subpages': self.render_subpages,
-                'thumbnail': self.thumbnail}
-
     def __repr__(self):
         return "<Page %s>" % self.source_file
 
@@ -272,15 +242,7 @@ class Page:
 
     # pylint: disable=no-self-use
     def __fetch_comment(self, sym, database):
-        old_comment = sym.comment
-        new_comment = database.get_comment(sym.unique_name)
-        sym.comment = Comment(sym.unique_name)
-
-        if new_comment:
-            sym.comment = new_comment
-        elif old_comment:
-            if old_comment.filename not in ChangeTracker.all_stale_files:
-                sym.comment = old_comment
+        sym.comment = database.get_comment(sym.unique_name) or Comment(sym.unique_name)
 
     def __format_page_comment(self, formatter, link_resolver):
         if not self.comment:
@@ -410,11 +372,7 @@ class Tree:
         self.project = project
         self.app = app
 
-        if self.app.incremental:
-            self.__all_pages = self.__load_private(
-                'pages-%s.p' % self.project.sanitized_name)
-        else:
-            self.__all_pages = {}
+        self.__all_pages = {}
 
         self.__placeholders = {}
         self.root = None
@@ -433,16 +391,6 @@ class Tree:
             for sym_name in page.symbol_names:
                 self.__dep_map[sym_name] = page
 
-    def __load_private(self, name):
-        path = os.path.join(self.project.get_private_folder(), name)
-        with open(path, 'rb') as _:
-            return pickle.loads(_.read())
-
-    def __save_private(self, obj, name):
-        path = os.path.join(self.project.get_private_folder(), name)
-        with open(path, 'wb') as _:
-            _.write(pickle.dumps(obj))
-
     # pylint: disable=no-self-use
     def __parse_page(self, source_file):
         with io.open(source_file, 'r', encoding='utf-8') as _:
@@ -454,7 +402,6 @@ class Tree:
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-statements
     def __parse_pages(self, sitemap):
-        change_tracker = self.app.change_tracker
         source_files = []
         source_map = {}
         placeholders = []
@@ -499,51 +446,10 @@ class Tree:
                         self.__all_pages[source_name] = page
                         placeholders.append(fname)
 
-        stale, unlisted = change_tracker.get_stale_files(
-            source_files, 'user-pages-%s' % self.project.sanitized_name)
-
-        old_user_symbols = set()
-        new_user_symbols = set()
-
-        for source_file in stale:
+        for source_file in source_files:
             pagename = source_map[source_file]
-
-            prev_page = self.__all_pages.get(pagename)
-            if prev_page:
-                old_user_symbols |= prev_page.symbol_names
-
             page = self.__parse_page(source_file)
-            new_user_symbols |= page.symbol_names
-
-            newly_listed_symbols = OrderedSet(page.symbol_names)
-            if prev_page:
-                newly_listed_symbols -= prev_page.symbol_names
-
-            self.stale_symbol_pages(newly_listed_symbols, page)
-
-            if prev_page:
-                page.subpages |= prev_page.subpages
-
             self.__all_pages[pagename] = page
-
-        unlisted_pagenames = set()
-
-        for source_file in unlisted:
-            prev_page = None
-            rel_path = None
-
-            for ipath in self.project.include_paths:
-                rel_path = os.path.relpath(source_file, ipath)
-                prev_page = self.__all_pages.get(rel_path)
-                if prev_page:
-                    break
-
-            if not prev_page:
-                continue
-
-            old_user_symbols |= prev_page.symbol_names
-            self.__all_pages.pop(rel_path)
-            unlisted_pagenames.add(rel_path)
 
         def setup_subpages(pagenames, get_pagename):
             """Setup subpages for pages with names in @pagenames"""
@@ -554,16 +460,12 @@ class Tree:
                 subpages = sitemap_pages.get(get_pagename(pagename), [])
                 page.subpages = OrderedSet(subpages) | page.subpages
                 for subpage_name in page.subpages:
-                    if subpage_name not in unlisted_pagenames:
-                        subpage = self.__all_pages[subpage_name]
-                        if not subpage.meta.get('auto-sort', False):
-                            subpage.pre_sorted = True
-                page.subpages -= unlisted_pagenames
+                    subpage = self.__all_pages[subpage_name]
+                    if not subpage.meta.get('auto-sort', False):
+                        subpage.pre_sorted = True
 
         setup_subpages(source_files, lambda x: source_map[x])
         setup_subpages(placeholders, lambda x: x)
-
-        return old_user_symbols - new_user_symbols
 
     def __update_sitemap(self, sitemap):
         # We need a mutable variable
@@ -664,43 +566,14 @@ class Tree:
         return Page(source_file, ast, output_path, self.project.sanitized_name,
                     meta=meta, raw_contents=raw_contents)
 
-    def stale_comment_pages(self, comment):
-        """
-        Banana banana
-        """
-        page = self.__dep_map.get(comment.name)
-        if page:
-            page.is_stale = True
-
-    def stale_symbol_pages(self, symbols, new_page=None):
-        """
-        Banana banana
-        """
-        for sym in symbols:
-            page = self.__dep_map.get(sym)
-            if page:
-                page.is_stale = True
-                if new_page and new_page.source_file != page.source_file:
-                    page.symbol_names.remove(sym)
-
     def parse_sitemap(self, sitemap):
         """
         Banana banana
         """
-        unlisted_symbols = self.__parse_pages(sitemap)
+        self.__parse_pages(sitemap)
         self.root = self.__all_pages[sitemap.index_file]
         self.__update_sitemap(sitemap)
-        self.update_signal(self, unlisted_symbols)
-
-    def get_stale_pages(self):
-        """
-        Banana banana
-        """
-        stale = {}
-        for pagename, page in list(self.__all_pages.items()):
-            if page.is_stale:
-                stale[pagename] = page
-        return stale
+        self.update_signal(self)
 
     def get_pages(self):
         """
@@ -769,10 +642,3 @@ class Tree:
         for page in self.walk():
             ext = self.project.extensions[page.extension_name]
             ext.write_out_page(output, page)
-
-    def persist(self):
-        """
-        Banana banana
-        """
-        self.__save_private(self.__all_pages, 'pages-%s.p' %
-                            self.project.sanitized_name)

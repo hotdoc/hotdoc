@@ -24,54 +24,15 @@ from hotdoc.utils.loggable import Logger
 
 class TestDatabase(HotdocTest):
     # Defining the same symbol twice in the same run is not allowed
-    def test_redefined_symbol_same_run(self):
-        self.database.get_or_create_symbol(
+    def test_redefined_symbol(self):
+        self.database.create_symbol(
             FunctionSymbol,
             unique_name='foo')
 
         Logger.fatal_warnings = True
         Logger.silent = True
         with self.assertRaises(RedefinedSymbolException):
-            self.database.get_or_create_symbol(
-                FunctionSymbol,
-                unique_name='foo')
-        Logger.fatal_warnings = False
-        Logger.silent = False
-
-    # But when building incrementally, redefining a symbol should work
-    # just fine
-    def test_redefined_symbol_different_run(self):
-        self.database.get_or_create_symbol(
-            FunctionSymbol,
-            unique_name='foo',
-            display_name='bar')
-
-        self.database.persist()
-        self.database = Database(self.private_folder)
-
-        # We get the symbol from the previous run
-        sym = self.database.get_symbol('foo')
-        self.assertIsNotNone(sym)
-        self.assertEqual(sym.display_name, 'bar')
-
-        # It is perfectly fine to update it in the new run
-        Logger.fatal_warnings = True
-        sym2 = self.database.get_or_create_symbol(
-            FunctionSymbol,
-            unique_name='foo',
-            display_name='baz')
-        Logger.fatal_warnings = False
-
-        # The previous call will have updated and returned the symbol
-        # we got initially
-        self.assertEqual(sym, sym2)
-        self.assertEqual(sym.display_name, 'baz')
-
-        # It is invalid to update the symbol any further
-        Logger.fatal_warnings = True
-        Logger.silent = True
-        with self.assertRaises(RedefinedSymbolException):
-            sym2 = self.database.get_or_create_symbol(
+            self.database.create_symbol(
                 FunctionSymbol,
                 unique_name='foo')
         Logger.fatal_warnings = False
