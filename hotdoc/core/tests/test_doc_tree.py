@@ -38,17 +38,13 @@ from hotdoc.run_hotdoc import Application
 class TestExtension(Extension):
     extension_name = 'test-extension'
     argument_prefix = 'test'
+    symbols = []
 
     # pylint: disable=arguments-differ
     def setup(self):
         super(TestExtension, self).setup()
-        for source in self.sources:
-            with open(source, 'r') as _:
-                for l in _.readlines():
-                    l = l.strip()
-                    self.create_symbol(
-                        FunctionSymbol,
-                        unique_name=l, filename=source)
+        for args, kwargs in TestExtension.symbols:
+            self.create_symbol(*args, **kwargs)
 
     def _get_all_sources(self):
         return self.sources
@@ -80,6 +76,7 @@ class TestTree(unittest.TestCase):
 
     def tearDown(self):
         self.__remove_tmp_dirs()
+        TestExtension.symbols = []
         Logger.fatal_warnings = False
 
     def __write_sitemap(self, text):
@@ -95,9 +92,9 @@ class TestTree(unittest.TestCase):
         return path
 
     def __create_src_file(self, name, symbols):
-        path = os.path.join(self.__md_dir, name)
+        path = os.path.join(self.__src_dir, name)
         if os.path.dirname(name):
-            os.makedirs(os.path.join(self.__md_dir, os.path.dirname(name)))
+            os.makedirs(os.path.join(self.__src_dir, os.path.dirname(name)))
         with open(path, 'w') as _:
             for symbol in symbols:
                 _.write('%s\n' % symbol)
@@ -144,7 +141,7 @@ class TestTree(unittest.TestCase):
             self.assertEqual(ext_name, page.extension_name)
 
     def __create_test_layout(self, with_ext_index=True, sitemap=None,
-                             sources=None, source_roots=None):
+                             symbols=None, source_roots=None):
         conf = {'project_name': 'test',
                 'project_version': '1.0'}
         if not sitemap:
@@ -158,20 +155,48 @@ class TestTree(unittest.TestCase):
         else:
             inp = sitemap
 
-        if sources is None:
-            sources = []
+        if symbols is None:
+            TestExtension.symbols = [
+                (
+                    [FunctionSymbol],
+                    {
+                        'unique_name': 'symbol_1',
+                        'filename': 'source_a.test'
+                    }
+                ),
+                (
+                    [FunctionSymbol],
+                    {
+                        'unique_name': 'symbol_2',
+                        'filename': 'source_a.test'
+                    }
+                ),
+                (
+                    [FunctionSymbol],
+                    {
+                        'unique_name': 'symbol_3',
+                        'filename': 'source_b.test'
+                    }
+                ),
+                (
+                    [FunctionSymbol],
+                    {
+                        'unique_name': 'symbol_4',
+                        'filename': 'source_b.test'
+                    }
+                ),
+            ]
+        else:
+            TestExtension.symbols = symbols
 
-        sources.append(self.__create_src_file(
-            'source_a.test',
-            ['symbol_1',
-             'symbol_2']))
-
-        sources.append(self.__create_src_file(
-            'source_b.test',
-            ['symbol_3',
-             'symbol_4']))
-
-        conf['test_sources'] = sources
+        conf['test_sources'] = []
+        all_src_files = set()
+        for _, kwargs in TestExtension.symbols:
+            fname = kwargs['filename']
+            if fname not in all_src_files:
+                conf['test_sources'].append(self.__create_src_file(fname, []))
+                all_src_files.add(fname)
+            kwargs['filename'] = os.path.join(self.__src_dir, fname)
 
         if source_roots:
             conf['test_source_roots'] = source_roots
@@ -435,19 +460,27 @@ class TestTree(unittest.TestCase):
                    '\t\t\tsource1.test\n'
                    '\t\t\tsource2.test\n')
 
-        sources = [
-            self.__create_src_file(
-                'a/source1.test',
-                ['symbol_a']),
-            self.__create_src_file(
-                'b/source2.test',
-                ['symbol_b'])
+        symbols = [
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': 'a/source1.test'
+                }
+            ),
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_b',
+                    'filename': 'source2.test'
+                }
+            ),
         ]
 
         self.__create_test_layout(
-            sitemap=sitemap, sources=sources,
-            source_roots=[os.path.join(self.__md_dir, 'a'),
-                          os.path.join(self.__md_dir, 'b')])
+            sitemap=sitemap, symbols=symbols,
+            source_roots=[os.path.join(self.__src_dir, 'a'),
+                          os.path.join(self.__src_dir, 'b')])
 
         source1 = self.app.project.tree.get_pages()['source1.test']
         self.assertEqual(source1.symbol_names, ['symbol_a'])
