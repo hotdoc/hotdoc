@@ -61,26 +61,20 @@ class TestExtension(Extension):
 class TestTree(unittest.TestCase):
     def setUp(self):
         here = os.path.dirname(__file__)
-        self.__md_dir = os.path.abspath(os.path.join(
-            here, 'tmp-markdown-files'))
-        self.private_folder = os.path.abspath(os.path.join(
-            here, 'tmp-private'))
-        self.__src_dir = os.path.abspath(os.path.join(
-            here, 'tmp-src-files'))
-        self.__output_dir = os.path.abspath(os.path.join(
-            here, 'tmp-output'))
+        self.__test_dir = os.path.abspath(os.path.join(here, 'testdir'))
+        self.__md_dir = os.path.join(self.__test_dir, 'tmp-markdown-files')
+        self.private_folder = os.path.join(self.__test_dir, 'tmp-private')
+        self.__src_dir = os.path.join(self.__test_dir, 'tmp-src-files')
+        self.__output_dir = os.path.join(self.__test_dir, 'tmp-output')
         self.__remove_tmp_dirs()
+        os.mkdir(self.__test_dir)
         os.mkdir(self.__md_dir)
         os.mkdir(self.private_folder)
         os.mkdir(self.__src_dir)
-        os.mkdir(self.get_generated_doc_folder())
         self.include_paths = OrderedSet([self.__md_dir])
-        self.include_paths.add(self.get_generated_doc_folder())
 
         self.dependency_map = {}
 
-        # Using the real doc database is too costly, tests should be lightning
-        # fast (and they are)
         self.database = Database(self.private_folder)
         self.link_resolver = LinkResolver(self.database)
 
@@ -111,9 +105,6 @@ class TestTree(unittest.TestCase):
         del self.core_ext
 
         Logger.fatal_warnings = False
-
-    def get_generated_doc_folder(self):
-        return os.path.join(self.private_folder, 'generated')
 
     def get_base_doc_folder(self):
         return self.__md_dir
@@ -151,11 +142,7 @@ class TestTree(unittest.TestCase):
         os.unlink(path)
 
     def __remove_tmp_dirs(self):
-        shutil.rmtree(self.__md_dir, ignore_errors=True)
-        shutil.rmtree(self.private_folder, ignore_errors=True)
-        shutil.rmtree(self.__src_dir, ignore_errors=True)
-        shutil.rmtree(self.__output_dir, ignore_errors=True)
-        shutil.rmtree(self.get_generated_doc_folder(), ignore_errors=True)
+        shutil.rmtree(self.__test_dir, ignore_errors=True)
 
     def test_basic(self):
         inp = (u'index.markdown\n'
