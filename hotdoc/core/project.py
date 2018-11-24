@@ -349,6 +349,9 @@ class Project(Configurable):
     def write_out(self, output):
         """Banana banana
         """
+        if not output:
+            return
+
         ext = self.extensions.get(self.tree.root.extension_name)
 
         self.tree.write_out(output)
