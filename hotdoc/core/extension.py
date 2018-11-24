@@ -538,7 +538,7 @@ class Extension(Configurable):
         return symbols
 
     def __get_user_symbols(self, tree, index):
-        symbols = self.__get_listed_symbols_in_listed_pages(tree, index)
+        symbol_locations = self.__get_listed_symbols_in_listed_pages(tree, index)
         private_symbols = set()
         parented_symbols = defaultdict(list)
 
@@ -551,8 +551,8 @@ class Extension(Configurable):
                 if not symbol.parent_name:
                     continue
 
-                if symbol.parent_name in symbols:
-                    symbols[symbol.unique_name] = symbols[symbol.parent_name]
+                if symbol.parent_name in symbol_locations:
+                    symbol_locations[symbol.unique_name] = symbol_locations[symbol.parent_name]
                 else:
                     parented_symbols[symbol.parent_name].append(symname)
 
@@ -568,9 +568,9 @@ class Extension(Configurable):
                 comment, parented_symbols, source_file, page_name)
             if comment_syms:
                 comment.meta['symbols'].extend(located_parented_symbols)
-                symbols.update(comment_syms)
+                symbol_locations.update(comment_syms)
 
-        return set(symbols.keys()), set(symbols.values()), private_symbols
+        return set(symbol_locations.keys()), set(symbol_locations.values()), private_symbols
 
     def __get_rel_source_path(self, source_file):
         return os.path.relpath(source_file, self.__package_root)
