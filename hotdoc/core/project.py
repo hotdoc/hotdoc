@@ -198,10 +198,10 @@ class Project(Configurable):
         for extension in list(self.extensions.values()):
             info('Setting up %s' % extension.extension_name)
             extension.setup()
-            extension.make_pages()
 
         sitemap = SitemapParser().parse(self.sitemap_path)
-        self.tree.parse_sitemap(sitemap)
+        self.tree.parse_sitemap2(sitemap, self.extensions)
+        #self.tree.parse_sitemap(sitemap)
         self.page_map.update({p: self for p in self.tree.get_pages().values()})
 
         info("Resolving symbols", 'resolution')

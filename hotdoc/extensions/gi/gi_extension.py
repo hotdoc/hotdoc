@@ -229,6 +229,11 @@ class GIExtension(Extension):
     def _get_smart_index_title(self):
         return 'GObject API Reference'
 
+    def _get_smart_filename(self, filename):
+        if filename == self.__default_page:
+            return filename
+        return os.path.splitext(filename)[0]
+
     def _get_smart_key(self, symbol):
         if symbol.filename == self.__default_page:
             return symbol.filename

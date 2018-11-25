@@ -181,6 +181,8 @@ class Extension(Configurable):
                 page = smart_pages[smart_key]
             else:
                 page = Page(smart_key, None, '', self.project.sanitized_name)
+                page.generated = True
+                page.extension_name = self.extension_name
                 smart_pages[smart_key] = page
 
         symbol_pages[symbol_name] = page
@@ -197,7 +199,7 @@ class Extension(Configurable):
         # explicitly assigned or ignored
         symbol_pages = {}
 
-        smart_pages = {}
+        smart_pages = OrderedDict()
 
         # First we make one page per toplevel comment (eg. SECTION comment)
         # This is the highest priority mechanism for sorting symbols
@@ -205,6 +207,8 @@ class Extension(Configurable):
             assert(comment.name)
             page = Page(comment.name, None, '', self.project.sanitized_name,
                         meta=comment.meta)
+            page.generated = True
+            page.extension_name = self.extension_name
             smart_key = self._get_comment_smart_key(comment)
             smart_pages[smart_key] = page
             symbol_names = comment.meta.get('symbols', [])
@@ -227,9 +231,18 @@ class Extension(Configurable):
                 page.symbol_names.add(symbol_name)
                 dispatched_symbol_names.add(symbol_name)
 
-        ret = OrderedSet(symbol_pages.values())
+        # Finally we make our index page
+        if self.index:
+            index_page = self.project.tree.parse_page(self.index)
+        else:
+            index_page = Page('%s-index' % self.argument_prefix, None, '', self.project.sanitized_name)
+            index_page.generated = True
 
-        return ret
+        index_page.extension_name = self.extension_name
+
+        smart_pages['%s-index' % self.argument_prefix] = index_page
+
+        return smart_pages
 
     def setup(self):
         """
@@ -283,6 +296,7 @@ class Extension(Configurable):
         """
         prefix = self.argument_prefix
         self.sources = config.get_sources(prefix)
+        self.smart_sources = [self._get_smart_filename(s) for s in self.sources]
         self.index = config.get_index(prefix)
         self.source_roots = OrderedSet(config.get_paths('%s_source_roots' % prefix))
 
@@ -336,7 +350,7 @@ class Extension(Configurable):
         pass
 
     @classmethod
-    def add_index_argument(cls, group, prefix=None):
+    def add_index_argument(cls, group):
         """
         Subclasses may call this to add an index argument.
 
@@ -344,7 +358,7 @@ class Extension(Configurable):
             group: arparse.ArgumentGroup, the extension argument group
             prefix: str, arguments have to be namespaced
         """
-        prefix = prefix or cls.argument_prefix
+        prefix = cls.argument_prefix
 
         group.add_argument(
             '--%s-index' % prefix, action="store",
@@ -490,6 +504,21 @@ class Extension(Configurable):
 
     def __resolve_placeholder_cb(self, tree, name, include_paths):
         return self._resolve_placeholder(tree, name, include_paths)
+
+    def resolve(self, name):
+        for path in OrderedSet([self.__package_root]) | self.source_roots:
+            possible_path = os.path.join(path, name)
+            if possible_path in self._get_all_sources():
+                pass
+
+    def get_possible_path(self, name):
+        self.__find_package_root()
+
+        for path in OrderedSet([self.__package_root]) | self.source_roots:
+            possible_path = os.path.join(path, name)
+            if possible_path in self._get_all_sources():
+                return self._get_smart_filename(possible_path)
+        return None
 
     def _resolve_placeholder(self, tree, name, include_paths):
         self.__find_package_root()
@@ -658,6 +687,9 @@ class Extension(Configurable):
 
     def _get_smart_key(self, symbol):
         return symbol.filename
+
+    def _get_smart_filename(self, filename):
+        return filename
 
     def _get_comment_smart_key(self, comment):
         return comment.filename

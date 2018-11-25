@@ -367,5 +367,3 @@ if ENV_VERBOSITY is not None:
 Logger.register_error_code('invalid-config', ConfigError)
 Logger.register_error_code('setup-issue', ConfigError)
 Logger.register_warning_code('parsing-issue', ParsingException)
-
-Logger.silent = True

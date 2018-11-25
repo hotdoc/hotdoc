@@ -392,11 +392,81 @@ class Tree:
                 self.__dep_map[sym_name] = page
 
     # pylint: disable=no-self-use
-    def __parse_page(self, source_file):
+    def parse_page(self, source_file):
         with io.open(source_file, 'r', encoding='utf-8') as _:
             contents = _.read()
 
         return self.page_from_raw_text(source_file, contents)
+
+    def parse_sitemap2(self, sitemap, extensions):
+        ext_level = -1
+        extensions = {ext.argument_prefix: ext for ext in extensions.values()}
+        ext_pages = {}
+        ext_index = None
+        extension = None
+
+        sitemap_pages = sitemap.get_all_sources()
+        self.__all_pages = {}
+
+        for name, level in sitemap:
+            page = None
+
+            if level <= ext_level:
+                for pagename, ext_page in ext_pages.items():
+                    ext_index.subpages.add(pagename)
+                    self.__all_pages[pagename] = ext_page
+                extension = None
+                ext_level = -1
+                ext_pages = {}
+
+            if extension:
+                smart_key = extension.get_possible_path(name)
+            else:
+                smart_key = None
+
+            if name.endswith('-index'):
+                ext_name = name[:-6]
+                extension = extensions.get(ext_name)
+                if extension is None:
+                    # print ("That is a problem")
+                    continue
+                ext_level = level
+                ext_pages = extension.make_pages()
+                page = ext_pages['%s-index' % ext_name]
+                del ext_pages['%s-index' % ext_name]
+                ext_index = page
+            elif name in ext_pages:
+                page = ext_pages[name]
+                del ext_pages[name]
+            elif smart_key in ext_pages:
+                page = ext_pages[smart_key]
+                del ext_pages[smart_key]
+            else:
+                source_file = find_file(name, self.project.include_paths)
+                if source_file is None:
+                    error(
+                        'no-such-subpage',
+                        'No markdown file found for %s' % fname,
+                        filename=sitemap.source_file,
+                        lineno=i,
+                        column=0)
+
+                ext = os.path.splitext(name)[1]
+                if ext == '.json':
+                    self.project.add_subproject(name, source_file)
+                    page = Page(name, None, '', self.project.sanitized_name)
+                    page.generated = True
+                    page.extension_name = 'core'
+                else:
+                    page = self.parse_page(source_file)
+                    page.extension_name = 'core'
+
+            if page:
+                self.__all_pages[name] = page
+                subpages = sitemap_pages.get(name, [])
+                page.subpages = OrderedSet(subpages) | page.subpages
+
+        self.root = self.__all_pages[sitemap.index_file]
 
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-branches
@@ -448,7 +518,7 @@ class Tree:
 
         for source_file in source_files:
             pagename = source_map[source_file]
-            page = self.__parse_page(source_file)
+            page = self.parse_page(source_file)
             self.__all_pages[pagename] = page
 
         def setup_subpages(pagenames, get_pagename):
@@ -471,7 +541,7 @@ class Tree:
         # We need a mutable variable
         level_and_name = [-1, 'core']
 
-        def _update_sitemap(name, _, level):
+        def _update_sitemap(name, _, level, __):
             if name in self.__placeholders:
                 level_and_name[1] = self.__placeholders[name]
                 level_and_name[0] = level
