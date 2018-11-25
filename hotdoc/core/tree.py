@@ -360,7 +360,7 @@ class Page:
         self.symbols.append(symbol)
 
         debug('Resolved symbol %s to page %s' %
-              (symbol.display_name, self.link.ref), 'resolution')
+              (symbol.unique_name, self.link.ref), 'resolution')
 
 
 # pylint: disable=too-many-instance-attributes
