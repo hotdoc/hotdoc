@@ -33,18 +33,23 @@ from hotdoc.utils.utils import OrderedSet
 from hotdoc.utils.loggable import Logger
 from hotdoc.core.config import Config
 from hotdoc.run_hotdoc import Application
+from hotdoc.core.comment import Comment
 
 
 class TestExtension(Extension):
     extension_name = 'test-extension'
     argument_prefix = 'test'
     symbols = []
+    comments = []
 
     # pylint: disable=arguments-differ
     def setup(self):
         super(TestExtension, self).setup()
         for args, kwargs in TestExtension.symbols:
             self.create_symbol(*args, **kwargs)
+
+        for comment in TestExtension.comments:
+            self.app.database.add_comment(comment)
 
     def _get_all_sources(self):
         return self.sources
@@ -77,6 +82,7 @@ class TestTree(unittest.TestCase):
     def tearDown(self):
         self.__remove_tmp_dirs()
         TestExtension.symbols = []
+        TestExtension.comments = []
         Logger.fatal_warnings = False
 
     def __write_sitemap(self, text):
@@ -140,8 +146,10 @@ class TestTree(unittest.TestCase):
             page = pages[name]
             self.assertEqual(ext_name, page.extension_name)
 
+    # pylint: disable=too-many-arguments
     def __create_test_layout(self, with_ext_index=True, sitemap=None,
-                             symbols=None, source_roots=None):
+                             symbols=None, source_roots=None, comments=None,
+                             output=None):
         conf = {'project_name': 'test',
                 'project_version': '1.0'}
         if not sitemap:
@@ -189,17 +197,24 @@ class TestTree(unittest.TestCase):
         else:
             TestExtension.symbols = symbols
 
+        if comments is not None:
+            TestExtension.comments = comments
+
         conf['test_sources'] = []
         all_src_files = set()
         for _, kwargs in TestExtension.symbols:
-            fname = kwargs['filename']
-            if fname not in all_src_files:
-                conf['test_sources'].append(self.__create_src_file(fname, []))
-                all_src_files.add(fname)
-            kwargs['filename'] = os.path.join(self.__src_dir, fname)
+            fname = kwargs.get('filename')
+            if fname is not None:
+                if fname not in all_src_files:
+                    conf['test_sources'].append(self.__create_src_file(fname, []))
+                    all_src_files.add(fname)
+                kwargs['filename'] = os.path.join(self.__src_dir, fname)
 
         if source_roots:
             conf['test_source_roots'] = source_roots
+
+        if output:
+            conf['output'] = output
 
         conf['index'] = self.__create_md_file(
             'index.markdown',
@@ -472,7 +487,7 @@ class TestTree(unittest.TestCase):
                 [FunctionSymbol],
                 {
                     'unique_name': 'symbol_b',
-                    'filename': 'source2.test'
+                    'filename': 'b/source2.test'
                 }
             ),
         ]
@@ -487,3 +502,89 @@ class TestTree(unittest.TestCase):
 
         source2 = self.app.project.tree.get_pages()['source2.test']
         self.assertEqual(source2.symbol_names, ['symbol_b'])
+
+    def test_comment_relocation_basic(self):
+        sitemap = ('index.markdown\n'
+                   '\ttest-index\n'
+                   '\t\t\tsource1.test\n'
+                   '\t\t\tsource2.test\n')
+
+        symbols = [
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': 'source1.test'
+                }
+            ),
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_b',
+                    'filename': 'source2.test'
+                }
+            ),
+        ]
+
+        # symbol_b should be documented in source1
+        comments = [
+            Comment(name=os.path.join(self.__src_dir, 'source1.test'),
+                    meta={'symbols': ['symbol_b']}),
+        ]
+
+        self.__create_test_layout(
+            sitemap=sitemap, symbols=symbols, comments=comments,
+            source_roots=[os.path.join(self.__src_dir, 'a'),
+                          os.path.join(self.__src_dir, 'b')])
+
+        pages = self.app.project.tree.get_pages()
+
+        self.assertIn('source1.test', pages)
+        source1 = pages['source1.test']
+        self.assertEqual(source1.symbol_names, ['symbol_a', 'symbol_b'])
+
+        # source2 should still exist as it is listed in the sitemap
+        self.assertIn('source2.test', pages)
+        source2 = pages['source2.test']
+        self.assertEqual(source2.symbol_names, [])
+
+    def test_comment_relocation_empty_page_disappears(self):
+        sitemap = ('index.markdown\n'
+                   '\ttest-index\n')
+
+        symbols = [
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': 'source1.test'
+                }
+            ),
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_b',
+                    'filename': 'source2.test'
+                }
+            ),
+        ]
+
+        # symbol_b should be documented in source1
+        comments = [
+            Comment(name=os.path.join(self.__src_dir, 'source1.test'),
+                    meta={'symbols': ['symbol_b']}),
+        ]
+
+        self.__create_test_layout(
+            sitemap=sitemap, symbols=symbols, comments=comments,
+            source_roots=[os.path.join(self.__src_dir, 'a'),
+                          os.path.join(self.__src_dir, 'b')])
+
+        pages = self.app.project.tree.get_pages()
+        self.assertIn('source1.test', pages)
+
+        source1 = self.app.project.tree.get_pages()['source1.test']
+        self.assertEqual(source1.symbol_names, ['symbol_a', 'symbol_b'])
+
+        # source2 should not appear in the sitemap
+        self.assertNotIn('source2.test', pages)
