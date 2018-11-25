@@ -80,7 +80,7 @@ class TestTree(unittest.TestCase):
         Logger.fatal_warnings = True
 
     def tearDown(self):
-        self.__remove_tmp_dirs()
+        #self.__remove_tmp_dirs()
         TestExtension.symbols = []
         TestExtension.comments = []
         Logger.fatal_warnings = False
@@ -268,28 +268,6 @@ class TestTree(unittest.TestCase):
         self.assertIn('source_a.test',
                       all_pages['test-section.markdown'].subpages)
 
-    def test_extension_override(self):
-        self.__create_md_file(
-            'source_a.test.markdown',
-            (u'# My override\n'))
-        self.__create_test_layout()
-        page = self.app.project.tree.get_pages()['source_a.test']
-
-        self.assertEqual(
-            page.symbol_names,
-            OrderedSet(['symbol_1',
-                        'symbol_2']))
-
-        self.assertEqual(
-            os.path.basename(page.source_file),
-            'source_a.test.markdown')
-
-        out, _ = cmark.ast_to_html(page.ast, None)
-
-        self.assertEqual(
-            out,
-            u'<h1>My override</h1>\n')
-
     def test_no_extension_index_override(self):
         self.__create_test_layout(with_ext_index=False)
         ext_index = self.app.project.tree.get_pages()['test-index']
@@ -431,9 +409,6 @@ class TestTree(unittest.TestCase):
              u'test-section.markdown': 'test-extension'})
 
     def test_extension_auto_sorted_override(self):
-        self.__create_md_file(
-            'source_b.test.markdown',
-            (u'---\nauto-sort: true\n...\n# My override\n'))
         sitemap = (u'index.markdown\n'
                    '\ttest-index\n'
                    '\t\ttest-section.markdown\n'
@@ -442,31 +417,15 @@ class TestTree(unittest.TestCase):
                    '\t\tpage_x.markdown\n'
                    '\t\tpage_y.markdown\n'
                    '\tcore_page.markdown\n')
-        self.__create_test_layout(sitemap=sitemap)
+        comments = [
+            Comment(name='source_b.test',
+                    filename=os.path.join(self.__src_dir, 'source_b.test'),
+                    meta={'auto-sort': True}, toplevel=True),
+        ]
+        self.__create_test_layout(sitemap=sitemap, comments=comments)
         pages = self.app.project.tree.get_pages()
         self.assertTrue(pages['source_a.test'].pre_sorted)
         self.assertFalse(pages['source_b.test'].pre_sorted)
-
-    def test_extension_implicit_override(self):
-        self.__create_md_file(
-            'source_b.test.markdown',
-            (u'---\nsymbols:\n  - symbol_2\n...\n# My override\n'))
-        self.__create_test_layout()
-
-        source_b = self.app.project.tree.get_pages()['source_b.test']
-        self.assertEqual(
-            os.path.basename(source_b.source_file),
-            'source_b.test.markdown')
-        self.assertEqual(source_b.symbol_names, ['symbol_2', 'symbol_4'])
-
-        source_a = self.app.project.tree.get_pages()['source_a.test']
-        self.assertEqual(source_a.symbol_names, ['symbol_1'])
-
-        out, _ = cmark.ast_to_html(source_b.ast, None)
-
-        self.assertEqual(
-            out,
-            u'<h1>My override</h1>\n')
 
     def test_extension_file_include_dirs(self):
         sitemap = ('index.markdown\n'
@@ -505,51 +464,6 @@ class TestTree(unittest.TestCase):
 
     def test_comment_relocation_basic(self):
         sitemap = ('index.markdown\n'
-                   '\ttest-index\n'
-                   '\t\t\tsource1.test\n'
-                   '\t\t\tsource2.test\n')
-
-        symbols = [
-            (
-                [FunctionSymbol],
-                {
-                    'unique_name': 'symbol_a',
-                    'filename': 'source1.test'
-                }
-            ),
-            (
-                [FunctionSymbol],
-                {
-                    'unique_name': 'symbol_b',
-                    'filename': 'source2.test'
-                }
-            ),
-        ]
-
-        # symbol_b should be documented in source1
-        comments = [
-            Comment(name=os.path.join(self.__src_dir, 'source1.test'),
-                    meta={'symbols': ['symbol_b']}, toplevel=True),
-        ]
-
-        self.__create_test_layout(
-            sitemap=sitemap, symbols=symbols, comments=comments,
-            source_roots=[os.path.join(self.__src_dir, 'a'),
-                          os.path.join(self.__src_dir, 'b')])
-
-        pages = self.app.project.tree.get_pages()
-
-        self.assertIn('source1.test', pages)
-        source1 = pages['source1.test']
-        self.assertEqual(source1.symbol_names, ['symbol_a', 'symbol_b'])
-
-        # source2 should still exist as it is listed in the sitemap
-        self.assertIn('source2.test', pages)
-        source2 = pages['source2.test']
-        self.assertEqual(source2.symbol_names, [])
-
-    def test_comment_relocation_empty_page_disappears(self):
-        sitemap = ('index.markdown\n'
                    '\ttest-index\n')
 
         symbols = [
@@ -571,16 +485,19 @@ class TestTree(unittest.TestCase):
 
         # symbol_b should be documented in source1
         comments = [
-            Comment(name=os.path.join(self.__src_dir, 'source1.test'),
+            Comment(name='source1.test',
+                    filename=os.path.join(self.__src_dir, 'source1.test'),
                     meta={'symbols': ['symbol_b']}, toplevel=True),
         ]
 
         self.__create_test_layout(
             sitemap=sitemap, symbols=symbols, comments=comments,
+            output=self.__output_dir,
             source_roots=[os.path.join(self.__src_dir, 'a'),
                           os.path.join(self.__src_dir, 'b')])
 
         pages = self.app.project.tree.get_pages()
+        self.assertEqual(len(pages), 3)
         self.assertIn('source1.test', pages)
 
         source1 = self.app.project.tree.get_pages()['source1.test']

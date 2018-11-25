@@ -189,6 +189,14 @@ class Extension(Configurable):
 
         return page
 
+    def get_pagename(self, name):
+        self.__find_package_root()
+        for path in OrderedSet([self.__package_root]) | self.source_roots:
+            commonprefix = os.path.commonprefix([path, name])
+            if commonprefix == path:
+                return os.path.relpath(name, path)
+        return name
+
     def make_pages(self):
         # All symbol names that no longer need to be assigned to a page
         dispatched_symbol_names = set()
@@ -207,6 +215,7 @@ class Extension(Configurable):
             assert(comment.name)
             page = Page(comment.name, None, '', self.project.sanitized_name,
                         meta=comment.meta)
+            page.comment = comment
             page.generated = True
             page.extension_name = self.extension_name
             smart_key = self._get_comment_smart_key(comment)

@@ -398,6 +398,12 @@ class Tree:
 
         return self.page_from_raw_text(source_file, contents)
 
+    def add_unordered_subpages(self, extension, ext_index, ext_pages):
+        for smart_key, ext_page in ext_pages.items():
+            pagename = extension.get_pagename(ext_page.source_file)
+            self.__all_pages[pagename] = ext_page
+            ext_index.subpages.add(pagename)
+
     def parse_sitemap2(self, sitemap, extensions):
         ext_level = -1
         extensions = {ext.argument_prefix: ext for ext in extensions.values()}
@@ -412,12 +418,11 @@ class Tree:
             page = None
 
             if level <= ext_level:
-                for pagename, ext_page in ext_pages.items():
-                    ext_index.subpages.add(pagename)
-                    self.__all_pages[pagename] = ext_page
+                self.add_unordered_subpages (extension, ext_index, ext_pages)
                 extension = None
                 ext_level = -1
                 ext_pages = {}
+                ext_index = None
 
             if extension:
                 smart_key = extension.get_possible_path(name)
@@ -446,25 +451,27 @@ class Tree:
                 if source_file is None:
                     error(
                         'no-such-subpage',
-                        'No markdown file found for %s' % fname,
-                        filename=sitemap.source_file,
-                        lineno=i,
-                        column=0)
+                        'No markdown file found for %s' % name,
+                        filename=sitemap.source_file)
 
                 ext = os.path.splitext(name)[1]
                 if ext == '.json':
                     self.project.add_subproject(name, source_file)
                     page = Page(name, None, '', self.project.sanitized_name)
                     page.generated = True
-                    page.extension_name = 'core'
                 else:
                     page = self.parse_page(source_file)
-                    page.extension_name = 'core'
 
-            if page:
-                self.__all_pages[name] = page
-                subpages = sitemap_pages.get(name, [])
-                page.subpages = OrderedSet(subpages) | page.subpages
+                page.extension_name = extension.extension_name if extension else 'core'
+
+            self.__all_pages[name] = page
+            subpages = sitemap_pages.get(name, [])
+            page.subpages = OrderedSet(subpages) | page.subpages
+            if not page.meta.get('auto-sort', False):
+                page.pre_sorted = True
+
+        if ext_index:
+            self.add_unordered_subpages(extension, ext_index, ext_pages)
 
         self.root = self.__all_pages[sitemap.index_file]
 
