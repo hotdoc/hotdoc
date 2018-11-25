@@ -31,7 +31,7 @@ from hotdoc.core import inclusions
 from hotdoc.core.extension import Extension
 from hotdoc.core.comment import Tag
 from hotdoc.core.config import Config
-from hotdoc.core.tree import Tree, PageResolutionResult
+from hotdoc.core.tree import Tree
 from hotdoc.utils.loggable import info, error
 from hotdoc.utils.configurable import Configurable
 from hotdoc.utils.utils import OrderedSet
@@ -75,20 +75,6 @@ class CoreExtension(Extension):
         inclusions.include_signal.disconnect(CoreExtension.include_file_cb)
         inclusions.include_signal.connect_after(CoreExtension.include_file_cb)
 
-    def _resolve_placeholder(self, tree, name, include_paths):
-        ext = os.path.splitext(name)[1]
-        if ext != '.json':
-            return None
-
-        conf_path = inclusions.find_file(name, include_paths)
-        if not conf_path:
-            error('invalid-config',
-                  '(%s) Could not find subproject config file %s' % (
-                      self.project.sanitized_name, name))
-
-        self.project.add_subproject(name, conf_path)
-        return PageResolutionResult(True, None, None, None)
-
     @staticmethod
     def include_file_cb(include_path, line_ranges, symbol):
         """
@@ -123,7 +109,7 @@ class Project(Configurable):
     Banana banana
     """
 
-    def __init__(self, app, dependency_map=None, page_map=None):
+    def __init__(self, app, dependency_map=None):
         self.app = app
         self.tree = None
         self.include_paths = None
@@ -141,11 +127,6 @@ class Project(Configurable):
             self.dependency_map = {}
         else:
             self.dependency_map = dependency_map
-
-        if page_map is None:
-            self.page_map = {}
-        else:
-            self.page_map = page_map
 
         if os.name == 'nt':
             self.datadir = os.path.join(
@@ -200,9 +181,7 @@ class Project(Configurable):
             extension.setup()
 
         sitemap = SitemapParser().parse(self.sitemap_path)
-        self.tree.parse_sitemap2(sitemap, self.extensions)
-        #self.tree.parse_sitemap(sitemap)
-        self.page_map.update({p: self for p in self.tree.get_pages().values()})
+        self.tree.build(sitemap, self.extensions)
 
         info("Resolving symbols", 'resolution')
         self.tree.resolve_symbols(self.app.database, self.app.link_resolver)
@@ -246,8 +225,7 @@ class Project(Configurable):
         """Creates and adds a new subproject."""
         config = Config(conf_file=conf_path)
         proj = Project(self.app,
-                       dependency_map=self.dependency_map,
-                       page_map=self.page_map)
+                       dependency_map=self.dependency_map)
         proj.parse_name_from_config(config)
         proj.parse_config(config)
         proj.setup()
@@ -258,12 +236,6 @@ class Project(Configurable):
         Banana banana
         """
         return self.dependency_map.get(unique_name)
-
-    def get_project_for_page(self, page):
-        """
-        Banana banana
-        """
-        return self.page_map.get(page)
 
     def __create_extensions(self):
         for ext_class in list(self.app.extension_classes.values()):

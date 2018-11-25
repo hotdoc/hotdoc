@@ -25,7 +25,7 @@ from collections import defaultdict
 
 from hotdoc.core.inclusions import find_file
 from hotdoc.core.symbols import Symbol
-from hotdoc.core.tree import Page, OverridePage, PageResolutionResult
+from hotdoc.core.tree import Page
 from hotdoc.core.formatter import Formatter
 from hotdoc.utils.configurable import Configurable
 from hotdoc.core.exceptions import InvalidOutputException
@@ -106,8 +106,7 @@ class Extension(Configurable):
         self._created_symbols = DefaultOrderedDict(OrderedSet)
         self.__parent_symbols = OrderedDict()
         self.__package_root = None
-        self.__overriden_pages = []
-        self.__toplevel_comments = set()
+        self.__toplevel_comments = OrderedSet()
 
         self.formatter = self._make_formatter()
 
@@ -165,6 +164,14 @@ class Extension(Configurable):
         self._created_symbols = DefaultOrderedDict(OrderedSet)
         self.__package_root = None
 
+    def get_pagename(self, name):
+        self.__find_package_root()
+        for path in OrderedSet([self.__package_root]) | self.source_roots:
+            commonprefix = os.path.commonprefix([path, name])
+            if commonprefix == path:
+                return os.path.relpath(name, path)
+        return name
+
     def get_symbol_page(self, symbol_name, symbol_pages, smart_pages):
         if symbol_name in symbol_pages:
             return symbol_pages[symbol_name]
@@ -188,14 +195,6 @@ class Extension(Configurable):
         symbol_pages[symbol_name] = page
 
         return page
-
-    def get_pagename(self, name):
-        self.__find_package_root()
-        for path in OrderedSet([self.__package_root]) | self.source_roots:
-            commonprefix = os.path.commonprefix([path, name])
-            if commonprefix == path:
-                return os.path.relpath(name, path)
-        return name
 
     def make_pages(self):
         # All symbol names that no longer need to be assigned to a page
@@ -264,11 +263,7 @@ class Extension(Configurable):
         constructed, but before its `tree.Tree.resolve_symbols`
         method has been called.
         """
-        self.project.tree.resolve_placeholder_signal.connect(
-            self.__resolve_placeholder_cb)
-        self.project.tree.list_override_pages_signal.connect(
-            self.__list_override_pages_cb)
-        self.project.tree.update_signal.connect(self.__update_tree_cb)
+        pass
 
     @staticmethod
     def get_dependencies():
@@ -497,29 +492,6 @@ class Extension(Configurable):
     def _make_formatter(self):
         return Formatter(self)
 
-    def __list_override_pages_cb(self, tree, include_paths):
-        self.__find_package_root()
-        for source in self._get_all_sources():
-            source_rel = self.__get_rel_source_path(source)
-
-            for ext in ['.md', '.markdown']:
-                override = find_file(source_rel + ext, include_paths)
-                if override:
-                    self.__overriden_pages.append(OverridePage(source_rel,
-                                                               override))
-                    break
-
-        return self.__overriden_pages
-
-    def __resolve_placeholder_cb(self, tree, name, include_paths):
-        return self._resolve_placeholder(tree, name, include_paths)
-
-    def resolve(self, name):
-        for path in OrderedSet([self.__package_root]) | self.source_roots:
-            possible_path = os.path.join(path, name)
-            if possible_path in self._get_all_sources():
-                pass
-
     def get_possible_path(self, name):
         self.__find_package_root()
 
@@ -529,164 +501,12 @@ class Extension(Configurable):
                 return self._get_smart_filename(possible_path)
         return None
 
-    def _resolve_placeholder(self, tree, name, include_paths):
-        self.__find_package_root()
-
-        if name == '%s-index' % self.argument_prefix:
-            if self.index:
-                path = find_file(self.index, include_paths)
-                if path is None:
-                    self.error("invalid-config",
-                               "Could not find index file %s" % self.index)
-                return PageResolutionResult(True, path, None, self.extension_name)
-            return PageResolutionResult(True, None, None, self.extension_name)
-
-        for path in OrderedSet([self.__package_root]) | self.source_roots:
-            possible_path = os.path.join(path, name)
-            if possible_path in self._get_all_sources():
-                override_path = find_file('%s.markdown' % name, include_paths)
-
-                if override_path:
-                    return PageResolutionResult(True, override_path, None, None)
-
-                return PageResolutionResult(True, possible_path,
-                                            self.__get_rel_source_path(possible_path),
-                                            None)
-
-        return None
-
-    def __update_tree_cb(self, tree):
-        self.__find_package_root()
-        index = self.__get_index_page(tree)
-        if index is None:
-            return
-
-        if not index.title:
-            index.title = self._get_smart_index_title()
-
-        for override in self.__overriden_pages:
-            page = tree.get_pages()[override.source_file]
-            page.extension_name = self.extension_name
-            tree.add_page(index, override.source_file, page)
-
-        user_symbols, user_symbol_pages, private_symbols = self.__get_user_symbols(tree, index)
-        for source_file, symbols in self._created_symbols.items():
-            symbols = symbols - user_symbols - private_symbols
-            if not symbols and source_file not in user_symbol_pages:
-                continue
-
-            self.__add_subpage(tree, index, source_file, symbols)
-
     def __find_package_root(self):
         if self.__package_root:
             return
 
         commonprefix = os.path.commonprefix(list(self._get_all_sources()) + list(self.source_roots))
         self.__package_root = os.path.dirname(commonprefix)
-
-    def __get_index_page(self, tree):
-        placeholder = '%s-index' % self.argument_prefix
-        return tree.get_pages().get(placeholder)
-
-    def __get_comment_for_page(self, source_file, page_name):
-        source_abs = os.path.abspath(source_file)
-        if os.path.exists(source_abs):
-            return self.app.database.get_comment(source_abs)
-        return self.app.database.get_comment(page_name)
-
-    def __get_page(self, tree, source_file):
-        page_name = self.__get_rel_source_path(source_file)
-        for path in OrderedSet([self.__package_root]) | self.source_roots:
-            possible_name = os.path.relpath(source_file, path)
-            page = tree.get_pages().get(possible_name)
-            if page:
-                return page, page_name
-
-        return page, page_name
-
-    def __add_subpage(self, tree, index, source_file, symbols):
-        page, page_name = self.__get_page(tree, source_file)
-
-        if not page:
-            comment = self.__get_comment_for_page(source_file, page_name)
-            page = Page(page_name, None, os.path.dirname(page_name),
-                        tree.project.sanitized_name)
-            page.set_comment(comment)
-            page.extension_name = self.extension_name
-            page.generated = True
-            tree.add_page(index, page_name, page)
-
-        page.symbol_names |= symbols
-
-    def __list_symbols_in_comment(self, comment, parented_symbols, source_file, page_name):
-        located_parented_symbols = []
-        symbols = {}
-
-        for symname in comment.meta.get("symbols", OrderedSet()):
-            symbol = self.app.database.get_symbol(symname)
-            if not symbol:
-                self.warn('unavailable-symbol-listed',
-                          "Symbol %s listed on %s but we have no reference to it."
-                          % (symname, page_name))
-                continue
-            symbols[symname] = source_file
-            for child in symbol.get_children_symbols():
-                if isinstance(child, Symbol):
-                    symbols[child.unique_name] = source_file
-            for related_symbol in parented_symbols[symname]:
-                symbols[related_symbol] = source_file
-                located_parented_symbols.append(related_symbol)
-
-        return symbols, located_parented_symbols
-
-    def __get_listed_symbols_in_listed_pages(self, tree, index):
-        symbols = {}
-        for page in tree.walk(index):
-            if not page.source_file.endswith(('.markdown', '.md')) and not page.comment:
-                page_name = self.__get_page(tree, page.source_file)[1]
-                page.set_comment(self.__get_comment_for_page(page.source_file, page_name))
-            for sym in page.listed_symbols:
-                symbols[sym] = page.source_file
-
-        return symbols
-
-    def __get_user_symbols(self, tree, index):
-        symbol_locations = self.__get_listed_symbols_in_listed_pages(tree, index)
-        private_symbols = set()
-        parented_symbols = defaultdict(list)
-
-        for source_file, symbols_names in list(self._created_symbols.items()):
-            if source_file.endswith(('.markdown', '.md')):
-                continue
-
-            for symname in symbols_names:
-                symbol = self.app.database.get_symbol(symname)
-                if not symbol.parent_name:
-                    continue
-
-                if symbol.parent_name in symbol_locations:
-                    symbol_locations[symbol.unique_name] = symbol_locations[symbol.parent_name]
-                else:
-                    parented_symbols[symbol.parent_name].append(symname)
-
-            page_name = self.__get_page(tree, source_file)[1]
-            comment = self.__get_comment_for_page(source_file, page_name)
-            if not comment:
-                continue
-
-            for symname in comment.meta.get("private-symbols", OrderedSet()):
-                private_symbols.add(symname)
-
-            comment_syms, located_parented_symbols = self.__list_symbols_in_comment(
-                comment, parented_symbols, source_file, page_name)
-            if comment_syms:
-                comment.meta['symbols'].extend(located_parented_symbols)
-                symbol_locations.update(comment_syms)
-
-        return set(symbol_locations.keys()), set(symbol_locations.values()), private_symbols
-
-    def __get_rel_source_path(self, source_file):
-        return os.path.relpath(source_file, self.__package_root)
 
     def _get_smart_index_title(self):
         return 'Reference Manual'

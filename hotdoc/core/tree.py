@@ -68,9 +68,6 @@ yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
                      _no_duplicates_constructor)
 
 
-OverridePage = namedtuple('OverridePage', ['source_file', 'file'])
-
-
 class TreeNoSuchPageException(HotdocSourceException):
     """
     Raised when a subpage listed in the sitemap file could not be found
@@ -84,11 +81,6 @@ Logger.register_error_code('no-such-subpage', TreeNoSuchPageException,
 Logger.register_warning_code('invalid-page-metadata', InvalidPageMetadata,
                              domain='doc-tree')
 Logger.register_warning_code('markdown-bad-link', HotdocSourceException)
-
-
-PageResolutionResult = namedtuple('PageResolutionResult',
-                                  ['found', 'source', 'generation_source',
-                                   'extension_name'])
 
 
 # pylint: disable=too-many-instance-attributes
@@ -130,7 +122,6 @@ class Page:
         self.private_symbols = []
         self.typed_symbols = OrderedDict()
         self.by_parent_symbols = OrderedDict()
-        self.is_stale = True
         self.formatted_contents = None
         self.detailed_description = None
         self.build_path = None
@@ -374,16 +365,12 @@ class Tree:
 
         self.__all_pages = {}
 
-        self.__placeholders = {}
         self.root = None
         self.__dep_map = project.dependency_map
         self.__fill_dep_map()
 
         cmark.hotdoc_to_ast(u'', self)
         self.__extensions = {}
-        self.resolve_placeholder_signal = Signal(optimized=True)
-        self.list_override_pages_signal = Signal(optimized=True)
-        self.update_signal = Signal()
         self.resolving_symbol_signal = Signal()
 
     def __fill_dep_map(self):
@@ -404,7 +391,7 @@ class Tree:
             self.__all_pages[pagename] = ext_page
             ext_index.subpages.add(pagename)
 
-    def parse_sitemap2(self, sitemap, extensions):
+    def build(self, sitemap, extensions):
         ext_level = -1
         extensions = {ext.argument_prefix: ext for ext in extensions.values()}
         ext_pages = {}
@@ -440,6 +427,7 @@ class Tree:
                 page = ext_pages['%s-index' % ext_name]
                 del ext_pages['%s-index' % ext_name]
                 ext_index = page
+                print (ext_pages)
             elif name in ext_pages:
                 page = ext_pages[name]
                 del ext_pages[name]
@@ -474,92 +462,6 @@ class Tree:
             self.add_unordered_subpages(extension, ext_index, ext_pages)
 
         self.root = self.__all_pages[sitemap.index_file]
-
-    # pylint: disable=too-many-locals
-    # pylint: disable=too-many-branches
-    # pylint: disable=too-many-statements
-    def __parse_pages(self, sitemap):
-        source_files = []
-        source_map = {}
-        placeholders = []
-
-        overrides = self.list_override_pages_signal(
-            self, self.project.include_paths) or []
-
-        for override in overrides:
-            source_files.append(override.file)
-            source_map[override.file] = override.source_file
-
-        for i, fname in enumerate(sitemap.get_all_sources().keys()):
-            resolved = self.resolve_placeholder_signal(
-                self, fname, self.project.include_paths)
-            if not resolved:
-                source_file = find_file(fname, self.project.include_paths)
-                source_files.append(source_file)
-                if source_file is None:
-                    error(
-                        'no-such-subpage',
-                        'No markdown file found for %s' % fname,
-                        filename=sitemap.source_file,
-                        lineno=i,
-                        column=0)
-                source_map[source_file] = fname
-            else:
-                if resolved.extension_name:
-                    self.__placeholders[fname] = resolved.extension_name
-                if resolved.source and not resolved.generation_source:
-                    source_files.append(resolved.source)
-                    source_map[resolved.source] = fname
-                else:
-                    if fname not in self.__all_pages:
-                        source_path = resolved.source
-                        source_name = fname
-                        if resolved.generation_source:
-                            source_name = resolved.generation_source
-                        page = Page(source_path or source_name, None, '',
-                                    self.project.sanitized_name)
-                        page.generated = True
-                        self.__all_pages[fname] = page
-                        self.__all_pages[source_name] = page
-                        placeholders.append(fname)
-
-        for source_file in source_files:
-            pagename = source_map[source_file]
-            page = self.parse_page(source_file)
-            self.__all_pages[pagename] = page
-
-        def setup_subpages(pagenames, get_pagename):
-            """Setup subpages for pages with names in @pagenames"""
-            sitemap_pages = sitemap.get_all_sources()
-            for pagename in pagenames:
-                page = self.__all_pages[get_pagename(pagename)]
-
-                subpages = sitemap_pages.get(get_pagename(pagename), [])
-                page.subpages = OrderedSet(subpages) | page.subpages
-                for subpage_name in page.subpages:
-                    subpage = self.__all_pages[subpage_name]
-                    if not subpage.meta.get('auto-sort', False):
-                        subpage.pre_sorted = True
-
-        setup_subpages(source_files, lambda x: source_map[x])
-        setup_subpages(placeholders, lambda x: x)
-
-    def __update_sitemap(self, sitemap):
-        # We need a mutable variable
-        level_and_name = [-1, 'core']
-
-        def _update_sitemap(name, _, level, __):
-            if name in self.__placeholders:
-                level_and_name[1] = self.__placeholders[name]
-                level_and_name[0] = level
-            elif level == level_and_name[0]:
-                level_and_name[1] = 'core'
-                level_and_name[0] = -1
-
-            page = self.__all_pages.get(name)
-            page.extension_name = level_and_name[1]
-
-        sitemap.walk(_update_sitemap)
 
     # pylint: disable=no-self-use
     def __setup_folder(self, folder):
@@ -607,14 +509,6 @@ class Tree:
             for page in self.walk(parent=cpage):
                 yield page
 
-    def add_page(self, parent, pagename, page):
-        """
-        Banana banana
-        """
-        self.__all_pages[pagename] = page
-        if parent:
-            parent.subpages.add(pagename)
-
     def page_from_raw_text(self, source_file, contents):
         """
         Banana banana
@@ -643,15 +537,6 @@ class Tree:
         return Page(source_file, ast, output_path, self.project.sanitized_name,
                     meta=meta, raw_contents=raw_contents)
 
-    def parse_sitemap(self, sitemap):
-        """
-        Banana banana
-        """
-        self.__parse_pages(sitemap)
-        self.root = self.__all_pages[sitemap.index_file]
-        self.__update_sitemap(sitemap)
-        self.update_signal(self)
-
     def get_pages(self):
         """
         Banana banana
@@ -675,13 +560,12 @@ class Tree:
 
         page = page or self.root
 
-        if page.is_stale:
-            if page.ast is None and not page.generated:
-                with io.open(page.source_file, 'r', encoding='utf-8') as _:
-                    page.ast = cmark.hotdoc_to_ast(_.read(), self)
+        if page.ast is None and not page.generated:
+            with io.open(page.source_file, 'r', encoding='utf-8') as _:
+                page.ast = cmark.hotdoc_to_ast(_.read(), self)
 
-            page.resolve_symbols(self, database, link_resolver)
-            self.__update_dep_map(page, page.symbols)
+        page.resolve_symbols(self, database, link_resolver)
+        self.__update_dep_map(page, page.symbols)
 
         for pagename in page.subpages:
             cpage = self.__all_pages[pagename]
