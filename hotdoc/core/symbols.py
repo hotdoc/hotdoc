@@ -114,7 +114,7 @@ class Symbol:
                 sym.comment = self.comment.params.get(sym.display_name)
 
     def _make_name(self):
-        return self.display_name
+        return self.display_name or self.unique_name
 
     def get_extra_links(self):
         """
