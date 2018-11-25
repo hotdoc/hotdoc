@@ -140,7 +140,7 @@ class Page:
 
         meta = meta or {}
         self.listed_symbols = []
-        self.symbol_names = []
+        self.symbol_names = OrderedSet()
         self.short_description = None
         self.render_subpages = True
         self.title = ''

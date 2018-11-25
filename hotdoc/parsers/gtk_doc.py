@@ -86,20 +86,7 @@ class GtkDocParser:
 
     def __parse_title(self, source_filename, raw_title):
         if raw_title.startswith('SECTION'):
-            rel_filename = raw_title.split('SECTION:')[1].strip()
-            section_name = os.path.abspath(os.path.join(
-                os.path.dirname(source_filename), rel_filename))
-
-            if not os.path.exists(section_name):
-                fname, ext = os.path.splitext(source_filename)
-                if self.__section_file_matching and os.path.exists(source_filename):
-                    if ext == ".c" and os.path.exists(fname + '.h'):
-                        section_name = source_filename[:-2] + '.h'
-                    else:
-                        section_name = source_filename
-                else:
-                    section_name = rel_filename
-
+            section_name = raw_title.split('SECTION:')[1].strip()
             return section_name, [], True
 
         split = raw_title.split(': ', 1)
@@ -371,7 +358,7 @@ class GtkDocParser:
                         endlineno=endlineno,
                         annotations=annotations, params=actual_parameters,
                         tags=tags, raw_comment=raw_comment,
-                        meta=meta)
+                        meta=meta, toplevel=is_section)
         block.line_offset = description_offset
         block.col_offset = column_offset
 

@@ -50,7 +50,7 @@ class CCommentExtractor:
                         block = self.__raw_comment_parser.parse_comment(comment,
                                                                         filename, c[1], c[2], self.project.include_paths)
                         if block is not None:
-                            self.app.database.add_comment(block)
+                            self.extension.add_comment(block)
                     elif not skip_next_symbol:
                         if header:
                             self.__raw_macros.append(RawMacro(c, filename))

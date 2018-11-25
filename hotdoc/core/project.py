@@ -198,6 +198,7 @@ class Project(Configurable):
         for extension in list(self.extensions.values()):
             info('Setting up %s' % extension.extension_name)
             extension.setup()
+            extension.make_pages()
 
         sitemap = SitemapParser().parse(self.sitemap_path)
         self.tree.parse_sitemap(sitemap)

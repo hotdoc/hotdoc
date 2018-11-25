@@ -104,8 +104,10 @@ class Extension(Configurable):
         self.index = None
         self.source_roots = OrderedSet()
         self._created_symbols = DefaultOrderedDict(OrderedSet)
+        self.__parent_symbols = OrderedDict()
         self.__package_root = None
         self.__overriden_pages = []
+        self.__toplevel_comments = set()
 
         self.formatter = self._make_formatter()
 
@@ -162,6 +164,72 @@ class Extension(Configurable):
         """
         self._created_symbols = DefaultOrderedDict(OrderedSet)
         self.__package_root = None
+
+    def get_symbol_page(self, symbol_name, symbol_pages, smart_pages):
+        if symbol_name in symbol_pages:
+            return symbol_pages[symbol_name]
+
+        symbol = self.app.database.get_symbol(symbol_name)
+        assert (symbol is not None)
+
+        if symbol.parent_name and symbol.parent_name != symbol_name:
+            page = self.get_symbol_page(symbol.parent_name, symbol_pages, smart_pages)
+        else:
+            smart_key = self._get_smart_key (symbol)
+            #print ('Smart!', smart_key)
+            if smart_key in smart_pages:
+                page = smart_pages[smart_key]
+            else:
+                page = Page(smart_key, None, '', self.project.sanitized_name)
+                smart_pages[smart_key] = page
+
+        symbol_pages[symbol_name] = page
+
+        return page
+
+    def make_pages(self):
+        # All symbol names that no longer need to be assigned to a page
+        dispatched_symbol_names = set()
+
+        # Map symbol names with pages
+        # This is used for assigning symbols with a parent to the page
+        # where their parent will be rendered, unless the symbol has been
+        # explicitly assigned or ignored
+        symbol_pages = {}
+
+        smart_pages = {}
+
+        # First we make one page per toplevel comment (eg. SECTION comment)
+        # This is the highest priority mechanism for sorting symbols
+        for comment in self.__toplevel_comments:
+            assert(comment.name)
+            page = Page(comment.name, None, '', self.project.sanitized_name,
+                        meta=comment.meta)
+            smart_key = self._get_comment_smart_key(comment)
+            smart_pages[smart_key] = page
+            symbol_names = comment.meta.get('symbols', [])
+            page.symbol_names |= OrderedSet(comment.meta.get('symbols', []))
+            dispatched_symbol_names |= set(page.symbol_names)
+
+            # All these symbols are explicitly ignored
+            dispatched_symbol_names |= set(comment.meta.get('private-symbols', []))
+
+        # We now browse all the symbols we have created
+        for key, symbol_names in self._created_symbols.items():
+            for symbol_name in symbol_names:
+                if symbol_name in dispatched_symbol_names:
+                    continue
+
+                page = self.get_symbol_page (symbol_name, symbol_pages, smart_pages)
+
+                assert(page)
+
+                page.symbol_names.add(symbol_name)
+                dispatched_symbol_names.add(symbol_name)
+
+        ret = OrderedSet(symbol_pages.values())
+
+        return ret
 
     def setup(self):
         """
@@ -367,6 +435,11 @@ class Extension(Configurable):
                            dest=dest, help=help_)
         cls.paths_arguments[dest] = final_dest
 
+    def add_comment(self, comment):
+        self.app.database.add_comment(comment)
+        if comment.toplevel:
+            self.__toplevel_comments.add(comment)
+
     def create_symbol(self, *args, **kwargs):
         """
         Extensions that discover and create instances of `symbols.Symbol`
@@ -393,6 +466,8 @@ class Extension(Configurable):
             # pylint: disable=unidiomatic-typecheck
             if type(sym) != Symbol and smart_key:
                 self._created_symbols[smart_key].add(sym.unique_name)
+                if sym.parent_name:
+                    self.__parent_symbols[sym.parent_name] = smart_key
 
         return sym
 
@@ -583,6 +658,9 @@ class Extension(Configurable):
 
     def _get_smart_key(self, symbol):
         return symbol.filename
+
+    def _get_comment_smart_key(self, comment):
+        return comment.filename
 
     def format_page(self, page, link_resolver, output):
         """

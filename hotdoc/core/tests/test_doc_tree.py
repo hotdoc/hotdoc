@@ -49,7 +49,7 @@ class TestExtension(Extension):
             self.create_symbol(*args, **kwargs)
 
         for comment in TestExtension.comments:
-            self.app.database.add_comment(comment)
+            self.add_comment(comment)
 
     def _get_all_sources(self):
         return self.sources
@@ -529,7 +529,7 @@ class TestTree(unittest.TestCase):
         # symbol_b should be documented in source1
         comments = [
             Comment(name=os.path.join(self.__src_dir, 'source1.test'),
-                    meta={'symbols': ['symbol_b']}),
+                    meta={'symbols': ['symbol_b']}, toplevel=True),
         ]
 
         self.__create_test_layout(
@@ -572,7 +572,7 @@ class TestTree(unittest.TestCase):
         # symbol_b should be documented in source1
         comments = [
             Comment(name=os.path.join(self.__src_dir, 'source1.test'),
-                    meta={'symbols': ['symbol_b']}),
+                    meta={'symbols': ['symbol_b']}, toplevel=True),
         ]
 
         self.__create_test_layout(
