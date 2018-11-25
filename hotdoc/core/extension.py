@@ -25,7 +25,7 @@ from collections import defaultdict
 
 from hotdoc.core.inclusions import find_file
 from hotdoc.core.symbols import Symbol
-from hotdoc.core.tree import Page, OverridePage, PageResolutionResult
+from hotdoc.core.tree import Page
 from hotdoc.core.formatter import Formatter
 from hotdoc.utils.configurable import Configurable
 from hotdoc.core.exceptions import InvalidOutputException
@@ -34,6 +34,7 @@ from hotdoc.utils.utils import OrderedSet, DefaultOrderedDict
 
 
 Logger.register_warning_code('unavailable-symbol-listed', InvalidOutputException, 'extension')
+Logger.register_warning_code('output-page-conflict', InvalidOutputException, 'extension')
 
 
 # pylint: disable=too-few-public-methods
@@ -104,8 +105,9 @@ class Extension(Configurable):
         self.index = None
         self.source_roots = OrderedSet()
         self._created_symbols = DefaultOrderedDict(OrderedSet)
+        self.__parent_symbols = OrderedDict()
         self.__package_root = None
-        self.__overriden_pages = []
+        self.__toplevel_comments = OrderedSet()
 
         self.formatter = self._make_formatter()
 
@@ -163,6 +165,108 @@ class Extension(Configurable):
         self._created_symbols = DefaultOrderedDict(OrderedSet)
         self.__package_root = None
 
+    def get_pagename(self, name):
+        self.__find_package_root()
+        for path in OrderedSet([self.__package_root]) | self.source_roots:
+            commonprefix = os.path.commonprefix([path, name])
+            if commonprefix == path:
+                return os.path.relpath(name, path)
+        return name
+
+    def get_symbol_page(self, symbol_name, symbol_pages, smart_pages, section_links):
+        if symbol_name in symbol_pages:
+            return symbol_pages[symbol_name]
+
+        symbol = self.app.database.get_symbol(symbol_name)
+        assert (symbol is not None)
+
+        if symbol.parent_name and symbol.parent_name != symbol_name:
+            page = self.get_symbol_page(symbol.parent_name, symbol_pages, smart_pages, section_links)
+        else:
+            smart_key = self._get_smart_key (symbol)
+            if smart_key in smart_pages:
+                page = smart_pages[smart_key]
+            else:
+                pagename = self.get_pagename(smart_key)
+                page = Page(smart_key, True, self.project.sanitized_name, self.extension_name,
+                            output_path=os.path.dirname(pagename))
+                if page.link.ref in section_links:
+                    self.warn('output-page-conflict',
+                              'Creating a page for symbol %s would overwrite the page '
+                              'declared in a toplevel comment (%s)' % (symbol_name, page.link.ref))
+                    page = None
+                else:
+                    smart_pages[smart_key] = page
+
+        if page is not None:
+            symbol_pages[symbol_name] = page
+
+        return page
+
+    def make_pages(self):
+        # All symbol names that no longer need to be assigned to a page
+        dispatched_symbol_names = set()
+
+        # Map symbol names with pages
+        # This is used for assigning symbols with a parent to the page
+        # where their parent will be rendered, unless the symbol has been
+        # explicitly assigned or ignored
+        symbol_pages = {}
+
+        smart_pages = OrderedDict()
+
+        # This is simply used as a conflict detection mechanism, see
+        # hotdoc.core.tests.test_doc_tree.TestTree.test_section_and_path_conflict
+        section_links = set()
+
+        # First we make one page per toplevel comment (eg. SECTION comment)
+        # This is the highest priority mechanism for sorting symbols
+        for comment in self.__toplevel_comments:
+            assert(comment.name)
+            symbol_names = comment.meta.pop('symbols', [])
+            private_symbol_names = comment.meta.pop('private-symbols', [])
+            page = Page(comment.name, True, self.project.sanitized_name, self.extension_name,
+                    comment=comment, symbol_names=symbol_names)
+            section_links.add(page.link.ref)
+            smart_key = self._get_comment_smart_key(comment)
+            if smart_key in smart_pages:
+                smart_pages[comment.name] = page
+            else:
+                smart_pages[smart_key] = page
+
+            # These symbols no longer need to be assigned
+            dispatched_symbol_names |= set(symbol_names)
+
+            # All these symbols are explicitly ignored
+            dispatched_symbol_names |= set(private_symbol_names)
+
+        # We now browse all the symbols we have created
+        for key, symbol_names in self._created_symbols.items():
+            for symbol_name in symbol_names:
+                if symbol_name in dispatched_symbol_names:
+                    continue
+
+                page = self.get_symbol_page (symbol_name, symbol_pages, smart_pages, section_links)
+
+                # Can be None if creating a page to hold the symbol conflicts with
+                # a page explicitly declared in a toplevel comment
+                if page is None:
+                    continue
+
+                page.symbol_names.add(symbol_name)
+                dispatched_symbol_names.add(symbol_name)
+
+        # Finally we make our index page
+        if self.index:
+            index_page = self.project.tree.parse_page(self.index, self.extension_name)
+        else:
+            index_page = Page('%s-index' % self.argument_prefix, True, self.project.sanitized_name,
+                    self.extension_name)
+
+        smart_pages['%s-index' % self.argument_prefix] = index_page
+
+        return smart_pages
+
     def setup(self):
         """
         Extension subclasses should implement this to scan whatever
@@ -174,11 +278,7 @@ class Extension(Configurable):
         constructed, but before its `tree.Tree.resolve_symbols`
         method has been called.
         """
-        self.project.tree.resolve_placeholder_signal.connect(
-            self.__resolve_placeholder_cb)
-        self.project.tree.list_override_pages_signal.connect(
-            self.__list_override_pages_cb)
-        self.project.tree.update_signal.connect(self.__update_tree_cb)
+        pass
 
     @staticmethod
     def get_dependencies():
@@ -215,6 +315,7 @@ class Extension(Configurable):
         """
         prefix = self.argument_prefix
         self.sources = config.get_sources(prefix)
+        self.smart_sources = [self._get_smart_filename(s) for s in self.sources]
         self.index = config.get_index(prefix)
         self.source_roots = OrderedSet(config.get_paths('%s_source_roots' % prefix))
 
@@ -268,7 +369,7 @@ class Extension(Configurable):
         pass
 
     @classmethod
-    def add_index_argument(cls, group, prefix=None):
+    def add_index_argument(cls, group):
         """
         Subclasses may call this to add an index argument.
 
@@ -276,7 +377,7 @@ class Extension(Configurable):
             group: arparse.ArgumentGroup, the extension argument group
             prefix: str, arguments have to be namespaced
         """
-        prefix = prefix or cls.argument_prefix
+        prefix = cls.argument_prefix
 
         group.add_argument(
             '--%s-index' % prefix, action="store",
@@ -367,6 +468,11 @@ class Extension(Configurable):
                            dest=dest, help=help_)
         cls.paths_arguments[dest] = final_dest
 
+    def add_comment(self, comment):
+        self.app.database.add_comment(comment)
+        if comment.toplevel:
+            self.__toplevel_comments.add(comment)
+
     def create_symbol(self, *args, **kwargs):
         """
         Extensions that discover and create instances of `symbols.Symbol`
@@ -393,76 +499,22 @@ class Extension(Configurable):
             # pylint: disable=unidiomatic-typecheck
             if type(sym) != Symbol and smart_key:
                 self._created_symbols[smart_key].add(sym.unique_name)
+                if sym.parent_name:
+                    self.__parent_symbols[sym.parent_name] = smart_key
 
         return sym
 
     def _make_formatter(self):
         return Formatter(self)
 
-    def __list_override_pages_cb(self, tree, include_paths):
+    def get_possible_path(self, name):
         self.__find_package_root()
-        for source in self._get_all_sources():
-            source_rel = self.__get_rel_source_path(source)
-
-            for ext in ['.md', '.markdown']:
-                override = find_file(source_rel + ext, include_paths)
-                if override:
-                    self.__overriden_pages.append(OverridePage(source_rel,
-                                                               override))
-                    break
-
-        return self.__overriden_pages
-
-    def __resolve_placeholder_cb(self, tree, name, include_paths):
-        return self._resolve_placeholder(tree, name, include_paths)
-
-    def _resolve_placeholder(self, tree, name, include_paths):
-        self.__find_package_root()
-
-        if name == '%s-index' % self.argument_prefix:
-            if self.index:
-                path = find_file(self.index, include_paths)
-                if path is None:
-                    self.error("invalid-config",
-                               "Could not find index file %s" % self.index)
-                return PageResolutionResult(True, path, None, self.extension_name)
-            return PageResolutionResult(True, None, None, self.extension_name)
 
         for path in OrderedSet([self.__package_root]) | self.source_roots:
             possible_path = os.path.join(path, name)
             if possible_path in self._get_all_sources():
-                override_path = find_file('%s.markdown' % name, include_paths)
-
-                if override_path:
-                    return PageResolutionResult(True, override_path, None, None)
-
-                return PageResolutionResult(True, possible_path,
-                                            self.__get_rel_source_path(possible_path),
-                                            None)
-
+                return self._get_smart_filename(possible_path)
         return None
-
-    def __update_tree_cb(self, tree):
-        self.__find_package_root()
-        index = self.__get_index_page(tree)
-        if index is None:
-            return
-
-        if not index.title:
-            index.title = self._get_smart_index_title()
-
-        for override in self.__overriden_pages:
-            page = tree.get_pages()[override.source_file]
-            page.extension_name = self.extension_name
-            tree.add_page(index, override.source_file, page)
-
-        user_symbols, user_symbol_pages, private_symbols = self.__get_user_symbols(tree, index)
-        for source_file, symbols in self._created_symbols.items():
-            symbols = symbols - user_symbols - private_symbols
-            if not symbols and source_file not in user_symbol_pages:
-                continue
-
-            self.__add_subpage(tree, index, source_file, symbols)
 
     def __find_package_root(self):
         if self.__package_root:
@@ -470,110 +522,6 @@ class Extension(Configurable):
 
         commonprefix = os.path.commonprefix(list(self._get_all_sources()) + list(self.source_roots))
         self.__package_root = os.path.dirname(commonprefix)
-
-    def __get_index_page(self, tree):
-        placeholder = '%s-index' % self.argument_prefix
-        return tree.get_pages().get(placeholder)
-
-    def __get_comment_for_page(self, source_file, page_name):
-        source_abs = os.path.abspath(source_file)
-        if os.path.exists(source_abs):
-            return self.app.database.get_comment(source_abs)
-        return self.app.database.get_comment(page_name)
-
-    def __get_page(self, tree, source_file):
-        page_name = self.__get_rel_source_path(source_file)
-        for path in OrderedSet([self.__package_root]) | self.source_roots:
-            possible_name = os.path.relpath(source_file, path)
-            page = tree.get_pages().get(possible_name)
-            if page:
-                return page, page_name
-
-        return page, page_name
-
-    def __add_subpage(self, tree, index, source_file, symbols):
-        page, page_name = self.__get_page(tree, source_file)
-
-        if not page:
-            comment = self.__get_comment_for_page(source_file, page_name)
-            page = Page(page_name, None, os.path.dirname(page_name),
-                        tree.project.sanitized_name)
-            page.set_comment(comment)
-            page.extension_name = self.extension_name
-            page.generated = True
-            tree.add_page(index, page_name, page)
-
-        page.symbol_names |= symbols
-
-    def __list_symbols_in_comment(self, comment, parented_symbols, source_file, page_name):
-        located_parented_symbols = []
-        symbols = {}
-
-        for symname in comment.meta.get("symbols", OrderedSet()):
-            symbol = self.app.database.get_symbol(symname)
-            if not symbol:
-                self.warn('unavailable-symbol-listed',
-                          "Symbol %s listed on %s but we have no reference to it."
-                          % (symname, page_name))
-                continue
-            symbols[symname] = source_file
-            for child in symbol.get_children_symbols():
-                if isinstance(child, Symbol):
-                    symbols[child.unique_name] = source_file
-            for related_symbol in parented_symbols[symname]:
-                symbols[related_symbol] = source_file
-                located_parented_symbols.append(related_symbol)
-
-        return symbols, located_parented_symbols
-
-    def __get_listed_symbols_in_listed_pages(self, tree, index):
-        symbols = {}
-        for page in tree.walk(index):
-            if not page.source_file.endswith(('.markdown', '.md')) and not page.comment:
-                page_name = self.__get_page(tree, page.source_file)[1]
-                page.set_comment(self.__get_comment_for_page(page.source_file, page_name))
-            for sym in page.listed_symbols:
-                symbols[sym] = page.source_file
-
-        return symbols
-
-    def __get_user_symbols(self, tree, index):
-        symbol_locations = self.__get_listed_symbols_in_listed_pages(tree, index)
-        private_symbols = set()
-        parented_symbols = defaultdict(list)
-
-        for source_file, symbols_names in list(self._created_symbols.items()):
-            if source_file.endswith(('.markdown', '.md')):
-                continue
-
-            for symname in symbols_names:
-                symbol = self.app.database.get_symbol(symname)
-                if not symbol.parent_name:
-                    continue
-
-                if symbol.parent_name in symbol_locations:
-                    symbol_locations[symbol.unique_name] = symbol_locations[symbol.parent_name]
-                else:
-                    parented_symbols[symbol.parent_name].append(symname)
-
-            page_name = self.__get_page(tree, source_file)[1]
-            comment = self.__get_comment_for_page(source_file, page_name)
-            if not comment:
-                continue
-
-            for symname in comment.meta.get("private-symbols", OrderedSet()):
-                private_symbols.add(symname)
-
-            comment_syms, located_parented_symbols = self.__list_symbols_in_comment(
-                comment, parented_symbols, source_file, page_name)
-            if comment_syms:
-                comment.meta['symbols'].extend(located_parented_symbols)
-                symbol_locations.update(comment_syms)
-
-        return set(symbol_locations.keys()), set(symbol_locations.values()), private_symbols
-
-    def __get_rel_source_path(self, source_file):
-        return os.path.relpath(source_file, self.__package_root)
 
     def _get_smart_index_title(self):
         return 'Reference Manual'
@@ -583,6 +531,12 @@ class Extension(Configurable):
 
     def _get_smart_key(self, symbol):
         return symbol.filename
+
+    def _get_smart_filename(self, filename):
+        return filename
+
+    def _get_comment_smart_key(self, comment):
+        return comment.filename
 
     def format_page(self, page, link_resolver, output):
         """

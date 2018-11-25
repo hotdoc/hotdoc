@@ -173,6 +173,7 @@ class TestGtkDocParser(unittest.TestCase):
             lineno,
             end_lineno)
         self.assertEqual(comment.name, "notafile")
+        self.assertEqual(comment.toplevel, True)
 
     def test_symbols_list(self):
         raw_lines = SECTION_GTKDOC_WITH_SYMBOLS.split("\n")
@@ -184,22 +185,6 @@ class TestGtkDocParser(unittest.TestCase):
             len(raw_lines) - 1)
         self.assertEqual(comment.meta['auto-sort'], True)
         self.assertEqual(comment.meta['symbols'], ['symbol_a', 'symbol_b'])
-
-    def test_page_name_filename(self):
-        raw_lines = SECTION_GTKDOC_COMMENT.split("\n")
-        tmpfile = tempfile.NamedTemporaryFile()
-
-        raw_lines[1] = " * SECTION: %s" % (
-            os.path.relpath(tmpfile.name, '.'))
-        raw = '\n'.join(raw_lines)
-        lineno = 10
-        end_lineno = len(raw.split('\n')) + 10 - 1
-        comment = self.parser.parse_comment(
-            raw,
-            'some-file.c',
-            lineno,
-            end_lineno)
-        self.assertEqual(comment.name, tmpfile.name)
 
     def test_linenos(self):
         raw = LINENOS_GTKDOC_COMMENT

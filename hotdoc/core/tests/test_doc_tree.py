@@ -26,7 +26,7 @@ import shutil
 import io
 import os
 
-from hotdoc.core.symbols import FunctionSymbol
+from hotdoc.core.symbols import ClassSymbol, FunctionSymbol
 from hotdoc.parsers import cmark
 from hotdoc.core.extension import Extension
 from hotdoc.utils.utils import OrderedSet
@@ -34,6 +34,7 @@ from hotdoc.utils.loggable import Logger
 from hotdoc.core.config import Config
 from hotdoc.run_hotdoc import Application
 from hotdoc.core.comment import Comment
+from hotdoc.core.exceptions import InvalidOutputException
 
 
 class TestExtension(Extension):
@@ -49,7 +50,7 @@ class TestExtension(Extension):
             self.create_symbol(*args, **kwargs)
 
         for comment in TestExtension.comments:
-            self.app.database.add_comment(comment)
+            self.add_comment(comment)
 
     def _get_all_sources(self):
         return self.sources
@@ -78,12 +79,14 @@ class TestTree(unittest.TestCase):
         self.app = Application((TestExtension,))
 
         Logger.fatal_warnings = True
+        Logger.silent = True
 
     def tearDown(self):
-        self.__remove_tmp_dirs()
+        #self.__remove_tmp_dirs()
         TestExtension.symbols = []
         TestExtension.comments = []
         Logger.fatal_warnings = False
+        Logger.silent = False
 
     def __write_sitemap(self, text):
         path = os.path.join(self.__md_dir, 'sitemap.txt')
@@ -93,6 +96,10 @@ class TestTree(unittest.TestCase):
 
     def __create_md_file(self, name, contents):
         path = os.path.join(self.__md_dir, name)
+
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
+
         with open(path, 'w') as _:
             _.write(contents)
         return path
@@ -114,37 +121,37 @@ class TestTree(unittest.TestCase):
         return Config(conf_file=os.path.join(self.__test_dir, 'hotdoc.json'),
                       json_conf=conf)
 
-    def test_basic(self):
+    def __make_project(self, sitemap, index_path, symbols=None, comments=None, output=None):
         conf = {'project_name': 'test',
                 'project_version': '1.0'}
-        self.__create_md_file(
-            'index.markdown',
-            (u'# My documentation\n'))
-        conf['index'] = self.__create_md_file(
-            'section.markdown',
-            (u'# My section\n'))
-        inp = (u'index.markdown\n'
-               '\tsection.markdown')
-        conf['sitemap'] = self.__write_sitemap(inp)
+
+        conf['sitemap'] = self.__write_sitemap(sitemap)
+
+        if output is not None:
+            conf['output'] = output
+
+        if symbols is not None:
+            TestExtension.symbols = symbols
+
+        conf['test_sources'] = []
+        all_src_files = set()
+        for _, kwargs in TestExtension.symbols:
+            fname = kwargs.get('filename')
+            if fname is not None:
+                if fname not in all_src_files:
+                    conf['test_sources'].append(self.__create_src_file(fname, []))
+                    all_src_files.add(fname)
+                kwargs['filename'] = os.path.join(self.__src_dir, fname)
+
+        if comments is not None:
+            TestExtension.comments = comments
+
+        conf['index'] = index_path
+
         conf = self.__make_config(conf)
+
         self.app.parse_config(conf)
         self.app.run()
-
-        pages = self.app.project.tree.get_pages()
-
-        self.assertSetEqual(
-            set(pages.keys()),
-            set([u'index.markdown',
-                 u'section.markdown']))
-
-        index = pages.get('index.markdown')
-        self.assertEqual(index.title, u'My documentation')
-
-    def __assert_extension_names(self, tree, name_map):
-        pages = tree.get_pages()
-        for name, ext_name in list(name_map.items()):
-            page = pages[name]
-            self.assertEqual(ext_name, page.extension_name)
 
     # pylint: disable=too-many-arguments
     def __create_test_layout(self, with_ext_index=True, sitemap=None,
@@ -157,7 +164,6 @@ class TestTree(unittest.TestCase):
                    '\ttest-index\n'
                    '\t\ttest-section.markdown\n'
                    '\t\t\tsource_a.test\n'
-                   '\t\tpage_x.markdown\n'
                    '\t\tpage_y.markdown\n'
                    '\tcore_page.markdown\n')
         else:
@@ -228,12 +234,6 @@ class TestTree(unittest.TestCase):
              '\n'
              'Linking to [a generated page](source_a.test)\n'))
         self.__create_md_file(
-            'page_x.markdown',
-            (u'---\n'
-             'symbols: [symbol_3]\n'
-             '...\n'
-             '# Page X\n'))
-        self.__create_md_file(
             'page_y.markdown',
             (u'# Page Y\n'))
 
@@ -249,6 +249,133 @@ class TestTree(unittest.TestCase):
         self.app.parse_config(conf)
         self.app.run()
 
+    def test_basic(self):
+        conf = {'project_name': 'test',
+                'project_version': '1.0'}
+        conf['index'] = self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+        self.__create_md_file(
+            'section.markdown',
+            (u'# My section\n'))
+        inp = (u'index.markdown\n'
+               '\tsection.markdown')
+        conf['sitemap'] = self.__write_sitemap(inp)
+        conf = self.__make_config(conf)
+        self.app.parse_config(conf)
+        self.app.run()
+
+        pages = self.app.project.tree.get_pages()
+
+        self.assertSetEqual(
+            set(pages.keys()),
+            set([u'index.markdown',
+                 u'section.markdown']))
+
+        index = pages.get('index.markdown')
+        self.assertEqual(index.title, u'My documentation')
+
+    def test_page_output_path(self):
+        conf = {'project_name': 'test',
+                'project_version': '1.0'}
+        conf['index'] = self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+
+        subfolder_page_path = os.path.join('subfolder', 'page.markdown')
+
+        self.__create_md_file(
+            subfolder_page_path,
+            (u'# Page in a subfolder\n'))
+        inp = (u'index.markdown\n'
+               '\tsubfolder/page.markdown')
+        conf['sitemap'] = self.__write_sitemap(inp)
+        conf = self.__make_config(conf)
+        self.app.parse_config(conf)
+        self.app.run()
+
+        pages = self.app.project.tree.get_pages()
+
+        self.assertIn(subfolder_page_path, pages)
+
+        subfolder_page = pages[subfolder_page_path]
+        self.assertEqual(subfolder_page.link.ref, os.path.join('subfolder', 'page.html'))
+
+    def test_generated_page_output_path(self):
+        sitemap = (u'index.markdown\n'
+                   '\ttest-index\n')
+        index_path = self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+
+        a_source_path = os.path.join('a', 'source1.test')
+        b_source_path = os.path.join('b', 'source1.test')
+
+        symbols = [
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': a_source_path,
+                }
+            ),
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_b',
+                    'filename': b_source_path,
+                }
+            ),
+        ]
+
+        self.__make_project(sitemap, index_path, symbols=symbols)
+
+        pages = self.app.project.tree.get_pages()
+
+        self.assertEqual(len(pages), 4)
+
+        a_page = pages[a_source_path]
+        b_page = pages[b_source_path]
+
+        self.assertEqual(a_page.link.ref, os.path.join('a', 'source1.html'))
+        self.assertEqual(b_page.link.ref, os.path.join('b', 'source1.html'))
+
+    def test_section_and_path_conflict(self):
+        sitemap = (u'index.markdown\n'
+                   '\ttest-index\n')
+        index_path = self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+
+        a_source_path = 'source1.test'
+        b_source_path = 'source2.test'
+
+        symbols = [
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': a_source_path,
+                }
+            ),
+        ]
+
+        comments = [
+            Comment(name='source1',
+                    filename=b_source_path,
+                    meta={'auto-sort': True}, toplevel=True),
+        ]
+
+        with self.assertRaises(InvalidOutputException):
+            self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
+                    output=self.__output_dir)
+
+    def __assert_extension_names(self, tree, name_map):
+        pages = tree.get_pages()
+        for name, ext_name in list(name_map.items()):
+            page = pages[name]
+            self.assertEqual(ext_name, page.extension_name)
+
     def test_extension_basic(self):
         self.__create_test_layout()
         self.__assert_extension_names(
@@ -258,43 +385,20 @@ class TestTree(unittest.TestCase):
              u'test-section.markdown': 'test-extension',
              u'source_a.test': 'test-extension',
              u'source_b.test': 'test-extension',
-             u'page_x.markdown': 'test-extension',
              u'page_y.markdown': 'test-extension',
              u'core_page.markdown': 'core'})
 
         all_pages = self.app.project.tree.get_pages()
-        self.assertEqual(len(all_pages), 8)
+        self.assertEqual(len(all_pages), 7)
         self.assertNotIn('source_a.test', all_pages['test-index'].subpages)
         self.assertIn('source_a.test',
                       all_pages['test-section.markdown'].subpages)
-
-    def test_extension_override(self):
-        self.__create_md_file(
-            'source_a.test.markdown',
-            (u'# My override\n'))
-        self.__create_test_layout()
-        page = self.app.project.tree.get_pages()['source_a.test']
-
-        self.assertEqual(
-            page.symbol_names,
-            OrderedSet(['symbol_1',
-                        'symbol_2']))
-
-        self.assertEqual(
-            os.path.basename(page.source_file),
-            'source_a.test.markdown')
-
-        out, _ = cmark.ast_to_html(page.ast, None)
-
-        self.assertEqual(
-            out,
-            u'<h1>My override</h1>\n')
 
     def test_no_extension_index_override(self):
         self.__create_test_layout(with_ext_index=False)
         ext_index = self.app.project.tree.get_pages()['test-index']
         self.assertEqual(ext_index.generated, True)
-        self.assertEqual(len(ext_index.subpages), 4)
+        self.assertEqual(len(ext_index.subpages), 3)
 
     def test_parse_yaml(self):
         conf = {'project_name': 'test',
@@ -305,7 +409,6 @@ class TestTree(unittest.TestCase):
             'index.markdown',
             (u'---\n'
              'title: A random title\n'
-             'symbols: [symbol_1, symbol_2]\n'
              '...\n'
              '# My documentation\n'))
 
@@ -323,11 +426,6 @@ class TestTree(unittest.TestCase):
             u'<h1>My documentation</h1>\n')
 
         self.assertEqual(page.title, u'A random title')
-
-        self.assertEqual(
-            page.symbol_names,
-            OrderedSet(['symbol_1',
-                        'symbol_2']))
 
     def test_empty_link_resolution(self):
         conf = {'project_name': 'test',
@@ -431,42 +529,22 @@ class TestTree(unittest.TestCase):
              u'test-section.markdown': 'test-extension'})
 
     def test_extension_auto_sorted_override(self):
-        self.__create_md_file(
-            'source_b.test.markdown',
-            (u'---\nauto-sort: true\n...\n# My override\n'))
         sitemap = (u'index.markdown\n'
                    '\ttest-index\n'
                    '\t\ttest-section.markdown\n'
                    '\t\t\tsource_b.test\n'
                    '\t\t\tsource_a.test\n'
-                   '\t\tpage_x.markdown\n'
                    '\t\tpage_y.markdown\n'
                    '\tcore_page.markdown\n')
-        self.__create_test_layout(sitemap=sitemap)
+        comments = [
+            Comment(name='source_b.test',
+                    filename=os.path.join(self.__src_dir, 'source_b.test'),
+                    meta={'auto-sort': True}, toplevel=True),
+        ]
+        self.__create_test_layout(sitemap=sitemap, comments=comments)
         pages = self.app.project.tree.get_pages()
         self.assertTrue(pages['source_a.test'].pre_sorted)
         self.assertFalse(pages['source_b.test'].pre_sorted)
-
-    def test_extension_implicit_override(self):
-        self.__create_md_file(
-            'source_b.test.markdown',
-            (u'---\nsymbols:\n  - symbol_2\n...\n# My override\n'))
-        self.__create_test_layout()
-
-        source_b = self.app.project.tree.get_pages()['source_b.test']
-        self.assertEqual(
-            os.path.basename(source_b.source_file),
-            'source_b.test.markdown')
-        self.assertEqual(source_b.symbol_names, ['symbol_2', 'symbol_4'])
-
-        source_a = self.app.project.tree.get_pages()['source_a.test']
-        self.assertEqual(source_a.symbol_names, ['symbol_1'])
-
-        out, _ = cmark.ast_to_html(source_b.ast, None)
-
-        self.assertEqual(
-            out,
-            u'<h1>My override</h1>\n')
 
     def test_extension_file_include_dirs(self):
         sitemap = ('index.markdown\n'
@@ -503,11 +581,9 @@ class TestTree(unittest.TestCase):
         source2 = self.app.project.tree.get_pages()['source2.test']
         self.assertEqual(source2.symbol_names, ['symbol_b'])
 
-    def test_comment_relocation_basic(self):
+    def test_multiple_toplevel_comments(self):
         sitemap = ('index.markdown\n'
-                   '\ttest-index\n'
-                   '\t\t\tsource1.test\n'
-                   '\t\t\tsource2.test\n')
+                   '\ttest-index\n')
 
         symbols = [
             (
@@ -521,34 +597,43 @@ class TestTree(unittest.TestCase):
                 [FunctionSymbol],
                 {
                     'unique_name': 'symbol_b',
-                    'filename': 'source2.test'
+                    'filename': 'source1.test'
+                }
+            ),
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_c',
+                    'filename': 'source1.test'
                 }
             ),
         ]
 
-        # symbol_b should be documented in source1
         comments = [
-            Comment(name=os.path.join(self.__src_dir, 'source1.test'),
-                    meta={'symbols': ['symbol_b']}),
+            Comment(name='foo',
+                    filename=os.path.join(self.__src_dir, 'source1.test'),
+                    meta={'symbols': ['symbol_a']}, toplevel=True),
+            Comment(name='bar',
+                    filename=os.path.join(self.__src_dir, 'source1.test'),
+                    meta={'symbols': ['symbol_b']}, toplevel=True),
         ]
 
         self.__create_test_layout(
             sitemap=sitemap, symbols=symbols, comments=comments,
-            source_roots=[os.path.join(self.__src_dir, 'a'),
-                          os.path.join(self.__src_dir, 'b')])
+            output=self.__output_dir)
 
         pages = self.app.project.tree.get_pages()
 
-        self.assertIn('source1.test', pages)
-        source1 = pages['source1.test']
-        self.assertEqual(source1.symbol_names, ['symbol_a', 'symbol_b'])
+        self.assertEqual(len(pages), 4)
+        self.assertIn('foo', pages)
+        foo = pages['foo']
+        self.assertEqual(foo.symbol_names, ['symbol_a', 'symbol_c'])
 
-        # source2 should still exist as it is listed in the sitemap
-        self.assertIn('source2.test', pages)
-        source2 = pages['source2.test']
-        self.assertEqual(source2.symbol_names, [])
+        self.assertIn('bar', pages)
+        foo = pages['bar']
+        self.assertEqual(foo.symbol_names, ['symbol_b'])
 
-    def test_comment_relocation_empty_page_disappears(self):
+    def test_comment_relocation_basic(self):
         sitemap = ('index.markdown\n'
                    '\ttest-index\n')
 
@@ -571,12 +656,52 @@ class TestTree(unittest.TestCase):
 
         # symbol_b should be documented in source1
         comments = [
-            Comment(name=os.path.join(self.__src_dir, 'source1.test'),
-                    meta={'symbols': ['symbol_b']}),
+            Comment(name='source1.test',
+                    filename=os.path.join(self.__src_dir, 'source1.test'),
+                    meta={'symbols': ['symbol_b']}, toplevel=True),
         ]
 
         self.__create_test_layout(
             sitemap=sitemap, symbols=symbols, comments=comments,
+            output=self.__output_dir,
+            source_roots=[os.path.join(self.__src_dir, 'a'),
+                          os.path.join(self.__src_dir, 'b')])
+
+        pages = self.app.project.tree.get_pages()
+        self.assertEqual(len(pages), 3)
+        self.assertIn('source1.test', pages)
+
+        source1 = self.app.project.tree.get_pages()['source1.test']
+        self.assertEqual(source1.symbol_names, ['symbol_a', 'symbol_b'])
+
+        # source2 should not appear in the sitemap
+        self.assertNotIn('source2.test', pages)
+
+    def test_parented_symbols(self):
+        sitemap = ('index.markdown\n'
+                   '\ttest-index\n'
+                   '\t\ttest-section.markdown\n')
+
+        symbols = [
+            (
+                [ClassSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': 'source1.test'
+                }
+            ),
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_b',
+                    'filename': 'source2.test',
+                    'parent_name': 'symbol_a',
+                }
+            ),
+        ]
+
+        self.__create_test_layout(
+            sitemap=sitemap, symbols=symbols,
             source_roots=[os.path.join(self.__src_dir, 'a'),
                           os.path.join(self.__src_dir, 'b')])
 

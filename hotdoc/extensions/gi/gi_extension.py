@@ -229,23 +229,18 @@ class GIExtension(Extension):
     def _get_smart_index_title(self):
         return 'GObject API Reference'
 
+    def _get_smart_filename(self, filename):
+        if filename == self.__default_page:
+            return filename
+        return os.path.splitext(filename)[0]
+
     def _get_smart_key(self, symbol):
-        if self.__class_gtype_structs.get(symbol.unique_name):
-            # Working with a Class Structure, not adding it anywhere
-            return None
+        if symbol.filename == self.__default_page:
+            return symbol.filename
+        return os.path.splitext(symbol.filename)[0]
 
-        key = symbol.extra.get('implementation_filename')
-        if key:
-            return key
-
-        if symbol.filename != self.__default_page and \
-                symbol.filename not in self._get_all_sources():
-            if symbol.filename.endswith('.h'):
-                cfilename = symbol.filename.replace('.h', '.c')
-                if cfilename in self._get_all_sources():
-                    return cfilename
-
-        return super()._get_smart_key(symbol)
+    def _get_comment_smart_key(self, comment):
+        return os.path.splitext(comment.filename)[0]
 
     def _get_all_sources(self):
         if not self.__all_sources:
@@ -641,7 +636,7 @@ class GIExtension(Extension):
         if klass_comment:
             param_comment = klass_comment.params.get(name)
             if (param_comment):
-                self.app.database.add_comment(
+                self.add_comment(
                     Comment(name=unique_name,
                             meta={'description': param_comment.description},
                             annotations=param_comment.annotations))
@@ -762,9 +757,10 @@ class GIExtension(Extension):
     def __create_struct_symbol(self, node, struct_name, filename,
                                parent_name):
 
+
         members = self.__get_structure_members(
             node, filename, struct_name,
-            parent_name=struct_name)
+            parent_name=parent_name or struct_name)
 
         if not parent_name:
             return self.create_symbol(GIStructSymbol, node,
@@ -823,7 +819,7 @@ class GIExtension(Extension):
         comment_parser = GtkDocParser(self.project)
         block = self.__raw_comment_parser.parse_comment(DEFAULT_PAGE_COMMENT,
                                                         DEFAULT_PAGE, 0, 0)
-        self.app.database.add_comment(block)
+        self.add_comment(block)
 
         self.__c_comment_extractor.parse_comments(self.c_sources)
 

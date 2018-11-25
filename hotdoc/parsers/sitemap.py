@@ -73,7 +73,7 @@ class Sitemap(object):
         self.index_file = index_file
         self.__all_sources = None
 
-    def walk(self, action):
+    def walk(self, action, user_data=None):
         """
         Walk the hierarchy, applying action to each filename.
 
@@ -82,8 +82,17 @@ class Sitemap(object):
                 will be invoked with the filename, the subfiles, and
                 the level in the sitemap.
         """
-        action(self.index_file, self.__root, 0)
-        self.__do_walk(self.__root, 1, action)
+        action(self.index_file, self.__root, 0, user_data)
+        self.__do_walk(self.__root, 1, action, user_data)
+
+    def __store_one(self, source_file, subpages, level, list_):
+        list_.append((source_file, level))
+
+    def __iter__(self):
+        list_ = []
+        self.walk(self.__store_one, user_data=list_)
+        for elem in list_:
+            yield elem
 
     def _dump(self):
         self.walk(self.__dump_one)
@@ -108,17 +117,17 @@ class Sitemap(object):
         """
         return self.get_all_sources()[source_file]
 
-    def __add_one(self, source_file, subpages, _):
+    def __add_one(self, source_file, subpages, _, __):
         self.__all_sources[source_file] = list(subpages.keys())
 
     # pylint: disable=no-self-use
-    def __dump_one(self, source_file, _, level):
+    def __dump_one(self, source_file, _, level, __):
         print(level * '\t' + source_file)
 
-    def __do_walk(self, parent, level, action):
+    def __do_walk(self, parent, level, action, user_data=None):
         for source_file, subpages in list(parent.items()):
-            action(source_file, subpages, level)
-            self.__do_walk(subpages, level + 1, action)
+            action(source_file, subpages, level, user_data)
+            self.__do_walk(subpages, level + 1, action, user_data)
 
 
 class SitemapParser(object):

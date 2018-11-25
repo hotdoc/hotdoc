@@ -68,7 +68,7 @@ class Comment:
     def __init__(self, name=u'', title=None, params=None, filename=u'',
                  lineno=-1, endlineno=-1, annotations=None,
                  tags=None, raw_comment=u'', topics=None, meta=None,
-                 description=None, short_description=None):
+                 description=None, short_description=None, toplevel=False):
         self.name = name
         self.params = params or {}
         self.topics = topics or {}
@@ -105,6 +105,7 @@ class Comment:
         self.tags = tags or {}
         self.meta = meta or {}
         self.raw_comment = raw_comment
+        self.toplevel = toplevel
 
     @staticmethod
     def __cleanup_meta(meta):

@@ -410,7 +410,7 @@ class Formatter(Configurable):
                     else:
                         warn('bad-local-link',
                              "Empty anchor link to %s in %s points nowhere" %
-                             (href, page.source_file))
+                             (href, page.name))
                         link.text = "FIXME broken link to %s" % href
                 link.attrib["href"] = rel_path + href
 
@@ -432,7 +432,7 @@ class Formatter(Configurable):
         src = asset.attrib.get('src')
         if not src:
             warn('no-image-src',
-                 'Empty image source in %s' % page.source_file)
+                 'Empty image source in %s' % page.name)
             return
 
         comps = urllib.parse.urlparse(src)
@@ -457,7 +457,7 @@ class Formatter(Configurable):
         warn('bad-image-src',
              ('In %s, a local assets refers to an unknown source (%s). '
               'It should be available in one of these locations: %s') %
-             (page.source_file, src, str(folders)))
+             (page.name, src, str(folders)))
 
     def write_out(self, page, xml_subpages, output):
         """Banana banana
@@ -731,7 +731,6 @@ class Formatter(Configurable):
 
         out = template.render(
             {'page': page,
-             'source_file': os.path.basename(page.source_file),
              'scripts': scripts_basenames,
              'stylesheets': stylesheets_basenames,
              'rel_path': rel_path,
