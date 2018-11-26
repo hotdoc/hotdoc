@@ -26,7 +26,7 @@ import shutil
 import io
 import os
 
-from hotdoc.core.symbols import FunctionSymbol
+from hotdoc.core.symbols import ClassSymbol, FunctionSymbol
 from hotdoc.parsers import cmark
 from hotdoc.core.extension import Extension
 from hotdoc.utils.utils import OrderedSet
@@ -462,6 +462,58 @@ class TestTree(unittest.TestCase):
         source2 = self.app.project.tree.get_pages()['source2.test']
         self.assertEqual(source2.symbol_names, ['symbol_b'])
 
+    def test_multiple_toplevel_comments(self):
+        sitemap = ('index.markdown\n'
+                   '\ttest-index\n')
+
+        symbols = [
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': 'source1.test'
+                }
+            ),
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_b',
+                    'filename': 'source1.test'
+                }
+            ),
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_c',
+                    'filename': 'source1.test'
+                }
+            ),
+        ]
+
+        comments = [
+            Comment(name='foo',
+                    filename=os.path.join(self.__src_dir, 'source1.test'),
+                    meta={'symbols': ['symbol_a']}, toplevel=True),
+            Comment(name='bar',
+                    filename=os.path.join(self.__src_dir, 'source1.test'),
+                    meta={'symbols': ['symbol_b']}, toplevel=True),
+        ]
+
+        self.__create_test_layout(
+            sitemap=sitemap, symbols=symbols, comments=comments,
+            output=self.__output_dir)
+
+        pages = self.app.project.tree.get_pages()
+
+        self.assertEqual(len(pages), 4)
+        self.assertIn('foo', pages)
+        foo = pages['foo']
+        self.assertEqual(foo.symbol_names, ['symbol_a', 'symbol_c'])
+
+        self.assertIn('bar', pages)
+        foo = pages['bar']
+        self.assertEqual(foo.symbol_names, ['symbol_b'])
+
     def test_comment_relocation_basic(self):
         sitemap = ('index.markdown\n'
                    '\ttest-index\n')
@@ -498,6 +550,43 @@ class TestTree(unittest.TestCase):
 
         pages = self.app.project.tree.get_pages()
         self.assertEqual(len(pages), 3)
+        self.assertIn('source1.test', pages)
+
+        source1 = self.app.project.tree.get_pages()['source1.test']
+        self.assertEqual(source1.symbol_names, ['symbol_a', 'symbol_b'])
+
+        # source2 should not appear in the sitemap
+        self.assertNotIn('source2.test', pages)
+
+    def test_parented_symbols(self):
+        sitemap = ('index.markdown\n'
+                   '\ttest-index\n'
+                   '\t\ttest-section.markdown\n')
+
+        symbols = [
+            (
+                [ClassSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': 'source1.test'
+                }
+            ),
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_b',
+                    'filename': 'source2.test',
+                    'parent_name': 'symbol_a',
+                }
+            ),
+        ]
+
+        self.__create_test_layout(
+            sitemap=sitemap, symbols=symbols,
+            source_roots=[os.path.join(self.__src_dir, 'a'),
+                          os.path.join(self.__src_dir, 'b')])
+
+        pages = self.app.project.tree.get_pages()
         self.assertIn('source1.test', pages)
 
         source1 = self.app.project.tree.get_pages()['source1.test']

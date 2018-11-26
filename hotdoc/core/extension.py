@@ -218,7 +218,10 @@ class Extension(Configurable):
             page.generated = True
             page.extension_name = self.extension_name
             smart_key = self._get_comment_smart_key(comment)
-            smart_pages[smart_key] = page
+            if smart_key in smart_pages:
+                smart_pages[comment.name] = page
+            else:
+                smart_pages[smart_key] = page
             symbol_names = comment.meta.get('symbols', [])
             page.symbol_names |= OrderedSet(comment.meta.get('symbols', []))
             dispatched_symbol_names |= set(page.symbol_names)

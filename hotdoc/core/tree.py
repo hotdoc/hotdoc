@@ -427,7 +427,6 @@ class Tree:
                 page = ext_pages['%s-index' % ext_name]
                 del ext_pages['%s-index' % ext_name]
                 ext_index = page
-                print (ext_pages)
             elif name in ext_pages:
                 page = ext_pages[name]
                 del ext_pages[name]
