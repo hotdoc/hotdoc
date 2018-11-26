@@ -54,7 +54,7 @@ class CoreExtension(Extension):
     extension_name = 'core'
 
     def format_page(self, page, link_resolver, output):
-        proj = self.project.subprojects.get(page.source_file)
+        proj = self.project.subprojects.get(page.name)
         if proj:
             proj.format(link_resolver, output)
             page.title = proj.tree.root.title
@@ -63,7 +63,7 @@ class CoreExtension(Extension):
                 page, link_resolver, output)
 
     def write_out_page(self, output, page):
-        proj = self.project.subprojects.get(page.source_file)
+        proj = self.project.subprojects.get(page.name)
         if proj:
             proj.tree.write_out(output)
         else:

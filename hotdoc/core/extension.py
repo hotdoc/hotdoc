@@ -187,9 +187,7 @@ class Extension(Configurable):
             if smart_key in smart_pages:
                 page = smart_pages[smart_key]
             else:
-                page = Page(smart_key, None, '', self.project.sanitized_name)
-                page.generated = True
-                page.extension_name = self.extension_name
+                page = Page(smart_key, True, self.project.sanitized_name, self.extension_name)
                 smart_pages[smart_key] = page
 
         symbol_pages[symbol_name] = page
@@ -212,22 +210,22 @@ class Extension(Configurable):
         # This is the highest priority mechanism for sorting symbols
         for comment in self.__toplevel_comments:
             assert(comment.name)
-            page = Page(comment.name, None, '', self.project.sanitized_name,
-                        meta=comment.meta)
-            page.comment = comment
-            page.generated = True
-            page.extension_name = self.extension_name
+            symbol_names = comment.meta.pop('symbols', [])
+            private_symbol_names = comment.meta.pop('private-symbols', [])
+            page = Page(comment.name, True, self.project.sanitized_name, self.extension_name,
+                    comment=comment, symbol_names=symbol_names)
+
             smart_key = self._get_comment_smart_key(comment)
             if smart_key in smart_pages:
                 smart_pages[comment.name] = page
             else:
                 smart_pages[smart_key] = page
-            symbol_names = comment.meta.get('symbols', [])
-            page.symbol_names |= OrderedSet(comment.meta.get('symbols', []))
-            dispatched_symbol_names |= set(page.symbol_names)
+
+            # These symbols no longer need to be assigned
+            dispatched_symbol_names |= set(symbol_names)
 
             # All these symbols are explicitly ignored
-            dispatched_symbol_names |= set(comment.meta.get('private-symbols', []))
+            dispatched_symbol_names |= set(private_symbol_names)
 
         # We now browse all the symbols we have created
         for key, symbol_names in self._created_symbols.items():
@@ -244,12 +242,10 @@ class Extension(Configurable):
 
         # Finally we make our index page
         if self.index:
-            index_page = self.project.tree.parse_page(self.index)
+            index_page = self.project.tree.parse_page(self.index, self.extension_name)
         else:
-            index_page = Page('%s-index' % self.argument_prefix, None, '', self.project.sanitized_name)
-            index_page.generated = True
-
-        index_page.extension_name = self.extension_name
+            index_page = Page('%s-index' % self.argument_prefix, True, self.project.sanitized_name,
+                    self.extension_name)
 
         smart_pages['%s-index' % self.argument_prefix] = index_page
 

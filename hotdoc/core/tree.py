@@ -87,8 +87,6 @@ Logger.register_warning_code('markdown-bad-link', HotdocSourceException)
 class Page:
     "Banana banana"
     meta_schema = {Optional('title'): And(str, len),
-                   Optional('symbols'): Schema([And(str, len)]),
-                   Optional('private-symbols'): Schema([And(str, len)]),
                    Optional('short-description'): And(str, len),
                    Optional('description'): And(str, len),
                    Optional('render-subpages'): bool,
@@ -98,24 +96,37 @@ class Page:
                    Optional('extra'): Schema({str: object}),
                    Optional('thumbnail'): And(str, len)}
 
-    # pylint: disable=too-many-arguments
-    def __init__(self, source_file, ast, output_path, project_name, meta=None,
-                 raw_contents=None):
-        "Banana banana"
-        assert source_file
-        basename = os.path.basename(source_file)
+    def __init__(self, name, generated, project_name, extension_name,
+                 source_file=None,
+                 ast=None,
+                 output_path='',
+                 raw_contents=None,
+                 comment=None,
+                 meta=None,
+                 pre_sorted=False,
+                 symbol_names=None):
+        assert name
+
+        if not generated:
+            assert source_file is not None
+
+        self.name = name
+        basename = os.path.basename(name)
         name = os.path.splitext(basename)[0]
         ref = os.path.join(output_path,
                            re.sub(r'\W+', '-', os.path.splitext(basename)[0]))
         pagename = '%s.html' % ref
 
-        self.ast = ast
-        self.extension_name = None
+        self.generated = generated
+        self.project_name = project_name
+        self.extension_name = extension_name
         self.source_file = source_file
+        self.ast = ast
         self.raw_contents = raw_contents
-        self.comment = None
-        self.generated = False
-        self.pre_sorted = False
+        self.comment = comment
+        self.pre_sorted = pre_sorted
+        self.symbol_names = OrderedSet(symbol_names or [])
+
         self.output_attrs = None
         self.subpages = OrderedSet()
         self.symbols = []
@@ -125,44 +136,37 @@ class Page:
         self.formatted_contents = None
         self.detailed_description = None
         self.build_path = None
-        self.thumbnail = None
-        self.project_name = project_name
         self.cached_paths = OrderedSet()
 
-        meta = meta or {}
-        self.listed_symbols = []
-        self.symbol_names = OrderedSet()
-        self.short_description = None
-        self.render_subpages = True
-        self.title = ''
-        self.meta = Schema(Page.meta_schema).validate({})
-        self.__update_meta(meta)
-        self.__discover_title(meta)
-        self.link = Link(pagename, self.title or name, ref)
+        if comment:
+            meta = comment.meta
+        elif meta:
+            meta = meta
+        else:
+            meta = {}
 
-    def __update_meta(self, meta):
+        self.meta = {}
         for key, value in meta.items():
             try:
                 self.meta.update(Schema(Page.meta_schema).validate({
                     key.replace('_', '-').lower(): value}))
-            except SchemaError as _:
+            except SchemaError as error:
                 warn('invalid-page-metadata',
                      '%s: Invalid metadata: \n%s, discarding metadata' %
-                     (self.source_file, str(_)))
+                     (self.name, str(error)))
 
         if not self.meta.get('extra'):
             self.meta['extra'] = defaultdict()
 
-        self.title = meta.get('title', self.title)
-        self.thumbnail = meta.get('thumbnail')
-        self.listed_symbols = OrderedSet(meta.get('symbols') or self.symbol_names)
-        self.private_symbols = OrderedSet(meta.get('private-symbols') or self.private_symbols)
-        self.symbol_names = OrderedSet(meta.get('symbols') or self.symbol_names)
-        self.short_description = meta.get('short-description', self.short_description)
-        self.render_subpages = meta.get('render-subpages', self.render_subpages)
+        self.title = self.meta.get('title', cmark.title_from_ast(self.ast) if ast else '')
+        self.thumbnail = self.meta.get('thumbnail')
+        self.short_description = self.meta.get('short-description', None)
+        self.render_subpages = self.meta.get('render-subpages', True)
+
+        self.link = Link(pagename, self.title or name, ref)
 
     def __repr__(self):
-        return "<Page %s>" % self.source_file
+        return "<Page %s>" % self.name
 
     @staticmethod
     def __get_empty_typed_symbols():
@@ -175,15 +179,6 @@ class Page:
                 subclass.get_plural_name(), [])
 
         return empty_typed_symbols
-
-    def set_comment(self, comment):
-        """
-        Sets @comment as main comment for @self.
-        """
-        if comment:
-            self.__update_meta(comment.meta)
-
-        self.comment = comment
 
     def resolve_symbols(self, tree, database, link_resolver):
         """
@@ -225,7 +220,7 @@ class Page:
             if self.title is None:
                 self.title = syms[0].display_name
             if self.comment is None:
-                self.comment = Comment(name=self.source_file)
+                self.comment = Comment(name=self.name)
                 self.comment.short_description = syms[
                     0].comment.short_description
                 self.comment.title = syms[0].comment.title
@@ -262,8 +257,8 @@ class Page:
         Banana banana
         """
 
-        if not self.title and self.source_file:
-            title = os.path.splitext(self.source_file)[0]
+        if not self.title and self.name:
+            title = os.path.splitext(self.name)[0]
             self.title = os.path.basename(title).replace('-', ' ')
 
         self.formatted_contents = u''
@@ -277,7 +272,7 @@ class Page:
                 warn(
                     diag.code,
                     message=diag.message,
-                    filename=self.source_file)
+                    filename=self.source_file or self.name)
 
             self.formatted_contents += out
 
@@ -311,7 +306,7 @@ class Page:
             if symbol is None:
                 continue
             debug('Formatting symbol %s in page %s' % (
-                symbol.unique_name, self.source_file), 'formatting')
+                symbol.unique_name, self.name), 'formatting')
             symbol.detailed_description = formatter.format_symbol(
                 symbol, link_resolver)
 
@@ -379,15 +374,15 @@ class Tree:
                 self.__dep_map[sym_name] = page
 
     # pylint: disable=no-self-use
-    def parse_page(self, source_file):
+    def parse_page(self, source_file, extension_name):
         with io.open(source_file, 'r', encoding='utf-8') as _:
             contents = _.read()
 
-        return self.page_from_raw_text(source_file, contents)
+        return self.page_from_raw_text(source_file, contents, extension_name)
 
     def add_unordered_subpages(self, extension, ext_index, ext_pages):
         for smart_key, ext_page in ext_pages.items():
-            pagename = extension.get_pagename(ext_page.source_file)
+            pagename = extension.get_pagename(ext_page.name)
             self.__all_pages[pagename] = ext_page
             ext_index.subpages.add(pagename)
 
@@ -397,6 +392,7 @@ class Tree:
         ext_pages = {}
         ext_index = None
         extension = None
+        ext_name = 'core'
 
         sitemap_pages = sitemap.get_all_sources()
         self.__all_pages = {}
@@ -410,6 +406,7 @@ class Tree:
                 ext_level = -1
                 ext_pages = {}
                 ext_index = None
+                ext_name = 'core'
 
             if extension:
                 smart_key = extension.get_possible_path(name)
@@ -444,10 +441,9 @@ class Tree:
                 ext = os.path.splitext(name)[1]
                 if ext == '.json':
                     self.project.add_subproject(name, source_file)
-                    page = Page(name, None, '', self.project.sanitized_name)
-                    page.generated = True
+                    page = Page(name, True, self.project.sanitized_name, 'core')
                 else:
-                    page = self.parse_page(source_file)
+                    page = self.parse_page(source_file, ext_name)
 
                 page.extension_name = extension.extension_name if extension else 'core'
 
@@ -508,7 +504,7 @@ class Tree:
             for page in self.walk(parent=cpage):
                 yield page
 
-    def page_from_raw_text(self, source_file, contents):
+    def page_from_raw_text(self, source_file, contents, extension_name):
         """
         Banana banana
         """
@@ -533,8 +529,9 @@ class Tree:
             source_file, next(iter(self.project.include_paths))))
 
         ast = cmark.hotdoc_to_ast(contents, self)
-        return Page(source_file, ast, output_path, self.project.sanitized_name,
-                    meta=meta, raw_contents=raw_contents)
+        return Page(source_file, False, self.project.sanitized_name, extension_name,
+                source_file=source_file, ast=ast, meta=meta, raw_contents=raw_contents,
+                output_path=output_path)
 
     def get_pages(self):
         """

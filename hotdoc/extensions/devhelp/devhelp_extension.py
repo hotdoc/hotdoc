@@ -96,9 +96,9 @@ class DevhelpExtension(Extension):
             cpage = tree.get_pages()[name]
 
             subtree = None
-            ext = os.path.splitext(cpage.source_file)[1]
+            ext = os.path.splitext(cpage.name)[1]
             if ext.endswith('.json'):
-                subproject = tree.project.subprojects[cpage.source_file]
+                subproject = tree.project.subprojects[cpage.name]
                 subtree = subproject.tree
                 cpage = subtree.root
 

@@ -1,4 +1,4 @@
-@require(page, source_file, symbols_details, attrs, sections_details)
+@require(page, symbols_details, attrs, sections_details)
 @extends('base_page.html')
 
 @def render_symbols(sdetails, section):
@@ -27,7 +27,7 @@
 @end
 
 @def content():
-    <div id="page-description" data-hotdoc-source="@source_file" data-hotdoc-role="main">
+    <div id="page-description" data-hotdoc-role="main">
     @if page.formatted_contents:
         @page.formatted_contents
     @end

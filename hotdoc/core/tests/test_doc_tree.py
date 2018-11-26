@@ -157,7 +157,6 @@ class TestTree(unittest.TestCase):
                    '\ttest-index\n'
                    '\t\ttest-section.markdown\n'
                    '\t\t\tsource_a.test\n'
-                   '\t\tpage_x.markdown\n'
                    '\t\tpage_y.markdown\n'
                    '\tcore_page.markdown\n')
         else:
@@ -228,12 +227,6 @@ class TestTree(unittest.TestCase):
              '\n'
              'Linking to [a generated page](source_a.test)\n'))
         self.__create_md_file(
-            'page_x.markdown',
-            (u'---\n'
-             'symbols: [symbol_3]\n'
-             '...\n'
-             '# Page X\n'))
-        self.__create_md_file(
             'page_y.markdown',
             (u'# Page Y\n'))
 
@@ -258,12 +251,11 @@ class TestTree(unittest.TestCase):
              u'test-section.markdown': 'test-extension',
              u'source_a.test': 'test-extension',
              u'source_b.test': 'test-extension',
-             u'page_x.markdown': 'test-extension',
              u'page_y.markdown': 'test-extension',
              u'core_page.markdown': 'core'})
 
         all_pages = self.app.project.tree.get_pages()
-        self.assertEqual(len(all_pages), 8)
+        self.assertEqual(len(all_pages), 7)
         self.assertNotIn('source_a.test', all_pages['test-index'].subpages)
         self.assertIn('source_a.test',
                       all_pages['test-section.markdown'].subpages)
@@ -272,7 +264,7 @@ class TestTree(unittest.TestCase):
         self.__create_test_layout(with_ext_index=False)
         ext_index = self.app.project.tree.get_pages()['test-index']
         self.assertEqual(ext_index.generated, True)
-        self.assertEqual(len(ext_index.subpages), 4)
+        self.assertEqual(len(ext_index.subpages), 3)
 
     def test_parse_yaml(self):
         conf = {'project_name': 'test',
@@ -283,7 +275,6 @@ class TestTree(unittest.TestCase):
             'index.markdown',
             (u'---\n'
              'title: A random title\n'
-             'symbols: [symbol_1, symbol_2]\n'
              '...\n'
              '# My documentation\n'))
 
@@ -301,11 +292,6 @@ class TestTree(unittest.TestCase):
             u'<h1>My documentation</h1>\n')
 
         self.assertEqual(page.title, u'A random title')
-
-        self.assertEqual(
-            page.symbol_names,
-            OrderedSet(['symbol_1',
-                        'symbol_2']))
 
     def test_empty_link_resolution(self):
         conf = {'project_name': 'test',
@@ -414,7 +400,6 @@ class TestTree(unittest.TestCase):
                    '\t\ttest-section.markdown\n'
                    '\t\t\tsource_b.test\n'
                    '\t\t\tsource_a.test\n'
-                   '\t\tpage_x.markdown\n'
                    '\t\tpage_y.markdown\n'
                    '\tcore_page.markdown\n')
         comments = [
