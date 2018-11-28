@@ -266,6 +266,9 @@ class Extension(Configurable):
             index_page = Page('%s-index' % self.argument_prefix, True, self.project.sanitized_name,
                     self.extension_name)
 
+        if not index_page.title:
+            index_page.title = self._get_smart_index_title()
+
         smart_pages['%s-index' % self.argument_prefix] = index_page
 
         return smart_pages
