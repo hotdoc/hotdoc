@@ -104,6 +104,11 @@ SECTION_GTKDOC_WITH_SYMBOLS = '''/**
  * - symbol_b
  */'''
 
+SECTION_WITH_NO_NEWLINE_NOR_METAS = '''/**
+ * SECTION: this:
+ * "this" is a section.
+ */'''
+
 NOT_A_GTKDOC_COMMENT = '''/**
  * $param rd Pointer to vbi3_raw_decoder object allocated with
  *   vbi3_raw_decoder_new().
@@ -174,6 +179,18 @@ class TestGtkDocParser(unittest.TestCase):
             end_lineno)
         self.assertEqual(comment.name, "notafile")
         self.assertEqual(comment.toplevel, True)
+
+    def test_section_with_no_newline_nor_metas(self):
+        raw_lines = SECTION_WITH_NO_NEWLINE_NOR_METAS.split("\n")
+
+        comment = self.parser.parse_comment(
+            SECTION_WITH_NO_NEWLINE_NOR_METAS,
+            'some-file.c',
+            0,
+            len(raw_lines) - 1)
+
+        self.assertEqual(comment.name, "this")
+        self.assertEqual(comment.description, '"this" is a section.')
 
     def test_symbols_list(self):
         raw_lines = SECTION_GTKDOC_WITH_SYMBOLS.split("\n")

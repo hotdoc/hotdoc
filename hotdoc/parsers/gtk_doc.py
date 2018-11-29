@@ -280,6 +280,21 @@ class GtkDocParser:
                  '%s: Invalid metadata: \n%s' % (filename, str(exception)))
         return res
 
+    def __extract_titles_params_and_description(self, comment):
+        titleandparams_description = re.split(r'\n[\W]*\n', comment, maxsplit=1)
+        title_and_params = titleandparams_description[0]
+
+        title_and_params_lines = title_and_params.split('\n')
+        if len(title_and_params_lines) > 1 and not title_and_params_lines[1].strip().startswith('@'):
+            return title_and_params_lines[0].rstrip(':'), '\n'.join([l.strip() for l in title_and_params_lines[1:]])
+
+        if len(titleandparams_description) > 1:
+            description = titleandparams_description[1]
+        else:
+            description = None
+
+        return title_and_params, description
+
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
     # pylint: disable=unused-argument
@@ -306,11 +321,10 @@ class GtkDocParser:
                 column_offset = 0
             comment, title_offset = self.__strip_comment(comment)
 
-        split = re.split(r'\n[\W]*\n', comment, maxsplit=1)
-
+        title_and_params, description = self.__extract_titles_params_and_description(comment)
         try:
             block_name, parameters, annotations, is_section = \
-                self.__parse_title_and_parameters(filename, split[0])
+                self.__parse_title_and_parameters(filename, title_and_params)
         except HotdocSourceException as _:
             warn('gtk-doc-bad-syntax',
                  message=_.message,
@@ -333,11 +347,11 @@ class GtkDocParser:
         description_offset = 0
         meta = {}
         tags = []
-        if len(split) > 1:
+        if description is not None:
             n_lines = len(comment.split('\n'))
             description_offset = (title_offset + n_lines -
-                                  len(split[1].split('\n')))
-            meta['description'], tags = self.__parse_description_and_tags(split[1])
+                                  len(description.split('\n')))
+            meta['description'], tags = self.__parse_description_and_tags(description)
 
         actual_parameters = OrderedDict({})
         for param in parameters:
