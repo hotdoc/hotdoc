@@ -102,6 +102,7 @@ class GIExtension(Extension):
         self.__current_output_filename = None
         self.__class_gtype_structs = {}
         self.__default_page = DEFAULT_PAGE
+        self.__relocated_symbols = set()
         self.created_symbols = set()
         self.__raw_comment_parser = GtkDocParser(self.project)
         self.__c_comment_extractor = CCommentExtractor(
@@ -150,6 +151,11 @@ class GIExtension(Extension):
         if ALL_GIRS:
             page.meta['extra']['gi-languages'] = ['c', 'python', 'javascript']
 
+    def __list_relocated_symbols(self):
+        for comment in self.get_toplevel_comments():
+            self.__relocated_symbols |= set(comment.meta.get('symbols', []))
+            self.__relocated_symbols |= set(comment.meta.get('private-symbols', []))
+
     def setup(self):
         for ext in self.project.extensions.values():
             ext.formatter.formatting_page_signal.connect(
@@ -166,6 +172,7 @@ class GIExtension(Extension):
             return
 
         self.__scan_comments()
+        self.__list_relocated_symbols()
         self.__scan_sources()
         self.__create_macro_symbols()
 
@@ -185,6 +192,15 @@ class GIExtension(Extension):
         page.meta['extra']['gi-language'] = 'c'
         Extension.write_out_page(self, output, page)
 
+    def __symbol_is_relocated(self, unique_name, parent_name):
+        if unique_name in self.__relocated_symbols:
+            return True
+
+        if parent_name in self.__relocated_symbols:
+            return True
+
+        return False
+
     def create_symbol(self, *args, **kwargs):
         args = list(args)
         node = None
@@ -199,15 +215,18 @@ class GIExtension(Extension):
                 if comment.annotations['attributes'].argument.get('doc.skip') is not None:
                     return None
 
-        name = kwargs['display_name']
-        if kwargs.get('filename', self.__default_page) == self.__default_page:
-            kwargs['filename'] = self.__get_symbol_filename(unique_name)
-            if kwargs.get('filename', self.__default_page) == self.__default_page:
-                self.warn("no-location-indication",
-                          "No way to determine where %s should land"
-                          " putting it to %s."
-                          " Document the symbol for smart indexing to work" % (
-                              name, os.path.basename(self.__default_page)))
+        filename = kwargs.get('filename', self.__default_page)
+        if filename == self.__default_page:
+            parent_name = kwargs.get('parent_name')
+            if not self.__symbol_is_relocated(unique_name, parent_name):
+                name = kwargs['display_name']
+                kwargs['filename'] = self.__get_symbol_filename(unique_name)
+                if kwargs.get('filename', self.__default_page) == self.__default_page:
+                    self.warn("no-location-indication",
+                            "No way to determine where %s should land"
+                            " putting it to %s."
+                            " Document the symbol for smart indexing to work" % (
+                                name, os.path.basename(self.__default_page)))
 
         res = super(GIExtension, self).create_symbol(*args, **kwargs)
 
@@ -334,6 +353,9 @@ class GIExtension(Extension):
         filename = self.__get_symbol_filename(unique_name)
         if filename != self.__default_page:
             return filename
+
+        if self.__symbol_is_relocated(unique_name, None):
+            return self.__default_page
 
         if not is_class:
             sym = self.__class_gtype_structs.get(node.attrib['name'])
