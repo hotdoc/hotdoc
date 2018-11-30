@@ -230,6 +230,10 @@ class Extension(Configurable):
             private_symbol_names = comment.meta.pop('private-symbols', [])
             page = Page(comment.name, True, self.project.sanitized_name, self.extension_name,
                     comment=comment, symbol_names=symbol_names)
+
+            symbol_pages.update({symbol_name: page for symbol_name in symbol_names})
+            symbol_pages.update({symbol_name: None for symbol_name in private_symbol_names})
+
             section_links.add(page.link.ref)
             smart_key = self._get_comment_smart_key(comment)
             if smart_key in smart_pages:
@@ -252,7 +256,8 @@ class Extension(Configurable):
                 page = self.get_symbol_page (symbol_name, symbol_pages, smart_pages, section_links)
 
                 # Can be None if creating a page to hold the symbol conflicts with
-                # a page explicitly declared in a toplevel comment
+                # a page explicitly declared in a toplevel comment or a parent has been
+                # marked as private
                 if page is None:
                     continue
 
