@@ -34,6 +34,7 @@ from hotdoc.utils.utils import OrderedSet, DefaultOrderedDict
 
 
 Logger.register_warning_code('unavailable-symbol-listed', InvalidOutputException, 'extension')
+Logger.register_warning_code('output-page-conflict', InvalidOutputException, 'extension')
 
 
 # pylint: disable=too-few-public-methods
@@ -172,7 +173,7 @@ class Extension(Configurable):
                 return os.path.relpath(name, path)
         return name
 
-    def get_symbol_page(self, symbol_name, symbol_pages, smart_pages):
+    def get_symbol_page(self, symbol_name, symbol_pages, smart_pages, section_links):
         if symbol_name in symbol_pages:
             return symbol_pages[symbol_name]
 
@@ -180,17 +181,25 @@ class Extension(Configurable):
         assert (symbol is not None)
 
         if symbol.parent_name and symbol.parent_name != symbol_name:
-            page = self.get_symbol_page(symbol.parent_name, symbol_pages, smart_pages)
+            page = self.get_symbol_page(symbol.parent_name, symbol_pages, smart_pages, section_links)
         else:
             smart_key = self._get_smart_key (symbol)
-            #print ('Smart!', smart_key)
             if smart_key in smart_pages:
                 page = smart_pages[smart_key]
             else:
-                page = Page(smart_key, True, self.project.sanitized_name, self.extension_name)
-                smart_pages[smart_key] = page
+                pagename = self.get_pagename(smart_key)
+                page = Page(smart_key, True, self.project.sanitized_name, self.extension_name,
+                            output_path=os.path.dirname(pagename))
+                if page.link.ref in section_links:
+                    self.warn('output-page-conflict',
+                              'Creating a page for symbol %s would overwrite the page '
+                              'declared in a toplevel comment (%s)' % (symbol_name, page.link.ref))
+                    page = None
+                else:
+                    smart_pages[smart_key] = page
 
-        symbol_pages[symbol_name] = page
+        if page is not None:
+            symbol_pages[symbol_name] = page
 
         return page
 
@@ -206,6 +215,10 @@ class Extension(Configurable):
 
         smart_pages = OrderedDict()
 
+        # This is simply used as a conflict detection mechanism, see
+        # hotdoc.core.tests.test_doc_tree.TestTree.test_section_and_path_conflict
+        section_links = set()
+
         # First we make one page per toplevel comment (eg. SECTION comment)
         # This is the highest priority mechanism for sorting symbols
         for comment in self.__toplevel_comments:
@@ -214,7 +227,7 @@ class Extension(Configurable):
             private_symbol_names = comment.meta.pop('private-symbols', [])
             page = Page(comment.name, True, self.project.sanitized_name, self.extension_name,
                     comment=comment, symbol_names=symbol_names)
-
+            section_links.add(page.link.ref)
             smart_key = self._get_comment_smart_key(comment)
             if smart_key in smart_pages:
                 smart_pages[comment.name] = page
@@ -233,9 +246,12 @@ class Extension(Configurable):
                 if symbol_name in dispatched_symbol_names:
                     continue
 
-                page = self.get_symbol_page (symbol_name, symbol_pages, smart_pages)
+                page = self.get_symbol_page (symbol_name, symbol_pages, smart_pages, section_links)
 
-                assert(page)
+                # Can be None if creating a page to hold the symbol conflicts with
+                # a page explicitly declared in a toplevel comment
+                if page is None:
+                    continue
 
                 page.symbol_names.add(symbol_name)
                 dispatched_symbol_names.add(symbol_name)

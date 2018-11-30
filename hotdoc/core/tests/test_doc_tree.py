@@ -34,6 +34,7 @@ from hotdoc.utils.loggable import Logger
 from hotdoc.core.config import Config
 from hotdoc.run_hotdoc import Application
 from hotdoc.core.comment import Comment
+from hotdoc.core.exceptions import InvalidOutputException
 
 
 class TestExtension(Extension):
@@ -78,12 +79,14 @@ class TestTree(unittest.TestCase):
         self.app = Application((TestExtension,))
 
         Logger.fatal_warnings = True
+        Logger.silent = True
 
     def tearDown(self):
         #self.__remove_tmp_dirs()
         TestExtension.symbols = []
         TestExtension.comments = []
         Logger.fatal_warnings = False
+        Logger.silent = False
 
     def __write_sitemap(self, text):
         path = os.path.join(self.__md_dir, 'sitemap.txt')
@@ -93,6 +96,10 @@ class TestTree(unittest.TestCase):
 
     def __create_md_file(self, name, contents):
         path = os.path.join(self.__md_dir, name)
+
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
+
         with open(path, 'w') as _:
             _.write(contents)
         return path
@@ -114,37 +121,37 @@ class TestTree(unittest.TestCase):
         return Config(conf_file=os.path.join(self.__test_dir, 'hotdoc.json'),
                       json_conf=conf)
 
-    def test_basic(self):
+    def __make_project(self, sitemap, index_path, symbols=None, comments=None, output=None):
         conf = {'project_name': 'test',
                 'project_version': '1.0'}
-        self.__create_md_file(
-            'index.markdown',
-            (u'# My documentation\n'))
-        conf['index'] = self.__create_md_file(
-            'section.markdown',
-            (u'# My section\n'))
-        inp = (u'index.markdown\n'
-               '\tsection.markdown')
-        conf['sitemap'] = self.__write_sitemap(inp)
+
+        conf['sitemap'] = self.__write_sitemap(sitemap)
+
+        if output is not None:
+            conf['output'] = output
+
+        if symbols is not None:
+            TestExtension.symbols = symbols
+
+        conf['test_sources'] = []
+        all_src_files = set()
+        for _, kwargs in TestExtension.symbols:
+            fname = kwargs.get('filename')
+            if fname is not None:
+                if fname not in all_src_files:
+                    conf['test_sources'].append(self.__create_src_file(fname, []))
+                    all_src_files.add(fname)
+                kwargs['filename'] = os.path.join(self.__src_dir, fname)
+
+        if comments is not None:
+            TestExtension.comments = comments
+
+        conf['index'] = index_path
+
         conf = self.__make_config(conf)
+
         self.app.parse_config(conf)
         self.app.run()
-
-        pages = self.app.project.tree.get_pages()
-
-        self.assertSetEqual(
-            set(pages.keys()),
-            set([u'index.markdown',
-                 u'section.markdown']))
-
-        index = pages.get('index.markdown')
-        self.assertEqual(index.title, u'My documentation')
-
-    def __assert_extension_names(self, tree, name_map):
-        pages = tree.get_pages()
-        for name, ext_name in list(name_map.items()):
-            page = pages[name]
-            self.assertEqual(ext_name, page.extension_name)
 
     # pylint: disable=too-many-arguments
     def __create_test_layout(self, with_ext_index=True, sitemap=None,
@@ -241,6 +248,133 @@ class TestTree(unittest.TestCase):
 
         self.app.parse_config(conf)
         self.app.run()
+
+    def test_basic(self):
+        conf = {'project_name': 'test',
+                'project_version': '1.0'}
+        conf['index'] = self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+        self.__create_md_file(
+            'section.markdown',
+            (u'# My section\n'))
+        inp = (u'index.markdown\n'
+               '\tsection.markdown')
+        conf['sitemap'] = self.__write_sitemap(inp)
+        conf = self.__make_config(conf)
+        self.app.parse_config(conf)
+        self.app.run()
+
+        pages = self.app.project.tree.get_pages()
+
+        self.assertSetEqual(
+            set(pages.keys()),
+            set([u'index.markdown',
+                 u'section.markdown']))
+
+        index = pages.get('index.markdown')
+        self.assertEqual(index.title, u'My documentation')
+
+    def test_page_output_path(self):
+        conf = {'project_name': 'test',
+                'project_version': '1.0'}
+        conf['index'] = self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+
+        subfolder_page_path = os.path.join('subfolder', 'page.markdown')
+
+        self.__create_md_file(
+            subfolder_page_path,
+            (u'# Page in a subfolder\n'))
+        inp = (u'index.markdown\n'
+               '\tsubfolder/page.markdown')
+        conf['sitemap'] = self.__write_sitemap(inp)
+        conf = self.__make_config(conf)
+        self.app.parse_config(conf)
+        self.app.run()
+
+        pages = self.app.project.tree.get_pages()
+
+        self.assertIn(subfolder_page_path, pages)
+
+        subfolder_page = pages[subfolder_page_path]
+        self.assertEqual(subfolder_page.link.ref, os.path.join('subfolder', 'page.html'))
+
+    def test_generated_page_output_path(self):
+        sitemap = (u'index.markdown\n'
+                   '\ttest-index\n')
+        index_path = self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+
+        a_source_path = os.path.join('a', 'source1.test')
+        b_source_path = os.path.join('b', 'source1.test')
+
+        symbols = [
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': a_source_path,
+                }
+            ),
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_b',
+                    'filename': b_source_path,
+                }
+            ),
+        ]
+
+        self.__make_project(sitemap, index_path, symbols=symbols)
+
+        pages = self.app.project.tree.get_pages()
+
+        self.assertEqual(len(pages), 4)
+
+        a_page = pages[a_source_path]
+        b_page = pages[b_source_path]
+
+        self.assertEqual(a_page.link.ref, os.path.join('a', 'source1.html'))
+        self.assertEqual(b_page.link.ref, os.path.join('b', 'source1.html'))
+
+    def test_section_and_path_conflict(self):
+        sitemap = (u'index.markdown\n'
+                   '\ttest-index\n')
+        index_path = self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+
+        a_source_path = 'source1.test'
+        b_source_path = 'source2.test'
+
+        symbols = [
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': a_source_path,
+                }
+            ),
+        ]
+
+        comments = [
+            Comment(name='source1',
+                    filename=b_source_path,
+                    meta={'auto-sort': True}, toplevel=True),
+        ]
+
+        with self.assertRaises(InvalidOutputException):
+            self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
+                    output=self.__output_dir)
+
+    def __assert_extension_names(self, tree, name_map):
+        pages = tree.get_pages()
+        for name, ext_name in list(name_map.items()):
+            page = pages[name]
+            self.assertEqual(ext_name, page.extension_name)
 
     def test_extension_basic(self):
         self.__create_test_layout()
