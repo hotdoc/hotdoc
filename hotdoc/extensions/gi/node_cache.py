@@ -46,12 +46,20 @@ def __find_gir_file(gir_name, all_girs):
         return all_girs[gir_name]
 
     xdg_dirs = os.getenv('XDG_DATA_DIRS') or ''
-    xdg_dirs = [p for p in xdg_dirs.split(':') if p]
+    xdg_dirs = [p for p in xdg_dirs.split(os.pathsep) if p]
     xdg_dirs.append(DATADIR)
     for dir_ in xdg_dirs:
         gir_file = os.path.join(dir_, 'gir-1.0', gir_name)
         if os.path.exists(gir_file):
             return gir_file
+
+    typelib_path = os.getenv('GI_TYPELIB_PATH') or ''
+    typelib_path = [p for p in typelib_path.split(os.pathsep) if p]
+    for dir_ in typelib_path:
+        gir_file = os.path.join(dir_, gir_name)
+        if os.path.exists(gir_file):
+            return gir_file
+
     return None
 
 
