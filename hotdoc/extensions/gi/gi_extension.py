@@ -332,7 +332,7 @@ class GIExtension(Extension):
             if field_name_prefix:
                 field_name = '%s.%s' % (field_name_prefix, field_name)
 
-            name = "%s.%s" % (parent_name, field_name)
+            name = "%s.%s" % (struct_name, field_name)
 
             qtype = QualifiedSymbol(type_tokens=type_desc.type_tokens)
             self.add_attrs(qtype, type_desc=type_desc)
