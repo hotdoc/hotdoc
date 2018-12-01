@@ -173,7 +173,7 @@ class Extension(Configurable):
                 return os.path.relpath(name, path)
         return name
 
-    def get_symbol_page(self, symbol_name, symbol_pages, smart_pages, section_links):
+    def get_symbol_page(self, symbol_name, symbol_pages, smart_pages, section_links, pages_sources):
         if symbol_name in symbol_pages:
             return symbol_pages[symbol_name]
 
@@ -181,11 +181,14 @@ class Extension(Configurable):
         assert (symbol is not None)
 
         if symbol.parent_name and symbol.parent_name != symbol_name:
-            page = self.get_symbol_page(symbol.parent_name, symbol_pages, smart_pages, section_links)
+            page = self.get_symbol_page(symbol.parent_name, symbol_pages, smart_pages, section_links,
+                pages_sources)
         else:
             smart_key = self._get_smart_key (symbol)
             if smart_key in smart_pages:
                 page = smart_pages[smart_key]
+            elif smart_key in pages_sources:
+                page = smart_pages[pages_sources[smart_key]]
             else:
                 pagename = self.get_pagename(smart_key)
                 page = Page(smart_key, True, self.project.sanitized_name, self.extension_name,
@@ -222,12 +225,16 @@ class Extension(Configurable):
         # hotdoc.core.tests.test_doc_tree.TestTree.test_section_and_path_conflict
         section_links = set()
 
+        # Map page source filename with expected final page name
+        pages_sources = {}
+
         # First we make one page per toplevel comment (eg. SECTION comment)
         # This is the highest priority mechanism for sorting symbols
         for comment in self.get_toplevel_comments():
             assert(comment.name)
             symbol_names = comment.meta.pop('symbols', [])
             private_symbol_names = comment.meta.pop('private-symbols', [])
+            sources = comment.meta.pop('sources', [])
             page = Page(comment.name, True, self.project.sanitized_name, self.extension_name,
                     comment=comment, symbol_names=symbol_names)
 
@@ -236,10 +243,14 @@ class Extension(Configurable):
 
             section_links.add(page.link.ref)
             smart_key = self._get_comment_smart_key(comment)
+
             if smart_key in smart_pages:
-                smart_pages[comment.name] = page
-            else:
-                smart_pages[smart_key] = page
+                smart_key = comment.name
+
+            smart_pages[smart_key] = page
+            if sources:
+                for source in sources:
+                    pages_sources[self._get_smart_filename(source)] = smart_key
 
             # These symbols no longer need to be assigned
             dispatched_symbol_names |= set(symbol_names)
@@ -253,7 +264,7 @@ class Extension(Configurable):
                 if symbol_name in dispatched_symbol_names:
                     continue
 
-                page = self.get_symbol_page (symbol_name, symbol_pages, smart_pages, section_links)
+                page = self.get_symbol_page (symbol_name, symbol_pages, smart_pages, section_links, pages_sources)
 
                 # Can be None if creating a page to hold the symbol conflicts with
                 # a page explicitly declared in a toplevel comment or a parent has been
