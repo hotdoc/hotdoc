@@ -87,8 +87,8 @@ Logger.register_warning_code('markdown-bad-link', HotdocSourceException)
 class Page:
     "Banana banana"
     meta_schema = {Optional('title'): And(str, len),
-                   Optional('short-description'): And(str, len),
-                   Optional('description'): And(str, len),
+                   Optional('short-description'): And(str),
+                   Optional('description'): And(str),
                    Optional('render-subpages'): bool,
                    Optional('auto-sort'): bool,
                    Optional('full-width'): bool,
