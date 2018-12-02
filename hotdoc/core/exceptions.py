@@ -22,6 +22,7 @@ import io
 
 class HotdocException(Exception):
     """Base Hotdoc exception"""
+
     def __init__(self, message):
         self.message = message
         super(HotdocException, self).__init__(message)
@@ -86,6 +87,7 @@ CONTEXT_HEIGHT = 2
 
 class HotdocSourceException(HotdocException):
     """Banana banana"""
+
     def __init__(self, message=None, filename=None, lineno=-1, column=-1):
         self.filename = filename
         self.lineno = lineno
