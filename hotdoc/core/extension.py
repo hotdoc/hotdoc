@@ -37,9 +37,13 @@ class SymbolListedTwiceException(InvalidPageMetadata):
     pass
 
 
+class InvalidRelocatedSourceException(InvalidPageMetadata):
+    pass
+
 Logger.register_warning_code('unavailable-symbol-listed', InvalidOutputException, 'extension')
 Logger.register_warning_code('output-page-conflict', InvalidOutputException, 'extension')
 Logger.register_warning_code('symbol-listed-twice', SymbolListedTwiceException, 'extension')
+Logger.register_warning_code('invalid-relocated-source', InvalidRelocatedSourceException, 'extension')
 
 
 # pylint: disable=too-few-public-methods
@@ -296,18 +300,30 @@ class Extension(Configurable):
                         abs_sources.append(os.path.abspath(os.path.join(os.path.dirname(comment.filename), source)))
                 imported_sources[page] = abs_sources
 
+        # Used as a duplicate detection mechanism
+        relocated_sources = {}
+
         # We now browse all the pages with explicitly imported sources
         # Importing sources has a lower level of priority than importing
         # symbols, which is why we do that in a separate loop
         for page, sources in imported_sources.items():
             for source in sources:
+                if not source in self.sources:
+                    self.warn('invalid-relocated-source',
+                              'Source %s does not exist but is relocated in %s' % (source, page.name))
+                    continue
+
+                if source in relocated_sources:
+                    self.warn('invalid-relocated-source',
+                              'Source %s relocated in %s was already relocated in %s' % (source, page.name, relocated_sources[source]))
+                    continue
+
                 if source in self._created_symbols:
                     symbol_names = OrderedSet(self._created_symbols[source]) - dispatched_symbol_names
                     page.symbol_names |= symbol_names
                     dispatched_symbol_names |= symbol_names
-                else:
-                    # print ('We most probably want to warn here!!!')
-                    pass
+
+                relocated_sources[source] = page.name
 
         # We now browse all the symbols we have created
         for key, symbol_names in self._created_symbols.items():

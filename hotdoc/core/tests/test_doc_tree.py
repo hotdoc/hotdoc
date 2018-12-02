@@ -35,7 +35,8 @@ from hotdoc.core.config import Config
 from hotdoc.run_hotdoc import Application
 from hotdoc.core.comment import Comment
 from hotdoc.core.exceptions import InvalidOutputException
-from hotdoc.core.extension import SymbolListedTwiceException
+from hotdoc.core.extension import (SymbolListedTwiceException,
+                                   InvalidRelocatedSourceException)
 from hotdoc.core.tree import (PageNotFoundException,
                               IndexExtensionNotFoundException)
 
@@ -929,3 +930,70 @@ class TestTree(unittest.TestCase):
         # source2 should not appear in the with only its section
         self.assertNotIn(os.path.join('b', 'source2.test'), pages)
         self.assertEqual(len(pages), 3)
+
+    def test_invalid_relocated_source(self):
+        sitemap = (u'index.markdown\n'
+                   '\ttest-index\n')
+        index_path = self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+
+        a_source_path = 'source_a.test'
+        b_source_path = 'source_b.test'
+
+        symbols = [
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': a_source_path,
+                }
+            ),
+        ]
+
+        comments = [
+            Comment(name='page_1',
+                    meta={'sources': ['does-not-exist.test']},
+                    filename=os.path.join(self.__src_dir, b_source_path),
+                    toplevel=True),
+        ]
+
+        with self.assertRaises(InvalidRelocatedSourceException):
+            self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
+                    output=self.__output_dir)
+
+    def test_source_relocated_twice(self):
+        sitemap = (u'index.markdown\n'
+                   '\ttest-index\n')
+        index_path = self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+
+        a_source_path = 'source_a.test'
+        b_source_path = 'source_b.test'
+        c_source_path = 'source_c.test'
+
+        symbols = [
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': a_source_path,
+                }
+            ),
+        ]
+
+        comments = [
+            Comment(name='page_1',
+                    meta={'sources': ['source_a.test']},
+                    filename=os.path.join(self.__src_dir, b_source_path),
+                    toplevel=True),
+            Comment(name='page_1',
+                    meta={'sources': ['source_a.test']},
+                    filename=os.path.join(self.__src_dir, c_source_path),
+                    toplevel=True),
+        ]
+
+        with self.assertRaises(InvalidRelocatedSourceException):
+            self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
+                    output=self.__output_dir)
