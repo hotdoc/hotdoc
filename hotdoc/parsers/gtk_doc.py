@@ -356,9 +356,12 @@ class GtkDocParser:
         actual_parameters = OrderedDict({})
         for param in parameters:
             if is_section:
-                if param.name.lower().replace('_', '-') in [
-                        'symbols', 'private-symbols', 'auto-sort']:
+                cleaned_up_name = param.name.lower().replace('_', '-')
+                if cleaned_up_name in ['symbols', 'private-symbols', 'auto-sort', 'sources']:
                     meta.update(self.__parse_yaml_comment(param, filename))
+                    if cleaned_up_name == 'sources':
+                        sources_paths = [os.path.abspath(os.path.join(os.path.dirname(filename), path)) for path in meta[cleaned_up_name]]
+                        meta[cleaned_up_name] = sources_paths
                 else:
                     meta[param.name] = param.description
             else:
