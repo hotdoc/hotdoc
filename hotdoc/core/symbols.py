@@ -147,6 +147,7 @@ class QualifiedSymbol:
     """
     Banana banana
     """
+
     def __init__(self, type_tokens=None):
         self.input_tokens = type_tokens or []
         self.comment = None
@@ -206,6 +207,7 @@ class ReturnItemSymbol(QualifiedSymbol):
     """
     Banana banana
     """
+
     def __init__(self, comment=None, name=None, **kwargs):
         QualifiedSymbol.__init__(self, **kwargs)
         self.comment = comment
@@ -216,6 +218,7 @@ class ParameterSymbol(QualifiedSymbol):
     """
     Banana banana
     """
+
     def __init__(self, argname='', comment=None, **kwargs):
         QualifiedSymbol.__init__(self, **kwargs)
         # FIXME: gir specific
