@@ -28,13 +28,18 @@ from hotdoc.core.symbols import Symbol
 from hotdoc.core.tree import Page
 from hotdoc.core.formatter import Formatter
 from hotdoc.utils.configurable import Configurable
-from hotdoc.core.exceptions import InvalidOutputException
+from hotdoc.core.exceptions import InvalidPageMetadata, InvalidOutputException
 from hotdoc.utils.loggable import debug, info, warn, error, Logger
 from hotdoc.utils.utils import OrderedSet, DefaultOrderedDict
 
 
+class SymbolListedTwiceException(InvalidPageMetadata):
+    pass
+
+
 Logger.register_warning_code('unavailable-symbol-listed', InvalidOutputException, 'extension')
 Logger.register_warning_code('output-page-conflict', InvalidOutputException, 'extension')
+Logger.register_warning_code('symbol-listed-twice', SymbolListedTwiceException, 'extension')
 
 
 # pylint: disable=too-few-public-methods
@@ -225,18 +230,55 @@ class Extension(Configurable):
         # hotdoc.core.tests.test_doc_tree.TestTree.test_section_and_path_conflict
         section_links = set()
 
+        # These are used as a duplicate detection mechanism, map
+        # relocated or ignored symbols to the source files where they were initially
+        # listed
+        relocated_symbols = {}
+        private_symbols = {}
+
         # First we make one page per toplevel comment (eg. SECTION comment)
         # This is the highest priority mechanism for sorting symbols
         for comment in self._get_toplevel_comments():
+            # Programming error from extension author
             assert(comment.name)
             symbol_names = comment.meta.pop('symbols', [])
             private_symbol_names = comment.meta.pop('private-symbols', [])
             sources = comment.meta.pop('sources', None)
-            page = Page(comment.name, True, self.project.sanitized_name, self.extension_name,
-                    comment=comment, symbol_names=symbol_names)
 
-            symbol_pages.update({symbol_name: page for symbol_name in symbol_names})
-            symbol_pages.update({symbol_name: None for symbol_name in private_symbol_names})
+            page = Page(comment.name, True, self.project.sanitized_name, self.extension_name,
+                    comment=comment)
+
+            for symbol_name in symbol_names:
+                if symbol_name in relocated_symbols:
+                    self.warn('symbol-listed-twice',
+                              'Symbol %s listed in %s was already listed in %s' % (symbol_name,
+                                  comment.filename, relocated_symbols[symbol_name]))
+                    continue
+                elif symbol_name in private_symbols:
+                    self.warn('symbol-listed-twice',
+                              'Symbol %s listed in %s was marked as private in %s' % (symbol_name,
+                                  comment.filename, private_symbols[symbol_name]))
+                    continue
+                else:
+                    page.symbol_names.add(symbol_name)
+                    symbol_pages[symbol_name] = page
+                    relocated_symbols[symbol_name] = comment.filename
+                    dispatched_symbol_names.add(symbol_name)
+
+            for symbol_name in private_symbol_names:
+                if symbol_name in relocated_symbols:
+                    self.warn('symbol-listed-twice',
+                              'Symbol %s marked private in %s was already listed in %s' % (symbol_name,
+                                  comment.filename, relocated_symbols[symbol_name]))
+                    continue
+                elif symbol_name in private_symbols:
+                    self.warn('symbol-listed-twice',
+                              'Symbol %s marked as private in %s was already marked as private in %s' % (symbol_name,
+                                  comment.filename, private_symbols[symbol_name]))
+                    continue
+                private_symbols[symbol_name] = comment.filename
+                symbol_pages[symbol_name] = None
+                dispatched_symbol_names.add(symbol_name)
 
             section_links.add(page.link.ref)
             smart_key = self._get_comment_smart_key(comment)
@@ -244,12 +286,6 @@ class Extension(Configurable):
                 smart_pages[comment.name] = page
             else:
                 smart_pages[smart_key] = page
-
-            # These symbols no longer need to be assigned
-            dispatched_symbol_names |= set(symbol_names)
-
-            # All these symbols are explicitly ignored
-            dispatched_symbol_names |= set(private_symbol_names)
 
             if sources is not None:
                 abs_sources = []

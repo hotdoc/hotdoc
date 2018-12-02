@@ -35,6 +35,7 @@ from hotdoc.core.config import Config
 from hotdoc.run_hotdoc import Application
 from hotdoc.core.comment import Comment
 from hotdoc.core.exceptions import InvalidOutputException
+from hotdoc.core.extension import SymbolListedTwiceException
 from hotdoc.core.tree import (PageNotFoundException,
                               IndexExtensionNotFoundException)
 
@@ -369,6 +370,150 @@ class TestTree(unittest.TestCase):
         ]
 
         with self.assertRaises(InvalidOutputException):
+            self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
+                    output=self.__output_dir)
+
+    def test_symbol_listed_twice(self):
+        sitemap = (u'index.markdown\n'
+                   '\ttest-index\n')
+        index_path = self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+
+        a_source_path = 'source_a.test'
+        b_source_path = 'source_b.test'
+        c_source_path = 'source_c.test'
+
+        symbols = [
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': a_source_path,
+                }
+            ),
+        ]
+
+        comments = [
+            Comment(name='page_1',
+                    meta={'symbols': ['symbol_a']},
+                    filename=b_source_path,
+                    toplevel=True),
+            Comment(name='page_2',
+                    meta={'symbols': ['symbol_a']},
+                    filename=c_source_path,
+                    toplevel=True),
+        ]
+
+        with self.assertRaises(SymbolListedTwiceException):
+            self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
+                    output=self.__output_dir)
+
+    def test_private_symbol_listed(self):
+        sitemap = (u'index.markdown\n'
+                   '\ttest-index\n')
+        index_path = self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+
+        a_source_path = 'source_a.test'
+        b_source_path = 'source_b.test'
+        c_source_path = 'source_c.test'
+
+        symbols = [
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': a_source_path,
+                }
+            ),
+        ]
+
+        comments = [
+            Comment(name='page_1',
+                    meta={'private-symbols': ['symbol_a']},
+                    filename=b_source_path,
+                    toplevel=True),
+            Comment(name='page_2',
+                    meta={'symbols': ['symbol_a']},
+                    filename=c_source_path,
+                    toplevel=True),
+        ]
+
+        with self.assertRaises(SymbolListedTwiceException):
+            self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
+                    output=self.__output_dir)
+
+    def test_relocated_symbol_marked_private(self):
+        sitemap = (u'index.markdown\n'
+                   '\ttest-index\n')
+        index_path = self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+
+        a_source_path = 'source_a.test'
+        b_source_path = 'source_b.test'
+        c_source_path = 'source_c.test'
+
+        symbols = [
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': a_source_path,
+                }
+            ),
+        ]
+
+        comments = [
+            Comment(name='page_1',
+                    meta={'symbols': ['symbol_a']},
+                    filename=b_source_path,
+                    toplevel=True),
+            Comment(name='page_2',
+                    meta={'private-symbols': ['symbol_a']},
+                    filename=c_source_path,
+                    toplevel=True),
+        ]
+
+        with self.assertRaises(SymbolListedTwiceException):
+            self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
+                    output=self.__output_dir)
+
+    def test_symbol_marked_private_twice(self):
+        sitemap = (u'index.markdown\n'
+                   '\ttest-index\n')
+        index_path = self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+
+        a_source_path = 'source_a.test'
+        b_source_path = 'source_b.test'
+        c_source_path = 'source_c.test'
+
+        symbols = [
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': a_source_path,
+                }
+            ),
+        ]
+
+        comments = [
+            Comment(name='page_1',
+                    meta={'private-symbols': ['symbol_a']},
+                    filename=b_source_path,
+                    toplevel=True),
+            Comment(name='page_2',
+                    meta={'private-symbols': ['symbol_a']},
+                    filename=c_source_path,
+                    toplevel=True),
+        ]
+
+        with self.assertRaises(SymbolListedTwiceException):
             self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
                     output=self.__output_dir)
 
