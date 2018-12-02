@@ -88,6 +88,7 @@ def __get_content(include_path, line_ranges, symbol):
                 included_content = u'\n``` %s\n%s\n```\n' % (
                     lang, included_content)
             return included_content
+    return None
 
 
 def resolve(uri, include_paths):
