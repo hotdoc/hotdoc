@@ -15,5 +15,5 @@ done
 echo "Pylint ignoring files:$IGNORED_FILES" | tr "\n" " "
 echo
 
-git-pylint-commit-hook --suppress-report --pylint-params="--disable=locally-disabled --disable=fixme --disable=import-error --unsafe-load-any-extension=y" $IGNORE_ARGS --limit=10.0
+git-pylint-commit-hook --suppress-report --pylint-params="--disable=locally-disabled --disable=fixme --disable=import-error --disable=missing-docstring --unsafe-load-any-extension=y" $IGNORE_ARGS --limit=10.0
 git_pep8_commit_hook --pep8-params="--repeat --ignore=E501,E128"

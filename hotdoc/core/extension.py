@@ -21,9 +21,7 @@ Utilities and baseclasses for extensions
 """
 import os
 from collections import OrderedDict
-from collections import defaultdict
 
-from hotdoc.core.inclusions import find_file
 from hotdoc.core.symbols import Symbol
 from hotdoc.core.tree import Page
 from hotdoc.core.formatter import Formatter
@@ -40,10 +38,15 @@ class SymbolListedTwiceException(InvalidPageMetadata):
 class InvalidRelocatedSourceException(InvalidPageMetadata):
     pass
 
-Logger.register_warning_code('unavailable-symbol-listed', InvalidOutputException, 'extension')
-Logger.register_warning_code('output-page-conflict', InvalidOutputException, 'extension')
-Logger.register_warning_code('symbol-listed-twice', SymbolListedTwiceException, 'extension')
-Logger.register_warning_code('invalid-relocated-source', InvalidRelocatedSourceException, 'extension')
+
+Logger.register_warning_code(
+    'unavailable-symbol-listed', InvalidOutputException, 'extension')
+Logger.register_warning_code(
+    'output-page-conflict', InvalidOutputException, 'extension')
+Logger.register_warning_code(
+    'symbol-listed-twice', SymbolListedTwiceException, 'extension')
+Logger.register_warning_code(
+    'invalid-relocated-source', InvalidRelocatedSourceException, 'extension')
 
 
 # pylint: disable=too-few-public-methods
@@ -111,6 +114,7 @@ class Extension(Configurable):
         self.project = project
         self.app = app
         self.sources = set()
+        self.smart_sources = []
         self.index = None
         self.source_roots = OrderedSet()
         self._created_symbols = DefaultOrderedDict(OrderedSet)
@@ -187,12 +191,13 @@ class Extension(Configurable):
             return symbol_pages[symbol_name]
 
         symbol = self.app.database.get_symbol(symbol_name)
-        assert (symbol is not None)
+        assert symbol is not None
 
         if symbol.parent_name and symbol.parent_name != symbol_name:
-            page = self.get_symbol_page(symbol.parent_name, symbol_pages, smart_pages, section_links)
+            page = self.get_symbol_page(
+                symbol.parent_name, symbol_pages, smart_pages, section_links)
         else:
-            smart_key = self._get_smart_key (symbol)
+            smart_key = self._get_smart_key(symbol)
             if smart_key in smart_pages:
                 page = smart_pages[smart_key]
             else:
@@ -215,6 +220,9 @@ class Extension(Configurable):
     def _get_toplevel_comments(self):
         return self.__toplevel_comments
 
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-statements
     def make_pages(self):
         # All symbol names that no longer need to be assigned to a page
         dispatched_symbol_names = set()
@@ -244,24 +252,24 @@ class Extension(Configurable):
         # This is the highest priority mechanism for sorting symbols
         for comment in self._get_toplevel_comments():
             # Programming error from extension author
-            assert(comment.name)
+            assert comment.name
             symbol_names = comment.meta.pop('symbols', [])
             private_symbol_names = comment.meta.pop('private-symbols', [])
             sources = comment.meta.pop('sources', None)
 
             page = Page(comment.name, True, self.project.sanitized_name, self.extension_name,
-                    comment=comment)
+                        comment=comment)
 
             for symbol_name in symbol_names:
                 if symbol_name in relocated_symbols:
                     self.warn('symbol-listed-twice',
-                              'Symbol %s listed in %s was already listed in %s' % (symbol_name,
-                                  comment.filename, relocated_symbols[symbol_name]))
+                              'Symbol %s listed in %s was already listed in %s' %
+                              (symbol_name, comment.filename, relocated_symbols[symbol_name]))
                     continue
                 elif symbol_name in private_symbols:
                     self.warn('symbol-listed-twice',
-                              'Symbol %s listed in %s was marked as private in %s' % (symbol_name,
-                                  comment.filename, private_symbols[symbol_name]))
+                              'Symbol %s listed in %s was marked as private in %s' %
+                              (symbol_name, comment.filename, private_symbols[symbol_name]))
                     continue
                 else:
                     page.symbol_names.add(symbol_name)
@@ -272,13 +280,14 @@ class Extension(Configurable):
             for symbol_name in private_symbol_names:
                 if symbol_name in relocated_symbols:
                     self.warn('symbol-listed-twice',
-                              'Symbol %s marked private in %s was already listed in %s' % (symbol_name,
-                                  comment.filename, relocated_symbols[symbol_name]))
+                              'Symbol %s marked private in %s was already listed in %s' %
+                              (symbol_name, comment.filename, relocated_symbols[symbol_name]))
                     continue
                 elif symbol_name in private_symbols:
                     self.warn('symbol-listed-twice',
-                              'Symbol %s marked as private in %s was already marked as private in %s' % (symbol_name,
-                                  comment.filename, private_symbols[symbol_name]))
+                              'Symbol %s marked as private in %s was '
+                              'already marked as private in %s' %
+                              (symbol_name, comment.filename, private_symbols[symbol_name]))
                     continue
                 private_symbols[symbol_name] = comment.filename
                 symbol_pages[symbol_name] = None
@@ -297,7 +306,8 @@ class Extension(Configurable):
                     if os.path.isabs(source):
                         abs_sources.append(source)
                     else:
-                        abs_sources.append(os.path.abspath(os.path.join(os.path.dirname(comment.filename), source)))
+                        abs_sources.append(os.path.abspath(os.path.join(
+                            os.path.dirname(comment.filename), source)))
                 imported_sources[page] = abs_sources
 
         # Used as a duplicate detection mechanism
@@ -308,30 +318,34 @@ class Extension(Configurable):
         # symbols, which is why we do that in a separate loop
         for page, sources in imported_sources.items():
             for source in sources:
-                if not source in self.sources:
+                if source not in self.sources:
                     self.warn('invalid-relocated-source',
-                              'Source %s does not exist but is relocated in %s' % (source, page.name))
+                              'Source %s does not exist but is relocated in %s' %
+                              (source, page.name))
                     continue
 
                 if source in relocated_sources:
                     self.warn('invalid-relocated-source',
-                              'Source %s relocated in %s was already relocated in %s' % (source, page.name, relocated_sources[source]))
+                              'Source %s relocated in %s was already relocated in %s' %
+                              (source, page.name, relocated_sources[source]))
                     continue
 
                 if source in self._created_symbols:
-                    symbol_names = OrderedSet(self._created_symbols[source]) - dispatched_symbol_names
+                    symbol_names = OrderedSet(
+                        self._created_symbols[source]) - dispatched_symbol_names
                     page.symbol_names |= symbol_names
                     dispatched_symbol_names |= symbol_names
 
                 relocated_sources[source] = page.name
 
         # We now browse all the symbols we have created
-        for key, symbol_names in self._created_symbols.items():
+        for _, symbol_names in self._created_symbols.items():
             for symbol_name in symbol_names:
                 if symbol_name in dispatched_symbol_names:
                     continue
 
-                page = self.get_symbol_page (symbol_name, symbol_pages, smart_pages, section_links)
+                page = self.get_symbol_page(
+                    symbol_name, symbol_pages, smart_pages, section_links)
 
                 # Can be None if creating a page to hold the symbol conflicts with
                 # a page explicitly declared in a toplevel comment or a parent has been
@@ -344,10 +358,11 @@ class Extension(Configurable):
 
         # Finally we make our index page
         if self.index:
-            index_page = self.project.tree.parse_page(self.index, self.extension_name)
+            index_page = self.project.tree.parse_page(
+                self.index, self.extension_name)
         else:
             index_page = Page('%s-index' % self.argument_prefix, True, self.project.sanitized_name,
-                    self.extension_name)
+                              self.extension_name)
 
         if not index_page.title:
             index_page.title = self._get_smart_index_title()
@@ -404,9 +419,11 @@ class Extension(Configurable):
         """
         prefix = self.argument_prefix
         self.sources = config.get_sources(prefix)
-        self.smart_sources = [self._get_smart_filename(s) for s in self.sources]
+        self.smart_sources = [
+            self._get_smart_filename(s) for s in self.sources]
         self.index = config.get_index(prefix)
-        self.source_roots = OrderedSet(config.get_paths('%s_source_roots' % prefix))
+        self.source_roots = OrderedSet(
+            config.get_paths('%s_source_roots' % prefix))
 
         for arg, dest in list(self.paths_arguments.items()):
             val = config.get_paths(arg)
@@ -609,7 +626,8 @@ class Extension(Configurable):
         if self.__package_root:
             return
 
-        commonprefix = os.path.commonprefix(list(self._get_all_sources()) + list(self.source_roots))
+        commonprefix = os.path.commonprefix(
+            list(self._get_all_sources()) + list(self.source_roots))
         self.__package_root = os.path.dirname(commonprefix)
 
     def _get_smart_index_title(self):
