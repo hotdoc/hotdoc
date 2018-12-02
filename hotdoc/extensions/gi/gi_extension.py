@@ -152,7 +152,7 @@ class GIExtension(Extension):
             page.meta['extra']['gi-languages'] = ['c', 'python', 'javascript']
 
     def __list_relocated_symbols(self):
-        for comment in self.get_toplevel_comments():
+        for comment in self._get_toplevel_comments():
             self.__relocated_symbols |= set(comment.meta.get('symbols', []))
             self.__relocated_symbols |= set(comment.meta.get('private-symbols', []))
 
