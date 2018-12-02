@@ -203,7 +203,7 @@ class Extension(Configurable):
 
         return page
 
-    def get_toplevel_comments(self):
+    def _get_toplevel_comments(self):
         return self.__toplevel_comments
 
     def make_pages(self):
@@ -227,7 +227,7 @@ class Extension(Configurable):
 
         # First we make one page per toplevel comment (eg. SECTION comment)
         # This is the highest priority mechanism for sorting symbols
-        for comment in self.get_toplevel_comments():
+        for comment in self._get_toplevel_comments():
             assert(comment.name)
             symbol_names = comment.meta.pop('symbols', [])
             private_symbol_names = comment.meta.pop('private-symbols', [])
