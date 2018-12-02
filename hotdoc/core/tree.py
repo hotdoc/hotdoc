@@ -76,6 +76,15 @@ class PageNotFoundException(HotdocSourceException):
     pass
 
 
+class IndexExtensionNotFoundException(HotdocSourceException):
+    """
+    Raised when the extension was not found for an index placeholder
+    """
+    pass
+
+
+Logger.register_error_code('index-extension-not-found', IndexExtensionNotFoundException,
+                           domain='doc-tree')
 Logger.register_error_code('page-not-found', PageNotFoundException,
                            domain='doc-tree')
 Logger.register_warning_code('invalid-page-metadata', InvalidPageMetadata,
@@ -417,7 +426,13 @@ class Tree:
                 ext_name = name[:-6]
                 extension = extensions.get(ext_name)
                 if extension is None:
-                    # print ("That is a problem")
+                    position = sitemap.get_position(name)
+                    error(
+                        'index-extension-not-found',
+                        'No extension named %s for index page' % ext_name,
+                        filename=sitemap.source_file,
+                        lineno=position[0],
+                        column=position[1])
                     continue
                 ext_level = level
                 ext_pages = extension.make_pages()

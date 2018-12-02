@@ -35,7 +35,8 @@ from hotdoc.core.config import Config
 from hotdoc.run_hotdoc import Application
 from hotdoc.core.comment import Comment
 from hotdoc.core.exceptions import InvalidOutputException
-from hotdoc.core.tree import PageNotFoundException
+from hotdoc.core.tree import (PageNotFoundException,
+                              IndexExtensionNotFoundException)
 
 
 class TestExtension(Extension):
@@ -383,6 +384,19 @@ class TestTree(unittest.TestCase):
             self.__make_project(sitemap, index_path)
 
         self.assertEqual(cm.exception.lineno, 2)
+        self.assertEqual(cm.exception.column, 9)
+
+    def test_sitemap_index_extension_not_found(self):
+        sitemap = (u'index.markdown\n'
+                   '\tdoes-not-exist-index\n')
+        index_path = self.__create_md_file(
+            'index.markdown',
+            (u'# My documentation\n'))
+
+        with self.assertRaises(IndexExtensionNotFoundException) as cm:
+            self.__make_project(sitemap, index_path)
+
+        self.assertEqual(cm.exception.lineno, 1)
         self.assertEqual(cm.exception.column, 9)
 
     def __assert_extension_names(self, tree, name_map):
