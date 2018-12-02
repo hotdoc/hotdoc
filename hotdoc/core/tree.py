@@ -25,7 +25,6 @@ import io
 import re
 import os
 from urllib.parse import urlparse
-import pickle
 from collections import namedtuple, defaultdict, OrderedDict
 
 # pylint: disable=import-error
@@ -105,6 +104,8 @@ class Page:
                    Optional('extra'): Schema({str: object}),
                    Optional('thumbnail'): And(str, len)}
 
+    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-locals
     def __init__(self, name, generated, project_name, extension_name,
                  source_file=None,
                  ast=None,
@@ -159,15 +160,16 @@ class Page:
             try:
                 self.meta.update(Schema(Page.meta_schema).validate({
                     key.replace('_', '-').lower(): value}))
-            except SchemaError as error:
+            except SchemaError as err:
                 warn('invalid-page-metadata',
                      '%s: Invalid metadata: \n%s, discarding metadata' %
-                     (self.name, str(error)))
+                     (self.name, str(err)))
 
         if not self.meta.get('extra'):
             self.meta['extra'] = defaultdict()
 
-        self.title = self.meta.get('title', cmark.title_from_ast(self.ast) if ast else '')
+        self.title = self.meta.get(
+            'title', cmark.title_from_ast(self.ast) if ast else '')
         self.thumbnail = self.meta.get('thumbnail')
         self.short_description = self.meta.get('short-description', None)
         self.render_subpages = self.meta.get('render-subpages', True)
@@ -237,7 +239,8 @@ class Page:
 
     # pylint: disable=no-self-use
     def __fetch_comment(self, sym, database):
-        sym.comment = database.get_comment(sym.unique_name) or Comment(sym.unique_name)
+        sym.comment = database.get_comment(
+            sym.unique_name) or Comment(sym.unique_name)
 
     def __format_page_comment(self, formatter, link_resolver):
         if not self.comment:
@@ -390,11 +393,14 @@ class Tree:
         return self.page_from_raw_text(source_file, contents, extension_name)
 
     def add_unordered_subpages(self, extension, ext_index, ext_pages):
-        for smart_key, ext_page in ext_pages.items():
+        for _, ext_page in ext_pages.items():
             pagename = extension.get_pagename(ext_page.name)
             self.__all_pages[pagename] = ext_page
             ext_index.subpages.add(pagename)
 
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-statements
     def build(self, sitemap, extensions):
         ext_level = -1
         extensions = {ext.argument_prefix: ext for ext in extensions.values()}
@@ -410,7 +416,7 @@ class Tree:
             page = None
 
             if level <= ext_level:
-                self.add_unordered_subpages (extension, ext_index, ext_pages)
+                self.add_unordered_subpages(extension, ext_index, ext_pages)
                 extension = None
                 ext_level = -1
                 ext_pages = {}
@@ -459,7 +465,8 @@ class Tree:
                 ext = os.path.splitext(name)[1]
                 if ext == '.json':
                     self.project.add_subproject(name, source_file)
-                    page = Page(name, True, self.project.sanitized_name, 'core')
+                    page = Page(
+                        name, True, self.project.sanitized_name, 'core')
                 else:
                     page = self.parse_page(source_file, ext_name)
 
@@ -548,8 +555,8 @@ class Tree:
 
         ast = cmark.hotdoc_to_ast(contents, self)
         return Page(source_file, False, self.project.sanitized_name, extension_name,
-                source_file=source_file, ast=ast, meta=meta, raw_contents=raw_contents,
-                output_path=output_path)
+                    source_file=source_file, ast=ast, meta=meta, raw_contents=raw_contents,
+                    output_path=output_path)
 
     def get_pages(self):
         """
