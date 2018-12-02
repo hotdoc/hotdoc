@@ -713,3 +713,45 @@ class TestTree(unittest.TestCase):
 
         # source2 should not appear in the sitemap
         self.assertNotIn('source2.test', pages)
+
+    def test_relocation_from_source(self):
+        sitemap = ('index.markdown\n'
+                   '\ttest-index\n')
+
+        symbols = [
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_a',
+                    'filename': os.path.join('a', 'source1.test')
+                }
+            ),
+            (
+                [FunctionSymbol],
+                {
+                    'unique_name': 'symbol_b',
+                    'filename': os.path.join('b', 'source2.test')
+                }
+            ),
+        ]
+
+        # symbol_b should be documented in page_1
+        comments = [
+            Comment(name='page_1',
+                    filename=os.path.join(self.__src_dir, 'a', 'source1.test'),
+                    meta={'sources': [os.path.join(os.pardir, 'b', 'source2.test')]}, toplevel=True),
+        ]
+
+        self.__create_test_layout(
+            sitemap=sitemap, symbols=symbols, comments=comments,
+            output=self.__output_dir)
+
+        pages = self.app.project.tree.get_pages()
+        self.assertIn('page_1', pages)
+
+        source1 = self.app.project.tree.get_pages()['page_1']
+        self.assertEqual(source1.symbol_names, ['symbol_a', 'symbol_b'])
+
+        # source2 should not appear in the with only its section
+        self.assertNotIn(os.path.join('b', 'source2.test'), pages)
+        self.assertEqual(len(pages), 3)

@@ -218,6 +218,9 @@ class Extension(Configurable):
 
         smart_pages = OrderedDict()
 
+        # Map pages with the sources they explicitly import
+        imported_sources = {}
+
         # This is simply used as a conflict detection mechanism, see
         # hotdoc.core.tests.test_doc_tree.TestTree.test_section_and_path_conflict
         section_links = set()
@@ -228,6 +231,7 @@ class Extension(Configurable):
             assert(comment.name)
             symbol_names = comment.meta.pop('symbols', [])
             private_symbol_names = comment.meta.pop('private-symbols', [])
+            sources = comment.meta.pop('sources', None)
             page = Page(comment.name, True, self.project.sanitized_name, self.extension_name,
                     comment=comment, symbol_names=symbol_names)
 
@@ -246,6 +250,28 @@ class Extension(Configurable):
 
             # All these symbols are explicitly ignored
             dispatched_symbol_names |= set(private_symbol_names)
+
+            if sources is not None:
+                abs_sources = []
+                for source in sources:
+                    if os.path.isabs(source):
+                        abs_sources.append(source)
+                    else:
+                        abs_sources.append(os.path.abspath(os.path.join(os.path.dirname(comment.filename), source)))
+                imported_sources[page] = abs_sources
+
+        # We now browse all the pages with explicitly imported sources
+        # Importing sources has a lower level of priority than importing
+        # symbols, which is why we do that in a separate loop
+        for page, sources in imported_sources.items():
+            for source in sources:
+                if source in self._created_symbols:
+                    symbol_names = OrderedSet(self._created_symbols[source]) - dispatched_symbol_names
+                    page.symbol_names |= symbol_names
+                    dispatched_symbol_names |= symbol_names
+                else:
+                    # print ('We most probably want to warn here!!!')
+                    pass
 
         # We now browse all the symbols we have created
         for key, symbol_names in self._created_symbols.items():
