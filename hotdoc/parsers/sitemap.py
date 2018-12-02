@@ -67,8 +67,9 @@ class Sitemap(object):
         index_file: str, the path to the index file.
     """
 
-    def __init__(self, root, source_file, index_file):
+    def __init__(self, root, source_file, index_file, source_map):
         self.__root = root
+        self.__source_map = source_map
         self.source_file = source_file
         self.index_file = index_file
         self.__all_sources = None
@@ -107,6 +108,9 @@ class Sitemap(object):
             self.__all_sources = OrderedDict()
             self.walk(self.__add_one)
         return self.__all_sources
+
+    def get_position(self, source_file):
+        return self.__source_map.get(source_file)
 
     def get_subpages(self, source_file):
         """
@@ -151,6 +155,7 @@ class SitemapParser(object):
             lines = _.readlines()
 
         all_source_files = set()
+        source_map = {}
 
         lineno = 0
         root = None
@@ -162,6 +167,7 @@ class SitemapParser(object):
             try:
                 level, line = dedent(line)
                 if line.startswith('#'):
+                    lineno += 1
                     continue
                 elif line.startswith('\\#'):
                     line = line[1:]
@@ -170,11 +176,13 @@ class SitemapParser(object):
                       lineno=lineno, column=exc.column)
 
             if not line:
+                lineno += 1
                 continue
 
             source_file = dequote(line)
 
             if not source_file:
+                lineno += 1
                 continue
 
             if source_file in all_source_files:
@@ -182,6 +190,7 @@ class SitemapParser(object):
                       filename=filename, lineno=lineno, column=level * 8 + 1)
 
             all_source_files.add(source_file)
+            source_map[source_file] = (lineno, level * 8 + 1)
 
             page = OrderedDict()
 
@@ -206,4 +215,4 @@ class SitemapParser(object):
 
             lineno += 1
 
-        return Sitemap(root, filename, index)
+        return Sitemap(root, filename, index, source_map)

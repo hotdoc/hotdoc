@@ -68,7 +68,7 @@ yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
                      _no_duplicates_constructor)
 
 
-class TreeNoSuchPageException(HotdocSourceException):
+class PageNotFoundException(HotdocSourceException):
     """
     Raised when a subpage listed in the sitemap file could not be found
     in any of the include paths.
@@ -76,7 +76,7 @@ class TreeNoSuchPageException(HotdocSourceException):
     pass
 
 
-Logger.register_error_code('no-such-subpage', TreeNoSuchPageException,
+Logger.register_error_code('page-not-found', PageNotFoundException,
                            domain='doc-tree')
 Logger.register_warning_code('invalid-page-metadata', InvalidPageMetadata,
                              domain='doc-tree')
@@ -433,10 +433,13 @@ class Tree:
             else:
                 source_file = find_file(name, self.project.include_paths)
                 if source_file is None:
+                    position = sitemap.get_position(name)
                     error(
-                        'no-such-subpage',
+                        'page-not-found',
                         'No markdown file found for %s' % name,
-                        filename=sitemap.source_file)
+                        filename=sitemap.source_file,
+                        lineno=position[0],
+                        column=position[1])
 
                 ext = os.path.splitext(name)[1]
                 if ext == '.json':
