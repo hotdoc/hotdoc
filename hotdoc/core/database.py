@@ -35,7 +35,9 @@ class RedefinedSymbolException(HotdocException):
     '''
     pass
 
-Logger.register_warning_code('symbol-redefined', RedefinedSymbolException, 'extension')
+
+Logger.register_warning_code(
+    'symbol-redefined', RedefinedSymbolException, 'extension')
 
 # pylint: disable=too-few-public-methods
 
