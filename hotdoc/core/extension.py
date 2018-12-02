@@ -318,7 +318,7 @@ class Extension(Configurable):
         # symbols, which is why we do that in a separate loop
         for page, sources in imported_sources.items():
             for source in sources:
-                if source not in self.sources:
+                if source not in self._get_all_sources():
                     self.warn('invalid-relocated-source',
                               'Source %s does not exist but is relocated in %s' %
                               (source, page.name))
