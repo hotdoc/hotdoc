@@ -153,7 +153,6 @@ class Project(Configurable):
         if self.app.dry:
             return
 
-        self.tree.persist()
         for proj in self.subprojects.values():
             proj.persist()
 
