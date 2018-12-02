@@ -89,10 +89,11 @@ class Link:
         return "Link %s -> %s (%s)" % (self.id_, self.ref, self._title)
 
 
-class LinkResolver(object):
+class LinkResolver:
     """
     Banana banana
     """
+
     def __init__(self, database):
         self.__links = {}
         self.__doc_db = database
@@ -160,7 +161,8 @@ class LinkResolver(object):
                 # pylint: disable=protected-access
                 elink.title = link._title
             return elink
-        elif not overwrite_ref:
+
+        if not overwrite_ref:
             sym = self.__doc_db.get_symbol(link.id_)
             if sym and sym.link:
                 self.__links[link.id_] = sym.link
