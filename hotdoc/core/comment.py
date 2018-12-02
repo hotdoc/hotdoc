@@ -30,6 +30,7 @@ class TagValidator:
     Tag validators may be created by extensions that wish
     to add custom tags. (Returns, Since, etc...)
     """
+
     def __init__(self, name):
         self.name = name
 
@@ -65,6 +66,8 @@ class Comment:
     # This constructor is convenient
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-locals
+
     def __init__(self, name=u'', title=None, params=None, filename=u'',
                  lineno=-1, endlineno=-1, annotations=None,
                  tags=None, raw_comment=u'', topics=None, meta=None,
@@ -133,6 +136,7 @@ class Annotation:
     For example gobject annotations will be displayed for the
     C language, but hidden in python, and interpreted instead.
     """
+
     def __init__(self, name, argument=None):
         self.name = name
         self.argument = argument
@@ -144,6 +148,7 @@ class Tag:
     to the end-user, independent of the context.
     For example, since tags or return tags.
     """
+
     def __init__(self, name, description, value=None, annotations=None):
         self.name = name
         self.description = description or ''
