@@ -118,7 +118,6 @@ class Extension(Configurable):
         self.index = None
         self.source_roots = OrderedSet()
         self._created_symbols = DefaultOrderedDict(OrderedSet)
-        self.__parent_symbols = OrderedDict()
         self.__package_root = None
         self.__toplevel_comments = OrderedSet()
 
@@ -600,13 +599,9 @@ class Extension(Configurable):
 
         sym = self.app.database.create_symbol(*args, **kwargs)
         if sym:
-            smart_key = self._get_smart_key(sym)
-
             # pylint: disable=unidiomatic-typecheck
-            if type(sym) != Symbol and smart_key:
-                self._created_symbols[smart_key].add(sym.unique_name)
-                if sym.parent_name:
-                    self.__parent_symbols[sym.parent_name] = smart_key
+            if type(sym) != Symbol:
+                self._created_symbols[sym.filename].add(sym.unique_name)
 
         return sym
 
