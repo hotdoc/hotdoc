@@ -554,7 +554,10 @@ class GIExtension(Extension):
             self.add_attrs(res, is_genum=is_genum)
 
             for cnode in node:
-                self.__scan_node(cnode, parent_name=res.unique_name)
+                parent_name = res.unique_name
+                if cnode.tag == core_ns('function'):
+                    parent_name = None
+                self.__scan_node(cnode, parent_name=parent_name)
 
         return res
 
