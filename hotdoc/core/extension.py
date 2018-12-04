@@ -574,9 +574,10 @@ class Extension(Configurable):
         cls.paths_arguments[dest] = final_dest
 
     def add_comment(self, comment):
-        self.app.database.add_comment(comment)
         if comment.toplevel:
             self.__toplevel_comments.add(comment)
+        else:
+            self.app.database.add_comment(comment)
 
     def create_symbol(self, *args, **kwargs):
         """
