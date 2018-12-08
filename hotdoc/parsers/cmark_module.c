@@ -28,6 +28,7 @@
 #include "cmark_include_extension.h"
 
 cmark_syntax_extension *cmark_table_extension_new();
+cmark_syntax_extension *cmark_flexlist_extension_new();
 
 struct module_state {
   PyObject *error;
@@ -501,6 +502,7 @@ PyInit_cmark(void)
 
   cmark_init();
   cmark_syntax_extension *ptables_ext = cmark_table_extension_new();
+  cmark_syntax_extension *flexlist_ext = cmark_flexlist_extension_new();
 
   diag_class = PyObject_GetAttrString(exception_mod, "CMarkDiagnostic");
   id_from_text_func = PyObject_GetAttrString(utils_mod, "id_from_text");
@@ -519,6 +521,11 @@ PyInit_cmark(void)
   if (ptables_ext) {
     cmark_parser_attach_syntax_extension(gtkdoc_parser, ptables_ext);
     cmark_parser_attach_syntax_extension(hotdoc_parser, ptables_ext);
+  }
+
+  if (flexlist_ext) {
+    cmark_parser_attach_syntax_extension(gtkdoc_parser, flexlist_ext);
+    cmark_parser_attach_syntax_extension(hotdoc_parser, flexlist_ext);
   }
 
   return module;

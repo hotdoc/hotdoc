@@ -1,0 +1,8 @@
+{
+  "project_name": "Flexlist example",
+  "project_version": "1.0",
+  "sitemap": "sitemap.txt",
+  "index": "markdown/index.md",
+  "output": "built_docs/",
+  "extra_assets": ["assets"]
+}
