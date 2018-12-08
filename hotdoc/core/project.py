@@ -24,8 +24,11 @@ import io
 import re
 import linecache
 import shutil
+import urllib.parse
 
 from collections import OrderedDict
+
+from lxml import etree
 
 from hotdoc.core import inclusions
 from hotdoc.core.extension import Extension
@@ -344,3 +347,37 @@ class Project(Configurable):
                         index_path)
 
         self.written_out_signal(self)
+
+    def __get_page_link(self, page):
+        sub_formatter = self.extensions[page.extension_name].formatter
+        page_link, _ = page.link.get_link(self.app.link_resolver)
+        prefix = sub_formatter.get_output_folder(page)
+        if prefix:
+            page_link = os.path.join(prefix, page_link)
+
+        return page_link
+
+    def gather_page_links(self, links):
+        for page in self.tree.walk():
+            proj = self.subprojects.get(page.name)
+            if proj:
+                proj.gather_page_links(links)
+            else:
+                links.add(self.__get_page_link(page))
+
+    # https://www.sitemaps.org/protocol.html
+    def write_seo_sitemap(self, hostname, output):
+        links = OrderedSet()
+        self.gather_page_links(links)
+
+        nsmap = {None: "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        urlset = etree.Element('urlset', nsmap=nsmap)
+        doc = etree.ElementTree(urlset)
+
+        for link in links:
+            url = etree.SubElement(urlset, 'url')
+            loc = etree.SubElement(url, 'loc')
+            loc.text = urllib.parse.urljoin(hostname, link)
+
+        doc.write(os.path.join(output, 'html', 'sitemap.xml'), xml_declaration=True,
+                  encoding='utf-8', pretty_print=True)

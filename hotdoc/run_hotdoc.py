@@ -24,7 +24,6 @@ import argparse
 import cProfile
 import json
 import os
-import pickle
 import shutil
 import sys
 import traceback
@@ -60,6 +59,7 @@ class Application(Configurable):
         self.database = None
         self.link_resolver = None
         self.dry = False
+        self.hostname = None
         self.config = None
         self.project = None
         self.formatted_signal = Signal()
@@ -79,11 +79,17 @@ class Application(Configurable):
                             dest="output",
                             help="where to output the rendered "
                             "documentation")
+        parser.add_argument('--hostname', dest='hostname', action='store',
+                            help='Where the documentation will be hosted, '
+                            'for example <http://hotdoc.com>. When provided, '
+                            'an XML sitemap will be generated for SEO '
+                            'purposes.')
 
     def parse_config(self, config):
         self.config = config
         self.output = config.get_path('output')
         self.dry = config.get('dry')
+        self.hostname = config.get('hostname')
         self.project = Project(self)
         self.project.parse_name_from_config(self.config)
         self.private_folder = os.path.abspath(
@@ -107,10 +113,14 @@ class Application(Configurable):
         self.project.format(self.link_resolver, self.output)
         self.project.write_out(self.output)
 
+        # Generating an XML sitemap makes no sense without a hostname
+        if self.hostname:
+            self.project.write_seo_sitemap(self.hostname, self.output)
+
         self.link_resolver.get_link_signal.disconnect(self.__get_link_cb)
 
         self.formatted_signal(self)
-        self.__persist(self.project)
+        self.__persist()
 
         return res
 
@@ -137,7 +147,7 @@ class Application(Configurable):
         for subproj in project.subprojects.values():
             self.__retrieve_all_projects(subproj)
 
-    def __persist(self, project):
+    def __persist(self):
         if self.dry:
             return
 
@@ -389,7 +399,8 @@ def run(args):
                 print("Extension '%s'... NOT FOUND." % extension_name)
                 res = 1
         return res
-    elif known_args.list_extensions:
+
+    if known_args.list_extensions:
         print("Extensions:")
         extensions = [e.extension_name for e in ext_classes]
         for extension in sorted(extensions):

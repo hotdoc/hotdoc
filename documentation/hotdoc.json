@@ -6,6 +6,7 @@
     "output": "built_doc",
     "project_name": "hotdoc",
     "project_version": "0.X",
+    "hostname": "https://hotdoc.github.io/",
     "sitemap": "sitemap.txt",
     "syntax_highlighting_activate": true,
     "devhelp_activate": true,
