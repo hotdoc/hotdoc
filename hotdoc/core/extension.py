@@ -197,7 +197,9 @@ class Extension(Configurable):
                 symbol.parent_name, symbol_pages, smart_pages, section_links)
         else:
             smart_key = self._get_smart_key(symbol)
-            if smart_key in smart_pages:
+            if smart_key is None:
+                return None
+            elif smart_key in smart_pages:
                 page = smart_pages[smart_key]
             else:
                 pagename = self.get_pagename(smart_key)
