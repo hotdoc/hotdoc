@@ -613,6 +613,12 @@ class CExtension(Extension):
 
         return None
 
+    def _get_smart_key(self, symbol):
+        return os.path.splitext(symbol.filename)[0]
+
+    def _get_comment_smart_key(self, comment):
+        return os.path.splitext(comment.filename)[0]
+
     def _get_smart_index_title(self):
         return 'C API Reference'
 
