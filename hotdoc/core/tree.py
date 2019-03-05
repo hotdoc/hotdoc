@@ -102,7 +102,9 @@ class Page:
                    Optional('full-width'): bool,
                    Optional('see-also'): And(str, len),
                    Optional('extra'): Schema({str: object}),
-                   Optional('thumbnail'): And(str, len)}
+                   Optional('thumbnail'): And(str, len),
+                   Optional('include'): And(str, len),
+                   }
 
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-locals
