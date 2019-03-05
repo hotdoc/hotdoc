@@ -220,7 +220,7 @@ class GIExtension(Extension):
             parent_name = kwargs.get('parent_name')
             if not self.__symbol_is_relocated(unique_name, parent_name):
                 name = kwargs['display_name']
-                kwargs['filename'] = self.__get_symbol_filename(unique_name)
+                kwargs['filename'] = self.__get_symbol_filename(unique_name, node)
                 if kwargs.get('filename', self.__default_page) == self.__default_page:
                     self.warn("no-location-indication",
                             "No way to determine where %s should land"
@@ -279,14 +279,28 @@ class GIExtension(Extension):
         return None
 
     # setup-time private methods
+    def __get_filename_from_gir(self, node):
+        source_position = node.find('{http://www.gtk.org/introspection/core/1.0}source-position')
+        if source_position is not None:
+            filename = source_position.attrib['filename']
+            for common_path in self.source_roots:
+                path = os.path.join(common_path, filename)
+                if path in self.c_sources:
+                    return path
+        return None
 
-    def __get_symbol_filename(self, unique_name):
+    def __get_symbol_filename(self, unique_name, node=None):
         if self.__current_output_filename:
             return self.__current_output_filename
 
         comment = self.app.database.get_comment(unique_name)
         if comment and comment.filename:
             return '%s.h' % os.path.splitext(comment.filename)[0]
+
+        if node is not None:
+            filename = self.__get_filename_from_gir(node)
+            if filename:
+                return filename
 
         return self.__default_page
 
@@ -350,7 +364,7 @@ class GIExtension(Extension):
         return members
 
     def __find_structure_pagename(self, node, unique_name, is_class):
-        filename = self.__get_symbol_filename(unique_name)
+        filename = self.__get_symbol_filename(unique_name, node)
         if filename != self.__default_page:
             return filename
 
@@ -367,7 +381,7 @@ class GIExtension(Extension):
             cunique_name = get_symbol_names(cnode)[0]
             if not cunique_name:
                 continue
-            fname = self.__get_symbol_filename(cunique_name)
+            fname = self.__get_symbol_filename(cunique_name, cnode)
             if fname != self.__default_page:
                 if cnode.tag == core_ns('constructor'):
                     filenames.insert(0, fname)
@@ -502,7 +516,7 @@ class GIExtension(Extension):
         name = node.attrib[c_ns('type')]
         parameters, retval = self.__create_parameters_and_retval(node)
 
-        filename = self.__get_symbol_filename(name)
+        filename = self.__get_symbol_filename(name, node)
         sym = self.create_symbol(
             CallbackSymbol, node, parameters=parameters,
             return_value=retval, display_name=name,
@@ -516,7 +530,7 @@ class GIExtension(Extension):
     def __create_enum_symbol(self, node, spelling=None):
         name = node.attrib[c_ns('type')]
 
-        filename = self.__get_symbol_filename(name)
+        filename = self.__get_symbol_filename(name, node)
         psymbol = self.app.database.get_symbol(name)
         is_genum = node.attrib.get(glib_ns('type'), False)
         if psymbol:
@@ -584,11 +598,10 @@ class GIExtension(Extension):
         parameters.append(udata_param)
 
         res = self.create_symbol(SignalSymbol, node,
-                                        parameters=parameters, return_value=retval,
-                                        display_name=name, unique_name=unique_name,
-                                        filename=self.__get_symbol_filename(
-                                            klass_name),
-                                        parent_name=parent_name)
+            parameters=parameters, return_value=retval,
+            display_name=name, unique_name=unique_name,
+            filename=self.__get_symbol_filename(klass_name, node),
+            parent_name=parent_name)
 
         if res:
             flags = []
@@ -638,7 +651,7 @@ class GIExtension(Extension):
                                         display_name=name,
                                         unique_name=unique_name,
                                         filename=self.__get_symbol_filename(
-                                            klass_name),
+                                            klass_name, node),
                                         parent_name=parent_name)
 
         if res:
@@ -672,7 +685,7 @@ class GIExtension(Extension):
                                            return_value=retval, display_name=name,
                                            unique_name=unique_name,
                                            filename=self.__get_symbol_filename(
-                                               klass_name),
+                                               klass_name, node),
                                            parent_name=parent_name,
                                            aliases=[unique_name.replace('::', '.')])
 
@@ -687,7 +700,7 @@ class GIExtension(Extension):
         type_desc = type_description_from_node(node)
         aliased_type = QualifiedSymbol(type_tokens=type_desc.type_tokens)
         self.add_attrs(aliased_type, type_desc=type_desc)
-        filename = self.__get_symbol_filename(name)
+        filename = self.__get_symbol_filename(name, node)
 
         alias_link = [l for l in type_desc.type_tokens if isinstance(l, Link)]
         for lang in ('python', 'javascript'):
@@ -832,7 +845,7 @@ class GIExtension(Extension):
                                          unique_name=name,
                                          throws='throws' in node.attrib,
                                          filename=self.__get_symbol_filename(
-                                             name),
+                                             name, node),
                                          parent_name=parent_name)
 
         if func:
