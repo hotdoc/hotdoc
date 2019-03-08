@@ -91,11 +91,11 @@ class GtkDocParser:
 
         split = raw_title.split(': ', 1)
 
-        if not len(split) > 1 and not split[0].rstrip().endswith(':'):
+        title = split[0].rstrip(':')
+        if not len(split) > 1 and not title.endswith(':') and " " in title:
             raise HotdocSourceException(
                 message='Unexpected title in gtk-doc comment')
 
-        title = split[0].rstrip(':')
         annotations = []
 
         if len(split) > 1:
