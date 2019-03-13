@@ -15,7 +15,7 @@ such it is necessary for the build environment to allow its compilation, and
 arguments are exposed to allow specifying the C flags and / or the names of the
 dependencies that C flags should be obtained from using [pkg-config].
 
-On a Debia-based OS you will need to install `llvm` and `libclang-dev` packages.
+On a Debian-based OS you will need to install `llvm` and `libclang-dev` packages.
 
 ## Commment parser
 
