@@ -313,8 +313,11 @@ INSTALL_REQUIRES = [
     'appdirs',
     'wheezy.template==0.1.167',
     'toposort>=1.4',
-    'dbus-deviation>=0.4.0',
 ]
+
+# dbus-deviation requires sphinx, which requires python 3.5
+if sys.version_info[1] >= 5:
+    INSTALL_REQUIRES += ['dbus-deviation>=0.4.0']
 
 EXTRAS_REQUIRE = {
     'dev': ['git-pylint-commit-hook',
