@@ -6,6 +6,9 @@ python:
   - "3.5"
   - "3.6"
 
+before_install:
+  - sudo apt-get install -y libxml2-dev libglib2.0-dev libjson-glib-dev
+
 install: "python3 setup.py develop"
 
 # command to run tests
