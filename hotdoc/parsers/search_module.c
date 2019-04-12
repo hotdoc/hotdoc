@@ -122,6 +122,18 @@ strsplit (const gchar *s, const gchar *del)
   return data;
 }
 
+static gboolean
+strv_contains (const gchar * const *strv,
+               const gchar *str)
+{
+  for (; *strv != NULL; strv++)
+  {
+    if (g_str_equal (str, *strv))
+      return TRUE;
+  }
+  return FALSE;
+}
+
 static void
 get_context (xmlNodePtr elem, TokenContext * ctx)
 {
@@ -131,7 +143,7 @@ get_context (xmlNodePtr elem, TokenContext * ctx)
     if (klasses) {
       gchar **split = strsplit ((const gchar *) klasses, " ");
 
-      if (g_strv_contains ((const gchar **) split, "gi-symbol") && split[1]) {
+      if (strv_contains ((const gchar **) split, "gi-symbol") && split[1]) {
         g_free (ctx->language);
         ctx->language = g_strdup (split[1] + 10);
       }
