@@ -255,7 +255,8 @@ i've
 j
 just
 k
-keep 	keeps
+keep
+keeps
 kept
 kg
 km
@@ -501,7 +502,8 @@ such
 sufficiently
 suggest
 sup
-sure 	t
+sure
+t
 take
 taken
 taking

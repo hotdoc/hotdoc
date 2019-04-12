@@ -26,18 +26,22 @@ flex is an optional dependency, which enables the C and GI extensions. See [][Bu
 
 Clang and llvm-config are runtime dependencies for the C extension. 
 
+### glib and json-glib
+
+The search extension is implemented in C, and index creation depends on [glib](https://developer.gnome.org/glib/) and [json-glib](https://developer.gnome.org/json-glib/).
+
 ### Command-line install
 
 On Fedora you can install all these dependencies with:
 
 ```
-dnf install python3-devel libxml2-devel libxslt-devel cmake libyaml-devel clang-devel llvm-devel
+dnf install python3-devel libxml2-devel libxslt-devel cmake libyaml-devel clang-devel llvm-devel glib2-devel json-glib-devel
 ```
 
 And on ubuntu / debian:
 
 ```
-apt-get install python3-dev libxml2-dev libxslt1-dev cmake libyaml-dev libclang-dev llvm-dev
+apt-get install python3-dev libxml2-dev libxslt1-dev cmake libyaml-dev libclang-dev llvm-dev libglib2.0-dev libjson-glib-dev
 ```
 
 We'll be happy to merge updates to this list if you have successfully built hotdoc on another platform.

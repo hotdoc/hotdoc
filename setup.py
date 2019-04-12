@@ -41,7 +41,7 @@ from setuptools.command.sdist import sdist
 from setuptools.command.test import test
 
 from hotdoc.utils.setup_utils import (
-    VERSION, require_clean_submodules, symlink)
+    VERSION, require_clean_submodules, symlink, pkgconfig)
 
 SOURCE_DIR = os.path.abspath(os.path.dirname(__file__))
 CMARK_DIR = os.path.join(SOURCE_DIR, 'cmark')
@@ -120,6 +120,21 @@ CMARK_MODULE = CMarkExtension('hotdoc.parsers.cmark',
                               include_dirs=CMARK_INCLUDE_DIRS,
                               define_macros=[
                                   ('LIBDIR', '"%s"' % CMARK_BUILD_DIR)])
+
+# We build our search index in C for performance reasons
+
+SEARCH_SOURCES = [os.path.join('hotdoc', 'parsers', 'search_module.c'),
+                  os.path.join('hotdoc', 'parsers', 'trie.c')]
+
+try:
+    search_flags = pkgconfig('libxml-2.0', 'glib-2.0', 'json-glib-1.0')
+except Exception as e:
+    print("libxml-2.0, glib-2.0 and json-glib-1.0 are required: %s" % str(e))
+    sys.exit(1)
+
+print (search_flags)
+
+SEARCH_MODULE = Extension('hotdoc.parsers.search', sources=SEARCH_SOURCES, **search_flags)
 
 # The default theme
 
@@ -231,7 +246,8 @@ class CustomSDist(sdist):
 class CustomBuildExt(build_ext):
     def run(self):
         for extension in self.extensions:
-            extension.build_custom()
+            if hasattr(extension, 'build_custom'):
+                extension.build_custom()
 
         build_ext.run(self)
         return True
@@ -311,7 +327,7 @@ SYN_EXT_DIR = os.path.join(SOURCE_DIR, 'hotdoc', 'extensions',
                            'syntax_highlighting')
 require_clean_submodules(SYN_EXT_DIR, ['prism'])
 
-ext_modules = [CMARK_MODULE]
+ext_modules = [CMARK_MODULE, SEARCH_MODULE]
 
 PACKAGE_DATA = {
     'hotdoc.core': ['templates/*', 'assets/*'],
@@ -339,8 +355,6 @@ PACKAGE_DATA = {
 }
 
 build_c_extension = os.environ.get('HOTDOC_BUILD_C_EXTENSION', 'auto')
-
-print (build_c_extension)
 
 class FlexExtension (Extension):
     def __init__(self, flex_sources, *args, **kwargs):

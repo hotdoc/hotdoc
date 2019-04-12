@@ -20,9 +20,11 @@
 
 import os
 import shutil
+import multiprocessing
+from lxml import etree
+from hotdoc.parsers import search
 from hotdoc.core.extension import Extension
 from hotdoc.utils.setup_utils import symlink
-from hotdoc.extensions.search.create_index import SearchIndex
 
 DESCRIPTION =\
     """
@@ -38,31 +40,25 @@ class SearchExtension(Extension):
     connected = False
 
     __connected_all_projects = False
-    __index = None
 
     def __init__(self, app, project):
         Extension.__init__(self, app, project)
-        if not SearchExtension.connected:
-            app.formatted_signal.connect(self.__build_index)
-            SearchExtension.connected = True
+        self.__all_paths = []
         self.script = os.path.abspath(os.path.join(HERE, 'trie.js'))
 
     def setup(self):
         super(SearchExtension, self).setup()
+
         for ext in self.project.extensions.values():
             ext.formatter.formatting_page_signal.connect(
                 self.__formatting_page)
 
-        output = os.path.join(self.app.output, 'html')
-        assets_path = os.path.join(output, 'assets')
-        dest = os.path.join(assets_path, 'js')
-
-        if not SearchExtension.__index:
-            SearchExtension.__index = SearchIndex(
-                output, dest, self.app.project.get_private_folder())
+        if not SearchExtension.connected:
+            self.app.formatted_signal.connect(self.__build_index)
             for ext in self.app.project.extensions.values():
                 ext.formatter.writing_page_signal.connect(
                     self.__writing_page_cb)
+            SearchExtension.connected = True
 
     def __connect_to_subprojects(self, project, toplevel=False):
         if not toplevel:
@@ -78,25 +74,25 @@ class SearchExtension(Extension):
             self.__connect_to_subprojects(self.project, toplevel=True)
             SearchExtension.__connected_all_projects = True
 
-        SearchExtension.__index.process(path, lxml_tree)
+        self.__all_paths.append (path)
 
     def __build_index(self, app):  # pylint: disable=unused-argument
-        output = os.path.join(self.app.output, 'html')
-        assets_path = os.path.join(output, 'assets')
-        dest = os.path.join(assets_path, 'js')
+        html_dir = os.path.join(self.app.output, 'html')
+        search_dir = os.path.join(html_dir, 'assets', 'js', 'search')
+        fragments_dir = os.path.join(search_dir, 'hotdoc_fragments')
 
-        topdir = os.path.abspath(os.path.join(assets_path, '..'))
+        all_rel_paths = [os.path.relpath(p, html_dir) for p in self.__all_paths]
 
-        subdirs = next(os.walk(topdir))[1]
-        subdirs.append(topdir)
+        search.create_index(all_rel_paths, multiprocessing.cpu_count() + 1, search_dir,
+                fragments_dir, html_dir, self.app.project.get_private_folder(),
+                os.path.join(HERE, 'stopwords.txt'))
 
-        self.__index.write()
-        dest = os.path.join(topdir, 'dumped.trie')
-        shutil.copyfile(os.path.join(self.project.get_private_folder(),
-                                     'search.trie'),
-                        dest)
+        subdirs = next(os.walk(html_dir))[1]
+        subdirs.append(html_dir)
+
+        dumped_trie_path = os.path.join(html_dir, 'dumped.trie')
         # pylint: disable=unused-variable
-        for root, dirs, files in os.walk(topdir):
+        for root, dirs, files in os.walk(html_dir):
             for dir_ in dirs:
                 if dir_ == 'assets':
                     continue
@@ -107,7 +103,7 @@ class SearchExtension(Extension):
                     pass
 
                 symlink(os.path.relpath(
-                    dest, os.path.join(root, dir_)), dest_trie)
+                    dumped_trie_path, os.path.join(root, dir_)), dest_trie)
 
     # pylint: disable=unused-argument
     def __formatting_page(self, formatter, page):
