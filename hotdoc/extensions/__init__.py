@@ -20,6 +20,8 @@
 A set of extensions with no external dependencies
 """
 
+import sys
+
 from hotdoc.extensions.syntax_highlighting.syntax_extension import (
     SyntaxHighlightingExtension)
 from hotdoc.extensions.search.search_extension import SearchExtension
@@ -30,7 +32,9 @@ from hotdoc.extensions.git_upload.git_upload_extension import (
     GitUploadExtension)
 from hotdoc.extensions.edit_on_github.edit_on_github_extension import (
     EditOnGitHubExtension)
-from hotdoc.extensions.dbus.dbus_extension import DBusExtension
+
+if sys.version_info[1] >= 5:
+    from hotdoc.extensions.dbus.dbus_extension import DBusExtension
 
 
 def get_extension_classes():
@@ -39,7 +43,10 @@ def get_extension_classes():
     """
     res = [SyntaxHighlightingExtension, SearchExtension, TagExtension,
            DevhelpExtension, LicenseExtension, GitUploadExtension,
-           EditOnGitHubExtension, DBusExtension]
+           EditOnGitHubExtension]
+
+    if sys.version_info[1] >= 5:
+        res += [DBusExtension]
 
     try:
         from hotdoc.extensions.c.c_extension import CExtension
