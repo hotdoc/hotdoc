@@ -86,7 +86,7 @@ class TestTree(unittest.TestCase):
         Logger.silent = True
 
     def tearDown(self):
-        #self.__remove_tmp_dirs()
+        self.__remove_tmp_dirs()
         TestExtension.symbols = []
         TestExtension.comments = []
         Logger.fatal_warnings = False
