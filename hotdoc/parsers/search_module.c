@@ -470,8 +470,12 @@ fill_fragment (gchar *key, GList *list, IndexContext *idx_ctx)
   json_node_unref (jroot);
 
   f = fopen (dest, "w");
-  fwrite (contents, sizeof (gchar), strlen(contents), f);
-  fclose(f);
+  if (!f) {
+    g_printerr ("Could not open %s\n", dest);
+  } else {
+    fwrite (contents, sizeof (gchar), strlen(contents), f);
+    fclose(f);
+  }
 
   g_list_free_full (list, g_free);
 
