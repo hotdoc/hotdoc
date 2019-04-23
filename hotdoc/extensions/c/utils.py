@@ -82,7 +82,7 @@ class CCommentExtractor:
         split = mcontent.split('(', 1)
         name = split[0]
 
-        if name.strip() in filter_names:
+        if name.strip() in filter_names and not self.app.database.get_comment(name.strip()):
             return None
 
         # `#define foo (x) ...` is *not* a function macro
