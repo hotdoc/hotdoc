@@ -27,6 +27,7 @@ import os
 
 from lxml import etree
 from collections import defaultdict
+from collections import OrderedDict
 
 from hotdoc.core.symbols import *
 from hotdoc.core.extension import Extension, ExtDependency
@@ -548,19 +549,22 @@ class GIExtension(Extension):
             # FIXME Handle nicks in GEnums
             return None
 
-        members = []
+        # FIXME Working around https://gitlab.gnome.org/GNOME/glib/issues/1756
+        members = OrderedDict()
         for field in node.findall(core_ns('member')):
             unique_name = field.attrib[c_ns('identifier')]
+            if unique_name in members:
+                continue
             member = self.create_symbol(
                 EnumMemberSymbol, field, display_name=unique_name,
                 filename=filename, parent_name=name)
 
             if member:
                 member.enum_value = field.attrib['value']
-                members.append(member)
+                members[unique_name] = member
 
         res = self.create_symbol(
-            EnumSymbol, node, members=members,
+            EnumSymbol, node, members=list(members.values()),
             anonymous=False, display_name=name,
             filename=filename, raw_text=None)
 
