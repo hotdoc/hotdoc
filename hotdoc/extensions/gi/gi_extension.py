@@ -306,22 +306,19 @@ class GIExtension(Extension):
         return self.__default_page
 
     def __get_structure_members(self, node, filename, struct_name, parent_name,
-                                field_name_prefix=None, in_union=False):
+                                in_union=False):
         members = []
         for field in node.getchildren():
             if field.tag in [core_ns('record'), core_ns('union')]:
-                if field_name_prefix is None:
-                    field_name_prefix = field.attrib['name']
-                else:
-                    if 'name' in field.attrib:
-                        field_name_prefix = '%s.%s' % (
-                            field_name_prefix, field.attrib['name'])
+                if 'name' in field.attrib:
+                    struct_name = '%s.%s' % (struct_name, field.attrib['name'])
 
                 new_union = field.tag == core_ns('union')
                 union_members = self.__get_structure_members(
-                    field, filename, field.attrib.get('name', None),
-                    parent_name,
-                    field_name_prefix=field_name_prefix,
+                    node=field,
+                    filename=filename,
+                    struct_name=struct_name,
+                    parent_name=parent_name,
                     in_union=in_union or new_union)
                 members += union_members
                 continue
@@ -343,10 +340,6 @@ class GIExtension(Extension):
                 continue
 
             field_name = field.attrib['name']
-
-            if field_name_prefix:
-                field_name = '%s.%s' % (field_name_prefix, field_name)
-
             name = "%s.%s" % (struct_name, field_name)
 
             qtype = QualifiedSymbol(type_tokens=type_desc.type_tokens)
