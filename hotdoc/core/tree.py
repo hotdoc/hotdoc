@@ -543,7 +543,7 @@ class Tree:
             if len(split) == 2:
                 contents = split[1]
                 try:
-                    blocks = yaml.load_all(split[0])
+                    blocks = yaml.load_all(split[0], Loader=yaml.FullLoader)
                     for block in blocks:
                         if block:
                             meta.update(block)

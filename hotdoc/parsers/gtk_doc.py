@@ -271,7 +271,7 @@ class GtkDocParser:
     def __parse_yaml_comment(self, comment, filename):
         res = {}
         try:
-            blocks = yaml.load_all(comment.raw_comment)
+            blocks = yaml.load_all(comment.raw_comment, Loader=yaml.SafeLoader)
             for block in blocks:
                 if block:
                     res.update(block)
