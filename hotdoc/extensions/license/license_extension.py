@@ -259,21 +259,21 @@ class LicenseExtension(Extension):
 
     def parse_config(self, config):
         super(LicenseExtension, self).parse_config(config)
-        short_name = config.get("default-license")
+        short_name = config.get("default_license")
         if short_name is not None:
             try:
                 self.default_license = ALL_LICENSES[short_name]
             except KeyError:
                 error('no-such-license', 'Unknown license : %s' % short_name)
 
-        short_name = config.get("default-code-samples-license")
+        short_name = config.get("default_code_samples_license")
         if short_name is not None:
             try:
                 self.default_code_samples_license = ALL_LICENSES[short_name]
             except KeyError:
                 error('no-such-license', 'Unknown license : %s' % short_name)
 
-        data = config.get("default-copyright-holders")
+        data = config.get("default_copyright_holders")
         if data:
             try:
                 data = Schema([BASE_COPYRIGHT_SCHEMA]).validate(data)
