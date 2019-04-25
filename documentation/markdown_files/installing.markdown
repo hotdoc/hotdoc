@@ -35,13 +35,13 @@ The search extension is implemented in C, and index creation depends on [glib](h
 On Fedora you can install all these dependencies with:
 
 ```
-dnf install python3-devel libxml2-devel libxslt-devel cmake libyaml-devel clang-devel llvm-devel glib2-devel json-glib-devel
+dnf install python3-devel libxml2-devel libxslt-devel cmake libyaml-devel clang-devel llvm-devel glib2-devel json-glib-devel flex
 ```
 
 And on ubuntu / debian:
 
 ```
-apt-get install python3-dev libxml2-dev libxslt1-dev cmake libyaml-dev libclang-dev llvm-dev libglib2.0-dev libjson-glib-dev
+apt-get install python3-dev libxml2-dev libxslt1-dev cmake libyaml-dev libclang-dev llvm-dev libglib2.0-dev libjson-glib-dev flex
 ```
 
 We'll be happy to merge updates to this list if you have successfully built hotdoc on another platform.
