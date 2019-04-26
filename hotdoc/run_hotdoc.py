@@ -304,7 +304,7 @@ def execute_command(parser, config, ext_classes):
 # pylint: disable=too-many-branches
 # pylint: disable=too-many-locals
 # pylint: disable=too-many-statements
-def run(args):
+def run(args, verbose=False):
     """
     Banana banana
     """
@@ -394,9 +394,11 @@ def run(args):
             for klass in ext_classes:
                 if klass.extension_name == extension_name:
                     found = True
-                    print("Extension '%s'... FOUND." % extension_name)
+                    if verbose:
+                        print("Extension '%s'... FOUND." % extension_name)
             if not found:
-                print("Extension '%s'... NOT FOUND." % extension_name)
+                if verbose:
+                    print("Extension '%s'... NOT FOUND." % extension_name)
                 res = 1
         return res
 
@@ -430,9 +432,9 @@ def main():
 
     if run_profile:
         prof = cProfile.Profile()
-        res = prof.runcall(run, sys.argv[1:])
+        res = prof.runcall(run, sys.argv[1:], verbose=True)
         prof.dump_stats('hotdoc-runstats')
     else:
-        res = run(sys.argv[1:])
+        res = run(sys.argv[1:], verbose=True)
 
     return res
