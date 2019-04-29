@@ -330,6 +330,8 @@ parse_sections (IndexContext *idx_ctx, const gchar *filename, xmlDocPtr doc, xml
     parse_content (idx_ctx, filename, doc, xpathObj->nodesetval->nodeTab[i], xpathCtx, (xmlChar *)
         ".//*[self::h1 or self::h2 or self::h3 or self::h4 or self::h5 or self::h6]");
     parse_content (idx_ctx, filename, doc, xpathObj->nodesetval->nodeTab[i], xpathCtx, (xmlChar *) ".//*[self::p]");
+    parse_content (idx_ctx, filename, doc, xpathObj->nodesetval->nodeTab[i], xpathCtx, (xmlChar *) ".//*[self::ul]");
+    parse_content (idx_ctx, filename, doc, xpathObj->nodesetval->nodeTab[i], xpathCtx, (xmlChar *) ".//*[self::table]");
   }
 
 done:
