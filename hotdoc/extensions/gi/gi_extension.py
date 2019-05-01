@@ -202,6 +202,17 @@ class GIExtension(Extension):
 
         return False
 
+    def __check_symbol_is_skipped(self, *args, **kwargs):
+        for comment_name in [kwargs.get('unique_name', kwargs.get('display_name')), kwargs.get('parent_name')]:
+            comment = self.app.database.get_comment(comment_name)
+            if not comment:
+                continue
+
+            if 'attributes' in comment.annotations:
+                if comment.annotations['attributes'].argument.get('doc.skip') is not None:
+                    return True
+        return False
+
     def create_symbol(self, *args, **kwargs):
         args = list(args)
         node = None
@@ -210,11 +221,8 @@ class GIExtension(Extension):
         aliases = kwargs.get('aliases', [])
 
         unique_name = kwargs.get('unique_name', kwargs.get('display_name'))
-        comment = self.app.database.get_comment(unique_name)
-        if comment:
-            if 'attributes' in comment.annotations:
-                if comment.annotations['attributes'].argument.get('doc.skip') is not None:
-                    return None
+        if self.__check_symbol_is_skipped(*args, **kwargs):
+            return None
 
         filename = kwargs.get('filename', self.__default_page)
         if filename == self.__default_page:
