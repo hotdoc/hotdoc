@@ -288,13 +288,6 @@ class Formatter(Configurable):
             elif os.path.isdir(src):
                 recursive_overwrite(src, dest)
 
-    def patch_page(self, page, symbol):
-        """
-        Subclasses should implement this in order to allow
-        live patching of the documentation.
-        """
-        raise NotImplementedError
-
     def format_page(self, page):
         """
         Banana banana
