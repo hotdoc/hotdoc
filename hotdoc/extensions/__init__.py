@@ -60,4 +60,10 @@ def get_extension_classes():
     except ImportError:
         pass
 
+    try:
+        from hotdoc.extensions.gst.gst_extension import GstExtension
+        res += [GstExtension]
+    except ImportError:
+        pass
+
     return res
