@@ -215,7 +215,7 @@ class GIFormatter(Formatter):
             return Formatter._format_prototype (self, function,
                     is_pointer, title)
 
-        c_name = function._make_name()
+        c_name = function.make_name()
 
         if language == 'python':
             template = self.engine.get_template('python_prototype.html')
