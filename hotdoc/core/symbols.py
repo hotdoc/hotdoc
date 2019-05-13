@@ -113,7 +113,7 @@ class Symbol:
             elif type(sym) == Symbol:
                 sym.comment = self.comment.params.get(sym.display_name)
 
-    def _make_name(self):
+    def make_name(self):
         return self.display_name or self.unique_name
 
     def get_extra_links(self):
@@ -133,7 +133,7 @@ class Symbol:
         Banana banana
         """
         if self.link is None:
-            self.link = Link(self.unique_name, self._make_name(),
+            self.link = Link(self.unique_name, self.make_name(),
                              self.unique_name)
 
         self.link = link_resolver.upsert_link(self.link, overwrite_ref=True)
@@ -239,7 +239,7 @@ class FieldSymbol(Symbol):
         self.member_name = None
         Symbol.__init__(self, **kwargs)
 
-    def _make_name(self):
+    def make_name(self):
         return self.member_name
 
     def get_children_symbols(self):
