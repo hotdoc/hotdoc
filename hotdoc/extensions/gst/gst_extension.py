@@ -459,11 +459,12 @@ class GstExtension(Extension):
 
     def create_symbol(self, *args, **kwargs):
         sym = super().create_symbol(*args, **kwargs)
-        if self.has_unique_feature:
+        if self.has_unique_feature and sym:
             self.__on_index_symbols.append(sym)
 
         return sym
 
+    # pylint: disable=too-many-branches
     def setup(self):
         # Make sure the cache file is save when the whole project
         # is done.
@@ -510,7 +511,11 @@ class GstExtension(Extension):
             plugin_node = self.cache
 
         for libfile, plugin in plugin_node.items():
-            plugins.append(self.__parse_plugin(libfile, plugin))
+            plugin_sym = self.__parse_plugin(libfile, plugin)
+            if not plugin_sym:
+                continue
+
+            plugins.append(plugin_sym)
 
         if not self.plugin:
             self.__plugins = self.create_symbol(
@@ -541,6 +546,10 @@ class GstExtension(Extension):
 
     def make_pages(self):
         smart_pages = super().make_pages()
+
+        if not self.__plugins:
+            return None
+
         if self.list_plugins_page is None:
             index = smart_pages.get('gst-index')
             if index is None:
@@ -706,6 +715,7 @@ class GstExtension(Extension):
                     aliases=aliases, parent_name=element['name'],
                     extra={'gst-element-name': 'element-' + element['name']},
                 )
+                assert res
 
             if not self.app.database.get_comment(unique_name):
                 comment = Comment(unique_name, Comment(name=name),
@@ -738,7 +748,8 @@ class GstExtension(Extension):
                                                 value=val['value'],
                                                 parent_name=unique_name, val=val,
                                                 extra={'gst-element-name': None})
-                members.append(member_sym)
+                if member_sym:
+                    members.append(member_sym)
             symbol = self.create_symbol(
                 GstNamedConstantsSymbols, anonymous=False,
                 raw_text=None, display_name=display_name.capitalize(),
@@ -808,7 +819,7 @@ class GstExtension(Extension):
 
             aliases = self._get_aliases(
                 ['element-' + element['name'], element['hierarchy'][0]])
-            sym = self.__elements[element['name']] = self.create_symbol(
+            sym = self.create_symbol(
                 GstElementSymbol, display_name=element['name'],
                 hierarchy=create_hierarchy(element),
                 unique_name=element['name'],
@@ -818,9 +829,15 @@ class GstExtension(Extension):
                 classification=element['klass'], plugin=plugin['filename'],
                 aliases=aliases,
                 package=plugin['package'])
+
+            if not sym:
+                continue
+
+            self.__elements[element['name']] = sym
             self.__create_property_symbols(element)
             self.__create_signal_symbols(element)
             self.__create_pad_template_symbols(element)
+
             elements.append(sym)
 
         plugin = self.create_symbol(
@@ -833,6 +850,10 @@ class GstExtension(Extension):
             filename=plugin['filename'],
             elements=elements,
             extra={'gst-plugins': 'plugins-' + plugin['filename']})
+
+        if not plugin:
+            return None
+
         self.__all_plugins_symbols.add(plugin)
 
         if self.plugin:
