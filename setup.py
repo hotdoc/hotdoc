@@ -307,7 +307,7 @@ class DiscoverTest(test):
 
 
 INSTALL_REQUIRES = [
-    'pyyaml',
+    'pyyaml>=5.1',
     'lxml',
     'schema',
     'appdirs',
