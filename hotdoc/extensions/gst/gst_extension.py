@@ -571,6 +571,13 @@ class GstExtension(Extension):
 
         return smart_pages
 
+    def add_comment(self, comment):
+        # We handle toplevel comments ourself, make sure all comments
+        # end up in the database
+        comment.toplevel = False
+
+        super().add_comment(comment)
+
     def _get_smart_index_title(self):
         if self.plugin:
             return self.__plugins.display_name
