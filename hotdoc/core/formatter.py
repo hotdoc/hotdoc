@@ -687,7 +687,6 @@ class Formatter(Configurable):
                 if symbols_details:
                     by_sections.append(by_section_symbols(bool(parent_name),
                                                           symbols_details))
-
         template = self.get_template('page.html')
 
         scripts = []
