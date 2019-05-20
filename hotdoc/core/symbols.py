@@ -113,6 +113,9 @@ class Symbol:
             elif type(sym) == Symbol:
                 sym.comment = self.comment.params.get(sym.display_name)
 
+            if isinstance(sym, Symbol):
+                sym.update_children_comments()
+
     def make_name(self):
         return self.display_name or self.unique_name
 

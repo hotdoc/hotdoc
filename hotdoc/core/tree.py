@@ -244,6 +244,10 @@ class Page:
         sym.comment = database.get_comment(
             sym.unique_name) or Comment(sym.unique_name)
 
+        for sym in sym.get_children_symbols():
+            if isinstance(sym, Symbol):
+                self.__fetch_comment(sym, database)
+
     def __format_page_comment(self, formatter, link_resolver):
         if not self.comment:
             return
