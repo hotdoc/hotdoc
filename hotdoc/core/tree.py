@@ -328,13 +328,7 @@ class Page:
                               database):
         if sym:
             self.__fetch_comment(sym, database)
-            new_symbols = sum(tree.resolving_symbol_signal(self, sym),
-                              [])
             all_syms.add(sym)
-
-            for symbol in new_symbols:
-                self.__query_extra_symbols(
-                    symbol, all_syms, tree, link_resolver, database)
 
     def __resolve_symbol(self, symbol, link_resolver, page_path):
         symbol.resolve_links(link_resolver)
@@ -380,7 +374,6 @@ class Tree:
 
         cmark.hotdoc_to_ast(u'', self)
         self.__extensions = {}
-        self.resolving_symbol_signal = Signal()
 
     def __fill_dep_map(self):
         for page in list(self.__all_pages.values()):
