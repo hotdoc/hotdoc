@@ -671,7 +671,7 @@ class GIExtension(Extension):
         gtype_struct = klass_node.attrib.get(glib_ns('type-struct'))
 
         klass_comment = self.app.database.get_comment('%s%s' %
-                                                      (ns.attrib['name'], gtype_struct))
+                                                      (ns.attrib[c_ns('identifier-prefixes')], gtype_struct))
 
         unique_name, name, klass_name = get_symbol_names(node)
 
