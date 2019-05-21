@@ -468,8 +468,7 @@ class Tree:
                         name, True, self.project.sanitized_name, 'core')
                 else:
                     page = self.parse_page(source_file, ext_name)
-
-                page.extension_name = extension.extension_name if extension else 'core'
+                    page.extension_name = extension.extension_name if extension else 'core'
 
             self.__all_pages[name] = page
             subpages = sitemap_pages.get(name, [])
