@@ -52,6 +52,9 @@ from hotdoc.extensions.gi.node_cache import (
     is_introspectable, is_callback_type)
 from hotdoc.extensions.gi.gtkdoc_links import GTKDOC_HREFS
 from hotdoc.extensions.gi.symbols import GIClassSymbol, GIStructSymbol
+from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
+
+TYPE_MAP.update({GIClassSymbol: 'class', GIStructSymbol: 'struct'})
 
 
 DESCRIPTION =\
