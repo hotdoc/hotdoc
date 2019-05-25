@@ -83,8 +83,8 @@ def type_tokens_from_type_name(type_name):
 
 class GstPluginsSymbol(Symbol):
     TEMPLATE = """
-        @require(symbol, has_unique_feature)
-        @if not has_unique_feature:
+        @require(symbol, unique_feature)
+        @if not unique_feature:
             <div class="base_symbol_container">
             <table class="table table-striped table-hover">
                 <tbody>
@@ -170,12 +170,14 @@ class GstElementSymbol(ClassSymbol):
 
 class GstPluginSymbol(Symbol):
     TEMPLATE = """
-        @require(symbol, has_unique_feature)
+        @require(symbol, unique_feature)
+        @if not unique_feature:
         <h1>@symbol.display_name</h1>
         <i>(from @symbol.package)</i>
+        @end
         <div class="base_symbol_container">
         @symbol.formatted_doc
-        @if not has_unique_feature:
+        @if not unique_feature:
         <table class="table table-striped table-hover">
             <tbody>
                 <tr>
@@ -365,11 +367,6 @@ class GstFormatter(Formatter):
             element.desc = desc
 
     def _format_page(self, page):
-        if self.extension.has_unique_feature:
-            # The page tries to smartly set a `<h1>` title,
-            # but we do not want it in our case.
-            page.formatted_contents = None
-
         # In our case unparented sections should go first one
         page.by_parent_symbols.move_to_end(None, last=False)
 
@@ -403,13 +400,13 @@ class GstFormatter(Formatter):
             self.__populate_plugin_infos(plugin)
         template = self.engine.get_template('plugins.html')
         return template.render({'symbol': symbol,
-                                'has_unique_feature': self.extension.has_unique_feature})
+                                'unique_feature': self.extension.unique_feature})
 
     def _format_plugin_symbol(self, symbol):
         self.__populate_plugin_infos(symbol)
         template = self.engine.get_template('plugin.html')
         return template.render({'symbol': symbol,
-                                'has_unique_feature': self.extension.has_unique_feature})
+                                'unique_feature': self.extension.unique_feature})
 
     def _format_pad_template_symbol(self, symbol):
         template = self.engine.get_template('padtemplate.html')
@@ -421,14 +418,8 @@ class GstFormatter(Formatter):
     def _format_element_symbol(self, symbol):
         hierarchy = self._format_hierarchy(symbol)
 
-        desc = ''
-        if self.extension.has_unique_feature:
-            desc = symbol.formatted_doc
-
         template = self.engine.get_template('element.html')
-        return template.render({'symbol': symbol,
-                                'hierarchy': hierarchy,
-                                'desc': desc})
+        return template.render({'symbol': symbol, 'hierarchy': hierarchy, 'desc': ''})
 
     def _format_name_constant_value(self, symbol):
         template = self.engine.get_template('enumtemplate.html')
@@ -469,7 +460,7 @@ class GstExtension(Extension):
         self.list_plugins_page = None
         # If we have a plugin with only one element, we render it on the plugin
         # page.
-        self.has_unique_feature = False
+        self.unique_feature = None
         self.__on_index_symbols = []
 
     def _make_formatter(self):
@@ -477,7 +468,7 @@ class GstExtension(Extension):
 
     def create_symbol(self, *args, **kwargs):
         sym = super().create_symbol(*args, **kwargs)
-        if self.has_unique_feature and sym:
+        if self.unique_feature and sym:
             self.__on_index_symbols.append(sym)
 
         return sym
@@ -552,7 +543,7 @@ class GstExtension(Extension):
             return None
 
     def _get_toplevel_comments(self):
-        if self.has_unique_feature:
+        if self.unique_feature:
             return OrderedSet()
         return self.__toplevel_comments
 
@@ -577,6 +568,8 @@ class GstExtension(Extension):
             index.symbol_names.add(self.__plugins.unique_name)
             for sym in self.__on_index_symbols:
                 index.symbol_names.add(sym.unique_name)
+            if self.unique_feature:
+                index.comment = self.app.database.get_comment("element-" + self.unique_feature)
             return smart_pages
 
         page = smart_pages.get(self.list_plugins_page)
@@ -636,7 +629,7 @@ class GstExtension(Extension):
         super().parse_config(config)
 
     def _get_smart_key(self, symbol):
-        if self.has_unique_feature:
+        if self.unique_feature:
             return None
 
         if isinstance(symbol, GstPluginSymbol):
@@ -849,7 +842,7 @@ class GstExtension(Extension):
     def __parse_plugin(self, plugin_name, plugin):
         elements = []
         if self.plugin and len(plugin.get('elements', {}).items()) == 1:
-            self.has_unique_feature = True
+            self.unique_feature = list(plugin.get('elements', {}).keys())[0]
 
         for ename, element in plugin.get('elements', {}).items():
             comment = None
