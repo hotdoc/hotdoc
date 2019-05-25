@@ -81,6 +81,7 @@ class DevhelpExtension(Extension):
     def __init__(self, app, project):
         Extension.__init__(self, app, project)
         self.__ext_languages = defaultdict(set)
+        self.__online = None
 
     def __writing_page_cb(self, formatter, page, path, lxml_tree):
         html_path = os.path.join(self.app.output, 'html')
@@ -128,6 +129,9 @@ class DevhelpExtension(Extension):
             'C')
 
         root = etree.fromstring(boilerplate)
+
+        if self.__online:
+            root.attrib['online'] = self.__online
 
         chapter_node = etree.Element('chapters')
         self.__format_subs(project.tree, chapter_node,
@@ -203,6 +207,14 @@ class DevhelpExtension(Extension):
                            action="store_true",
                            help="Activate the devhelp extension",
                            dest='devhelp_activate')
+        group.add_argument('--devhelp-online',
+                           help='The base URL where the documentation will be published',
+                           dest='devhelp_online',
+                           action='store')
+
+    def parse_config(self, config):
+        super(DevhelpExtension, self).parse_config(config)
+        self.__online = config.get("devhelp_online")
 
     def parse_toplevel_config(self, config):
         super(DevhelpExtension, self).parse_toplevel_config(config)
