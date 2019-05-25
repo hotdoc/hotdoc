@@ -321,16 +321,22 @@ static cmark_node *symbol_link_match(cmark_syntax_extension *self,
   char *symbol_name = NULL;
   NamedLink *named_link = NULL;
   int start_offset = cmark_inline_parser_get_offset(inline_parser);
+  char next_char = cmark_inline_parser_peek_at(
+      inline_parser,
+      start_offset + 1);
   ParsingContext context;
 
   context.parser = inline_parser;
   context.allow_dashes = 0;
 
+  /* Make sure we don't try to resolve empty links */
+  if (!next_char || next_char == ' ' || next_char == '\t' || next_char == '\n' || !is_valid_c (next_char, 0, NULL))
+    return NULL;
+
   if (start_offset > 0) {
     char prev_char = cmark_inline_parser_peek_at(
         inline_parser,
         start_offset - 1);
-
     if (prev_char && prev_char != ' ' && prev_char != '\t' && prev_char != '\n')
       return NULL;
   }
