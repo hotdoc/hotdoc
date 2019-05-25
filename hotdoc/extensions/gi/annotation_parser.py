@@ -70,6 +70,9 @@ NOT_NULLABLE_HELP = \
 DEFAULT_HELP = \
 "Default parameter value (for in case the shadows-to function has less parameters)"
 
+DESTROY_HELP = \
+"The parameter is a 'destroy_data' for callbacks."
+
 # VERY DIFFERENT FROM THE PREVIOUS ONE BEWARE :P
 OPTIONAL_HELP = \
 "NULL may be passed instead of a pointer to a location"
@@ -101,6 +104,7 @@ class GIAnnotationParser(object):
                  "type": self.__make_type_annotation,
                  "optional": self.__make_optional_annotation,
                  "default": self.__make_default_annotation,
+                 "destroy": self.__make_destroy_annotation,
                 }
 
     def __make_type_annotation (self, annotation, value):
@@ -173,6 +177,12 @@ class GIAnnotationParser(object):
 
     def __make_default_annotation (self, annotation, value):
         return GIAnnotation ("default %s" % str (value[0]), DEFAULT_HELP)
+
+    def __make_destroy_annotation (self, annotation, value):
+        if value:
+            return GIAnnotation ("destroy %s" % str (value[0]), DESTROY_HELP)
+        else:
+            return GIAnnotation ("destroy", DESTROY_HELP)
 
     def __make_not_nullable_annotation(self):
         return GIAnnotation("not nullable", NOT_NULLABLE_HELP)
