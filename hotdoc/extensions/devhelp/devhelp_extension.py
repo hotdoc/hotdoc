@@ -116,11 +116,13 @@ class DevhelpExtension(Extension):
             else:
                 self.__format_subs(tree, node, cpage)
 
+    # pylint: disable=too-many-locals
     def __format(self, project):
         oname = project.sanitized_name
         title = '%s %s' % (project.project_name, project.project_version)
 
-        opath = os.path.join(self.app.output, 'devhelp')
+        opath = os.path.join(self.app.output, 'devhelp',
+                             'books', project.sanitized_name)
 
         boilerplate = BOILERPLATE % (
             title,
@@ -168,7 +170,8 @@ class DevhelpExtension(Extension):
     # pylint: disable=no-self-use
     def __formatted_cb(self, app):
         html_path = os.path.join(app.output, 'html')
-        dh_html_path = os.path.join(app.output, 'devhelp')
+        dh_html_path = os.path.join(
+            app.output, 'devhelp', 'books', self.project.sanitized_name)
         recursive_overwrite(html_path, dh_html_path)
 
         # Remove some stuff not relevant in devhelp
