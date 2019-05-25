@@ -45,6 +45,11 @@ def parse_devhelp_index(dir_):
                     name = '%s::%s' % (split[0], split[1].lstrip('-'))
                 else:
                     name = '%s:%s' % (split[0], split[1].lstrip('-'))
+        elif type_ in ['vfunc']:
+            anchor = link.split('#', 1)[1]
+            if author == 'hotdoc':
+                name = anchor
+                GTKDOC_HREFS[name.replace('::', '.')] = online + link
 
         GTKDOC_HREFS[name] = online + link
 
