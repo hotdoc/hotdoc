@@ -83,19 +83,21 @@ def parse_sgml_index(dir_):
 
 
 def gather_gtk_doc_links ():
-    gtkdoc_dir = os.path.join(DATADIR, "gtk-doc", "html")
-    if not os.path.exists(gtkdoc_dir):
-        info("no gtk doc to gather links from in %s" % gtkdoc_dir)
-        return
+    for envvar in ('XDG_DATA_DIRS', 'XDG_DATA_HOME'):
+        for datadir in os.environ.get(envvar, '').split(os.pathsep):
+            for path in (os.path.join(datadir, 'devhelp', 'books'), os.path.join(datadir, 'gtk-doc', 'html')):
+                if not os.path.exists(path):
+                    info("no gtk doc to gather links from in %s" % path)
+                    continue
 
-    for node in os.listdir(gtkdoc_dir):
-        dir_ = os.path.join(gtkdoc_dir, node)
-        if os.path.isdir(dir_):
-            if not parse_devhelp_index(dir_):
-                try:
-                    parse_sgml_index(dir_)
-                except IOError:
-                    pass
+                for node in os.listdir(path):
+                    dir_ = os.path.join(path, node)
+                    if os.path.isdir(dir_):
+                        if not parse_devhelp_index(dir_):
+                            try:
+                                parse_sgml_index(dir_)
+                            except IOError:
+                                pass
 
 
 gather_gtk_doc_links()
