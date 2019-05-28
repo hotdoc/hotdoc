@@ -42,6 +42,8 @@ from hotdoc.core.comment import Comment
 from hotdoc.extensions.gi.gi_extension import WritableFlag, ReadableFlag, \
     ConstructFlag, ConstructOnlyFlag
 from hotdoc.extensions.gi.fundamentals import FUNDAMENTALS
+from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
+
 
 Logger.register_warning_code('signal-arguments-mismatch', HotdocSourceException,
                              'gst-extension')
@@ -931,3 +933,6 @@ class GstExtension(Extension):
         super().format_page(page, link_resolver, output)
         link_resolver.get_link_signal.disconnect(
             GIExtension.search_online_links)
+
+
+TYPE_MAP.update({GstElementSymbol: 'class', GstNamedConstantsSymbols: 'enum'})
