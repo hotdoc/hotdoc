@@ -313,6 +313,7 @@ INSTALL_REQUIRES = [
     'appdirs',
     'wheezy.template==0.1.167',
     'toposort>=1.4',
+    'xdg>=4.0.0',
 ]
 
 # dbus-deviation requires sphinx, which requires python 3.5
