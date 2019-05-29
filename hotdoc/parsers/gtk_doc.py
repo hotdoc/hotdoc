@@ -281,7 +281,7 @@ class GtkDocParser:
         return res
 
     def __extract_titles_params_and_description(self, comment):
-        titleandparams_description = re.split(r'\n[\W]*\n', comment, maxsplit=1)
+        titleandparams_description = re.split(r'\n[\s]*\n', comment, maxsplit=1)
         title_and_params = titleandparams_description[0]
 
         title_and_params_lines = title_and_params.split('\n')
