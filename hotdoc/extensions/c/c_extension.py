@@ -252,7 +252,7 @@ class ClangScanner(object):
         if node.kind != cindex.CursorKind.COMPOUND_STMT:
             return None
 
-        if node.semantic_parent.kind == cindex.CursorKind.FUNCTION_DECL:
+        if node.semantic_parent and node.semantic_parent.kind == cindex.CursorKind.FUNCTION_DECL:
             return node.semantic_parent
 
         return None
