@@ -178,11 +178,17 @@ resolve_include(const char *uri) {
 
   contents = PyObject_CallMethod(include_resolver, "resolve", "s", uri);
 
+  if (PyErr_Occurred()) {
+    PyErr_Clear();
+    goto done;
+  }
+
   if (contents != Py_None)
     res = strdup(PyUnicode_AsUTF8(contents));
 
   Py_DECREF(contents);
 
+done:
   return res;
 }
 
