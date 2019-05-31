@@ -261,6 +261,7 @@ class GstPadTemplateSymbol(Symbol):
         @end
         @def content():
         <div>
+            @symbol.formatted_doc
             <pre class="language-yaml"><code class="language-yaml">@symbol.caps</code></pre>
             <div class="symbol-detail">
                 <p><b>Presence</b> – <i>@symbol.presence</i></p>
@@ -826,7 +827,7 @@ class GstExtension(Extension):
 
         for tname, template in templates.items():
             name = tname.replace("%%", "%")
-            unique_name = '%s->%s' % (element['hierarchy'][0], name)
+            unique_name = '%s!%s' % (element['hierarchy'][0], name)
             object_type = self.__create_object_type(element, template.get("object-type"))
             self.create_symbol(GstPadTemplateSymbol,
                                name=name,
