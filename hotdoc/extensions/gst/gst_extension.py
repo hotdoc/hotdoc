@@ -370,8 +370,9 @@ class GstFormatter(Formatter):
             element.desc = desc
 
     def _format_page(self, page):
-        # In our case unparented sections should go first one
-        page.by_parent_symbols.move_to_end(None, last=False)
+        if None in page.by_parent_symbols:
+            # In our case unparented sections should go first one
+            page.by_parent_symbols.move_to_end(None, last=False)
 
         return super()._format_page(page)
 
@@ -842,35 +843,48 @@ class GstExtension(Extension):
     def _get_aliases(self, aliases):
         return [alias for alias in aliases if not self.app.database.get_symbol(alias)]
 
+    def __extract_feature_comment(self, feature_type, feature):
+        pagename = feature_type + '-' + feature['name']
+        possible_comment_names = [pagename, feature['name']]
+        if feature_type == 'element':
+            possible_comment_names.append(feature['hierarchy'][0])
+
+        comment = None
+        for comment_name in possible_comment_names:
+            comment = self.app.database.get_comment(comment_name)
+            if comment:
+                break
+
+        description = feature.get('description')
+        if not comment:
+            comment = Comment(
+                pagename,
+                Comment(description=feature['name']),
+                description=description,
+                short_description=Comment(description=description))
+            self.app.database.add_comment(comment)
+        elif not comment.short_description:
+            comment.short_description = Comment(
+                description=description)
+        comment.title = Comment(description=feature['name'])
+        comment.name = pagename
+        comment.meta['title'] = feature['name']
+        self.__toplevel_comments.add(comment)
+
+        return pagename
+
     def __parse_plugin(self, plugin_name, plugin):
         elements = []
         if self.plugin and len(plugin.get('elements', {}).items()) == 1:
             self.unique_feature = list(plugin.get('elements', {}).keys())[0]
 
+        for ename, tracer in plugin.get('tracers', {}).items():
+            tracer['name'] = ename
+            self.__extract_feature_comment("tracer", tracer)
+
         for ename, element in plugin.get('elements', {}).items():
-            comment = None
             element['name'] = ename
-
-            pagename = 'element-' + element['name']
-            for comment_name in [pagename, element['name'], element['hierarchy'][0]]:
-                comment = self.app.database.get_comment(comment_name)
-                if comment:
-                    break
-
-            if not comment:
-                comment = Comment(
-                    pagename,
-                    Comment(description=element['name']),
-                    description=element['description'],
-                    short_description=Comment(description=element['description']))
-                self.app.database.add_comment(comment)
-            elif not comment.short_description:
-                comment.short_description = Comment(
-                    description=element['description'])
-            comment.title = Comment(description=element['name'])
-            comment.name = element['name']
-            comment.meta['title'] = element['name']
-            self.__toplevel_comments.add(comment)
+            pagename = self.__extract_feature_comment("element", element)
 
             aliases = self._get_aliases([pagename, element['hierarchy'][0]])
             sym = self.create_symbol(
