@@ -867,7 +867,7 @@ class GstExtension(Extension):
             comment.short_description = Comment(
                 description=description)
         comment.title = Comment(description=feature['name'])
-        comment.name = pagename
+        comment.name = feature.get('name', pagename)
         comment.meta['title'] = feature['name']
         self.__toplevel_comments.add(comment)
 
