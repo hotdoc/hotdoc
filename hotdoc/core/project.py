@@ -256,9 +256,7 @@ class Project(Configurable):
         if not self.project_version:
             error('invalid-config', 'No project version was provided')
 
-        self.sanitized_name = '%s-%s' % (re.sub(r'\W+', '-',
-                                                self.project_name),
-                                         self.project_version)
+        self.sanitized_name = '%s' % (re.sub(r'\W+', '-', self.project_name))
 
     # pylint: disable=arguments-differ
     def parse_config(self, config, toplevel=False):
