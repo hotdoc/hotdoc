@@ -757,6 +757,9 @@ class GstExtension(Extension):
             extra_content = self.formatter.format_flags(flags)
             res.extension_contents['Flags'] = extra_content
             if default:
+                if prop['type-name'] in ['GstCaps', 'GstStructure']:
+                    default = '<pre class="language-yaml">' + \
+                        '<code class="language-yaml">%s</code></pre>' % default
                 res.extension_contents['Default value'] = default
 
     def __create_enum_symbol(self, type_name, enum, element_name, parent_name=None):
@@ -800,7 +803,7 @@ class GstExtension(Extension):
         symbol.values = enum
         return symbol
 
-    def __create_object_type(self, element, _object):
+    def __create_object_type(self, pagename, _object):
         if not _object:
             return None
 
@@ -808,7 +811,6 @@ class GstExtension(Extension):
         if self.app.database.get_symbol(unique_name):
             return None
 
-        pagename = 'element-' + element['name']
         self.__create_property_symbols(_object, unique_name, pagename, parent_name=unique_name)
         self.__create_signal_symbols(_object, unique_name, pagename, parent_name=unique_name)
 
@@ -829,7 +831,8 @@ class GstExtension(Extension):
         for tname, template in templates.items():
             name = tname.replace("%%", "%")
             unique_name = '%s!%s' % (element['hierarchy'][0], name)
-            object_type = self.__create_object_type(element, template.get("object-type"))
+            pagename = 'element-' + element['name']
+            object_type = self.__create_object_type(pagename, template.get("object-type"))
             self.create_symbol(GstPadTemplateSymbol,
                                name=name,
                                direction=template["direction"],
@@ -838,7 +841,7 @@ class GstExtension(Extension):
                                filename=plugin_name, parent_name=None,
                                object_type=object_type,
                                display_name=name, unique_name=unique_name,
-                               extra={'gst-element-name': 'element-' + element['name']})
+                               extra={'gst-element-name': pagename})
 
     def _get_aliases(self, aliases):
         return [alias for alias in aliases if not self.app.database.get_symbol(alias)]
@@ -871,20 +874,30 @@ class GstExtension(Extension):
         comment.meta['title'] = feature['name']
         self.__toplevel_comments.add(comment)
 
-        return pagename
+        return pagename, comment
 
     def __parse_plugin(self, plugin_name, plugin):
         elements = []
-        if self.plugin and len(plugin.get('elements', {}).items()) == 1:
-            self.unique_feature = list(plugin.get('elements', {}).keys())[0]
+        feature_names = list(plugin.get('elements', {}).keys()) \
+            + list(plugin.get('tracers', {}).keys()) \
+            + list(plugin.get('device-providers', {}).keys())
+
+        if self.plugin and len(feature_names) == 1:
+            self.unique_feature = feature_names[0]
 
         for ename, tracer in plugin.get('tracers', {}).items():
             tracer['name'] = ename
             self.__extract_feature_comment("tracer", tracer)
 
+        for provider_name, provider in plugin.get('device-providers', {}).items():
+            provider['name'] = provider_name
+            _, comment = self.__extract_feature_comment("provider", provider)
+            comment.description += """\n\n# Provided device example"""
+            self.__create_object_type(provider_name, provider.get('device-example'))
+
         for ename, element in plugin.get('elements', {}).items():
             element['name'] = ename
-            pagename = self.__extract_feature_comment("element", element)
+            pagename, _ = self.__extract_feature_comment("element", element)
 
             aliases = self._get_aliases([pagename, element['hierarchy'][0]])
             sym = self.create_symbol(
