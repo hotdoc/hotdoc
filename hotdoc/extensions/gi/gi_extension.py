@@ -619,7 +619,7 @@ class GIExtension(Extension):
         udata_param = ParameterSymbol(
             argname='user_data', type_tokens=[udata_link])
         type_desc = SymbolTypeDesc([], 'gpointer', None, 0)
-        self.add_attrs(udata_param, type_desc=type_desc, direction='in')
+        self.add_attrs(udata_param, type_desc=type_desc, direction='in', is_closure=True)
         parameters.append(udata_param)
 
         res = self.create_symbol(SignalSymbol, node,
