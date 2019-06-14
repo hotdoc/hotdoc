@@ -31,6 +31,9 @@ from hotdoc.extensions.gi.symbols import GIClassSymbol, GIStructSymbol
 from hotdoc.extensions.gi.annotation_parser import GIAnnotationParser
 
 
+PYTHON_VARIADIC_LINK = 'https://docs.python.org/dev/tutorial/controlflow.html#arbitrary-argument-lists'
+
+
 class GIFormatter(Formatter):
     sitemap_language = None
     engine = None
@@ -176,7 +179,17 @@ class GIFormatter(Formatter):
             if direction == 'out':
                 return None
 
-            parameter.extension_contents['type-link'] = self._format_linked_symbol (parameter)
+            is_destroy = parameter.get_extension_attribute ('gi-extension', 'is_destroy')
+            if is_destroy:
+                return None
+
+            is_closure = parameter.get_extension_attribute ('gi-extension', 'is_closure')
+
+            if is_closure and language == 'python':
+                parameter.extension_contents['type-link'] = self._format_link(
+                        PYTHON_VARIADIC_LINK, None, 'variadic')
+            else:
+                parameter.extension_contents['type-link'] = self._format_linked_symbol (parameter)
         else:
             parameter.extension_contents.pop('type-link', None)
 

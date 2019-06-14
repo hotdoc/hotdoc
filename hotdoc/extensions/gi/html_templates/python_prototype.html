@@ -13,10 +13,15 @@ self\
 @if parameters:
 \
 @for i, parameter in enumerate (parameters):
+@if not parameter.get_extension_attribute('gi-extension', 'is_destroy'):
 @if i != 0 or is_method:
 , \
 @end
+@if parameter.get_extension_attribute('gi-extension', 'is_closure'):
+*\
+@end
 @parameter.argname\
+@end
 @end
 \
 @end

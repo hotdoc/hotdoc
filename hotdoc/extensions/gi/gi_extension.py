@@ -493,17 +493,34 @@ class GIExtension(Extension):
                 '{http://www.gtk.org/introspection/core/1.0}parameter')
 
         parameters = []
-
-        if instance_param is not None:
-            param, direction = self.__create_parameter_symbol(instance_param)
-            parameters.append(param)
+        closure_indices = set()
+        destroy_indices = set()
 
         out_parameters = []
         for gi_parameter in gi_parameters:
             param, direction = self.__create_parameter_symbol(gi_parameter)
             parameters.append(param)
+            if 'destroy' in gi_parameter.attrib:
+                destroy_indices.add(int(gi_parameter.attrib['destroy']))
+            if 'closure' in gi_parameter.attrib:
+                closure_indices.add(int(gi_parameter.attrib['closure']))
+
             if direction != 'in':
                 out_parameters.append(param)
+
+        for idx in destroy_indices:
+            param = parameters[idx]
+            self.add_attrs(param, is_destroy=True)
+
+        for idx in closure_indices:
+            param = parameters[idx]
+            self.add_attrs(param, is_closure=True)
+
+        # We add our instance parameter last in order not to mess with
+        # the destroy indices
+        if instance_param is not None:
+            param, direction = self.__create_parameter_symbol(instance_param)
+            parameters.insert(0, param)
 
         if node.attrib.get('throws') == '1':
             type_desc = SymbolTypeDesc([Link(None, 'GError', 'GError'), '*', '*'], 'GLib.Error', 'GError**', 0)
