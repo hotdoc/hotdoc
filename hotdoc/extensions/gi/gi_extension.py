@@ -947,7 +947,7 @@ class GIExtension(Extension):
         if link.ref is None:
             return GTKDOC_HREFS.get(link.id_)
 
-        return link.ref
+        return None
 
     def __translate_title(self, link, language):
         fund = FUNDAMENTALS[language].get(link.id_)
