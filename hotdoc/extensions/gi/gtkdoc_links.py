@@ -13,7 +13,12 @@ def parse_devhelp_index(dir_):
     if not os.path.exists(path):
         return False
 
-    dh_root = etree.parse(path).getroot()
+    try:
+        dh_root = etree.parse(path).getroot()
+    except etree.Error:
+        # No need to look for a sgml file
+        return True
+
     online = dh_root.attrib.get('online')
     name = dh_root.attrib.get('name')
     author = dh_root.attrib.get('author')
