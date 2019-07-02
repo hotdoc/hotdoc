@@ -574,6 +574,8 @@ class GstExtension(Extension):
                 index.symbol_names.add(sym.unique_name)
             if self.unique_feature:
                 index.comment = self.app.database.get_comment("element-" + self.unique_feature)
+            else:
+                index.comment = self.get_plugin_comment()
             return smart_pages
 
         page = smart_pages.get(self.list_plugins_page)
@@ -581,7 +583,6 @@ class GstExtension(Extension):
         page.extension_name = self.extension_name
 
         page.symbol_names.add(self.__plugins.unique_name)
-        page.comment = self.get_plugin_comment()
         self.__plugins.plugins = self.__all_plugins_symbols
 
         return smart_pages
