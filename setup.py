@@ -152,7 +152,7 @@ class BuildDefaultTheme(Command):
     """
     user_options = []
     description = ("Build default html theme, the following dependencies are "
-                   "required: make, npm")
+                   "required: GNU make, npm")
 
     # pylint: disable=missing-docstring
     def initialize_options(self):
@@ -165,9 +165,13 @@ class BuildDefaultTheme(Command):
     # pylint: disable=missing-docstring
     # pylint: disable=no-self-use
     def run(self):
-        if spawn.find_executable('make') is None:
-            print("make is required")
-            print("please get a version of make and re-run setup")
+        if spawn.find_executable('gmake') is not None:
+            gmake = 'gmake'
+        elif spawn.find_executable('make') is not None:
+            gmake = 'make'
+        else:
+            print("GNU make  is required")
+            print("please get a version of GNU make and re-run setup")
             sys.exit(-1)
         if spawn.find_executable('npm') is None:
             print("npm is required")
@@ -180,7 +184,7 @@ class BuildDefaultTheme(Command):
                 spawn.spawn(['./node_modules/bower/bin/bower', 'install', '--allow-root'])
                 os.environ['LESS_INCLUDE_PATH'] = os.path.join(
                     SOURCE_DIR, 'hotdoc', 'less')
-                spawn.spawn(['make'])
+                spawn.spawn([gmake])
                 del os.environ['LESS_INCLUDE_PATH']
                 with open(os.path.join(THEME_DIST_DIR, 'theme.json'), 'w') as _:
                     _.write(json.dumps({'prism-theme': 'prism-tomorrow', 'hotdoc-version': VERSION}))
