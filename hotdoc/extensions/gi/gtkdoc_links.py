@@ -22,6 +22,8 @@ def parse_devhelp_index(dir_):
     online = dh_root.attrib.get('online')
     name = dh_root.attrib.get('name')
     author = dh_root.attrib.get('author')
+    language = dh_root.attrib.get('language')
+
     if not online:
         if not name:
             return False
@@ -42,20 +44,23 @@ def parse_devhelp_index(dir_):
             else:
                 name = split[0]
         elif type_ in ['signal', 'property']:
-            anchor = link.split('#', 1)[1]
-            if author == 'hotdoc':
-                name = anchor
-            else:
-                split = anchor.split('-', 1)
-                if type_ == 'signal':
-                    name = '%s::%s' % (split[0], split[1].lstrip('-'))
+            # Heuristic to determine that the naming follows the gtk-doc "logic"
+            if '#' in link and (language.lower() == 'c' or author == 'hotdoc'):
+                anchor = link.split('#', 1)[1]
+                if author == 'hotdoc':
+                    name = anchor
                 else:
-                    name = '%s:%s' % (split[0], split[1].lstrip('-'))
+                    split = anchor.split('-', 1)
+                    if type_ == 'signal':
+                        name = '%s::%s' % (split[0], split[1].lstrip('-'))
+                    else:
+                        name = '%s:%s' % (split[0], split[1].lstrip('-'))
         elif type_ in ['vfunc']:
-            anchor = link.split('#', 1)[1]
-            if author == 'hotdoc':
-                name = anchor
-                GTKDOC_HREFS[name.replace('::', '.')] = online + link
+            if '#' in link and (language.lower() == 'c' or author == 'hotdoc'):
+                anchor = link.split('#', 1)[1]
+                if author == 'hotdoc':
+                    name = anchor
+                    GTKDOC_HREFS[name.replace('::', '.')] = online + link
 
         GTKDOC_HREFS[name] = online + link
 
