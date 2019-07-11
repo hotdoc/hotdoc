@@ -41,6 +41,7 @@ from hotdoc.core.formatter import Formatter
 from hotdoc.core.comment import Comment
 from hotdoc.extensions.gi.gi_extension import WritableFlag, ReadableFlag, \
     ConstructFlag, ConstructOnlyFlag
+from hotdoc.extensions.gi.gtkdoc_links import gather_gtk_doc_links
 from hotdoc.extensions.gi.fundamentals import FUNDAMENTALS
 from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
 
@@ -495,6 +496,8 @@ class GstExtension(Extension):
 
                 super().setup()
             return
+
+        gather_gtk_doc_links ()
 
         comment_parser = GtkDocParser(self.project, False)
         to_parse_sources = set(self.c_sources) - GstExtension.__parsed_cfiles

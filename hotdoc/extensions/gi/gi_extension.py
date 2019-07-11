@@ -50,7 +50,7 @@ from hotdoc.extensions.gi.node_cache import (
     SMART_FILTERS, make_translations, get_translation, get_klass_parents,
     get_klass_children, cache_nodes, type_description_from_node,
     is_introspectable, is_callback_type)
-from hotdoc.extensions.gi.gtkdoc_links import GTKDOC_HREFS
+from hotdoc.extensions.gi.gtkdoc_links import GTKDOC_HREFS, gather_gtk_doc_links
 from hotdoc.extensions.gi.symbols import GIClassSymbol, GIStructSymbol
 from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
 
@@ -174,6 +174,8 @@ class GIExtension(Extension):
             self.__translate_link_ref, 'default')
         if not self.sources:
             return
+
+        gather_gtk_doc_links ()
 
         self.__scan_comments()
         self.__list_relocated_symbols()

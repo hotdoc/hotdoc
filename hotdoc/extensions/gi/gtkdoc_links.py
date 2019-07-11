@@ -8,6 +8,9 @@ from hotdoc.utils.loggable import info
 GTKDOC_HREFS = {}
 
 
+GATHERED_GTKDOC_LINKS = False
+
+
 def parse_devhelp_index(dir_):
     path = os.path.join(dir_, os.path.basename(dir_) + '.devhelp2')
     if not os.path.exists(path):
@@ -94,6 +97,13 @@ def parse_sgml_index(dir_):
 
 
 def gather_gtk_doc_links ():
+    global GATHERED_GTKDOC_LINKS
+
+    if GATHERED_GTKDOC_LINKS:
+        return
+
+    GATHERED_GTKDOC_LINKS = True
+
     # XDG_DATA_DIRS is preference-ordered, we reverse so that preferred
     # links override less-preferred ones
     for datadir in reversed([XDG_DATA_HOME] + XDG_DATA_DIRS):
@@ -110,6 +120,3 @@ def gather_gtk_doc_links ():
                             parse_sgml_index(dir_)
                         except IOError:
                             pass
-
-
-gather_gtk_doc_links()
