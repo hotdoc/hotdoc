@@ -179,10 +179,16 @@ class Extension(Configurable):
 
     def get_pagename(self, name):
         self.__find_package_root()
+        # Find the longest prefix
+        longest = None
         for path in OrderedSet([self.__package_root]) | self.source_roots:
             commonprefix = os.path.commonprefix([path, name])
-            if commonprefix == path:
-                return os.path.relpath(name, path)
+            if commonprefix == path and (longest is None or len(path) > len(longest)):
+                longest = path
+
+        if longest is not None:
+            return os.path.relpath(name, longest)
+
         return name
 
     def get_symbol_page(self, symbol_name, symbol_pages, smart_pages, section_links):
@@ -199,7 +205,8 @@ class Extension(Configurable):
             smart_key = self._get_smart_key(symbol)
             if smart_key is None:
                 return None
-            elif smart_key in smart_pages:
+
+            if smart_key in smart_pages:
                 page = smart_pages[smart_key]
             else:
                 pagename = self.get_pagename(smart_key)
