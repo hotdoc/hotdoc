@@ -1,12 +1,4 @@
-[submodule "cmark"]
-	path = cmark
-	url = https://github.com/MathieuDuponchelle/cmark.git
-	branch = extensions_draft_3
 [submodule "hotdoc/extensions/syntax_highlighting/prism"]
 	path = hotdoc/extensions/syntax_highlighting/prism
 	url = https://github.com/PrismJS/prism.git
-	branch = master
-[submodule "hotdoc/hotdoc_bootstrap_theme"]
-	path = hotdoc/hotdoc_bootstrap_theme
-	url = https://github.com/hotdoc/hotdoc_bootstrap_theme.git
 	branch = master

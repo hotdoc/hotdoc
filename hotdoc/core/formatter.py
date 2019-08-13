@@ -64,7 +64,6 @@ class FormatterBadLinkException(HotdocException):
     Raised when a produced html page contains an empty local link
     to nowhere.
     """
-    pass
 
 
 XSLT_PAGE_TRANSFORM = etree.XML('''\
@@ -1084,11 +1083,14 @@ class Formatter(Configurable):
                     html_theme = self.__download_theme(uri)
 
             if html_theme == 'default':
-                default_theme = os.path.join(HERE, os.pardir,
-                                             'hotdoc_bootstrap_theme', 'dist')
+                default_theme = os.path.abspath(os.path.join(HERE, os.pardir,
+                                             'hotdoc_bootstrap_theme'))
+                if not os.path.exists(default_theme):
+                    default_theme = os.path.abspath(
+                        os.path.join(HERE, os.pardir, os.pardir, 'subprojects',
+                        'hotdoc_bootstrap_theme'))
 
-                html_theme = os.path.abspath(default_theme)
-                debug("Using default theme")
+                html_theme = default_theme
 
             theme_meta_path = os.path.join(html_theme, 'theme.json')
 

@@ -17,7 +17,7 @@ dependencies that C flags should be obtained from using [pkg-config].
 
 On a Debian-based OS you will need to install `llvm` and `libclang-dev` packages.
 
-## Commment parser
+## Comment parser
 
 Currently, comments are expected to be formatted according to the [gtk-doc syntax].
 

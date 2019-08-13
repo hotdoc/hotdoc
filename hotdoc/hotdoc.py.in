@@ -1,0 +1,8 @@
+#!@PYTHON@
+
+import sys
+sys.path.insert(0, '@BUILDPATH@')
+from hotdoc.run_hotdoc import main
+
+if __name__ == "__main__":
+    sys.exit(main())

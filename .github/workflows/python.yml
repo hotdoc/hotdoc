@@ -28,8 +28,9 @@ jobs:
       run: sudo apt install -y libxml2-dev libglib2.0-dev libjson-glib-dev
     - name: Build
       run: |
-        python -m pip install --upgrade pip
-        pip install wheel
-        python3 setup.py develop
+        python -m pip install --upgrade pip ninja wheel
+        # We need meson master for the new `develop` command
+        python -m pip install --upgrade git+https://github.com/mesonbuild/meson.git
+        python -m pip install .
     - name: Test
-      run: python3 -m unittest
+      run: find /opt/hostedtoolcache/Python/ && cd hotdoc && python3 -m unittest

@@ -1,0 +1,40 @@
+[build-system]
+requires = ["mesonpep517", 'cmake', 'ninja']
+build-backend = "mesonpep517.buildapi"
+
+[tool.mesonpep517]
+build-backend = "mesonpep517.buildapi"
+
+[tool.mesonpep517.metadata]
+module="hotdoc"
+summary="A documentation tool micro-framework"
+author="Mathieu Duponchelle"
+author-email="mathieu.duponchelle@opencreed.com"
+home-page="https://github.com/hotdoc/hotdoc"
+requires=[
+    'pyyaml>=5.1',
+    'lxml',
+    'schema',
+    'appdirs',
+    'wheezy.template',
+    'toposort>=1.4',
+    'dbus-deviation>=0.4.0',
+    'cchardet',
+    'networkx==2.5'
+]
+meson-python-option-name = "python"
+requires-python="3"
+description-file="README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.4",
+    "Programming Language :: Python :: 3.5",
+]
+
+[tool.mesonpep517.entry-points]
+console_scripts = [
+    'hotdoc = hotdoc.run_hotdoc:main',
+]
+"hotdoc.extensions" = [
+    'get_extension_classes = hotdoc.extensions:get_extension_classes'
+]

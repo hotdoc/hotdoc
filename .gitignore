@@ -10,3 +10,4 @@ dist
 hotdoc.egg-info/
 *.eggs
 .ycm_extra_conf.py
+subprojects/

@@ -1,0 +1,4 @@
+[wrap-git]
+directory=hotdoc_bootstrap_theme
+url=https://github.com/hotdoc/hotdoc_bootstrap_theme.git
+revision=master

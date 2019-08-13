@@ -1,0 +1,9 @@
+option('python',
+        type: 'string',
+        value: 'python3',
+        description: 'The python installation to use, see http://mesonbuild.com/Python-module.html#find_installation for more details')
+
+option('c-extension',
+        type: 'feature',
+        value: 'auto',
+        description: 'Wether to enable the C and GI extensions.')

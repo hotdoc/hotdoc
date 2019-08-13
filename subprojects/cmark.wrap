@@ -1,0 +1,4 @@
+[wrap-git]
+directory=cmark
+url=https://github.com/thiblahute/cmark.git
+revision=7b5fadbececf4605d7754e71c7a8858e8c8c1d6b

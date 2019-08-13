@@ -1,0 +1,1 @@
+run_target('doc', command: [ hotdoc, 'run', 'hotdoc.json', '--output', meson.current_build_dir()])
