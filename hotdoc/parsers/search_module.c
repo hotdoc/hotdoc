@@ -275,6 +275,7 @@ parse_content (IndexContext *idx_ctx, const gchar *filename, xmlDocPtr doc, xmlN
     TokenContext *ctx;
     guint url_len;
     gchar *url;
+    const xmlChar *node_type;
 
     ctx = g_malloc0 (sizeof (TokenContext));
     idx_ctx->token_contexts = g_list_prepend (idx_ctx->token_contexts, ctx);
@@ -295,7 +296,13 @@ parse_content (IndexContext *idx_ctx, const gchar *filename, xmlDocPtr doc, xmlN
     append_fragment (idx_ctx->fragments, url, "\n");
     g_mutex_unlock (&idx_ctx->fragment_lock);
 
-    parse_tokens (idx_ctx, ctx, url, (gchar *) content, xpathObj->nodesetval->nodeTab[i]->name);
+    if (xmlHasProp(xpathObj->nodesetval->nodeTab[i], (xmlChar *) "data-hotdoc-id")) {
+      node_type = (const xmlChar *) "symbol";
+    } else {
+      node_type = xpathObj->nodesetval->nodeTab[i]->name;
+    }
+
+    parse_tokens (idx_ctx, ctx, url, (gchar *) content, node_type);
 
     g_free (url);
 
