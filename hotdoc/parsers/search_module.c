@@ -578,9 +578,39 @@ show_url (ContextualizedURL *ctx_url, JsonArray *jurls)
 }
 
 static gint
+node_type_priority (const gchar *node_type)
+{
+  if (!g_strcmp0(node_type, "symbol"))
+    return 7;
+  else if (!g_strcmp0(node_type, "h1"))
+    return 6;
+  else if (!g_strcmp0(node_type, "h2"))
+    return 5;
+  else if (!g_strcmp0(node_type, "h3"))
+    return 4;
+  else if (!g_strcmp0(node_type, "h4"))
+    return 3;
+  else if (!g_strcmp0(node_type, "h5"))
+    return 2;
+  else if (!g_strcmp0(node_type, "h6"))
+    return 1;
+  return 0;
+}
+
+static gint
 sort_url (ContextualizedURL *url1, ContextualizedURL *url2)
 {
-  return g_strcmp0 (url1->url, url2->url);
+  gint url_sort = g_strcmp0 (url1->url, url2->url);
+
+  if (!url_sort) {
+    /* Sort by node types before deduplication */
+    gint url1_node_type_prio = node_type_priority (url1->node_type);
+    gint url2_node_type_prio = node_type_priority (url2->node_type);
+
+    return url2_node_type_prio - url1_node_type_prio;
+  } else {
+    return url_sort;
+  }
 }
 
 static void
