@@ -944,7 +944,7 @@ class Formatter(Configurable):
 
     def _format_comment(self, comment, link_resolver):
         return self._docstring_formatter.translate_comment(
-            comment, link_resolver)
+            comment, link_resolver, self.extension.project.tree)
 
     def __get_theme_files(self, path):
         res = []

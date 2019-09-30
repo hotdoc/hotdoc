@@ -308,7 +308,7 @@ class GIFormatter(Formatter):
                 ast, link_resolver)
         else:
             ast = self._docstring_formatter.comment_to_ast(
-                comment, link_resolver)
+                comment, link_resolver, self.extension.project.tree)
             out = self._docstring_formatter.ast_to_html(
                 ast, link_resolver)
             comment.extension_attrs['gi-extension']['ast'] = ast

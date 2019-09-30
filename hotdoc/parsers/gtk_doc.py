@@ -393,7 +393,7 @@ class GtkDocStringFormatter(Configurable):
         self.gdbus_codegen_sources = []
 
     # pylint: disable=no-self-use
-    def comment_to_ast(self, comment, link_resolver):
+    def comment_to_ast(self, comment, link_resolver, include_resolver):
         """
         Given a gtk-doc comment string, returns an opaque PyCapsule
         containing the document root.
@@ -430,7 +430,7 @@ class GtkDocStringFormatter(Configurable):
         if self.escape_html:
             # pylint: disable=deprecated-method
             text = cgi.escape(text)
-        ast, diagnostics = cmark.gtkdoc_to_ast(text, link_resolver)
+        ast, diagnostics = cmark.gtkdoc_to_ast(text, link_resolver, include_resolver)
 
         for diag in diagnostics:
             if (comment.filename and comment.filename not in
@@ -477,26 +477,26 @@ class GtkDocStringFormatter(Configurable):
         out, _ = cmark.ast_to_html(ast, link_resolver)
         return out
 
-    def translate_comment(self, comment, link_resolver):
+    def translate_comment(self, comment, link_resolver, include_resolver):
         """
         Given a gtk-doc comment string, returns the comment translated
         to the desired format.
         """
         out = u''
 
-        self.translate_tags(comment, link_resolver)
-        ast = self.comment_to_ast(comment, link_resolver)
+        self.translate_tags(comment, link_resolver, include_resolver)
+        ast = self.comment_to_ast(comment, link_resolver, include_resolver)
         out += self.ast_to_html(ast, link_resolver)
         return out
 
-    def translate_tags(self, comment, link_resolver):
+    def translate_tags(self, comment, link_resolver, include_resolver):
         """Banana banana
         """
         for tname in ('deprecated',):
             tag = comment.tags.get(tname)
             if tag is not None and tag.description:
                 comment = comment_from_tag(tag)
-                ast = self.comment_to_ast(comment, link_resolver)
+                ast = self.comment_to_ast(comment, link_resolver, include_resolver)
                 tag.description = self.ast_to_html(ast, link_resolver) or ''
 
     @staticmethod

@@ -139,34 +139,6 @@ diagnose(const char *code, const char *message, int lineno, int column) {
   Py_DECREF(diag);
 }
 
-static PyObject *
-gtkdoc_to_ast(PyObject *self, PyObject *args) {
-  CMarkDocument *doc;
-  PyObject *input;
-  PyObject *cap;
-  char *utf8;
-  Py_ssize_t size;
-
-  if (!PyArg_ParseTuple(args, "O!O", &PyUnicode_Type, &input, &link_resolver))
-    return NULL;
-
-  Py_XDECREF(diagnostics);
-  diagnostics = PyList_New(0);
-
-  doc = calloc(1, sizeof(CMarkDocument));
-
-  cmark_gtkdoc_extension_set_link_resolve_function(gtkdoc_extension, resolve_link);
-
-  utf8 = PyUnicode_AsUTF8AndSize(input, &size);
-  cmark_parser_feed(gtkdoc_parser, utf8, size);
-
-  doc->root = cmark_parser_finish(gtkdoc_parser);
-
-  cap = PyCapsule_New((void *)doc, "cmark.document", NULL);
-
-  return Py_BuildValue("OO", cap, diagnostics);
-}
-
 static char *
 resolve_include(const char *uri) {
   PyObject *contents;
@@ -190,6 +162,36 @@ resolve_include(const char *uri) {
 
 done:
   return res;
+}
+
+static PyObject *
+gtkdoc_to_ast(PyObject *self, PyObject *args) {
+  CMarkDocument *doc;
+  PyObject *input;
+  PyObject *cap;
+  char *utf8;
+  Py_ssize_t size;
+
+  if (!PyArg_ParseTuple(args, "O!OO", &PyUnicode_Type, &input, &link_resolver, &include_resolver))
+    return NULL;
+
+  Py_XDECREF(diagnostics);
+  diagnostics = PyList_New(0);
+
+  doc = calloc(1, sizeof(CMarkDocument));
+
+  cmark_gtkdoc_extension_set_link_resolve_function(gtkdoc_extension, resolve_link);
+  cmark_include_extension_set_resolve_function(include_extension, resolve_include);
+
+
+  utf8 = PyUnicode_AsUTF8AndSize(input, &size);
+  cmark_parser_feed(gtkdoc_parser, utf8, size);
+
+  doc->root = cmark_parser_finish(gtkdoc_parser);
+
+  cap = PyCapsule_New((void *)doc, "cmark.document", NULL);
+
+  return Py_BuildValue("OO", cap, diagnostics);
 }
 
 static void collect_title(CMarkDocument *doc)
