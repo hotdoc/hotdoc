@@ -170,12 +170,12 @@ class GIExtension(Extension):
 
         super(GIExtension, self).setup()
 
+        gather_gtk_doc_links ()
+
         self.app.link_resolver.resolving_link_signal.connect_after(
             self.__translate_link_ref, 'default')
         if not self.sources:
             return
-
-        gather_gtk_doc_links ()
 
         self.__scan_comments()
         self.__list_relocated_symbols()
