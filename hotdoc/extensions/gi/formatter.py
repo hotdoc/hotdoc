@@ -25,7 +25,6 @@ from wheezy.template.loader import FileLoader
 from hotdoc.core.formatter import Formatter
 from hotdoc.core.symbols import *
 import lxml.etree
-from hotdoc.extensions.gi.fundamentals import FUNDAMENTALS
 from hotdoc.extensions.gi.node_cache import ALL_GI_TYPES, is_introspectable
 from hotdoc.extensions.gi.symbols import GIClassSymbol, GIStructSymbol
 from hotdoc.extensions.gi.annotation_parser import GIAnnotationParser
@@ -61,38 +60,31 @@ class GIFormatter(Formatter):
         for csym in symbol.get_children_symbols():
             self.__add_attrs(csym, **kwargs)
 
-    def __wrap_in_language(self, symbol, c_doc, python_doc, js_doc):
+    def __wrap_in_language(self, symbol, langs_docs):
         template = self.get_template('symbol_language_wrapper.html')
         res = template.render(
                 {'symbol': symbol,
-                 'c_doc': c_doc,
-                 'python_doc': python_doc,
-                 'js_doc': js_doc})
+                 'languages': langs_docs})
         return res
 
     def _format_symbol (self, symbol):
         if isinstance(symbol, (QualifiedSymbol, FieldSymbol, EnumMemberSymbol)):
             return Formatter._format_symbol(self, symbol)
 
-        self.extension.setup_language('c', None)
-        self.__add_attrs(symbol, language='c')
+        langs_docs = {}
+        previous_lang = None
+        for lang in self.extension.get_languages():
+            self.extension.setup_language(lang, previous_lang)
+            lang_name = lang.language_name
+            if lang_name == 'c' or is_introspectable(symbol.unique_name, lang):
+                self.__add_attrs(symbol, language=lang_name)
+                langs_docs[lang_name] = Formatter._format_symbol(self, symbol)
+            else:
+                langs_docs[lang_name] = None
+            previous_lang = lang
 
-        c_out = Formatter._format_symbol(self, symbol)
-        python_out = None
-        js_out = None
-
-        self.extension.setup_language('python', 'c')
-        if is_introspectable(symbol.unique_name, 'python'):
-            self.__add_attrs(symbol, language='python')
-            python_out = Formatter._format_symbol(self, symbol)
-
-        self.extension.setup_language('javascript', 'python')
-        if is_introspectable(symbol.unique_name, 'javascript'):
-            self.__add_attrs(symbol, language='javascript')
-            js_out = Formatter._format_symbol(self, symbol)
-
-        self.extension.setup_language(None, 'javascript')
-        return self.__wrap_in_language(symbol, c_out, python_out, js_out)
+        self.extension.setup_language(None, previous_lang)
+        return self.__wrap_in_language(symbol, langs_docs)
 
     def _format_flags (self, flags):
         template = self.engine.get_template('gi_flags.html')
@@ -107,8 +99,9 @@ class GIFormatter(Formatter):
             gi_name = type_desc.gi_name
             new_tokens = []
             link = None
-            if gi_name in FUNDAMENTALS[language]:
-                fund_link = FUNDAMENTALS[language][gi_name]
+            lang = self.extension.get_language(language)
+            fund_link = lang.get_fundamental(gi_name)
+            if fund_link:
                 link = Link(fund_link.ref, fund_link._title, gi_name)
             elif gi_name in ALL_GI_TYPES:
                 ctype_name = ALL_GI_TYPES[gi_name]
@@ -229,11 +222,7 @@ class GIFormatter(Formatter):
                     is_pointer, title)
 
         c_name = function.make_name()
-
-        if language == 'python':
-            template = self.engine.get_template('python_prototype.html')
-        else:
-            template = self.engine.get_template('javascript_prototype.html')
+        template = self.engine.get_template(language + '_prototype.html')
 
         if type (function) == SignalSymbol:
             comment = "%s callback for the '%s' signal" % (language, c_name)
@@ -241,8 +230,7 @@ class GIFormatter(Formatter):
             comment = "%s implementation of the '%s' virtual method" % \
                     (language, c_name)
         else:
-            comment = "%s wrapper for '%s'" % (language,
-                    c_name)
+            comment = "%s wrapper for '%s'" % (language, c_name)
 
         res = template.render ({'return_value': function.return_value,
             'parent_name': function.parent_name, 'function_name': title, 'parameters':

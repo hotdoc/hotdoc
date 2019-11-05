@@ -2,6 +2,8 @@ import os
 from collections import namedtuple
 import pathlib
 
+import pkg_resources
+
 from hotdoc.core.links import Link
 
 
@@ -177,3 +179,37 @@ def insert_language(ref, language, project):
 
     p = pathlib.Path(ref)
     return str(pathlib.Path(p.parts[0], language, *p.parts[1:]))
+
+def get_field_c_name_components(node, components):
+    parent = node.getparent()
+    if parent.tag != core_ns('namespace'):
+        get_field_c_name_components(parent, components)
+    component = node.attrib.get(c_ns('type'), node.attrib.get('name'))
+
+    if component:
+        components.append(component)
+
+# pylint: disable=too-many-locals
+# pylint: disable=too-many-branches
+def get_language_classes():
+    """
+    Banana banana
+    """
+    all_classes = {}
+    deps_map = {}
+
+    for entry_point in pkg_resources.iter_entry_points(
+            group='hotdoc.extensions.gi.languages', name='get_language_classes'):
+        try:
+            activation_function = entry_point.load()
+            classes = activation_function()
+        # pylint: disable=broad-except
+        except Exception as exc:
+            info("Failed to load %s" % entry_point.module_name, exc)
+            debug(traceback.format_exc())
+            continue
+
+        for klass in classes:
+            all_classes[klass.language_name] = klass
+
+    return list(all_classes.values())
