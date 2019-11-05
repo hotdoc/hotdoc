@@ -1,6 +1,8 @@
 import unittest
 import importlib
 from lxml import etree
+PYTHON_LANG = importlib.import_module('hotdoc.extensions.gi.languages.python')
+JAVASCRIPT_LANG = importlib.import_module('hotdoc.extensions.gi.languages.javascript')
 CACHE_MODULE = importlib.import_module('hotdoc.extensions.gi.node_cache')
 from hotdoc.extensions.gi.utils import core_ns, unnest_type
 
@@ -139,10 +141,12 @@ class TestNodeCaching(unittest.TestCase):
     def test_array_type(self):
         test_data = GIR_TEMPLATE % TEST_GREETER_LIST_GREETS
         gir_root = etree.fromstring (test_data)
-        CACHE_MODULE.cache_nodes(gir_root, [])
-        translated = CACHE_MODULE.get_translation('test_greeter_list_greets', 'python')
+        pythonlang = PYTHON_LANG.get_language_classes()[0]()
+        javascriptlang = JAVASCRIPT_LANG.get_language_classes()[0]()
+        CACHE_MODULE.cache_nodes(gir_root, [], {pythonlang, javascriptlang})
+        translated = pythonlang.get_translation('test_greeter_list_greets')
         self.assertEqual (translated, 'Test.list_greets')
-        translated = CACHE_MODULE.get_translation('test_greeter_list_greets', 'javascript')
+        translated = javascriptlang.get_translation('test_greeter_list_greets')
         self.assertEqual (translated, 'Test.prototype.list_greets')
         retval = gir_root.find('.//%s/%s' %
                 (core_ns ('method'), core_ns('return-value')))

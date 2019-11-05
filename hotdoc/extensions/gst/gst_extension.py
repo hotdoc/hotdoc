@@ -42,7 +42,6 @@ from hotdoc.core.comment import Comment
 from hotdoc.extensions.gi.gi_extension import WritableFlag, ReadableFlag, \
     ConstructFlag, ConstructOnlyFlag
 from hotdoc.extensions.gi.gtkdoc_links import gather_gtk_doc_links
-from hotdoc.extensions.gi.fundamentals import FUNDAMENTALS
 from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
 
 
@@ -77,9 +76,9 @@ def create_hierarchy(element_dict):
     return hierarchy
 
 
-def type_tokens_from_type_name(type_name):
+def type_tokens_from_type_name(type_name, python_lang):
     res = [Link(None, type_name, type_name)]
-    if type_name not in FUNDAMENTALS['python']:
+    if python_lang and not python_lang.get_fundamental(type_name):
         res.append('<span class="pointer-token">*</span>')
     return res
 
@@ -658,15 +657,17 @@ class GstExtension(Extension):
         unique_name = "%s::%s" % (parent_uniquename, name)
         aliases = self._get_aliases(["%s::%s" % (instance_type, name)])
 
+        gi_extension = self.project.extensions.get('gi-extension')
+        python_lang = gi_extension.get_language('python')
         args_type_names = []
         args_type_names = [
-            (type_tokens_from_type_name('GstElement'), 'param_0')]
+            (type_tokens_from_type_name('GstElement', python_lang), 'param_0')]
         for i, _ in enumerate(atypes):
             args_type_names.append(
-                (type_tokens_from_type_name(atypes[i]), 'param_%s' % (i + 1)))
+                (type_tokens_from_type_name(atypes[i], python_lang), 'param_%s' % (i + 1)))
 
         args_type_names.append(
-            (type_tokens_from_type_name('gpointer'), "udata"))
+            (type_tokens_from_type_name('gpointer', python_lang), "udata"))
         params = []
 
         for comment_name in [unique_name] + aliases:
@@ -682,7 +683,7 @@ class GstExtension(Extension):
         if type_name == 'void':
             retval = [None]
         else:
-            tokens = type_tokens_from_type_name(type_name)
+            tokens = type_tokens_from_type_name(type_name, python_lang)
 
             enum = signal.get('return-values')
             if enum:
@@ -714,6 +715,8 @@ class GstExtension(Extension):
         if not properties:
             return
 
+        gi_extension = self.project.extensions.get('gi-extension')
+        python_lang = gi_extension.get_language('python')
         for name, prop in properties.items():
             unique_name = '%s:%s' % (obj.get('name', parent_uniquename), name)
             flags = [ReadableFlag()]
@@ -726,7 +729,7 @@ class GstExtension(Extension):
 
             type_name = prop['type-name']
 
-            tokens = type_tokens_from_type_name(type_name)
+            tokens = type_tokens_from_type_name(type_name, python_lang)
             type_ = QualifiedSymbol(type_tokens=tokens)
 
             default = prop.get('default')

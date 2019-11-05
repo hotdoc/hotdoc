@@ -5,7 +5,6 @@ import networkx as nx
 from hotdoc.core.symbols import QualifiedSymbol
 from hotdoc.core.exceptions import BadInclusionException
 from hotdoc.extensions.gi.utils import *
-from hotdoc.extensions.gi.fundamentals import FUNDAMENTALS
 from hotdoc.utils.loggable import warn, Logger
 
 
@@ -81,73 +80,6 @@ def get_field_c_name(node):
     get_field_c_name_components(node, components)
     return '.'.join(components)
 
-
-def make_translations(unique_name, node):
-    '''
-    Compute and store the title that should be displayed
-    when linking to a given unique_name, eg in python
-    when linking to test_greeter_greet() we want to display
-    Test.Greeter.greet
-    '''
-    introspectable = not node.attrib.get('introspectable') == '0'
-
-    if node.tag == core_ns('member'):
-        __TRANSLATED_NAMES['c'][unique_name] = unique_name
-        if introspectable:
-            components = get_gi_name_components(node)
-            components[-1] = components[-1].upper()
-            gi_name = '.'.join(components)
-            __TRANSLATED_NAMES['python'][unique_name] = gi_name
-            __TRANSLATED_NAMES['javascript'][unique_name] = gi_name
-    elif c_ns('identifier') in node.attrib:
-        __TRANSLATED_NAMES['c'][unique_name] = unique_name
-        if introspectable:
-            components = get_gi_name_components(node)
-            gi_name = '.'.join(components)
-            __TRANSLATED_NAMES['python'][unique_name] = gi_name
-            components[-1] = 'prototype.%s' % components[-1]
-            __TRANSLATED_NAMES['javascript'][unique_name] = '.'.join(components)
-    elif c_ns('type') in node.attrib:
-        components = get_gi_name_components(node)
-        gi_name = '.'.join(components)
-        __TRANSLATED_NAMES['c'][unique_name] = unique_name
-        if introspectable:
-            __TRANSLATED_NAMES['javascript'][unique_name] = gi_name
-            __TRANSLATED_NAMES['python'][unique_name] = gi_name
-    elif node.tag == core_ns('field'):
-        components = []
-        get_field_c_name_components(node, components)
-        display_name = '.'.join(components[1:])
-        __TRANSLATED_NAMES['c'][unique_name] = display_name
-        if introspectable:
-            __TRANSLATED_NAMES['javascript'][unique_name] = display_name
-            __TRANSLATED_NAMES['python'][unique_name] = display_name
-    elif node.tag == core_ns('virtual-method'):
-        display_name = node.attrib['name']
-        __TRANSLATED_NAMES['c'][unique_name] = display_name
-        if introspectable:
-            __TRANSLATED_NAMES['javascript'][unique_name] = 'vfunc_%s' % display_name
-            __TRANSLATED_NAMES['python'][unique_name] = 'do_%s' % display_name
-    elif node.tag == core_ns('property'):
-        display_name = node.attrib['name']
-        __TRANSLATED_NAMES['c'][unique_name] = display_name
-        if introspectable:
-            __TRANSLATED_NAMES['javascript'][unique_name] = display_name
-            __TRANSLATED_NAMES['python'][unique_name] = display_name.replace('-', '_')
-    else:
-        __TRANSLATED_NAMES['c'][unique_name] = node.attrib.get('name')
-        if introspectable:
-            __TRANSLATED_NAMES['python'][unique_name] = node.attrib.get('name')
-            __TRANSLATED_NAMES['javascript'][unique_name] = node.attrib.get('name')
-
-
-def get_translation(unique_name, language):
-    '''
-    See make_translations
-    '''
-    return __TRANSLATED_NAMES[language].get(unique_name)
-
-
 def __update_hierarchies(cur_ns, node, gi_name):
     parent_name = node.attrib.get('parent')
     if not parent_name:
@@ -199,7 +131,7 @@ def get_klass_children(gi_name):
     return res
 
 
-def cache_nodes(gir_root, all_girs):
+def cache_nodes(gir_root, all_girs, languages):
     '''
     Identify and store all the gir symbols the symbols we will document
     may link to, or be typed with
@@ -212,7 +144,8 @@ def cache_nodes(gir_root, all_girs):
     for node in gir_root.xpath(
             './/*[@c:identifier]',
             namespaces=NS_MAP):
-        make_translations (node.attrib[id_key], node)
+        for language in languages:
+            language.make_translations (node.attrib[id_key], node)
 
     id_type = c_ns('type')
     glib_type = glib_ns('type-name')
@@ -225,39 +158,45 @@ def cache_nodes(gir_root, all_girs):
             name = node.attrib[id_type]
         except KeyError:
             name = node.attrib[glib_type]
-        make_translations (name, node)
+        for language in languages:
+            language.make_translations (name, node)
         gi_name = '.'.join(get_gi_name_components(node))
         ALL_GI_TYPES[gi_name] = get_klass_name(node)
         if node.tag in (class_tag, interface_tag):
             __update_hierarchies (ns_node.attrib.get('name'), node, gi_name)
-            make_translations('%s::%s' % (name, name), node)
+            for language in languages:
+                language.make_translations('%s::%s' % (name, name), node)
             __generate_smart_filters(id_prefixes, sym_prefixes, node)
         elif node.tag in (callback_tag,):
             ALL_CALLBACK_TYPES.add(node.attrib[c_ns('type')])
 
     for field in gir_root.xpath('.//self::core:field', namespaces=NS_MAP):
         unique_name = get_field_c_name(field)
-        make_translations(unique_name, field)
+        for language in languages:
+            language.make_translations(unique_name, field)
 
     for node in gir_root.xpath(
             './/core:property',
             namespaces=NS_MAP):
         name = '%s:%s' % (get_klass_name(node.getparent()),
                           node.attrib['name'])
-        make_translations (name, node)
+        for language in languages:
+            language.make_translations (name, node)
 
     for node in gir_root.xpath(
             './/glib:signal',
             namespaces=NS_MAP):
         name = '%s::%s' % (get_klass_name(node.getparent()),
                            node.attrib['name'])
-        make_translations (name, node)
+        for language in languages:
+            language.make_translations (name, node)
 
     for node in gir_root.xpath(
             './/core:virtual-method',
             namespaces=NS_MAP):
         name = get_symbol_names(node)[0]
-        make_translations (name, node)
+        for language in languages:
+            language.make_translations (name, node)
 
     for inc in gir_root.findall('./core:include',
             namespaces = NS_MAP):
@@ -274,7 +213,7 @@ def cache_nodes(gir_root, all_girs):
 
         __PARSED_GIRS.add(gir_file)
         inc_gir_root = etree.parse(gir_file).getroot()
-        cache_nodes(inc_gir_root, all_girs)
+        cache_nodes(inc_gir_root, all_girs, languages)
 
 
 def __type_tokens_from_gitype (cur_ns, ptype_name):
@@ -339,10 +278,10 @@ def is_introspectable(name, language):
     '''
     Do not call this before caching the nodes
     '''
-    if name in FUNDAMENTALS[language]:
+    if language.get_fundamental(name):
         return True
 
-    if name not in __TRANSLATED_NAMES[language]:
+    if not language.get_translation(name):
         return False
 
     return True

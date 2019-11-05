@@ -448,6 +448,8 @@ if __name__ == '__main__':
         entry_points={
             'hotdoc.extensions': ('get_extension_classes = '
                                   'hotdoc.extensions:get_extension_classes'),
+            'hotdoc.extensions.gi.languages':  ('get_language_classes = '
+                                                'hotdoc.extensions.gi.languages:get_language_classes'),
             'console_scripts': [
                 'hotdoc=hotdoc.run_hotdoc:main',
                 'hotdoc_dep_printer=hotdoc.hotdoc_dep_printer:main']},
