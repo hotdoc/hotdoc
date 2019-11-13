@@ -26,7 +26,7 @@ from hotdoc.core.config import ConfigParser
 
 def main():
     if len(sys.argv) != 2:
-        print "USAGE: %s path/to/conf/file" % sys.argv[0]
+        print("USAGE: %s path/to/conf/file" % sys.argv[0])
         sys.exit(1)
 
     PARSER = ConfigParser(conf_file=sys.argv[1])
