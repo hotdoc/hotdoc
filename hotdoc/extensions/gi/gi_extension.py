@@ -298,7 +298,7 @@ class GIExtension(Extension):
         if source_position is not None:
             filename = source_position.attrib['filename']
             for common_path in self.source_roots:
-                path = os.path.join(common_path, filename)
+                path = os.path.realpath(os.path.join(common_path, filename))
                 if path in self.c_sources:
                     return path
         return None
