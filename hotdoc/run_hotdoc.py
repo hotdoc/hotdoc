@@ -154,6 +154,7 @@ class Application(Configurable):
         info('Persisting database and private files', 'persisting')
 
         self.database.persist()
+        self.__dump_deps_file(self.project)
 
     def finalize(self):
         """
@@ -172,6 +173,43 @@ class Application(Configurable):
     def __setup_database(self):
         self.database = Database(self.private_folder)
         self.link_resolver = LinkResolver(self.database)
+
+    def __dump_project_deps_file(self, project, deps_file, empty_targets):
+        for page in list(project.tree.get_pages().values()):
+            if not page.generated:
+                empty_targets.append(page.source_file)
+                deps_file.write(u'%s ' % page.source_file)
+
+        for subproj in project.subprojects.values():
+            self.__dump_project_deps_file(subproj, deps_file, empty_targets)
+
+    def __dump_deps_file(self, project):
+        dest = self.config.get('deps_file_dest', None)
+        target = self.config.get('deps_file_target')
+
+        if dest is None:
+            info("Not dumping deps file")
+            return
+
+        info("Dumping deps file to %s with target %s" %
+             (dest, target))
+
+        destdir = os.path.dirname(dest)
+        if not os.path.exists(destdir):
+            os.makedirs(destdir)
+
+        empty_targets = []
+        with open(dest, 'w', encoding='utf-8') as _:
+            _.write(u'%s: ' % target)
+
+            for dep in self.config.get_dependencies():
+                empty_targets.append(dep)
+                _.write(u'%s ' % dep.replace(' ', '\\ '))
+
+            self.__dump_project_deps_file(project, _, empty_targets)
+
+            for empty_target in empty_targets:
+                _.write(u'\n\n%s:' % empty_target)
 
 
 def check_path(init_dir, name):
