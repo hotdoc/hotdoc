@@ -103,6 +103,8 @@ class ClangScanner(object):
         self.__doc_db = doc_db
         self.__all_sources = []
 
+        self.__renamed_symbols = {}
+
     def scan(self, filenames, options, full_scan,
              full_scan_patterns, fail_fast=False, all_sources=None):
         if all_sources is None:
@@ -151,6 +153,9 @@ class ClangScanner(object):
                         if fname in self.filenames:
                             header_guarded.add(fname)
                     self.__parse_file (fname, tu, full_scan)
+
+        for unique_name, target in self.__renamed_symbols.items():
+            self.__doc_db.rename_symbol(unique_name, target)
 
         if not full_scan:
             comment_parser = GtkDocParser(self.project)
@@ -219,7 +224,7 @@ class ClangScanner(object):
                 if not str(node.location.file) in self.filenames:
                     continue
 
-            if node.spelling in self.symbols:
+            if node.spelling in self.symbols or node.spelling in self.__renamed_symbols:
                 continue
 
             sym = None
@@ -278,7 +283,7 @@ class ClangScanner(object):
 
             tokens.append (link)
             self.__apply_qualifiers(type_, tokens)
-        elif type_.kind == cindex.TypeKind.UNEXPOSED:
+        elif type_.kind in (cindex.TypeKind.UNEXPOSED, cindex.TypeKind.ELABORATED):
             d = type_.get_declaration()
             if d.spelling:
                 tokens.append(Link(None, d.displayname, d.displayname))
@@ -488,9 +493,21 @@ class ClangScanner(object):
 
         filename = str(node.location.file)
 
-        return self.__doc_db.create_symbol(AliasSymbol, aliased_type=aliased_type,
-                display_name=node.spelling, filename=filename,
-                lineno=node.location.line, extra=extra)
+        # We want to allow a few patterns for documentation aliases,
+        # for example typedef struct _Foo Foo should let us document
+        # _Foo with the Foo display name. As we don't want to parse
+        # each translation unit twice, we instead keep track of symbols
+        # to rename and rename them at the end of the parsing stage
+        if (len(type_tokens) == 2 and
+            type_tokens[0] in ('struct ', 'enum ') and
+            isinstance(type_tokens[1], Link) and
+            '_%s' % node.spelling == type_tokens[1].id_):
+            self.__renamed_symbols[node.spelling] = type_tokens[1].id_
+            return None
+        else:
+            return self.__doc_db.create_symbol(AliasSymbol, aliased_type=aliased_type,
+                    display_name=node.spelling, filename=filename,
+                    lineno=node.location.line, extra=extra)
 
     def __create_typedef_symbol (self, node):
         t = node.underlying_typedef_type

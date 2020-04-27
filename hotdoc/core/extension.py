@@ -615,6 +615,13 @@ class Extension(Configurable):
 
         return sym
 
+    def rename_symbol(self, unique_name, target):
+        sym = self.app.database.rename_symbol(unique_name, target)
+        # pylint: disable=unidiomatic-typecheck
+        if sym and type(sym) != Symbol:
+            self._created_symbols[sym.filename].remove(target)
+            self._created_symbols[sym.filename].add(sym.unique_name)
+
     def _make_formatter(self):
         return Formatter(self)
 

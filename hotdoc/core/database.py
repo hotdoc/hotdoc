@@ -21,6 +21,8 @@
 import os
 import pickle
 
+from collections import defaultdict
+
 # pylint: disable=import-error
 # pylint: disable=import-error
 from hotdoc.core.exceptions import HotdocException
@@ -66,7 +68,7 @@ class Database:
 
         self.__comments = {}
         self.__symbols = {}
-        self.__aliases = {}
+        self.__aliases = defaultdict(list)
         self.__symbol_folder = os.path.join(private_folder or '/tmp',
                                             "symbols")
         self.__aliases_folder = os.path.join(private_folder or '/tmp',
@@ -139,11 +141,25 @@ class Database:
             setattr(symbol, key, value)
 
         self.__symbols[unique_name] = symbol
-        for alias in aliases:
+        self.__aliases[unique_name].extend(aliases)
+
+        for alias in self.__aliases[unique_name]:
             self.__symbols[alias] = symbol
-        self.__aliases[unique_name] = aliases
 
         return symbol
+
+    def rename_symbol(self, unique_name, target):
+        sym = self.__symbols.get(target)
+        if sym:
+            for alias in self.__aliases[unique_name]:
+                alias.target = unique_name
+            if sym.unique_name == sym.display_name:
+                sym.display_name = unique_name
+            sym.unique_name = unique_name
+            del self.__symbols[target]
+            self.__symbols[unique_name] = sym
+            debug('Renamed symbol with unique name %s to %s' % (target, unique_name))
+        return sym
 
     @staticmethod
     def __get_pickle_path(folder, name, create_if_required=False):
@@ -172,7 +188,7 @@ class Database:
                     pickle.dump(comment, _)
 
     def __get_aliases(self, name):
-        return self.__aliases.get(name, [])
+        return self.__aliases[name]
 
     # pylint: disable=unused-argument
     def get_symbol(self, name, prefer_class=False):
