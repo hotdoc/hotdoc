@@ -12,12 +12,6 @@ NS_MAP = {'core': 'http://www.gtk.org/introspection/core/1.0',
           'glib': 'http://www.gtk.org/introspection/glib/1.0'}
 
 
-if os.name == 'nt':
-    DATADIR = os.path.join(os.path.dirname(__file__), '..', 'share')
-else:
-    DATADIR = "/usr/share"
-
-
 OUTPUT_LANGUAGES = ['c', 'python', 'javascript']
 
 

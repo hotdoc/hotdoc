@@ -34,14 +34,13 @@ from hotdoc.utils.utils import OrderedSet
 from hotdoc.core.extension import Extension
 from hotdoc.core.symbols import ClassSymbol, QualifiedSymbol, PropertySymbol, \
     SignalSymbol, ReturnItemSymbol, ParameterSymbol, Symbol
-from hotdoc.parsers.gtk_doc import GtkDocParser
+from hotdoc.parsers.gtk_doc import GtkDocParser, gather_links, search_online_links
 from hotdoc.extensions.c.utils import CCommentExtractor
 from hotdoc.core.exceptions import HotdocSourceException
 from hotdoc.core.formatter import Formatter
 from hotdoc.core.comment import Comment
 from hotdoc.extensions.gi.gi_extension import WritableFlag, ReadableFlag, \
     ConstructFlag, ConstructOnlyFlag
-from hotdoc.extensions.gi.gtkdoc_links import gather_gtk_doc_links
 from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
 
 
@@ -496,7 +495,7 @@ class GstExtension(Extension):
                 super().setup()
             return
 
-        gather_gtk_doc_links ()
+        gather_links()
 
         comment_parser = GtkDocParser(self.project, False)
         to_parse_sources = set(self.c_sources) - GstExtension.__parsed_cfiles
@@ -964,10 +963,10 @@ class GstExtension(Extension):
         return (resolver, name)
 
     def format_page(self, page, link_resolver, output):
-        link_resolver.get_link_signal.connect(GIExtension.search_online_links)
+        link_resolver.get_link_signal.connect(search_online_links)
         super().format_page(page, link_resolver, output)
         link_resolver.get_link_signal.disconnect(
-            GIExtension.search_online_links)
+            search_online_links)
 
 
 TYPE_MAP.update({GstElementSymbol: 'class', GstNamedConstantsSymbols: 'enum'})

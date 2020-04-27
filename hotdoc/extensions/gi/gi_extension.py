@@ -40,7 +40,7 @@ from hotdoc.utils.utils import OrderedSet
 
 from hotdoc.extensions.gi.formatter import GIFormatter
 
-from hotdoc.parsers.gtk_doc import GtkDocParser
+from hotdoc.parsers.gtk_doc import GtkDocParser, GTKDOC_HREFS, gather_links, search_online_links
 from hotdoc.extensions.c.utils import CCommentExtractor
 
 from hotdoc.extensions.gi.flags import *
@@ -49,7 +49,6 @@ from hotdoc.extensions.gi.node_cache import (
     SMART_FILTERS, get_klass_parents,
     get_klass_children, cache_nodes, type_description_from_node,
     is_introspectable, is_callback_type)
-from hotdoc.extensions.gi.gtkdoc_links import GTKDOC_HREFS, gather_gtk_doc_links
 from hotdoc.extensions.gi.symbols import GIClassSymbol, GIStructSymbol
 from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
 
@@ -179,7 +178,7 @@ class GIExtension(Extension):
 
         super(GIExtension, self).setup()
 
-        gather_gtk_doc_links ()
+        gather_links ()
 
         self.app.link_resolver.resolving_link_signal.connect_after(
             self.__translate_link_ref, None)
@@ -192,7 +191,7 @@ class GIExtension(Extension):
         self.__create_macro_symbols()
 
     def format_page(self, page, link_resolver, output):
-        link_resolver.get_link_signal.connect(self.search_online_links)
+        link_resolver.get_link_signal.connect(search_online_links)
 
         prev_l = None
         page.meta['extra']['gi-languages'] = ','.join([lang.language_name for lang in self.languages])
@@ -200,7 +199,7 @@ class GIExtension(Extension):
         Extension.format_page(self, page, link_resolver, output)
         page.meta['extra']['gi-language'] = self.languages[0].language_name
 
-        link_resolver.get_link_signal.disconnect(self.search_online_links)
+        link_resolver.get_link_signal.disconnect(search_online_links)
 
     def write_out_page(self, output, page):
         prev_l = None
@@ -292,15 +291,6 @@ class GIExtension(Extension):
                 s.replace('.c', '.h') not in self.c_sources})
 
         return self.__all_sources
-
-    # Exposed API for dependent extensions
-
-    @classmethod
-    def search_online_links(cls, resolver, name):
-        href = GTKDOC_HREFS.get(name)
-        if href:
-            return Link(href, name, name)
-        return None
 
     # setup-time private methods
     def __get_filename_from_gir(self, node):

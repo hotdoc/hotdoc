@@ -29,7 +29,8 @@ from hotdoc.core.symbols import *
 from hotdoc.core.comment import comment_from_tag
 from hotdoc.core.links import Link
 
-from hotdoc.parsers.gtk_doc import GtkDocParser
+from hotdoc.parsers.gtk_doc import GtkDocParser, gather_links, search_online_links
+from hotdoc.extensions.gi.gi_extension import GIExtension
 from hotdoc.extensions.c.utils import CCommentExtractor
 
 from hotdoc.utils.loggable import (info as core_info, warn, Logger,
@@ -645,8 +646,15 @@ class CExtension(Extension):
 
     def setup(self):
         super(CExtension, self).setup()
+        gather_links ()
         self.scanner.scan(self.sources, self.flags, False, ['*.h'],
                           all_sources=self.sources)
+
+    def format_page(self, page, link_resolver, output):
+        link_resolver.get_link_signal.connect(search_online_links)
+        super().format_page(page, link_resolver, output)
+        link_resolver.get_link_signal.disconnect(
+            search_online_links)
 
     @staticmethod
     def add_arguments (parser):

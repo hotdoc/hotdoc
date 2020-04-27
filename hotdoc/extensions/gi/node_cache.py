@@ -5,6 +5,7 @@ import networkx as nx
 from hotdoc.core.symbols import QualifiedSymbol
 from hotdoc.core.exceptions import BadInclusionException
 from hotdoc.extensions.gi.utils import *
+from hotdoc.utils.utils import DATADIR
 from hotdoc.utils.loggable import warn, Logger
 
 

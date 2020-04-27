@@ -43,6 +43,12 @@ from hotdoc.utils.loggable import info, debug, error
 WIN32 = (sys.platform == 'win32')
 
 
+if os.name == 'nt':
+    DATADIR = os.path.join(os.path.dirname(__file__), '..', 'share')
+else:
+    DATADIR = "/usr/share"
+
+
 def splitall(path):
     """
     Splits path in its components:
