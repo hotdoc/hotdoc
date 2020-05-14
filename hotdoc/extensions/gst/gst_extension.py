@@ -692,11 +692,36 @@ class GstExtension(Extension):
 
             retval = [ReturnItemSymbol(type_tokens=tokens)]
 
-        return self.create_symbol(
+        res = self.create_symbol(
             SignalSymbol, parameters=params, return_value=retval,
             display_name=name, unique_name=unique_name,
             extra={'gst-element-name': element_name},
             aliases=aliases, parent_name=parent_name)
+
+        if res:
+            flags = []
+
+            when = signal.get('when')
+            if when == "first":
+                flags.append(gi.flags.RunFirstFlag())
+            elif when == "last":
+                flags.append(gi.flags.RunLastFlag())
+            elif when == "cleanup":
+                flags.append(gi.flags.RunCleanupFlag())
+
+            no_hooks = signal.get('no-hooks')
+            if no_hooks:
+                flags.append(gi.flags.NoHooksFlag())
+
+            action = signal.get('action')
+            if action:
+                flags.append(gi.flags.ActionFlag())
+
+            # This is incorrect, it's not yet format time
+            extra_content = self.formatter.format_flags(flags)
+            res.extension_contents['Flags'] = extra_content
+
+        return res
 
     def __create_signal_symbols(self, obj, parent_uniquename, element_name,
                                 parent_name=None):

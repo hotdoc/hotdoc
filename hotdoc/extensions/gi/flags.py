@@ -21,6 +21,10 @@ class RunCleanupFlag (Flag):
         Flag.__init__ (self, "Run Cleanup",
                 "https://developer.gnome.org/gobject/unstable/gobject-Signals.html#G-SIGNAL-RUN-CLEANUP:CAPS")
 
+class ActionFlag (Flag):
+    def __init__(self):
+        Flag.__init__ (self, "Action",
+                "https://developer.gnome.org/gobject/unstable/gobject-Signals.html#G-SIGNAL-ACTION:CAPS")
 
 class NoHooksFlag (Flag):
     def __init__(self):

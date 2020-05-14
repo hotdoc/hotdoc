@@ -645,6 +645,10 @@ class GIExtension(Extension):
             if no_hooks == '1':
                 flags.append(NoHooksFlag())
 
+            action = node.attrib.get('action')
+            if action == '1':
+                flags.append(ActionFlag())
+
             # This is incorrect, it's not yet format time
             extra_content = self.formatter._format_flags(flags)
             res.extension_contents['Flags'] = extra_content
