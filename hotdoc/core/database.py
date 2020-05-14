@@ -19,9 +19,9 @@
 """Banana banana
 """
 import os
-import pickle
+import json
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 # pylint: disable=import-error
 # pylint: disable=import-error
@@ -53,6 +53,13 @@ class ProxySymbol(Symbol):
         Symbol.__init__(self, **kwargs)
 
 
+def serialize(obj):
+    try:
+        return obj.__getstate__()
+    except AttributeError:
+        return obj.__dict__
+
+
 # pylint: disable=too-many-instance-attributes
 class Database:
     """
@@ -66,15 +73,10 @@ class Database:
     def __init__(self, private_folder):
         self.comment_added_signal = Signal()
 
-        self.__comments = {}
-        self.__symbols = {}
+        self.__comments = OrderedDict()
+        self.__symbols = OrderedDict()
         self.__aliases = defaultdict(list)
-        self.__symbol_folder = os.path.join(private_folder or '/tmp',
-                                            "symbols")
-        self.__aliases_folder = os.path.join(private_folder or '/tmp',
-                                             "aliases")
-        self.__comments_folder = os.path.join(private_folder or '/tmp',
-                                              "comments")
+        self.__private_folder = private_folder or '/tmp'
 
     def add_comment(self, comment):
         """
@@ -172,20 +174,20 @@ class Database:
         """
         Banana banana
         """
-        os.makedirs(self.__symbol_folder, exist_ok=True)
-        os.makedirs(self.__aliases_folder, exist_ok=True)
-        os.makedirs(self.__comments_folder, exist_ok=True)
-        for name, sym in self.__symbols.items():
-            with open(self.__get_pickle_path(self.__symbol_folder, name, True), 'wb') as _:
-                pickle.dump(sym, _)
-        for name, aliases in self.__aliases.items():
-            if aliases:
-                with open(self.__get_pickle_path(self.__aliases_folder, name, True), 'wb') as _:
-                    pickle.dump(aliases, _)
+        # Let's try and use the name of the symbols comments ended up
+        # associated with as the keys
+        resolved_comments = OrderedDict()
+
         for name, comment in self.__comments.items():
             if comment:
-                with open(self.__get_pickle_path(self.__comments_folder, name, True), 'wb') as _:
-                    pickle.dump(comment, _)
+                sym = self.get_symbol(name)
+                if sym:
+                    resolved_comments[sym.unique_name] = comment
+                else:
+                    resolved_comments[name] = comment
+
+        with open(os.path.join(self.__private_folder, 'all_comments.json'), 'w', encoding='utf8') as f:
+            f.write(json.dumps(resolved_comments, default=serialize, indent=2))
 
     def __get_aliases(self, name):
         return self.__aliases[name]
