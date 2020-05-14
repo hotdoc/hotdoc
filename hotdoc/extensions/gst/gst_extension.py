@@ -446,7 +446,6 @@ class GstExtension(Extension):
     __dual_links = {}  # Maps myelement:XXX to GstMyElement:XXX
     __parsed_cfiles = set()
     __caches = {}  # cachefile -> dict
-    __apps_sigs = set()
     __all_plugins_symbols = set()
 
     def __init__(self, app, project):
@@ -478,11 +477,6 @@ class GstExtension(Extension):
 
     # pylint: disable=too-many-branches
     def setup(self):
-        # Make sure the cache file is save when the whole project
-        # is done.
-        if self.cache_file not in GstExtension.__apps_sigs and self.cache_file:
-            GstExtension.__apps_sigs.add(self.cache_file)
-
         if not self.cache_file:
             if self.list_plugins_page:
                 self.__plugins = self.create_symbol(
