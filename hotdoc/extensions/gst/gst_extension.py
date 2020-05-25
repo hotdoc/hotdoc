@@ -29,7 +29,7 @@ from wheezy.template.loader import FileLoader
 from hotdoc.extensions import gi
 from hotdoc.extensions.gi.gi_extension import GIExtension
 from hotdoc.core.links import Link
-from hotdoc.utils.loggable import info, Logger, error
+from hotdoc.utils.loggable import info, debug, Logger, error
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.core.extension import Extension
 from hotdoc.core.symbols import ClassSymbol, QualifiedSymbol, PropertySymbol, \
@@ -497,6 +497,8 @@ class GstExtension(Extension):
         CCommentExtractor(self, comment_parser).parse_comments(
             to_parse_sources)
         GstExtension.__parsed_cfiles.update(self.c_sources)
+
+        self.debug("Parsing plugin %s, (cache file %s)" % (self.plugin, self.cache_file))
 
         if not self.cache:
             error('setup-issue', "No cache loaded or created for %s" % self.plugin)
