@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+# pylint: disable=too-many-lines
+
 import re
 import os
 import json
@@ -27,25 +29,20 @@ from wheezy.template.ext.core import CoreExtension
 from wheezy.template.ext.code import CodeExtension
 from wheezy.template.loader import FileLoader
 from hotdoc.extensions import gi
-from hotdoc.extensions.gi.gi_extension import GIExtension
 from hotdoc.core.links import Link
-from hotdoc.utils.loggable import info, debug, Logger, error
+from hotdoc.utils.loggable import info, error
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.core.extension import Extension
 from hotdoc.core.symbols import ClassSymbol, QualifiedSymbol, PropertySymbol, \
     SignalSymbol, ReturnItemSymbol, ParameterSymbol, Symbol
 from hotdoc.parsers.gtk_doc import GtkDocParser, gather_links, search_online_links
 from hotdoc.extensions.c.utils import CCommentExtractor
-from hotdoc.core.exceptions import HotdocSourceException
 from hotdoc.core.formatter import Formatter
 from hotdoc.core.comment import Comment
 from hotdoc.extensions.gi.gi_extension import WritableFlag, ReadableFlag, \
     ConstructFlag, ConstructOnlyFlag
 from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
 
-
-Logger.register_warning_code('signal-arguments-mismatch', HotdocSourceException,
-                             'gst-extension')
 
 DESCRIPTION =\
     """
@@ -281,10 +278,11 @@ class GstPadTemplateSymbol(Symbol):
         self.direction = None
         self.presence = None
         self.caps = None
+        self.object_type = None
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
-        return [self.qtype]
+        return [self.qtype, self.object_type]
 
     # pylint: disable=no-self-use
     def get_type_name(self):
@@ -413,9 +411,7 @@ class GstFormatter(Formatter):
 
     def _format_pad_template_symbol(self, symbol):
         template = self.engine.get_template('padtemplate.html')
-        if symbol.object_type:
-            symbol.object_type.rendered_link = self._format_linked_symbol(
-                symbol.object_type)
+        symbol.object_type.rendered_link = self._format_linked_symbol(symbol.object_type)
         return template.render({'symbol': symbol})
 
     def _format_element_symbol(self, symbol):
@@ -464,6 +460,10 @@ class GstExtension(Extension):
         # page.
         self.unique_feature = None
         self.__on_index_symbols = []
+
+        # Links GTypeName to pagename for other-types so we now where to locate
+        # the symbols on creation.
+        self.__other_types_pages = {}
 
     def _make_formatter(self):
         return GstFormatter(self)
@@ -643,23 +643,34 @@ class GstExtension(Extension):
 
         return res
 
+    def __create_symbol(self, gtype, symbol, pagename):
+        if symbol["kind"] in ["enum", "flags"]:
+            self.__create_enum_symbol(gtype, symbol.get('values'), pagename)
+        elif symbol["kind"] == "object":
+            self.__create_object_type(pagename, symbol)
+
+    def _remember_symbol_type(self, gtype, pagename):
+        self.__other_types_pages[gtype] = pagename
+
+        return gtype
+
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-arguments
     def __create_signal_symbol(self, obj, parent_uniquename, name, signal,
-                               element_name, parent_name=None):
-        atypes = signal['args']
+                               pagename, parent_name=None):
+        args = signal['args']
         instance_type = obj['hierarchy'][0]
         unique_name = "%s::%s" % (parent_uniquename, name)
         aliases = self._get_aliases(["%s::%s" % (instance_type, name)])
 
         gi_extension = self.project.extensions.get('gi-extension')
         python_lang = gi_extension.get_language('python')
-        args_type_names = []
-        args_type_names = [
-            (type_tokens_from_type_name('GstElement', python_lang), 'param_0')]
-        for i, _ in enumerate(atypes):
-            args_type_names.append(
-                (type_tokens_from_type_name(atypes[i], python_lang), 'param_%s' % (i + 1)))
+        args_type_names = [(type_tokens_from_type_name('GstElement', python_lang), 'param_0')]
+        for arg in args:
+            arg_name = arg["name"]
+            arg_type_name = self._remember_symbol_type(arg["type"], pagename)
+            type_tokens = type_tokens_from_type_name(arg_type_name, python_lang)
+            args_type_names.append((type_tokens, arg_name))
 
         args_type_names.append(
             (type_tokens_from_type_name('gpointer', python_lang), "udata"))
@@ -674,24 +685,18 @@ class GstExtension(Extension):
         for tokens, argname in args_type_names:
             params.append(ParameterSymbol(argname=argname, type_tokens=tokens))
 
-        type_name = signal['retval']
-        if type_name == 'void':
+        return_type_name = self._remember_symbol_type(
+            signal["return-type"], pagename)
+        if return_type_name == 'void':
             retval = [None]
         else:
-            tokens = type_tokens_from_type_name(type_name, python_lang)
-
-            enum = signal.get('return-values')
-            if enum:
-                self.__create_enum_symbol(
-                    type_name, enum, obj.get('name', parent_uniquename),
-                    parent_name=parent_name)
-
+            tokens = type_tokens_from_type_name(return_type_name, python_lang)
             retval = [ReturnItemSymbol(type_tokens=tokens)]
 
         res = self.create_symbol(
             SignalSymbol, parameters=params, return_value=retval,
             display_name=name, unique_name=unique_name,
-            extra={'gst-element-name': element_name},
+            extra={'gst-element-name': pagename},
             aliases=aliases, parent_name=parent_name)
 
         if res:
@@ -727,7 +732,8 @@ class GstExtension(Extension):
 
         for name, signal in signals.items():
             self.__create_signal_symbol(obj, parent_uniquename, name, signal,
-                                        element_name, parent_name=parent_name)
+                                        element_name,
+                                        parent_name=parent_name)
 
     def __create_property_symbols(self, obj, parent_uniquename,
                                   pagename, parent_name=None):
@@ -747,18 +753,13 @@ class GstExtension(Extension):
             elif prop['construct']:
                 flags += [ConstructFlag()]
 
-            type_name = prop['type-name']
+            prop_type_name = self._remember_symbol_type(
+                prop["type"], pagename)
 
-            tokens = type_tokens_from_type_name(type_name, python_lang)
+            tokens = type_tokens_from_type_name(prop_type_name, python_lang)
             type_ = QualifiedSymbol(type_tokens=tokens)
 
             default = prop.get('default')
-            enum = prop.get('values')
-            if enum:
-                type_ = self.__create_enum_symbol(
-                    prop['type-name'], enum, obj.get('name', parent_uniquename),
-                    parent_name=parent_name)
-
             if obj['hierarchy'][0] != parent_uniquename:
                 aliases = self._get_aliases(['%s:%s' % (obj['hierarchy'][0], name)])
             else:
@@ -784,45 +785,40 @@ class GstExtension(Extension):
             extra_content = self.formatter.format_flags(flags)
             res.extension_contents['Flags'] = extra_content
             if default:
-                if prop['type-name'] in ['GstCaps', 'GstStructure']:
+                if prop_type_name in ['GstCaps', 'GstStructure']:
                     default = '<pre class="language-yaml">' + \
                         '<code class="language-yaml">%s</code></pre>' % default
                 res.extension_contents['Default value'] = default
 
-    def __create_enum_symbol(self, type_name, enum, element_name, parent_name=None):
+    def __create_enum_symbol(self, type_name, enum, pagename, parent_name=None):
         display_name = re.sub(
             r"([a-z])([A-Z])", r"\g<1>-\g<2>", type_name.replace('Gst', ''))
+
         unique_name = type_name
         if self.app.database.get_symbol(unique_name):
-            unique_name = element_name + '_' + type_name
-        symbol = self.app.database.get_symbol(unique_name)
-        if not symbol:
-            members = []
-            for val in enum:
-                value_unique_name = "%s::%s" % (type_name, val['name'])
-                if self.app.database.get_symbol(value_unique_name):
-                    value_unique_name = "%s::%s" % (
-                        element_name + '_' + type_name, val['name'])
-                member_sym = self.create_symbol(GstNamedConstantValue,
-                                                unique_name=value_unique_name,
-                                                display_name=val['name'],
-                                                value=val['value'],
-                                                parent_name=parent_name, val=val,
-                                                extra={'gst-element-name': element_name})
-                if member_sym:
-                    members.append(member_sym)
-            symbol = self.create_symbol(
-                GstNamedConstantsSymbols, anonymous=False,
-                raw_text=None, display_name=display_name.capitalize(),
-                unique_name=unique_name, parent_name=parent_name,
-                members=members,
-                extra={'gst-element-name': 'element-' + element_name})
-        elif not isinstance(symbol, GstNamedConstantsSymbols):
-            self.warn('symbol-redefined', "EnumMemberSymbol(unique_name=%s, project=%s)"
-                      " has already been defined: %s" % (unique_name, self.project.project_name,
-                                                         symbol))
+            # Still required as some bin manually proxy children properties inside
+            # themselves (like GstFakeSinkStateError in fakevideosink for example)
+            unique_name = pagename + '_' + type_name
+        members = []
+        for val in enum:
+            value_unique_name = "%s::%s" % (type_name, val['name'])
+            if self.app.database.get_symbol(value_unique_name):
+                value_unique_name = "%s_%s" % (pagename, value_unique_name)
+            member_sym = self.create_symbol(GstNamedConstantValue,
+                                            unique_name=value_unique_name,
+                                            display_name=val['name'],
+                                            value=val['value'],
+                                            parent_name=parent_name, val=val,
+                                            extra={'gst-element-name': pagename})
+            if member_sym:
+                members.append(member_sym)
 
-            return None
+        symbol = self.create_symbol(
+            GstNamedConstantsSymbols, anonymous=False,
+            raw_text=None, display_name=display_name.capitalize(),
+            unique_name=unique_name, parent_name=parent_name,
+            members=members,
+            extra={'gst-element-name': pagename})
 
         if not symbol:
             return None
@@ -831,15 +827,11 @@ class GstExtension(Extension):
         return symbol
 
     def __create_object_type(self, pagename, _object):
-        if not _object:
-            return None
-
         unique_name = _object['hierarchy'][0]
-        if self.app.database.get_symbol(unique_name):
-            return None
-
-        self.__create_property_symbols(_object, unique_name, pagename, parent_name=unique_name)
-        self.__create_signal_symbols(_object, unique_name, pagename, parent_name=unique_name)
+        self.__create_property_symbols(
+            _object, unique_name, pagename, parent_name=unique_name)
+        self.__create_signal_symbols(
+            _object, unique_name, pagename, parent_name=unique_name)
 
         return self.create_symbol(
             ClassSymbol,
@@ -859,7 +851,10 @@ class GstExtension(Extension):
             name = tname.replace("%%", "%")
             unique_name = '%s!%s' % (element['hierarchy'][0], name)
             pagename = 'element-' + element['name']
-            object_type = self.__create_object_type(pagename, template.get("object-type"))
+            gtype = self._remember_symbol_type(
+                template.get("type", "GstPad"), pagename)
+            link = Link(None, gtype, gtype)
+            object_type = QualifiedSymbol(type_tokens=[link])
             self.create_symbol(GstPadTemplateSymbol,
                                name=name,
                                direction=template["direction"],
@@ -909,6 +904,7 @@ class GstExtension(Extension):
             + list(plugin.get('tracers', {}).keys()) \
             + list(plugin.get('device-providers', {}).keys())
 
+        self.__other_types_pages = {}
         if self.plugin and len(feature_names) == 1:
             self.unique_feature = feature_names[0]
 
@@ -949,6 +945,28 @@ class GstExtension(Extension):
             self.__create_pad_template_symbols(element, plugin_name)
 
             elements.append(sym)
+
+        types = list(plugin['other-types'].items())
+        while True:
+            type_ = None
+            for tmptype in types:
+                if tmptype[0] in self.__other_types_pages:
+                    type_ = tmptype
+                    break
+
+            if not type_:
+                break
+
+            types.remove(type_)
+            self.__create_symbol(
+                type_[0], type_[1], self.__other_types_pages[type_[0]])
+
+        for _type in types:
+            self.warn("no-location-indication",
+                      "Type %s has been marked with `gst_type_mark_as_plugin_api`"
+                      " but is not used in any of %s API (it might require to"
+                      " be manually removed from the cache in case of plugin"
+                      " move)" % (_type[0], plugin_name))
 
         plugin = self.create_symbol(
             GstPluginSymbol,
