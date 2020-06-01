@@ -73,7 +73,7 @@ def create_hierarchy(element_dict):
 
 
 def type_tokens_from_type_name(type_name, python_lang):
-    res = [Link(None, type_name, type_name)]
+    res = [Link(None, type_name, type_name, mandatory=True)]
     if python_lang and not python_lang.get_fundamental(type_name):
         res.append('<span class="pointer-token">*</span>')
     return res
@@ -851,9 +851,8 @@ class GstExtension(Extension):
             name = tname.replace("%%", "%")
             unique_name = '%s!%s' % (element['hierarchy'][0], name)
             pagename = 'element-' + element['name']
-            gtype = self._remember_symbol_type(
-                template.get("type", "GstPad"), pagename)
-            link = Link(None, gtype, gtype)
+            gtype = self._remember_symbol_type(template.get("type", "GstPad"), pagename)
+            link = Link(None, gtype, gtype, mandatory=True)
             object_type = QualifiedSymbol(type_tokens=[link])
             self.create_symbol(GstPadTemplateSymbol,
                                name=name,
