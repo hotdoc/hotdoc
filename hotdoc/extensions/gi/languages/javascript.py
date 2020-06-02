@@ -32,9 +32,9 @@ class JavascriptLanguage(Language):
 
     def __init__(self):
         Language.__init__(self)
-        self._create_fundamentals();
 
-    def _create_fundamentals(self):
+    @classmethod
+    def _create_fundamentals(cls):
         string_link = \
                 Link('https://developer.mozilla.org/en-US/docs/Web/'
                         'JavaScript/Reference/Global_Objects/String',
@@ -67,7 +67,7 @@ class JavascriptLanguage(Language):
                         'gobject-Type-Information.html#GType',
                         'GObject.Type', None)
 
-        FUNDAMENTALS[self.language_name] = {
+        FUNDAMENTALS[cls.language_name] = {
                 'gchararray': string_link,
                 'gunichar': string_link,
                 'utf8': string_link,
@@ -138,6 +138,7 @@ class JavascriptLanguage(Language):
     def get_translation(self, unique_name):
         return TRANSLATED.get (unique_name)
 
+JavascriptLanguage._create_fundamentals()
 def get_language_classes():
     """Nothing important, really"""
     return [JavascriptLanguage]

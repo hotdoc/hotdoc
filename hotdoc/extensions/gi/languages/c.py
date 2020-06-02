@@ -26,6 +26,7 @@ from hotdoc.extensions.gi.utils import *
 # FIXME: Avoid the use of a global dictionary
 TRANSLATED = {}
 
+
 class CLanguage(Language):
     language_name = 'c'
 
@@ -57,6 +58,13 @@ class CLanguage(Language):
 
     def get_translation(self, unique_name):
         return TRANSLATED.get (unique_name)
+
+
+FUNDAMENTALS[CLanguage.language_name] = {
+        "GParam": Link("https://developer.gnome.org/gobject/stable/gobject-GParamSpec.html#GParamSpec",
+            'GParamSpec', 'GParamSpec')
+}
+
 
 def get_language_classes():
     """Nothing important, really"""

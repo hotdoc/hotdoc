@@ -29,6 +29,7 @@ from wheezy.template.ext.core import CoreExtension
 from wheezy.template.ext.code import CodeExtension
 from wheezy.template.loader import FileLoader
 from hotdoc.extensions import gi
+from hotdoc.extensions.gi.languages import CLanguage
 from hotdoc.core.links import Link
 from hotdoc.utils.loggable import info, error
 from hotdoc.utils.utils import OrderedSet
@@ -49,6 +50,18 @@ DESCRIPTION =\
 Extract gstreamer plugin documentation from sources and
 built plugins.
 """
+
+def _inject_fundamentals():
+    # Working around https://gitlab.freedesktop.org/gstreamer/gst-plugins-good/-/issues/744
+    CLanguage.add_fundamental("JackClient", Link("https://jackaudio.org/api/jack_8h.html", 'jack_client_t', None))
+    CLanguage.add_fundamental(
+        "GrapheneMatrix",
+        Link("https://developer.gnome.org/graphene/stable/graphene-Matrix.html#graphene-matrix-t",
+                'graphen_matrix_t', 'GrapheneMatrix'))
+    CLanguage.add_fundamental(
+        "CairoContext",
+        Link("https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-t",
+                'cairo_t', 'CairoContext'))
 
 
 def _cleanup_package_name(package_name):
@@ -1008,3 +1021,4 @@ class GstExtension(Extension):
 
 
 TYPE_MAP.update({GstElementSymbol: 'class', GstNamedConstantsSymbols: 'enum'})
+_inject_fundamentals()
