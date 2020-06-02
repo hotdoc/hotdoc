@@ -67,7 +67,7 @@ class JavascriptLanguage(Language):
                         'gobject-Type-Information.html#GType',
                         'GObject.Type', None)
 
-        self.fundamentals = {
+        FUNDAMENTALS[self.language_name] = {
                 'gchararray': string_link,
                 'gunichar': string_link,
                 'utf8': string_link,

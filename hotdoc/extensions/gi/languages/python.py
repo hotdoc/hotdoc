@@ -71,7 +71,7 @@ class PythonLanguage(Language):
                 Link('https://developer.gnome.org/glib/stable/glib-GVariant.html',
                         'GLib.Variant', None)
 
-        self.fundamentals = {
+        FUNDAMENTALS[self.language_name] = {
                 "none": none_link,
                 "gpointer": pointer_link,
                 "gconstpointer": pointer_link,
