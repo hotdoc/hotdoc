@@ -673,6 +673,10 @@ class Formatter(Configurable):
 
     # pylint: disable=too-many-locals
     def _format_page(self, page):
+        redirect = page.meta.get("redirect")
+        if redirect:
+            return ('<meta http-equiv="refresh" content="0; url=%s"/>'  % redirect, True)
+
         symbols_details = []
         by_sections = []
         by_section_symbols = namedtuple('BySectionSymbols',

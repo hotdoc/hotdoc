@@ -104,6 +104,7 @@ class Page:
                    Optional('extra'): Schema({str: object}),
                    Optional('thumbnail'): And(str, len),
                    Optional('include'): And(str, len),
+                   Optional('redirect'): str,
                    }
 
     # pylint: disable=too-many-arguments
@@ -270,6 +271,38 @@ class Page:
         self.formatted_contents += formatter.format_comment(
             self.comment, link_resolver)
 
+    def __redirect_if_needed(self, formatter, link_resolver):
+        redirect = self.meta.get("redirect")
+        if not redirect:
+            return False
+        link = link_resolver.get_named_link(redirect)
+        if link:
+            if formatter.extension.project.is_toplevel:
+                page_path = self.link.ref
+            else:
+                page_path = self.project_name + '/' + self.link.ref
+            self_dir = os.path.dirname(page_path)
+            if self_dir == self.link.ref:
+                self_dir = ""
+            self.meta["redirect"] = os.path.relpath(link.ref, self_dir)
+        else:
+            warn('markdown-bad-link', "Bad redirect link '%s' in page: %s"
+                 % (redirect, self.name))
+        return True
+
+    def __format_content(self, formatter, link_resolver):
+        if self.ast:
+            out, diags = cmark.ast_to_html(self.ast, link_resolver)
+            for diag in diags:
+                warn(
+                    diag.code,
+                    message=diag.message,
+                    filename=self.source_file or self.name)
+            self.formatted_contents += out
+
+        if not self.formatted_contents:
+            self.__format_page_comment(formatter, link_resolver)
+
     def format(self, formatter, link_resolver, output):
         """
         Banana banana
@@ -283,19 +316,8 @@ class Page:
 
         self.build_path = os.path.join(formatter.get_output_folder(self),
                                        self.link.ref)
-
-        if self.ast:
-            out, diags = cmark.ast_to_html(self.ast, link_resolver)
-            for diag in diags:
-                warn(
-                    diag.code,
-                    message=diag.message,
-                    filename=self.source_file or self.name)
-
-            self.formatted_contents += out
-
-        if not self.formatted_contents:
-            self.__format_page_comment(formatter, link_resolver)
+        if not self.__redirect_if_needed(formatter, link_resolver):
+            self.__format_content(formatter, link_resolver)
 
         self.output_attrs = defaultdict(lambda: defaultdict(dict))
         formatter.prepare_page_attributes(self)
