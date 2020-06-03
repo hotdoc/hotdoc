@@ -438,11 +438,16 @@ class GtkDocStringFormatter(Configurable):
         if self.escape_html:
             # pylint: disable=deprecated-method
             text = cgi.escape(text)
-        ast, diagnostics = cmark.gtkdoc_to_ast(text, link_resolver, include_resolver)
+
+        ast, diagnostics = cmark.gtkdoc_to_ast(text, link_resolver, include_resolver, comment.filename)
 
         for diag in diagnostics:
             if (comment.filename and comment.filename not in
                     self.gdbus_codegen_sources):
+                # FIXME: update offset calculation code for includes
+                if diag.filename != comment.filename:
+                    diag.lineno = -1
+
                 column = diag.column + comment.col_offset
                 if diag.lineno == 0:
                     column += comment.initial_col_offset
@@ -459,13 +464,13 @@ class GtkDocStringFormatter(Configurable):
                     column += 1
 
                 lineno = -1
-                if comment.lineno != -1:
+                if comment.lineno != -1 and diag.lineno != -1:
                     lineno = (comment.lineno - 1 + comment.line_offset +
                               diag.lineno)
                 warn(
                     diag.code,
                     message=diag.message,
-                    filename=comment.filename,
+                    filename=diag.filename,
                     lineno=lineno,
                     column=column)
 

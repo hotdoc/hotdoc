@@ -186,8 +186,10 @@ static cmark_node *fixup_nodes(cmark_syntax_extension *self,
 
   if (!named_link || !named_link->ref) {
     int actual_line, actual_col;
+    cmark_node *first_parent_block = get_first_parent_block(parent);
+    char *filename = cmark_node_filename(first_parent_block);
 
-    translate_sourcepos(get_first_parent_block(parent),
+    translate_sourcepos(first_parent_block,
         start_offset, &actual_line, &actual_col);
 
     cmark_strbuf *message = cmark_strbuf_new(0);
@@ -195,7 +197,8 @@ static cmark_node *fixup_nodes(cmark_syntax_extension *self,
     cmark_strbuf_puts(message, cmark_strbuf_get(name));
     cmark_strbuf_puts(message, "’");
     diagnose("gtk-doc-bad-link", cmark_strbuf_get(message), actual_line - 1,
-        actual_col - 1);
+        actual_col - 1, filename);
+    free(filename);
     cmark_strbuf_free(message);
     cmark_node_set_literal(prev, cmark_strbuf_get(name));
     cmark_strbuf_free(name);
@@ -352,14 +355,17 @@ static cmark_node *symbol_link_match(cmark_syntax_extension *self,
   named_link = PRIV(self)->link_resolve_func(symbol_name);
   if (!named_link || !named_link->ref) {
     int actual_line, actual_col;
+    cmark_node *first_parent_block = get_first_parent_block(parent);
+    char *filename = cmark_node_filename(first_parent_block);
 
-    translate_sourcepos(get_first_parent_block(parent),
+    translate_sourcepos(first_parent_block,
         start_offset, &actual_line, &actual_col);
     cmark_strbuf *message = cmark_strbuf_new(0);
     cmark_strbuf_puts(message, "Trying to link to non-existing symbol ‘");
     cmark_strbuf_puts(message, symbol_name);
     cmark_strbuf_puts(message, "’");
-    diagnose("gtk-doc-bad-link", cmark_strbuf_get(message), actual_line - 1, actual_col - 1);
+    diagnose("gtk-doc-bad-link", cmark_strbuf_get(message), actual_line - 1, actual_col - 1, filename);
+    free(filename);
     cmark_strbuf_free(message);
     link = cmark_node_new (CMARK_NODE_TEXT);
     cmark_node_set_literal (link, symbol_name);

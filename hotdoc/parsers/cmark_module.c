@@ -120,14 +120,14 @@ done:
 }
 
 void
-diagnose(const char *code, const char *message, int lineno, int column) {
+diagnose(const char *code, const char *message, int lineno, int column, const char *filename) {
   PyObject *args;
   PyObject *diag;
 
   if (diagnostics == NULL)
     return;
 
-  args = Py_BuildValue("ssii", code, message, lineno, column);
+  args = Py_BuildValue("ssiis", code, message, lineno, column, filename);
   diag = PyObject_CallObject(diag_class, args);
   if (PyErr_Occurred()) {
     PyErr_Print();
@@ -169,10 +169,11 @@ gtkdoc_to_ast(PyObject *self, PyObject *args) {
   CMarkDocument *doc;
   PyObject *input;
   PyObject *cap;
-  char *utf8;
+  PyObject *uri_string;
+  const char *utf8;
   Py_ssize_t size;
 
-  if (!PyArg_ParseTuple(args, "O!OO", &PyUnicode_Type, &input, &link_resolver, &include_resolver))
+  if (!PyArg_ParseTuple(args, "O!OOO", &PyUnicode_Type, &input, &link_resolver, &include_resolver, &uri_string))
     return NULL;
 
   Py_XDECREF(diagnostics);
@@ -183,11 +184,17 @@ gtkdoc_to_ast(PyObject *self, PyObject *args) {
   cmark_gtkdoc_extension_set_link_resolve_function(gtkdoc_extension, resolve_link);
   cmark_include_extension_set_resolve_function(include_extension, resolve_include);
 
+  if (uri_string != Py_None) {
+    const char *uri = PyUnicode_AsUTF8(uri_string);
+    cmark_parser_set_current_file(gtkdoc_parser, uri);
+  }
 
   utf8 = PyUnicode_AsUTF8AndSize(input, &size);
   cmark_parser_feed(gtkdoc_parser, utf8, size);
 
   doc->root = cmark_parser_finish(gtkdoc_parser);
+
+  cmark_parser_set_current_file(gtkdoc_parser, NULL);
 
   cap = PyCapsule_New((void *)doc, "cmark.document", NULL);
 
@@ -253,7 +260,7 @@ collect_autorefs(cmark_parser *parser) {
     if (cmark_node_get_type(tmp) == CMARK_NODE_HEADING) {
       PyObject *translated;
       PyObject *utf8;
-      char *title;
+      const char *title;
 
       utf8 = concatenate_title(tmp);
 
@@ -284,17 +291,23 @@ static PyObject *
 hotdoc_to_ast(PyObject *self, PyObject *args) {
   CMarkDocument *doc;
   PyObject *input;
+  PyObject *uri_string;
   PyObject *ret;
-  char *utf8;
+  const char *utf8;
   Py_ssize_t size;
 
-  if (!PyArg_ParseTuple(args, "O!O", &PyUnicode_Type, &input, &include_resolver))
+  if (!PyArg_ParseTuple(args, "O!OO", &PyUnicode_Type, &input, &include_resolver, &uri_string))
     return NULL;
 
   doc = calloc(1, sizeof(CMarkDocument));
 
   cmark_include_extension_set_resolve_function(include_extension,
       resolve_include);
+
+  if (uri_string != Py_None) {
+    const char *uri = PyUnicode_AsUTF8(uri_string);
+    cmark_parser_set_current_file(hotdoc_parser, uri);
+  }
 
   utf8 = PyUnicode_AsUTF8AndSize(input, &size);
   cmark_parser_feed(hotdoc_parser, utf8, size);
@@ -303,6 +316,8 @@ hotdoc_to_ast(PyObject *self, PyObject *args) {
     return NULL;
 
   doc->root = cmark_parser_finish(hotdoc_parser);
+
+  cmark_parser_set_current_file(hotdoc_parser, NULL);
 
   collect_title(doc);
 
@@ -334,7 +349,7 @@ static char *render_doc(CMarkDocument *doc)
           cmark_strbuf_puts(message, "Trying to link to non-existing identifier ‘");
           cmark_strbuf_puts(message, url);
           cmark_strbuf_puts(message, "’");
-          diagnose("markdown-bad-link", cmark_strbuf_get(message), -1, -1);
+          diagnose("markdown-bad-link", cmark_strbuf_get(message), -1, -1, NULL);
           continue;
         }
 

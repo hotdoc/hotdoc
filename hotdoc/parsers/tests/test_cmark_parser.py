@@ -40,7 +40,7 @@ class TestParser(unittest.TestCase):
         self.link_resolver.add_link(Link("here.com", "foo", "foo"))
 
     def assertOutputs(self, inp, expected):
-        ast, _ = cmark.gtkdoc_to_ast(inp, self.link_resolver, None)
+        ast, _ = cmark.gtkdoc_to_ast(inp, self.link_resolver, None, None)
         out = cmark.ast_to_html(ast, self.link_resolver)[0]
         self.assertEqual(out, expected)
 
@@ -55,7 +55,7 @@ class TestParser(unittest.TestCase):
     def test_input_none(self):
         inp = None
         with self.assertRaises(TypeError):
-            ast, _ = cmark.gtkdoc_to_ast(inp, self.link_resolver, None)
+            ast, _ = cmark.gtkdoc_to_ast(inp, self.link_resolver, None, None)
             self.assertEqual(ast, None)
 
     def test_resolver_none(self):
@@ -236,7 +236,7 @@ class TestGtkDocExtension(unittest.TestCase):
                                          "org.dbus.func"))
 
     def assertOutputs(self, inp, expected):
-        ast, diagnostics = cmark.gtkdoc_to_ast(inp, self.link_resolver, None)
+        ast, diagnostics = cmark.gtkdoc_to_ast(inp, self.link_resolver, None, None)
         out = cmark.ast_to_html(ast, self.link_resolver)[0]
         self.assertEqual(out, expected)
         return ast, diagnostics
@@ -400,7 +400,7 @@ class TestGtkDocExtension(unittest.TestCase):
         inp = (u'a #wrong_link\n\n'
                'and #another_wrong_link\n'
                'and then #yet_another_wrong_link')
-        _, diagnostics = cmark.gtkdoc_to_ast(inp, self.link_resolver, None)
+        _, diagnostics = cmark.gtkdoc_to_ast(inp, self.link_resolver, None, None)
         self.assertEqual(len(diagnostics), 3)
         diag = diagnostics[0]
         self.assertEqual(diag.lineno, 0)
@@ -435,7 +435,7 @@ class TestIncludeExtension(unittest.TestCase):
         self.include_resolver = MockIncludeResolver()
 
     def assertOutputs(self, inp, expected):
-        ast = cmark.hotdoc_to_ast(inp, self.include_resolver)
+        ast = cmark.hotdoc_to_ast(inp, self.include_resolver, None)
         out = cmark.ast_to_html(ast, self.link_resolver)[0]
         self.assertEqual(out, expected)
         return out, ast
@@ -497,7 +497,7 @@ class TestTableExtension(unittest.TestCase):
         self.include_resolver = MockIncludeResolver()
 
     def render(self, inp):
-        ast = cmark.hotdoc_to_ast(inp, self.include_resolver)
+        ast = cmark.hotdoc_to_ast(inp, self.include_resolver, None)
         out = cmark.ast_to_html(ast, self.link_resolver)[0]
         return ast, out
 
@@ -564,7 +564,7 @@ class TestTableExtension(unittest.TestCase):
 
 class TestAutoRefExtension(unittest.TestCase):
     def render(self, inp):
-        ast = cmark.hotdoc_to_ast(inp, None)
+        ast = cmark.hotdoc_to_ast(inp, None, None)
         out = cmark.ast_to_html(ast, None)[0]
         return ast, out
 

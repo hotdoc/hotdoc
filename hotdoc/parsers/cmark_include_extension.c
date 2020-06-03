@@ -41,6 +41,7 @@ static cmark_node *try_opening_include_block(cmark_syntax_extension *self,
 {
   cmark_bufsize_t start, end;
   char *contents;
+  char *saved_uri;
   const char *final_contents;
   cmark_strbuf *uri, *text;
 
@@ -81,7 +82,11 @@ static cmark_node *try_opening_include_block(cmark_syntax_extension *self,
 
   cmark_parser_advance_offset(parser, input, start, false);
 
+  saved_uri = cmark_parser_get_current_file(parser);
+  cmark_parser_set_current_file (parser, cmark_strbuf_get(uri));
   cmark_parser_feed_reentrant(parser, final_contents, strlen(final_contents));
+  cmark_parser_set_current_file (parser, saved_uri);
+  free(saved_uri);
 
   cmark_parser_advance_offset(parser, input, strlen(input), false);
 

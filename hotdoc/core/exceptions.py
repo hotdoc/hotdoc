@@ -54,10 +54,6 @@ class InvalidOutputException(HotdocException):
 
 def _format_source_exception(filename, message, lineno, column):
     from hotdoc.utils.loggable import TERMC
-    with io.open(filename, 'r', encoding='utf-8') as _:
-        text = _.read().expandtabs()
-        lines = text.split('\n')
-
     res = []
 
     diag = ''
@@ -72,6 +68,10 @@ def _format_source_exception(filename, message, lineno, column):
     res.append(diag)
 
     if lineno != -1:
+        with io.open(filename, 'r', encoding='utf-8') as _:
+            text = _.read().expandtabs()
+            lines = text.split('\n')
+
         for i in range(max(0, lineno - CONTEXT_HEIGHT),
                        min(len(lines), lineno + CONTEXT_HEIGHT + 1)):
             res.append('%05d:%s' % (i + 1, lines[i]))

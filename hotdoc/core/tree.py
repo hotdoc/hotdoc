@@ -398,7 +398,7 @@ class Tree:
         self.__dep_map = project.dependency_map
         self.__fill_dep_map()
 
-        cmark.hotdoc_to_ast(u'', self)
+        cmark.hotdoc_to_ast(u'', self, None)
         self.__extensions = {}
 
     def __fill_dep_map(self):
@@ -573,7 +573,7 @@ class Tree:
         output_path = os.path.dirname(os.path.relpath(
             source_file, next(iter(self.project.include_paths))))
 
-        ast = cmark.hotdoc_to_ast(contents, self)
+        ast = cmark.hotdoc_to_ast(contents, self, source_file)
         return Page(source_file, False, self.project.sanitized_name, extension_name,
                     source_file=source_file, ast=ast, meta=meta, raw_contents=raw_contents,
                     output_path=output_path)
@@ -603,7 +603,7 @@ class Tree:
 
         if page.ast is None and not page.generated:
             with io.open(page.source_file, 'r', encoding='utf-8') as _:
-                page.ast = cmark.hotdoc_to_ast(_.read(), self)
+                page.ast = cmark.hotdoc_to_ast(_.read(), self, page.source_file)
 
         page.resolve_symbols(self, database, link_resolver)
         self.__update_dep_map(page, page.symbols)

@@ -153,11 +153,11 @@ class TestStandaloneParser(unittest.TestCase):
 
     def test_page_title(self):
         inp = (u'### A title *please* a title\n')
-        ast = cmark.hotdoc_to_ast(inp, None)
+        ast = cmark.hotdoc_to_ast(inp, None, None)
         self.assertEqual(cmark.title_from_ast(ast),
                          u'A title *please* a title')
 
     def test_page_no_title(self):
         inp = (u'Just a paragraph\n')
-        ast = cmark.hotdoc_to_ast(inp, None)
+        ast = cmark.hotdoc_to_ast(inp, None, None)
         self.assertIsNone(cmark.title_from_ast(ast))
