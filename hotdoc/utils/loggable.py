@@ -196,6 +196,7 @@ class Logger(Configurable):
     _last_checkpoint = 0
     _verbosity = WARNING
     silent = False
+    n_fatal_warnings = 0
 
     @staticmethod
     def register_error_code(code, exception_type, domain='core'):
@@ -256,7 +257,7 @@ class Logger(Configurable):
         Logger._log(code, exc.message, level, domain)
 
         if Logger.fatal_warnings:
-            raise exc
+            Logger.n_fatal_warnings += 1
 
     @staticmethod
     def debug(message, domain):

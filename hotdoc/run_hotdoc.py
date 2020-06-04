@@ -104,8 +104,6 @@ class Application(Configurable):
         """
         Banana banana
         """
-        res = 0
-
         self.project.setup()
         self.__retrieve_all_projects(self.project)
 
@@ -121,8 +119,6 @@ class Application(Configurable):
 
         self.formatted_signal(self)
         self.__persist()
-
-        return res
 
     def __get_link_cb(self, link_resolver, name):
         url_components = urlparse(name)
@@ -295,7 +291,8 @@ def execute_command(parser, config, ext_classes):
             if get_private_folder:
                 print(app.private_folder)
                 return res
-            res = app.run()
+            app.run()
+            res = Logger.n_fatal_warnings
         except HotdocException:
             res = len(Logger.get_issues())
         except Exception:  # pylint: disable=broad-except
