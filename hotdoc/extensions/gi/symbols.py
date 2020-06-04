@@ -36,4 +36,10 @@ class GIStructSymbol(ClassSymbol):
         ClassSymbol.__init__(self, **kwargs)
 
 
+class FundamentalSymbol(Symbol):
+    __tablename__ = 'fundamentals'
+
+    def get_type_name(self):
+        return 'Fundamental'
+
 TYPE_MAP[GIClassSymbol] = 'class'

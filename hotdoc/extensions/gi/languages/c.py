@@ -50,6 +50,8 @@ class CLanguage(Language):
         elif node.tag == core_ns('property'):
             display_name = node.attrib['name']
             TRANSLATED[unique_name] = display_name
+        elif node.attrib.get(glib_ns('fundamental')) == '1':
+            TRANSLATED[unique_name] = node.attrib[glib_ns('type-name')]
         else:
             TRANSLATED[unique_name] = node.attrib.get('name')
 

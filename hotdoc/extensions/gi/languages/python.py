@@ -142,6 +142,10 @@ class PythonLanguage(Language):
         elif node.tag == core_ns('property'):
             display_name = node.attrib['name']
             TRANSLATED[unique_name] = display_name.replace('-', '_')
+        elif node.attrib.get(glib_ns('fundamental')) == '1':
+            components = get_gi_name_components(node)
+            gi_name = '.'.join(components)
+            TRANSLATED[unique_name] = gi_name
         else:
             TRANSLATED[unique_name] = node.attrib.get('name')
 
