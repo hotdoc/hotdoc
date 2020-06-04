@@ -20,6 +20,10 @@
 Banana banana
 """
 import urllib.parse
+from hotdoc.utils.loggable import Logger, warn
+from hotdoc.core.exceptions import MissingLinkException
+Logger.register_warning_code('mandatory-link-not-found', MissingLinkException,
+                             domain='links')
 
 from hotdoc.utils.signals import Signal
 
@@ -38,9 +42,14 @@ class Link:
     """
     resolving_title_signal = Signal()
 
-    def __init__(self, ref, title, id_):
+    def __init__(self, ref, title, id_, mandatory=False):
         self.ref = None
         self._title = None
+        # Whether the link should be always resolved when true and a warning
+        # otherwise
+        self.__mandatory = mandatory
+        # Ensure we warn only once for a unresolved mandatory link
+        self.__warned = False
 
         if title:
             self._title = str(title)
@@ -78,9 +87,21 @@ class Link:
         Banana banana
         """
         res = link_resolver.resolving_link_signal(self)
+
         if not res:
-            return self.ref, None
-        ref = res[0] or self.ref
+            ref = self.ref
+        else:
+            ref = res[0] or self.ref
+
+        if self.__mandatory and not self.__warned:
+            if not ref:
+                warn('mandatory-link-not-found',
+                     'Mandatory link %s could not be resolved' % self)
+            self.__warned = True
+
+        if not res:
+            return ref, None
+
         if res[1]:
             return ref, dict_to_html_attrs(res[1])
         return ref, None

@@ -52,6 +52,11 @@ class InvalidOutputException(HotdocException):
     pass
 
 
+class MissingLinkException(HotdocException):
+    """Banana banana"""
+    pass
+
+
 def _format_source_exception(filename, message, lineno, column):
     from hotdoc.utils.loggable import TERMC
     res = []

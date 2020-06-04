@@ -45,7 +45,6 @@ class Language(Configurable):
 
         This should never get called directly.
         """
-        FUNDAMENTALS[self.language_name] = {}
         ALIASES[self.language_name] = {}
 
     def get_fundamental(self, name):
@@ -55,12 +54,13 @@ class Language(Configurable):
         """
         return FUNDAMENTALS[self.language_name].get(name)
 
-    def add_fundamental(self, name, link):
+    @classmethod
+    def add_fundamental(cls, name, link):
         """
         Add a Link for the specified fundamental
         Extension subclasses might implement this.
         """
-        FUNDAMENTALS[self.language_name][name] = link
+        FUNDAMENTALS[cls.language_name][name] = link
 
     def make_translations(self, unique_name, node):
         """

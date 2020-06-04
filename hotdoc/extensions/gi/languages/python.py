@@ -32,9 +32,9 @@ class PythonLanguage(Language):
 
     def __init__(self):
         Language.__init__(self)
-        self._create_fundamentals();
 
-    def _create_fundamentals(self):
+    @classmethod
+    def _create_fundamentals(cls):
         string_link = \
                 Link('https://docs.python.org/3/library/functions.html#func-str',
                     'str', None)
@@ -71,7 +71,7 @@ class PythonLanguage(Language):
                 Link('https://developer.gnome.org/glib/stable/glib-GVariant.html',
                         'GLib.Variant', None)
 
-        FUNDAMENTALS[self.language_name] = {
+        FUNDAMENTALS[cls.language_name] = {
                 "none": none_link,
                 "gpointer": pointer_link,
                 "gconstpointer": pointer_link,
@@ -152,6 +152,8 @@ class PythonLanguage(Language):
     def get_translation(self, unique_name):
         return TRANSLATED.get (unique_name)
 
+
+PythonLanguage._create_fundamentals()
 def get_language_classes():
     """Nothing important, really"""
     return [PythonLanguage]
