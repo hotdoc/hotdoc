@@ -189,6 +189,9 @@ class Database:
         with open(os.path.join(self.__private_folder, 'all_comments.json'), 'w', encoding='utf8') as f:
             f.write(json.dumps(resolved_comments, default=serialize, indent=2))
 
+        with open(os.path.join(self.__private_folder, 'symbol_index.json'), 'w', encoding='utf8') as f:
+            f.write(json.dumps(list(self.__symbols.keys()), default=serialize, indent=2))
+
     def __get_aliases(self, name):
         return self.__aliases[name]
 
