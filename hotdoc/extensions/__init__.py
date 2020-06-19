@@ -28,6 +28,7 @@ from hotdoc.extensions.search.search_extension import SearchExtension
 from hotdoc.extensions.tags.tag_extension import TagExtension
 from hotdoc.extensions.devhelp.devhelp_extension import DevhelpExtension
 from hotdoc.extensions.license.license_extension import LicenseExtension
+from hotdoc.extensions.check_since_markers.check_since_markers import CheckMissingSinceMarkersExtension
 from hotdoc.extensions.git_upload.git_upload_extension import (
     GitUploadExtension)
 from hotdoc.extensions.edit_on_github.edit_on_github_extension import (
@@ -43,7 +44,7 @@ def get_extension_classes():
     """
     res = [SyntaxHighlightingExtension, SearchExtension, TagExtension,
            DevhelpExtension, LicenseExtension, GitUploadExtension,
-           EditOnGitHubExtension]
+           EditOnGitHubExtension, CheckMissingSinceMarkersExtension]
 
     if sys.version_info[1] >= 5:
         res += [DBusExtension]
