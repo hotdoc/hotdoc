@@ -201,3 +201,6 @@ class Database:
         Banana banana
         """
         return self.__symbols.get(name)
+
+    def get_all_symbols(self):
+        return self.__symbols
