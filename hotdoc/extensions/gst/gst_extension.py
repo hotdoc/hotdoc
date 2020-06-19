@@ -51,17 +51,19 @@ Extract gstreamer plugin documentation from sources and
 built plugins.
 """
 
+
 def _inject_fundamentals():
     # Working around https://gitlab.freedesktop.org/gstreamer/gst-plugins-good/-/issues/744
-    CLanguage.add_fundamental("JackClient", Link("https://jackaudio.org/api/jack_8h.html", 'jack_client_t', None))
+    CLanguage.add_fundamental("JackClient", Link("https://jackaudio.org/api/jack_8h.html",
+                                                 'jack_client_t', None))
     CLanguage.add_fundamental(
         "GrapheneMatrix",
         Link("https://developer.gnome.org/graphene/stable/graphene-Matrix.html#graphene-matrix-t",
-                'graphen_matrix_t', 'GrapheneMatrix'))
+             'graphen_matrix_t', 'GrapheneMatrix'))
     CLanguage.add_fundamental(
         "CairoContext",
         Link("https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-t",
-                'cairo_t', 'CairoContext'))
+             'cairo_t', 'CairoContext'))
 
 
 def _cleanup_package_name(package_name):
@@ -70,19 +72,6 @@ def _cleanup_package_name(package_name):
             'prerelease').strip(
                 'GStreamer').strip(
                     'Plug-ins').strip(' ')
-
-
-def create_hierarchy(element_dict):
-
-    hierarchy = []
-
-    for klass_name in element_dict["hierarchy"][1:]:
-        link = Link(None, klass_name, klass_name)
-        sym = QualifiedSymbol(type_tokens=[link])
-        hierarchy.append(sym)
-
-    hierarchy.reverse()
-    return hierarchy
 
 
 def type_tokens_from_type_name(type_name, python_lang):
@@ -839,6 +828,17 @@ class GstExtension(Extension):
         symbol.values = enum
         return symbol
 
+    def __create_hierarchy(self, pagename, element_dict):
+        hierarchy = []
+        for klass_name in element_dict["hierarchy"][1:]:
+            self._remember_symbol_type(klass_name, pagename)
+            link = Link(None, klass_name, klass_name, mandatory=True)
+            sym = QualifiedSymbol(type_tokens=[link])
+            hierarchy.append(sym)
+
+        hierarchy.reverse()
+        return hierarchy
+
     def __create_object_type(self, pagename, _object):
         unique_name = _object['hierarchy'][0]
         self.__create_property_symbols(
@@ -848,7 +848,7 @@ class GstExtension(Extension):
 
         return self.create_symbol(
             ClassSymbol,
-            hierarchy=create_hierarchy(_object),
+            hierarchy=self.__create_hierarchy(pagename, _object),
             display_name=unique_name,
             unique_name=unique_name,
             parent_name=unique_name,
@@ -939,7 +939,7 @@ class GstExtension(Extension):
                 GstElementSymbol,
                 parent_name=None,
                 display_name=element['name'],
-                hierarchy=create_hierarchy(element),
+                hierarchy=self.__create_hierarchy(pagename, element),
                 unique_name=element['name'],
                 filename=plugin_name,
                 extra={'gst-element-name': pagename},
