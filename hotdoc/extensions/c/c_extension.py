@@ -150,8 +150,8 @@ class ClangScanner(object):
 
                 for include in tu.get_includes():
                     fname = os.path.abspath(str(include.include))
-                    if (cindex.conf.lib.clang_isFileMultipleIncludeGuarded(tu, tu.get_file(fname))):
-                        if fname in self.filenames:
+                    if fname in self.filenames:
+                        if (cindex.conf.lib.clang_isFileMultipleIncludeGuarded(tu, tu.get_file(fname))):
                             header_guarded.add(fname)
                     self.__parse_file (fname, tu, full_scan)
 
