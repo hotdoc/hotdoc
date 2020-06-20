@@ -341,6 +341,7 @@ PACKAGE_DATA = {
     'hotdoc.core': ['templates/*', 'assets/*'],
     'hotdoc': [os.path.join(THEME_REL_DIR, 'templates', '*'),
                os.path.join(THEME_REL_DIR, 'js', '*'),
+               os.path.join(THEME_REL_DIR, 'js', 'search', '*'),
                os.path.join(THEME_REL_DIR, 'css', '*'),
                os.path.join(THEME_REL_DIR, 'images', '*'),
                os.path.join(THEME_REL_DIR, 'fonts', '*'),
