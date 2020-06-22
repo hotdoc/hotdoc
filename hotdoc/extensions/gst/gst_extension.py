@@ -42,6 +42,7 @@ from hotdoc.core.formatter import Formatter
 from hotdoc.core.comment import Comment
 from hotdoc.extensions.gi.gi_extension import WritableFlag, ReadableFlag, \
     ConstructFlag, ConstructOnlyFlag
+from hotdoc.extensions.gi.symbols import GIClassSymbol
 from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
 
 
@@ -133,16 +134,27 @@ class GstPluginsSymbol(Symbol):
         return ""
 
 
-class GstElementSymbol(ClassSymbol):
+class GstElementSymbol(GIClassSymbol):
     TEMPLATE = """
-        @require(symbol, hierarchy, desc)
+        @require(symbol, hierarchy, desc, interfaces)
         @desc
 
         @if hierarchy:
         <h2>Hierarchy</h2>
-        <div class="hierarchy_container">
-            @hierarchy
-        </div>
+            <div class="hierarchy_container">
+                @hierarchy
+            </div>
+        @end
+        @if interfaces:
+            <h2>Implemented interfaces</h2>
+            <div>
+                <pre>
+                @for interface in interfaces:
+@interface
+ \
+@end
+</pre>
+            </div>
         @end
         <h2 class="symbol_section">Factory details</h2>
         <div class="symbol-detail">
@@ -161,7 +173,7 @@ class GstElementSymbol(ClassSymbol):
         self.rank = None
         self.author = None
         self.plugin = None
-        ClassSymbol.__init__(self, **kwargs)
+        super().__init__(**kwargs)
 
     @classmethod
     def get_plural_name(cls):
@@ -420,7 +432,10 @@ class GstFormatter(Formatter):
         hierarchy = self._format_hierarchy(symbol)
 
         template = self.engine.get_template('element.html')
-        return template.render({'symbol': symbol, 'hierarchy': hierarchy, 'desc': ''})
+        interfaces = []
+        for interface in symbol.interfaces:
+            interfaces.append(self._format_linked_symbol(interface))
+        return template.render({'symbol': symbol, 'hierarchy': hierarchy, 'desc': '', 'interfaces': interfaces})
 
     def _format_name_constant_value(self, symbol):
         template = self.engine.get_template('enumtemplate.html')
@@ -933,6 +948,9 @@ class GstExtension(Extension):
         for ename, element in plugin.get('elements', {}).items():
             element['name'] = ename
             pagename, _ = self.__extract_feature_comment("element", element)
+            interfaces = []
+            for interface in element.get("interfaces", []):
+                interfaces.append(QualifiedSymbol(type_tokens=[Link(None, interface, interface, mandatory=True)]))
 
             aliases = self._get_aliases([pagename, element['hierarchy'][0]])
             sym = self.create_symbol(
@@ -946,7 +964,8 @@ class GstExtension(Extension):
                 rank=str(element['rank']), author=element['author'],
                 classification=element['klass'], plugin=plugin['filename'],
                 aliases=aliases,
-                package=plugin['package'])
+                package=plugin['package'],
+                interfaces=interfaces)
 
             if not sym:
                 continue
