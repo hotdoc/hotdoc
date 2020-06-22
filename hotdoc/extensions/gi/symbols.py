@@ -21,10 +21,11 @@ from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
 class GIClassSymbol(ClassSymbol):
     def __init__(self, **kwargs):
         self.class_struct_symbol = None
+        self.interfaces = []
         ClassSymbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
-        return [self.class_struct_symbol] + super().get_children_symbols()
+        return [self.class_struct_symbol] + super().get_children_symbols() + self.interfaces
 
 
 class GIStructSymbol(ClassSymbol):
