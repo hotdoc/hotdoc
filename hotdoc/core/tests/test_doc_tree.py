@@ -83,6 +83,7 @@ class TestTree(unittest.TestCase):
         self.app = Application((TestExtension,))
 
         Logger.fatal_warnings = True
+        Logger.raise_on_fatal_warnings = True
         Logger.silent = True
 
     def tearDown(self):
@@ -91,6 +92,7 @@ class TestTree(unittest.TestCase):
         TestExtension.comments = []
         Logger.fatal_warnings = False
         Logger.silent = False
+        Logger.reset()
 
     def __write_sitemap(self, text):
         path = os.path.join(self.__md_dir, 'sitemap.txt')

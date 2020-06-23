@@ -30,6 +30,7 @@ class TestDatabase(HotdocTest):
             unique_name='foo')
 
         Logger.fatal_warnings = True
+        Logger.raise_on_fatal_warnings = True
         Logger.silent = True
         with self.assertRaises(RedefinedSymbolException):
             self.database.create_symbol(
@@ -37,3 +38,4 @@ class TestDatabase(HotdocTest):
                 unique_name='foo')
         Logger.fatal_warnings = False
         Logger.silent = False
+        Logger.reset()

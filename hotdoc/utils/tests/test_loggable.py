@@ -58,6 +58,7 @@ class TestLogger(unittest.TestCase):
 
     def test_fatal_warnings(self):
         Logger.fatal_warnings = True
+        Logger.raise_on_fatal_warnings = True
         test_journal = []
 
         with self.assertRaises(BazError) as cm:

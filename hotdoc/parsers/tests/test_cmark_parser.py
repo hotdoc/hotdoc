@@ -125,10 +125,12 @@ class TestGtkDocParser(unittest.TestCase):
         self.formatter = GtkDocStringFormatter()
         Logger.silent = True
         Logger.fatal_warnings = True
+        Logger.raise_on_fatal_warnings = True
 
     def tearDown(self):
         Logger.silent = False
         Logger.fatal_warnings = False
+        Logger.reset()
 
     def test_basic(self):
         raw = BASIC_GTKDOC_COMMENT

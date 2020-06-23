@@ -34,10 +34,12 @@ class TestPage(unittest.TestCase):
     def setUp(self):
         Logger.silent = True
         Logger.fatal_warnings = True
+        Logger.raise_on_fatal_warnings = True
 
     def tearDown(self):
         Logger.silent = False
         Logger.fatal_warnings = False
+        Logger.reset()
 
     def test_meta_schema(self):
         meta = {'foo': u'bar'}

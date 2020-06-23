@@ -191,6 +191,7 @@ class Logger(Configurable):
     _warning_code_to_exception = defaultdict()
     journal = []
     fatal_warnings = False
+    raise_on_fatal_warnings = False
     _ignored_codes = set()
     _ignored_domains = set()
     _last_checkpoint = 0
@@ -236,7 +237,8 @@ class Logger(Configurable):
         """
         Call this to store a warning in the journal.
 
-        Will raise if `Logger.fatal_warnings` is set to True.
+        Will raise if `Logger.fatal_warnings` is set to True and
+        `Logger.raise_on_fatal_warnings` as well.
         """
 
         if code in Logger._ignored_codes:
@@ -257,7 +259,10 @@ class Logger(Configurable):
         Logger._log(code, exc.message, level, domain)
 
         if Logger.fatal_warnings:
-            Logger.n_fatal_warnings += 1
+            if Logger.raise_on_fatal_warnings:
+                raise exc
+            else:
+                Logger.n_fatal_warnings += 1
 
     @staticmethod
     def debug(message, domain):
@@ -309,10 +314,12 @@ class Logger(Configurable):
         """Resets Logger to its initial state"""
         Logger.journal = []
         Logger.fatal_warnings = False
+        Logger.raise_on_fatal_warnings = False
         Logger._ignored_codes = set()
         Logger._ignored_domains = set()
         Logger._verbosity = 2
         Logger._last_checkpoint = 0
+        Logger.n_fatal_warnings = 0
 
     @staticmethod
     def add_arguments(parser):
