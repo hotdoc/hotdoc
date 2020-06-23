@@ -35,7 +35,7 @@ from hotdoc.utils.loggable import info, error
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.core.extension import Extension
 from hotdoc.core.symbols import ClassSymbol, QualifiedSymbol, PropertySymbol, \
-    SignalSymbol, ReturnItemSymbol, ParameterSymbol, Symbol
+    SignalSymbol, ReturnItemSymbol, ParameterSymbol, Symbol, InterfaceSymbol
 from hotdoc.parsers.gtk_doc import GtkDocParser, gather_links, search_online_links
 from hotdoc.extensions.c.utils import CCommentExtractor
 from hotdoc.core.formatter import Formatter
@@ -664,7 +664,9 @@ class GstExtension(Extension):
         if symbol["kind"] in ["enum", "flags"]:
             self.__create_enum_symbol(gtype, symbol.get('values'), pagename)
         elif symbol["kind"] == "object":
-            self.__create_object_type(pagename, symbol)
+            self.__create_classed_type(pagename, symbol)
+        elif symbol["kind"] == "interface":
+            self.__create_classed_type(pagename, symbol, True)
 
     def _remember_symbol_type(self, gtype, pagename):
         self.__other_types_pages[gtype] = pagename
@@ -854,7 +856,7 @@ class GstExtension(Extension):
         hierarchy.reverse()
         return hierarchy
 
-    def __create_object_type(self, pagename, _object):
+    def __create_classed_type(self, pagename, _object, is_interface=False):
         unique_name = _object['hierarchy'][0]
         self.__create_property_symbols(
             _object, unique_name, pagename, parent_name=unique_name)
@@ -862,7 +864,7 @@ class GstExtension(Extension):
             _object, unique_name, pagename, parent_name=unique_name)
 
         return self.create_symbol(
-            ClassSymbol,
+            InterfaceSymbol if is_interface else ClassSymbol,
             hierarchy=self.__create_hierarchy(pagename, _object),
             display_name=unique_name,
             unique_name=unique_name,
@@ -943,13 +945,14 @@ class GstExtension(Extension):
             provider['name'] = provider_name
             _, comment = self.__extract_feature_comment("provider", provider)
             comment.description += """\n\n# Provided device example"""
-            self.__create_object_type(provider_name, provider.get('device-example'))
+            self.__create_classed_type(provider_name, provider.get('device-example'))
 
         for ename, element in plugin.get('elements', {}).items():
             element['name'] = ename
             pagename, _ = self.__extract_feature_comment("element", element)
             interfaces = []
             for interface in element.get("interfaces", []):
+                self._remember_symbol_type(interface, pagename)
                 interfaces.append(QualifiedSymbol(type_tokens=[Link(None, interface, interface, mandatory=True)]))
 
             aliases = self._get_aliases([pagename, element['hierarchy'][0]])

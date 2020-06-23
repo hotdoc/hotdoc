@@ -62,7 +62,9 @@ class CLanguage(Language):
 
 FUNDAMENTALS[CLanguage.language_name] = {
         "GParam": Link("https://developer.gnome.org/gobject/stable/gobject-GParamSpec.html#GParamSpec",
-            'GParamSpec', 'GParamSpec')
+            'GParamSpec', 'GParamSpec'),
+        "GInterface": Link("https://developer.gnome.org/gobject/stable/gobject-Type-Information.html#GInterfaceInfo",
+            'GInterface', 'GInterface')
 }
 
 
