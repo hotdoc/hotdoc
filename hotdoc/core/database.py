@@ -26,7 +26,7 @@ from collections import defaultdict, OrderedDict
 # pylint: disable=import-error
 # pylint: disable=import-error
 from hotdoc.core.exceptions import HotdocException
-from hotdoc.core.symbols import Symbol
+from hotdoc.core.symbols import Symbol, ProxySymbol
 from hotdoc.utils.signals import Signal
 from hotdoc.utils.loggable import debug, warn, Logger
 
@@ -42,15 +42,6 @@ Logger.register_warning_code(
     'symbol-redefined', RedefinedSymbolException, 'extension')
 
 # pylint: disable=too-few-public-methods
-
-
-class ProxySymbol(Symbol):
-    """A proxy type to handle aliased symbols"""
-    __tablename__ = 'proxy_symbols'
-
-    def __init__(self, **kwargs):
-        self.target = None
-        Symbol.__init__(self, **kwargs)
 
 
 def serialize(obj):
@@ -130,10 +121,12 @@ class Database:
             return None
 
         aliases = kwargs.pop('aliases', [])
+        alias_symbols = []
         for alias in aliases:
-            self.create_symbol(ProxySymbol,
-                               unique_name=alias,
-                               target=unique_name)
+            alias_symbols.append(
+                self.create_symbol(ProxySymbol,
+                unique_name=alias,
+                target=unique_name))
 
         symbol = type_()
         debug('Created symbol with unique name %s' % unique_name,
@@ -141,6 +134,7 @@ class Database:
 
         for key, value in list(kwargs.items()):
             setattr(symbol, key, value)
+        symbol.aliases += alias_symbols
 
         self.__symbols[unique_name] = symbol
         self.__aliases[unique_name].extend(aliases)

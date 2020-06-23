@@ -52,6 +52,7 @@ class Symbol:
         self.link = None
         self.project_name = None
         self.parent_name = None
+        self.aliases = []
 
     def __repr__(self):
         return "%s(unique_name=%s, filename=%s, project=%s)" % (
@@ -87,7 +88,7 @@ class Symbol:
         """
         Banana banana
         """
-        return []
+        return self.aliases
 
     # pylint: disable=unidiomatic-typecheck
     # pylint: disable=no-member
@@ -246,7 +247,7 @@ class FieldSymbol(Symbol):
         return self.member_name
 
     def get_children_symbols(self):
-        return [self.qtype]
+        return [self.qtype] + super().get_children_symbols()
 
     # pylint: disable=no-self-use
     def get_type_name(self):
@@ -277,7 +278,7 @@ class FunctionSymbol(Symbol):
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
-        return self.parameters + self.return_value
+        return self.parameters + self.return_value + super().get_children_symbols()
 
     def get_type_name(self):
         return 'Function'
@@ -347,7 +348,7 @@ class PropertySymbol(Symbol):
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
-        return [self.prop_type]
+        return [self.prop_type] + super().get_children_symbols()
 
 
 class CallbackSymbol(FunctionSymbol):
@@ -373,7 +374,7 @@ class EnumSymbol(Symbol):
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
-        return self.members
+        return self.members + super().get_children_symbols()
 
     def get_extra_links(self):
         return [m.link for m in self.members]
@@ -396,7 +397,7 @@ class StructSymbol(Symbol):
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
-        return self.members
+        return self.members + super().get_children_symbols()
 
     def get_extra_links(self):
         return [m.link for m in self.members]
@@ -429,7 +430,7 @@ class FunctionMacroSymbol(MacroSymbol):
         MacroSymbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
-        return self.parameters + self.return_value
+        return self.parameters + self.return_value + super().get_children_symbols()
 
     def get_type_name(self):
         return "Function macro"
@@ -459,7 +460,7 @@ class ExportedVariableSymbol(MacroSymbol):
         return "Exported variable"
 
     def get_children_symbols(self):
-        return [self.type_qs]
+        return [self.type_qs] + super().get_children_symbols()
 
 
 class AliasSymbol(Symbol):
@@ -476,7 +477,7 @@ class AliasSymbol(Symbol):
         return "Alias"
 
     def get_children_symbols(self):
-        return [self.aliased_type]
+        return [self.aliased_type] + super().get_children_symbols()
 
 
 class ClassSymbol(StructSymbol):
@@ -512,4 +513,13 @@ class InterfaceSymbol(ClassSymbol):
         return "Interface"
 
     def get_children_symbols(self):
-        return self.prerequisites + ClassSymbol.get_children_symbols(self)
+        return self.prerequisites + super().get_children_symbols()
+
+
+class ProxySymbol(Symbol):
+    """A proxy type to handle aliased symbols"""
+    __tablename__ = 'proxy_symbols'
+
+    def __init__(self, **kwargs):
+        self.target = None
+        Symbol.__init__(self, **kwargs)
