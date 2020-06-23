@@ -127,7 +127,7 @@ class GstPluginsSymbol(Symbol):
         return sorted(all_elements, key=lambda x: x.display_name)
 
     def get_children_symbols(self):
-        return self.plugins
+        return list(self.plugins) + super().get_children_symbols()
 
     @classmethod
     def get_plural_name(cls):
@@ -221,7 +221,7 @@ class GstPluginSymbol(Symbol):
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
-        return self.elements
+        return self.elements + super().get_children_symbols()
 
     @classmethod
     def get_plural_name(cls):
@@ -248,7 +248,7 @@ class GstNamedConstantsSymbols(Symbol):
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
-        return self.members
+        return self.members + super().get_children_symbols()
 
     def get_extra_links(self):
         return [m.link for m in self.members]
@@ -296,7 +296,7 @@ class GstPadTemplateSymbol(Symbol):
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
-        return [self.qtype, self.object_type]
+        return [self.qtype, self.object_type] + super().get_children_symbols()
 
     # pylint: disable=no-self-use
     def get_type_name(self):
