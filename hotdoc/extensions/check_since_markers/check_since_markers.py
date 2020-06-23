@@ -47,7 +47,7 @@ class CheckMissingSinceMarkersExtension(Extension):
         group.add_argument("--previous-symbol-index")
 
     def parse_toplevel_config(self, config):
-        self.__symbols_database = config.get("previous_symbol_index")
+        self.__symbols_database = config.get_index(prefix="previous_symbol")
 
     def setup(self):
         if self.__symbols_database:
