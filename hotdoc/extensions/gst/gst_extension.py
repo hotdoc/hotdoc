@@ -35,14 +35,14 @@ from hotdoc.utils.loggable import info, error
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.core.extension import Extension
 from hotdoc.core.symbols import ClassSymbol, QualifiedSymbol, PropertySymbol, \
-    SignalSymbol, ReturnItemSymbol, ParameterSymbol, Symbol, InterfaceSymbol
+    SignalSymbol, ReturnItemSymbol, ParameterSymbol, Symbol
 from hotdoc.parsers.gtk_doc import GtkDocParser, gather_links, search_online_links
 from hotdoc.extensions.c.utils import CCommentExtractor
 from hotdoc.core.formatter import Formatter
 from hotdoc.core.comment import Comment
 from hotdoc.extensions.gi.gi_extension import WritableFlag, ReadableFlag, \
     ConstructFlag, ConstructOnlyFlag
-from hotdoc.extensions.gi.symbols import GIClassSymbol
+from hotdoc.extensions.gi.symbols import GIClassSymbol, GIInterfaceSymbol
 from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
 
 
@@ -173,11 +173,15 @@ class GstElementSymbol(GIClassSymbol):
         self.rank = None
         self.author = None
         self.plugin = None
+        self.pad_templates = []
         super().__init__(**kwargs)
 
     @classmethod
     def get_plural_name(cls):
         return ""
+
+    def get_children_symbols(self):
+        return super().get_children_symbols() + self.pad_templates
 
 
 class GstPluginSymbol(Symbol):
@@ -218,10 +222,11 @@ class GstPluginSymbol(Symbol):
         self.description = None
         self.package = None
         self.elements = []
+        self.other_types = []
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
-        return self.elements + super().get_children_symbols()
+        return super().get_children_symbols() + self.elements + self.other_types
 
     @classmethod
     def get_plural_name(cls):
@@ -435,7 +440,8 @@ class GstFormatter(Formatter):
         interfaces = []
         for interface in symbol.interfaces:
             interfaces.append(self._format_linked_symbol(interface))
-        return template.render({'symbol': symbol, 'hierarchy': hierarchy, 'desc': '', 'interfaces': interfaces})
+        return template.render({'symbol': symbol, 'hierarchy': hierarchy, 'desc': '',
+                                'interfaces': interfaces})
 
     def _format_name_constant_value(self, symbol):
         template = self.engine.get_template('enumtemplate.html')
@@ -662,11 +668,14 @@ class GstExtension(Extension):
 
     def __create_symbol(self, gtype, symbol, pagename):
         if symbol["kind"] in ["enum", "flags"]:
-            self.__create_enum_symbol(gtype, symbol.get('values'), pagename)
-        elif symbol["kind"] == "object":
-            self.__create_classed_type(pagename, symbol)
-        elif symbol["kind"] == "interface":
-            self.__create_classed_type(pagename, symbol, True)
+            return self.__create_enum_symbol(gtype, symbol.get('values'), pagename)
+        if symbol["kind"] == "object":
+            return self.__create_classed_type(pagename, symbol)
+        if symbol["kind"] == "interface":
+            return self.__create_classed_type(pagename, symbol, True)
+
+        assert "Not reached" == "False"
+        return None
 
     def _remember_symbol_type(self, gtype, pagename):
         self.__other_types_pages[gtype] = pagename
@@ -745,20 +754,24 @@ class GstExtension(Extension):
 
     def __create_signal_symbols(self, obj, parent_uniquename, element_name,
                                 parent_name=None):
+        res = []
         signals = obj.get('signals', {})
         if not signals:
-            return
+            return res
 
         for name, signal in signals.items():
-            self.__create_signal_symbol(obj, parent_uniquename, name, signal,
-                                        element_name,
-                                        parent_name=parent_name)
+            res.append(self.__create_signal_symbol(
+                obj, parent_uniquename, name, signal,
+                element_name,
+                parent_name=parent_name))
+        return res
 
     def __create_property_symbols(self, obj, parent_uniquename,
                                   pagename, parent_name=None):
+        res = []
         properties = obj.get('properties', [])
         if not properties:
-            return
+            return res
 
         gi_extension = self.project.extensions.get('gi-extension')
         python_lang = gi_extension.get_language('python')
@@ -784,16 +797,16 @@ class GstExtension(Extension):
             else:
                 aliases = []
 
-            res = self.app.database.get_symbol(unique_name)
-            if res is None:
-                res = self.create_symbol(
+            prop = self.app.database.get_symbol(unique_name)
+            if prop is None:
+                prop = self.create_symbol(
                     PropertySymbol,
                     prop_type=type_,
                     display_name=name, unique_name=unique_name,
                     aliases=aliases, parent_name=parent_name,
                     extra={'gst-element-name': pagename},
                 )
-            assert res
+            assert prop
 
             if not self.app.database.get_comment(unique_name):
                 comment = Comment(unique_name, Comment(name=name),
@@ -802,12 +815,15 @@ class GstExtension(Extension):
 
             # FIXME This is incorrect, it's not yet format time (from gi_extension)
             extra_content = self.formatter.format_flags(flags)
-            res.extension_contents['Flags'] = extra_content
+            prop.extension_contents['Flags'] = extra_content
             if default:
                 if prop_type_name in ['GstCaps', 'GstStructure']:
                     default = '<pre class="language-yaml">' + \
                         '<code class="language-yaml">%s</code></pre>' % default
-                res.extension_contents['Default value'] = default
+                prop.extension_contents['Default value'] = default
+            res.append(prop)
+
+        return res
 
     def __create_enum_symbol(self, type_name, enum, pagename, parent_name=None):
         display_name = re.sub(
@@ -858,24 +874,27 @@ class GstExtension(Extension):
 
     def __create_classed_type(self, pagename, _object, is_interface=False):
         unique_name = _object['hierarchy'][0]
-        self.__create_property_symbols(
+        properties = self.__create_property_symbols(
             _object, unique_name, pagename, parent_name=unique_name)
-        self.__create_signal_symbols(
+        signals = self.__create_signal_symbols(
             _object, unique_name, pagename, parent_name=unique_name)
 
         return self.create_symbol(
-            InterfaceSymbol if is_interface else ClassSymbol,
+            GIInterfaceSymbol if is_interface else ClassSymbol,
             hierarchy=self.__create_hierarchy(pagename, _object),
             display_name=unique_name,
             unique_name=unique_name,
             parent_name=unique_name,
+            properties=properties,
+            signals=signals,
             extra={'gst-element-name': pagename}
         )
 
     def __create_pad_template_symbols(self, element, plugin_name):
         templates = element.get('pad-templates', {})
+        res = []
         if not templates:
-            return
+            return res
 
         for tname, template in templates.items():
             name = tname.replace("%%", "%")
@@ -884,15 +903,18 @@ class GstExtension(Extension):
             gtype = self._remember_symbol_type(template.get("type", "GstPad"), pagename)
             link = Link(None, gtype, gtype, mandatory=True)
             object_type = QualifiedSymbol(type_tokens=[link])
-            self.create_symbol(GstPadTemplateSymbol,
-                               name=name,
-                               direction=template["direction"],
-                               presence=template["presence"],
-                               caps=template["caps"],
-                               filename=plugin_name, parent_name=None,
-                               object_type=object_type,
-                               display_name=name, unique_name=unique_name,
-                               extra={'gst-element-name': pagename})
+            res.append(self.create_symbol(
+                GstPadTemplateSymbol,
+                name=name,
+                direction=template["direction"],
+                presence=template["presence"],
+                caps=template["caps"],
+                filename=plugin_name, parent_name=None,
+                object_type=object_type,
+                display_name=name, unique_name=unique_name,
+                extra={'gst-element-name': pagename}))
+
+        return res
 
     def _get_aliases(self, aliases):
         return [alias for alias in aliases if not self.app.database.get_symbol(alias)]
@@ -941,11 +963,13 @@ class GstExtension(Extension):
             tracer['name'] = ename
             self.__extract_feature_comment("tracer", tracer)
 
+        other_types = []
         for provider_name, provider in plugin.get('device-providers', {}).items():
             provider['name'] = provider_name
             _, comment = self.__extract_feature_comment("provider", provider)
             comment.description += """\n\n# Provided device example"""
-            self.__create_classed_type(provider_name, provider.get('device-example'))
+            other_types.append(self.__create_classed_type(provider_name,
+                                                          provider.get('device-example')))
 
         for ename, element in plugin.get('elements', {}).items():
             element['name'] = ename
@@ -953,7 +977,8 @@ class GstExtension(Extension):
             interfaces = []
             for interface in element.get("interfaces", []):
                 self._remember_symbol_type(interface, pagename)
-                interfaces.append(QualifiedSymbol(type_tokens=[Link(None, interface, interface, mandatory=True)]))
+                interfaces.append(QualifiedSymbol(
+                    type_tokens=[Link(None, interface, interface, mandatory=True)]))
 
             aliases = self._get_aliases([pagename, element['hierarchy'][0]])
             sym = self.create_symbol(
@@ -974,9 +999,10 @@ class GstExtension(Extension):
                 continue
 
             self.__elements[element['name']] = sym
-            self.__create_property_symbols(element, element['name'], pagename)
-            self.__create_signal_symbols(element, element['name'], pagename)
-            self.__create_pad_template_symbols(element, plugin_name)
+            sym.properties.extend(self.__create_property_symbols(
+                element, element['name'], pagename))
+            sym.signals.extend(self.__create_signal_symbols(element, element['name'], pagename))
+            sym.pad_templates.extend(self.__create_pad_template_symbols(element, plugin_name))
 
             elements.append(sym)
 
@@ -992,8 +1018,8 @@ class GstExtension(Extension):
                 break
 
             types.remove(type_)
-            self.__create_symbol(
-                type_[0], type_[1], self.__other_types_pages[type_[0]])
+            other_types.append(self.__create_symbol(
+                type_[0], type_[1], self.__other_types_pages[type_[0]]))
 
         for _type in types:
             self.warn("no-location-indication",
@@ -1011,6 +1037,7 @@ class GstExtension(Extension):
             package=plugin['package'],
             filename=plugin['filename'],
             elements=elements,
+            other_types=other_types,
             extra={'gst-plugins': 'plugins-' + plugin['filename']})
 
         if not plugin:
