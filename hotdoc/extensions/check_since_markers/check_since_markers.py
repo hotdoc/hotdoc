@@ -69,7 +69,6 @@ class CheckMissingSinceMarkersExtension(Extension):
             self.__add_children_with_since(inherited_sinces, child)
 
     def __check_since_markers(self, app):
-        print(self.__symbols_database)
         with open(self.__symbols_database) as f:
             prev_symbols = set(json.load(f))
 
