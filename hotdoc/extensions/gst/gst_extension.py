@@ -342,6 +342,7 @@ class GstFormatter(Formatter):
              GstPadTemplateSymbol: self._format_pad_template_symbol,
              GstElementSymbol: self._format_element_symbol,
              GstNamedConstantsSymbols: self._format_enum,
+             GIInterfaceSymbol: self._format_interface_symbol,
              GstNamedConstantValue: self._format_name_constant_value, })
 
     def get_template(self, name):
@@ -797,16 +798,16 @@ class GstExtension(Extension):
             else:
                 aliases = []
 
-            prop = self.app.database.get_symbol(unique_name)
-            if prop is None:
-                prop = self.create_symbol(
+            sym = self.app.database.get_symbol(unique_name)
+            if sym is None:
+                sym = self.create_symbol(
                     PropertySymbol,
                     prop_type=type_,
                     display_name=name, unique_name=unique_name,
                     aliases=aliases, parent_name=parent_name,
                     extra={'gst-element-name': pagename},
                 )
-            assert prop
+            assert sym
 
             if not self.app.database.get_comment(unique_name):
                 comment = Comment(unique_name, Comment(name=name),
@@ -815,13 +816,13 @@ class GstExtension(Extension):
 
             # FIXME This is incorrect, it's not yet format time (from gi_extension)
             extra_content = self.formatter.format_flags(flags)
-            prop.extension_contents['Flags'] = extra_content
+            sym.extension_contents['Flags'] = extra_content
             if default:
                 if prop_type_name in ['GstCaps', 'GstStructure']:
                     default = '<pre class="language-yaml">' + \
                         '<code class="language-yaml">%s</code></pre>' % default
-                prop.extension_contents['Default value'] = default
-            res.append(prop)
+                sym.extension_contents['Default value'] = default
+            res.append(sym)
 
         return res
 
