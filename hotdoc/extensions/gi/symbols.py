@@ -18,14 +18,31 @@
 from hotdoc.core.symbols import *
 from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
 
+
 class GIClassSymbol(ClassSymbol):
     def __init__(self, **kwargs):
         self.class_struct_symbol = None
         self.interfaces = []
+        self.properties = []
+        self.methods = []
+        self.signals = []
+        self.vfuncs = []
         ClassSymbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
-        return [self.class_struct_symbol] + super().get_children_symbols() + self.interfaces
+        return [self.class_struct_symbol] + self.interfaces + self.properties + self.methods + self.signals + self.vfuncs + super().get_children_symbols()
+
+
+class GIInterfaceSymbol(InterfaceSymbol):
+    def __init__(self, **kwargs):
+        self.properties = []
+        self.methods = []
+        self.signals = []
+        self.vfuncs = []
+        InterfaceSymbol.__init__(self, **kwargs)
+
+    def get_children_symbols(self):
+        return self.properties + self.methods + self.signals + self.vfuncs + super().get_children_symbols()
 
 
 class GIStructSymbol(ClassSymbol):
@@ -34,8 +51,11 @@ class GIStructSymbol(ClassSymbol):
     """
     def __init__(self, **kwargs):
         self.class_struct_symbol = None
+        self.methods = []
         ClassSymbol.__init__(self, **kwargs)
 
+    def get_children_symbols(self):
+        return [self.class_struct_symbol] + self.methods + super().get_children_symbols()
 
 class FundamentalSymbol(Symbol):
     __tablename__ = 'fundamentals'

@@ -49,10 +49,10 @@ from hotdoc.extensions.gi.node_cache import (
     SMART_FILTERS, get_klass_parents,
     get_klass_children, cache_nodes, type_description_from_node,
     is_introspectable, is_callback_type)
-from hotdoc.extensions.gi.symbols import GIClassSymbol, GIStructSymbol, FundamentalSymbol
+from hotdoc.extensions.gi.symbols import GIClassSymbol, GIInterfaceSymbol, GIStructSymbol, FundamentalSymbol
 from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
 
-TYPE_MAP.update({GIClassSymbol: 'class', GIStructSymbol: 'struct'})
+TYPE_MAP.update({GIClassSymbol: 'class', GIInterfaceSymbol: 'interface', GIStructSymbol: 'struct'})
 
 
 DESCRIPTION =\
@@ -631,6 +631,10 @@ class GIExtension(Extension):
             parent_name=parent_name)
 
         if res:
+            klass = self.app.database.get_symbol(klass_name)
+            assert(klass)
+            klass.signals.append(res)
+
             flags = []
 
             when = node.attrib.get('when')
@@ -686,6 +690,10 @@ class GIExtension(Extension):
                                         parent_name=parent_name)
 
         if res:
+            klass = self.app.database.get_symbol(klass_name)
+            assert(klass)
+            klass.properties.append(res)
+
             extra_content = self.formatter._format_flags(flags)
             res.extension_contents['Flags'] = extra_content
 
@@ -721,6 +729,10 @@ class GIExtension(Extension):
                                            aliases=[unique_name.replace('::', '.')])
 
         if symbol:
+            klass = self.app.database.get_symbol(klass_name)
+            assert(klass)
+            klass.vfuncs.append(symbol)
+
             self.__sort_parameters(symbol, retval, parameters)
 
         return symbol
@@ -856,14 +868,14 @@ class GIExtension(Extension):
             return res
 
     def __create_interface_symbol(self, node, unique_name, filename):
-        return self.create_symbol(InterfaceSymbol, node,
+        return self.create_symbol(GIInterfaceSymbol, node,
                                          display_name=unique_name,
                                          unique_name=unique_name,
                                          parent_name=unique_name,
                                          filename=filename)
 
     def __create_function_symbol(self, node, parent_name):
-        name = get_symbol_names(node)[0]
+        unique_name, name, klass_name = get_symbol_names(node)
 
         gi_params, retval = self.__create_parameters_and_retval(node)
 
@@ -881,13 +893,18 @@ class GIExtension(Extension):
                                          parameters=gi_params,
                                          return_value=retval,
                                          display_name=name,
-                                         unique_name=name,
+                                         unique_name=unique_name,
                                          throws='throws' in node.attrib,
                                          filename=self.__get_symbol_filename(
                                              name, node),
                                          parent_name=parent_name)
 
         if func:
+            if klass_name is not None:
+                klass = self.app.database.get_symbol(klass_name)
+                assert(klass)
+                klass.methods.append(func)
+
             self.__sort_parameters(func, func.return_value, func.parameters)
 
         return func
@@ -924,7 +941,7 @@ class GIExtension(Extension):
         elif node.tag == core_ns('record'):
             self.__create_structure(GIStructSymbol, node, gi_name)
         elif node.tag == core_ns('interface'):
-            self.__create_structure(InterfaceSymbol, node, gi_name)
+            self.__create_structure(GIInterfaceSymbol, node, gi_name)
         elif node.tag == core_ns('enumeration'):
             self.__create_enum_symbol(node)
         elif node.tag == core_ns('bitfield'):

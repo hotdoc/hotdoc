@@ -75,9 +75,18 @@ def get_symbol_names(node):
     elif node.tag in (core_ns('interface')):
         _ = get_klass_name (node)
         return _, _, _
-    elif node.tag in (core_ns('function'), core_ns('method'), core_ns('constructor')):
+    elif node.tag == core_ns('function'):
         _ = get_function_name(node)
-        return _, _, _
+        return _, _, None
+    elif node.tag in (core_ns('method'), core_ns('constructor')):
+        unique_name = get_function_name(node)
+        parent = node.getparent()
+        if glib_ns('is-gtype-struct-for') in parent.attrib:
+            ns = parent.getparent()
+            parent = ns.xpath(
+                    './*[@name="%s"]' % parent.attrib[glib_ns('is-gtype-struct-for')])[0]
+        parent_name = get_klass_name(parent)
+        return unique_name, unique_name, parent_name
     elif node.tag == core_ns('virtual-method'):
         klass_node = node.getparent()
         ns = klass_node.getparent()
@@ -87,7 +96,7 @@ def get_symbol_names(node):
         parent_name = get_structure_name(klass_structure_node)
         name = node.attrib['name']
         unique_name = '%s::%s' % (parent_name, name)
-        return unique_name, name, unique_name
+        return unique_name, name, get_klass_name (klass_node)
     elif node.tag == core_ns('field'):
         structure_node = node.getparent()
         parent_name = get_structure_name(structure_node)
@@ -96,16 +105,14 @@ def get_symbol_names(node):
         return unique_name, name, unique_name
     elif node.tag == core_ns('property'):
         parent_name = get_klass_name(node.getparent())
-        klass_name = '%s::%s' % (parent_name, parent_name)
         name = node.attrib['name']
         unique_name = '%s:%s' % (parent_name, name)
-        return unique_name, name, klass_name
+        return unique_name, name, parent_name
     elif node.tag == glib_ns('signal'):
         parent_name = get_klass_name(node.getparent())
-        klass_name = '%s::%s' % (parent_name, parent_name)
         name = node.attrib['name']
         unique_name = '%s::%s' % (parent_name, name)
-        return unique_name, name, klass_name
+        return unique_name, name, parent_name
     elif node.tag == core_ns('alias'):
         _ = node.attrib.get(c_ns('type'))
         return _, _, _
