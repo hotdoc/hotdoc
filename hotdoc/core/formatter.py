@@ -928,13 +928,17 @@ class Formatter(Configurable):
         return out
 
     def _format_symbol(self, symbol):
-        order_by_section = self._order_by_parent and bool(symbol.parent_name)
+        if isinstance(symbol, Symbol):
+            order_by_section = self._order_by_parent and bool(symbol.parent_name)
+        else:
+            order_by_section = False
         symbol.extension_attributes['order_by_section'] = order_by_section
         for csym in symbol.get_children_symbols():
             if csym:
-                csym.parent_name = symbol.parent_name
-                csym.extension_attributes['order_by_section'] = \
-                    order_by_section
+                if isinstance(csym, Symbol) and csym.parent_name is None:
+                    csym.parent_name = symbol.parent_name
+                    csym.extension_attributes['order_by_section'] = \
+                        order_by_section
                 csym.detailed_description = self._format_symbol(csym)
 
         symbol.formatted_doc = self.format_comment(
