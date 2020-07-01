@@ -35,7 +35,7 @@ from hotdoc.utils.loggable import info, error
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.core.extension import Extension
 from hotdoc.core.symbols import ClassSymbol, QualifiedSymbol, PropertySymbol, \
-    SignalSymbol, ReturnItemSymbol, ParameterSymbol, Symbol
+    SignalSymbol, ReturnItemSymbol, ParameterSymbol, Symbol, InterfaceSymbol
 from hotdoc.parsers.gtk_doc import GtkDocParser, gather_links, search_online_links
 from hotdoc.extensions.c.utils import CCommentExtractor
 from hotdoc.core.formatter import Formatter
@@ -330,10 +330,10 @@ class GstFormatter(Formatter):
         self._order_by_parent = True
         self._ordering.insert(0, GstPluginSymbol)
         self._ordering.insert(1, GstElementSymbol)
-        self._ordering.insert(self._ordering.index(
-            ClassSymbol) + 1, GstPadTemplateSymbol)
-        self._ordering.insert(self._ordering.index(GstPadTemplateSymbol) + 1,
-                              GstPluginsSymbol)
+        self._ordering.insert(self._ordering.index(ClassSymbol) + 1, GIClassSymbol)
+        self._ordering.insert(self._ordering.index(GIClassSymbol) + 1, GstPadTemplateSymbol)
+        self._ordering.insert(self._ordering.index(GstPadTemplateSymbol) + 1, GstPluginsSymbol)
+        self._ordering.insert(self._ordering.index(InterfaceSymbol) + 1, GIInterfaceSymbol)
         self._ordering.append(GstNamedConstantsSymbols)
 
         self._symbol_formatters.update(
@@ -342,6 +342,7 @@ class GstFormatter(Formatter):
              GstPadTemplateSymbol: self._format_pad_template_symbol,
              GstElementSymbol: self._format_element_symbol,
              GstNamedConstantsSymbols: self._format_enum,
+             GIClassSymbol: self._format_class_symbol,
              GIInterfaceSymbol: self._format_interface_symbol,
              GstNamedConstantValue: self._format_name_constant_value, })
 
@@ -669,11 +670,19 @@ class GstExtension(Extension):
 
     def __create_symbol(self, gtype, symbol, pagename):
         if symbol["kind"] in ["enum", "flags"]:
-            return self.__create_enum_symbol(gtype, symbol.get('values'), pagename)
+            if pagename in self.__other_types_pages:
+                # The enum was defined by another type (not an element)
+                # this page will be rendered as any GObject so we need
+                # to specify its parent name
+                parent_name = pagename
+            else:
+                parent_name = None
+            return self.__create_enum_symbol(gtype, symbol.get('values'), pagename,
+                                             parent_name=parent_name)
         if symbol["kind"] == "object":
-            return self.__create_classed_type(pagename, symbol)
+            return self.__create_classed_type(gtype, symbol)
         if symbol["kind"] == "interface":
-            return self.__create_classed_type(pagename, symbol, True)
+            return self.__create_classed_type(gtype, symbol, True)
 
         assert "Not reached" == "False"
         return None
@@ -881,7 +890,7 @@ class GstExtension(Extension):
             _object, unique_name, pagename, parent_name=unique_name)
 
         return self.create_symbol(
-            GIInterfaceSymbol if is_interface else ClassSymbol,
+            GIInterfaceSymbol if is_interface else GIClassSymbol,
             hierarchy=self.__create_hierarchy(pagename, _object),
             display_name=unique_name,
             unique_name=unique_name,
