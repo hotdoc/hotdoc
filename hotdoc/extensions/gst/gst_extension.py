@@ -1000,7 +1000,8 @@ class GstExtension(Extension):
                 filename=plugin_name,
                 extra={'gst-element-name': pagename},
                 rank=str(element['rank']), author=element['author'],
-                classification=element['klass'], plugin=plugin['filename'],
+                classification=element['klass'],
+                plugin=plugin_name,
                 aliases=aliases,
                 package=plugin['package'],
                 interfaces=interfaces)
@@ -1042,7 +1043,7 @@ class GstExtension(Extension):
             GstPluginSymbol,
             description=plugin['description'],
             display_name=plugin_name,
-            unique_name='plugin-' + plugin['filename'],
+            unique_name='plugin-' + plugin_name,
             license=plugin['license'],
             package=plugin['package'],
             filename=plugin['filename'],
