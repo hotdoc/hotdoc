@@ -66,7 +66,8 @@ class Database:
 
         self.__comments = OrderedDict()
         self.__symbols = OrderedDict()
-        self.__aliases = defaultdict(list)
+        self.__aliased = defaultdict(list)
+        self.__aliases = OrderedDict()
         self.__private_folder = private_folder or '/tmp'
 
     def add_comment(self, comment):
@@ -113,7 +114,7 @@ class Database:
             filename = os.path.abspath(filename)
             kwargs['filename'] = os.path.abspath(filename)
 
-        if unique_name in self.__symbols:
+        if unique_name in self.__symbols and not type_ == ProxySymbol:
             warn('symbol-redefined', "%s(unique_name=%s, filename=%s, project=%s)"
                  " has already been defined: %s" % (type_.__name__, unique_name, filename,
                                                     kwargs.get('project_name'),
@@ -136,18 +137,19 @@ class Database:
             setattr(symbol, key, value)
         symbol.aliases += alias_symbols
 
-        self.__symbols[unique_name] = symbol
-        self.__aliases[unique_name].extend(aliases)
+        if not isinstance(symbol, ProxySymbol):
+            self.__symbols[unique_name] = symbol
+        self.__aliased[unique_name].extend(aliases)
 
-        for alias in self.__aliases[unique_name]:
-            self.__symbols[alias] = symbol
+        for alias in self.__aliased[unique_name]:
+            self.__aliases[alias] = symbol
 
         return symbol
 
     def rename_symbol(self, unique_name, target):
         sym = self.__symbols.get(target)
         if sym:
-            for alias in self.__aliases[unique_name]:
+            for alias in self.__aliased[unique_name]:
                 alias.target = unique_name
             if sym.unique_name == sym.display_name:
                 sym.display_name = unique_name
@@ -184,17 +186,20 @@ class Database:
             f.write(json.dumps(resolved_comments, default=serialize, indent=2))
 
         with open(os.path.join(self.__private_folder, 'symbol_index.json'), 'w', encoding='utf8') as f:
-            f.write(json.dumps(list(self.__symbols.keys()), default=serialize, indent=2))
+            f.write(json.dumps(list(self.get_all_symbols().keys()), default=serialize, indent=2))
 
     def __get_aliases(self, name):
-        return self.__aliases[name]
+        return self.__aliased[name]
 
     # pylint: disable=unused-argument
     def get_symbol(self, name, prefer_class=False):
         """
         Banana banana
         """
-        return self.__symbols.get(name)
+        if name in self.__symbols:
+            return self.__symbols.get(name)
+
+        return self.__aliases.get(name)
 
     def get_all_symbols(self):
         return self.__symbols

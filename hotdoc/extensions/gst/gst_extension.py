@@ -699,7 +699,7 @@ class GstExtension(Extension):
         args = signal['args']
         instance_type = obj['hierarchy'][0]
         unique_name = "%s::%s" % (parent_uniquename, name)
-        aliases = self._get_aliases(["%s::%s" % (instance_type, name)])
+        aliases = ["%s::%s" % (instance_type, name)]
 
         gi_extension = self.project.extensions.get('gi-extension')
         python_lang = gi_extension.get_language('python')
@@ -803,7 +803,7 @@ class GstExtension(Extension):
 
             default = prop.get('default')
             if obj['hierarchy'][0] != parent_uniquename:
-                aliases = self._get_aliases(['%s:%s' % (obj['hierarchy'][0], name)])
+                aliases = ['%s:%s' % (obj['hierarchy'][0], name)]
             else:
                 aliases = []
 
@@ -926,9 +926,6 @@ class GstExtension(Extension):
 
         return res
 
-    def _get_aliases(self, aliases):
-        return [alias for alias in aliases if not self.app.database.get_symbol(alias)]
-
     def __extract_feature_comment(self, feature_type, feature):
         pagename = feature_type + '-' + feature['name']
         possible_comment_names = [pagename, feature['name']]
@@ -990,7 +987,7 @@ class GstExtension(Extension):
                 interfaces.append(QualifiedSymbol(
                     type_tokens=[Link(None, interface, interface, mandatory=True)]))
 
-            aliases = self._get_aliases([pagename, element['hierarchy'][0]])
+            aliases = [pagename, element['hierarchy'][0]]
             sym = self.create_symbol(
                 GstElementSymbol,
                 parent_name=None,
