@@ -139,7 +139,7 @@ class GtkDocParser:
             if par_level == 1 and _ not in '()':
                 current_annotation += _
             elif par_level == 0:
-                if _ not in ' \t\n\r()':
+                if _ not in ' \t\n\r():':
                     return []
                 if current_annotation:
                     ann = self.__parse_annotation(current_annotation)
