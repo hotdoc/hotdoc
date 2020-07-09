@@ -75,6 +75,10 @@ SKIP_GTKDOC_COMMENT = '''/**
  * test_greeter_greet: (skip)
  */'''
 
+ANNOTATIONS_ENDED_WITH_COLON_COMMENT = '''/**
+ * test_greeter_greet: (skip): (attributes doc.skip=true):
+ */'''
+
 LINENOS_GTKDOC_COMMENT = '''/**
  *
  *
@@ -92,12 +96,12 @@ LINENOS_GTKDOC_COMMENT = '''/**
 
 SECTION_GTKDOC_COMMENT = '''/**
  * SECTION: notafile
- * @title: This page is not comming from a file.
+ * @title: This page is not coming from a file.
  */'''
 
 SECTION_GTKDOC_WITH_SYMBOLS = '''/**
  * SECTION: notafile
- * @title: This page is not comming from a file.
+ * @title: This page is not coming from a file.
  * @auto-sort: true
  * @symbols:
  * - symbol_a
@@ -113,6 +117,10 @@ NOT_A_GTKDOC_COMMENT = '''/**
  * $param rd Pointer to vbi3_raw_decoder object allocated with
  *   vbi3_raw_decoder_new().
  */'''
+
+ANNOTATIONS_SKIP_TEST = '''/**
+* GESUriSource: (attributes doc.skip=true):
+*/'''
 
 
 class TestGtkDocParser(unittest.TestCase):
@@ -147,6 +155,18 @@ class TestGtkDocParser(unittest.TestCase):
         self.assertTrue('greeter' in comment.params)
         param = comment.params['greeter']
         self.assertEqual(param.description, 'a random greeter')
+
+    def test_annotations_ended_with_colons(self):
+        raw = ANNOTATIONS_ENDED_WITH_COLON_COMMENT
+        lineno = 10
+        end_lineno = len(raw.split('\n')) + 10 - 1
+        comment = self.parser.parse_comment(
+            raw,
+            None,
+            lineno,
+            end_lineno)
+        self.assertIn('skip', comment.annotations)
+        self.assertIn('attributes', comment.annotations)
 
     def test_skip_gtkdoc_comment(self):
         raw = SKIP_GTKDOC_COMMENT
