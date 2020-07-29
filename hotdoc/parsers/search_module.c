@@ -156,8 +156,14 @@ get_context (xmlNodePtr elem, TokenContext * ctx)
   ctx->id = (gchar *) xmlGetProp (elem, (xmlChar *) "id");
 
   if (!ctx->id) {
-    g_assert (elem->parent);
-    get_context (elem->parent, ctx);
+    xmlNodePtr prev_sibling = xmlPreviousElementSibling (elem);
+
+    if (prev_sibling) {
+      get_context (prev_sibling, ctx);
+    } else {
+      g_assert (elem->parent);
+      get_context (elem->parent, ctx);
+    }
   }
 }
 
