@@ -20,7 +20,7 @@
 
 import os
 
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 from schema import Schema, SchemaError, And, Use, Optional
 
@@ -47,6 +47,11 @@ DESCRIPTION =\
 This extension helps licensing your hotdoc project
 """
 
+ASSETS_DOC_TEMPLATE =\
+"""# Licensing
+
+This documentation uses various external assets, licensed as follows:
+"""
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(HERE, 'data')
@@ -105,10 +110,20 @@ CC0_LICENSE = License("CC0-1.0",
                       "Creative Commons Zero 1.0 Universal.",
                       "http://spdx.org/licenses/CC0-1.0")
 
+MIT_LICENSE = License("MIT",
+                      "Massachusetts Institute of Technology",
+                      "https://opensource.org/licenses/MIT")
+
+GPLV3_LICENSE = License("GPLv3",
+                        "GNU General Public License v3.0",
+                        "https://www.gnu.org/licenses/gpl-3.0.en.html")
+
 ALL_LICENSES = {
     "CC-BY-SAv4.0": CCBYSA_4_0_LICENSE,
     "CC-BY-SA": CCBYSA_4_0_LICENSE,
     "CC0-1.0": CC0_LICENSE,
+    "MIT": MIT_LICENSE,
+    "GPLv3": GPLV3_LICENSE,
 }
 
 
@@ -222,6 +237,37 @@ class LicenseExtension(Extension):
             res.append((src, dest))
         return res
 
+    def __formatted_cb(self, project):
+        assets_licenses = []
+
+        licensing = OrderedDict(Formatter.theme_meta.get('assets', {}))
+        for name, extension in self.app.extension_classes.items():
+            licensing.update(extension.get_assets_licensing())
+
+        for name, info in licensing.items():
+            licensing_text = []
+            if not 'url' in info:
+                licensing_text += [name]
+            else:
+                licensing_text += ['[{}]({})'.format(name, info['url'])]
+
+            if 'license' in info:
+                license = info['license']
+                if license in ALL_LICENSES:
+                    license = ALL_LICENSES[license]
+                    LicenseExtension.installed_assets.add(license.plain_text_path)
+                    licensing_text += ['is licensed under the [{} ({})]({}) license.'.format(
+                        license.full_name, license.short_name, license.url)]
+                else:
+                    licensing_text += ['is licensed under the {} license'.format(license)]
+
+                assets_licenses += [' '.join(licensing_text)]
+
+        if assets_licenses:
+            licensing_text = '\n'.join([ASSETS_DOC_TEMPLATE] + assets_licenses)
+            with open(os.path.join(self.app.output, 'COPYING'), 'w') as _:
+                _.write(licensing_text)
+
     def setup(self):
         super(LicenseExtension, self).setup()
         for ext in self.project.extensions.values():
@@ -231,6 +277,7 @@ class LicenseExtension(Extension):
         if not LicenseExtension.connected:
             Formatter.get_extra_files_signal.connect(
                 self.__get_extra_files_cb)
+            self.app.project.formatted_signal.connect(self.__formatted_cb)
             LicenseExtension.connected = True
 
     @staticmethod

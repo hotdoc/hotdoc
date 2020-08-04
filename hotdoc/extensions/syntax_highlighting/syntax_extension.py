@@ -47,6 +47,7 @@ class SyntaxHighlightingExtension(Extension):
     """
     extension_name = 'syntax-highlighting-extension'
     argument_prefix = 'syntax-highlighting'
+    needs_licensing = False
 
     def __init__(self, app, project):
         Extension.__init__(self, app, project)
@@ -80,10 +81,23 @@ class SyntaxHighlightingExtension(Extension):
             opath = os.path.join(self.app.output, folder)
             recursive_overwrite(ipath, opath)
 
+    @classmethod
+    def get_assets_licensing(cls):
+        if SyntaxHighlightingExtension.needs_licensing:
+            return {
+                    'prism': {
+                        'url': 'https://prismjs.com/',
+                        'license': 'MIT'
+                    }
+            }
+        return {}
+
     def setup(self):
         super(SyntaxHighlightingExtension, self).setup()
         if not self.activated:
             return
+
+        SyntaxHighlightingExtension.needs_licensing = True
 
         for ext in self.project.extensions.values():
             ext.formatter.formatting_page_signal.connect(

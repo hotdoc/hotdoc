@@ -483,6 +483,10 @@ class Extension(Configurable):
         pass
 
     @classmethod
+    def get_assets_licensing(cls):
+        return {}
+
+    @classmethod
     def add_index_argument(cls, group):
         """
         Subclasses may call this to add an index argument.
