@@ -93,9 +93,9 @@ def __update_hierarchies(cur_ns, node, gi_name):
 
 
 def __get_parent_link_recurse(gi_name, res):
-    parents = __HIERARCHY_GRAPH.predecessors(gi_name)
+    parents = list(__HIERARCHY_GRAPH.predecessors(gi_name))
     if parents:
-        __get_parent_link_recurse(parents[0], res)
+        __get_parent_link_recurse(list(parents)[0], res)
     ctype_name = ALL_GI_TYPES[gi_name]
     qs = QualifiedSymbol(type_tokens=[Link(None, ctype_name, ctype_name)])
     qs.add_extension_attribute ('gi-extension', 'type_desc',
@@ -109,7 +109,7 @@ def get_klass_parents(gi_name):
     the parents of the klass-like symbol named gi_name
     '''
     res = []
-    parents = __HIERARCHY_GRAPH.predecessors(gi_name)
+    parents = list(__HIERARCHY_GRAPH.predecessors(gi_name))
     if not parents:
         return []
     __get_parent_link_recurse(parents[0], res)

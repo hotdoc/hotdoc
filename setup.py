@@ -416,7 +416,7 @@ if build_c_extension != 'disabled':
         INSTALL_REQUIRES += [
             'pkgconfig==1.1.0',
             'cchardet',
-            'networkx==1.11'
+            'networkx==2.5'
         ]
         PACKAGE_DATA['hotdoc.extensions.gi'] = ['html_templates/*']
         PACKAGE_DATA['hotdoc.extensions.gi.transition_scripts'] = ['translate_sections.sh']
