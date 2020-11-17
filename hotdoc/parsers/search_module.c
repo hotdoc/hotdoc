@@ -210,7 +210,8 @@ parse_tokens (IndexContext *idx_ctx, TokenContext *ctx, const gchar *url, gchar 
   while (str[i] &&
       ((str[i] >= 'a' && str[i] <= 'z') ||
           (str[i] >= 'A' && str[i] <= 'Z') ||
-          (str[i] >= '0' && str[i] <= '9') || str[i] == '_' || str[i] == '.')) {
+          (str[i] >= '0' && str[i] <= '9') ||
+          str[i] == '_' || str[i] == '.' || str[i] == '-')) {
     i++;
   }
 
