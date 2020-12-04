@@ -194,10 +194,9 @@ class GIExtension(Extension):
         link_resolver.get_link_signal.connect(search_online_links)
 
         prev_l = None
-        page.meta['extra']['gi-languages'] = ','.join([lang.language_name for lang in self.languages])
-        page.meta['extra']['gi-language'] = 'c'
-        Extension.format_page(self, page, link_resolver, output)
+        page.meta['extra']['gi-languages'] = [lang.language_name for lang in self.languages]
         page.meta['extra']['gi-language'] = self.languages[0].language_name
+        Extension.format_page(self, page, link_resolver, output)
 
         link_resolver.get_link_signal.disconnect(search_online_links)
 
