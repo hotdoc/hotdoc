@@ -414,7 +414,7 @@ if build_c_extension != 'disabled':
                             ['hotdoc/parsers/c_comment_scanner/scanner.l',
                             'hotdoc/parsers/c_comment_scanner/scanner.h'])]
         INSTALL_REQUIRES += [
-            'pkgconfig==1.1.0',
+            'pkgconfig',
             'cchardet',
             'networkx==2.5'
         ]
