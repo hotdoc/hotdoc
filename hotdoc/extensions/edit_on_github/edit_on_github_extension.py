@@ -96,7 +96,7 @@ class EditOnGitHubExtension(Extension):
         edit_link = self.__repo + '/edit/' + self.__branch + \
             '/' + os.path.relpath(page.source_file, root)
 
-        sitename = "github" if "github" in self.__repo else "GitLab"
+        sitename = "GitHub" if "github" in self.__repo else "GitLab"
 
         page.output_attrs['html']['edit_button'] = \
             '<a href=%s data-hotdoc-role="edit-button">' \
