@@ -84,6 +84,8 @@ def get_field_c_name(node):
 def __update_hierarchies(cur_ns, node, gi_name):
     parent_name = node.attrib.get('parent')
     if not parent_name:
+        # fundamental
+        __HIERARCHY_GRAPH.add_node(gi_name)
         return
 
     if not '.' in parent_name:

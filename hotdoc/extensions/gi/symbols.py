@@ -57,10 +57,4 @@ class GIStructSymbol(ClassSymbol):
     def get_children_symbols(self):
         return [self.class_struct_symbol] + self.methods + super().get_children_symbols()
 
-class FundamentalSymbol(Symbol):
-    __tablename__ = 'fundamentals'
-
-    def get_type_name(self):
-        return 'Fundamental'
-
 TYPE_MAP[GIClassSymbol] = 'class'

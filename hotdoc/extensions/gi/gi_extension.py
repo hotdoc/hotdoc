@@ -49,7 +49,7 @@ from hotdoc.extensions.gi.node_cache import (
     SMART_FILTERS, get_klass_parents,
     get_klass_children, cache_nodes, type_description_from_node,
     is_introspectable, is_callback_type)
-from hotdoc.extensions.gi.symbols import GIClassSymbol, GIInterfaceSymbol, GIStructSymbol, FundamentalSymbol
+from hotdoc.extensions.gi.symbols import GIClassSymbol, GIInterfaceSymbol, GIStructSymbol
 from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
 
 TYPE_MAP.update({GIClassSymbol: 'class', GIInterfaceSymbol: 'interface', GIStructSymbol: 'struct'})
@@ -760,20 +760,7 @@ class GIExtension(Extension):
                                          filename=filename,
                                          parent_name=parent_name)
 
-    def __create_fundamental(self, node, gi_name):
-        name = get_symbol_names(node)[0]
-        sym = self.create_symbol(FundamentalSymbol, node,
-                                 display_name=name,
-                                 unique_name=name,
-                                 filename=self.__get_symbol_filename(name, node))
-        return sym
-
     def __create_structure(self, symbol_type, node, gi_name):
-        if node.attrib.get(glib_ns('fundamental')) == '1':
-            self.debug('%s is a fundamental type, not an actual '
-                       'object class' % (node.attrib['name']))
-            return self.__create_fundamental(node, gi_name)
-
         unique_name, unused_name, klass_name = get_symbol_names(node)
         # Hidding class private structures
         if node.attrib.get('disguised') == '1' and \
