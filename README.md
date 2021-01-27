@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/hotdoc/hotdoc.svg?branch=master)](https://travis-ci.org/hotdoc/hotdoc)
+![Build Status](https://github.com/hotdoc/hotdoc/workflows/python/badge.svg)
 
 ![Hotdoc logo](https://cdn.rawgit.com/hotdoc/hotdoc/master/documentation/hotdoc.svg)
 
