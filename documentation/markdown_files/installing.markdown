@@ -63,6 +63,15 @@ You are now in a virtual environment, to exit it you may call `deactivate`, to e
 
 ## Hotdoc itself
 
+### Python dependencies
+
+In order to use the exact versions of all dependencies hotdoc is known to work against:
+```
+git clone https://github.com/hotdoc/hotdoc.git
+cd hotdoc
+pip install -r requirements.txt
+```
+
 ### Build options
 
 To ensure that extensions with optional dependencies are enabled when installing hotdoc, the setup script will look at the following environment variables:
