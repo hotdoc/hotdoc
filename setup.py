@@ -421,39 +421,38 @@ if build_c_extension != 'disabled':
         PACKAGE_DATA['hotdoc.extensions.gi.transition_scripts'] = ['translate_sections.sh']
 
 
-if __name__ == '__main__':
-    setup(
-        name='hotdoc',
-        version=VERSION,
-        description='A documentation tool micro-framework',
-        keywords='documentation',
-        url='https://github.com/hotdoc/hotdoc',
-        author='Mathieu Duponchelle',
-        author_email='mathieu.duponchelle@opencreed.com',
-        license='LGPLv2.1+',
-        packages=find_packages(),
-        ext_modules=ext_modules,
+setup(
+    name='hotdoc',
+    version=VERSION,
+    description='A documentation tool micro-framework',
+    keywords='documentation',
+    url='https://github.com/hotdoc/hotdoc',
+    author='Mathieu Duponchelle',
+    author_email='mathieu.duponchelle@opencreed.com',
+    license='LGPLv2.1+',
+    packages=find_packages(),
+    ext_modules=ext_modules,
 
-        cmdclass={'build': CustomBuild,
-                  'build_ext': CustomBuildExt,
-                  'sdist': CustomSDist,
-                  'bdist_egg': CustomBDistEgg,
-                  'develop': CustomDevelop,
-                  'test': DiscoverTest,
-                  'link_pre_commit_hook': LinkPreCommitHook,
-                  'build_default_theme': BuildDefaultTheme},
-        package_data=PACKAGE_DATA,
-        install_requires=INSTALL_REQUIRES,
-        extras_require=EXTRAS_REQUIRE,
-        entry_points={
-            'hotdoc.extensions': ('get_extension_classes = '
-                                  'hotdoc.extensions:get_extension_classes'),
-            'hotdoc.extensions.gi.languages':  ('get_language_classes = '
-                                                'hotdoc.extensions.gi.languages:get_language_classes'),
-            'console_scripts': [
-                'hotdoc=hotdoc.run_hotdoc:main',
-                'hotdoc_dep_printer=hotdoc.hotdoc_dep_printer:main']},
-        classifiers=[
-            "Programming Language :: Python :: 3",
-            "Programming Language :: Python :: 3.4",
-            "Programming Language :: Python :: 3.5"])
+    cmdclass={'build': CustomBuild,
+              'build_ext': CustomBuildExt,
+              'sdist': CustomSDist,
+              'bdist_egg': CustomBDistEgg,
+              'develop': CustomDevelop,
+              'test': DiscoverTest,
+              'link_pre_commit_hook': LinkPreCommitHook,
+              'build_default_theme': BuildDefaultTheme},
+    package_data=PACKAGE_DATA,
+    install_requires=INSTALL_REQUIRES,
+    extras_require=EXTRAS_REQUIRE,
+    entry_points={
+        'hotdoc.extensions': ('get_extension_classes = '
+                              'hotdoc.extensions:get_extension_classes'),
+        'hotdoc.extensions.gi.languages':  ('get_language_classes = '
+                                            'hotdoc.extensions.gi.languages:get_language_classes'),
+        'console_scripts': [
+            'hotdoc=hotdoc.run_hotdoc:main',
+            'hotdoc_dep_printer=hotdoc.hotdoc_dep_printer:main']},
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5"])
