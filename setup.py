@@ -315,7 +315,7 @@ INSTALL_REQUIRES = [
     'lxml',
     'schema',
     'appdirs',
-    'wheezy.template==0.1.167',
+    'wheezy.template',
     'toposort>=1.4',
     'xdg>=4.0.0',
 ]
