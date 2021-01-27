@@ -27,7 +27,6 @@ import re
 import cgi
 from collections import OrderedDict
 from itertools import zip_longest
-from xdg import XDG_DATA_HOME, XDG_DATA_DIRS
 from lxml import etree
 
 import yaml
@@ -40,6 +39,7 @@ from hotdoc.core.links import Link
 from hotdoc.utils.configurable import Configurable
 from hotdoc.parsers import cmark
 from hotdoc.utils.loggable import Logger, warn, info
+from hotdoc.utils.utils import XDG_DATA_HOME, XDG_DATA_DIRS
 
 Logger.register_warning_code('gtk-doc', HotdocSourceException)
 Logger.register_warning_code('gtk-doc-bad-link', HotdocSourceException)
@@ -654,4 +654,3 @@ def search_online_links(resolver, name):
     if href:
         return Link(href, name, name)
     return None
-

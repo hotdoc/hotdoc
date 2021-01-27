@@ -47,6 +47,8 @@ if os.name == 'nt':
 else:
     DATADIR = "/usr/share"
 
+XDG_DATA_DIRS = os.getenv('XDG_DATA_DIRS','/usr/local/share/:/usr/share/').split(':')
+XDG_DATA_HOME = os.getenv('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
 
 def splitall(path):
     """
