@@ -20,9 +20,8 @@
 Toolbox
 """
 
-import collections
-# pylint: disable=no-name-in-module
-from collections import OrderedDict, Callable
+from collections import OrderedDict
+from collections.abc import Callable, MutableSet
 import os
 import shutil
 import math
@@ -217,7 +216,7 @@ def get_extension_classes(sort, extra_extension_paths=None):
 # Recipe from http://code.activestate.com/recipes/576694/
 
 
-class OrderedSet(collections.MutableSet):
+class OrderedSet(MutableSet):
     """
     Banana banana
     """
