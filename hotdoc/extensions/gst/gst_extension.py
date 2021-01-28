@@ -298,6 +298,7 @@ class GstPadTemplateSymbol(Symbol):
         self.presence = None
         self.caps = None
         self.object_type = None
+        self.gi_languages = []
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
@@ -395,26 +396,40 @@ class GstFormatter(Formatter):
         return super()._format_page(page)
 
     def _format_prototype(self, function, is_pointer, title):
-        c_proto = Formatter._format_prototype(self, function, is_pointer, title)
-        template = self.get_template('python_prototype.html')
-        python_proto = template.render(
-            {'function_name': title,
-             'parameters': function.parameters,
-             'throws': False,
-             'comment': "python callback for the '%s' signal" % function.make_name(),
-             'is_method': False})
-        template = self.get_template('javascript_prototype.html')
-        for param in function.parameters:
-            param.extension_contents['type-link'] = self._format_linked_symbol(
-                param)
-        js_proto = template.render(
-            {'function_name': title,
-             'parameters': function.parameters,
-             'throws': False,
-             'comment': "javascript callback for the '%s' signal" % function.make_name(),
-             'is_method': False})
-        for param in function.parameters:
-            param.extension_contents.pop('type-link', None)
+        gi_extension = self.extension.project.extensions.get('gi-extension')
+
+        if 'c' in self.extension.gi_languages:
+            c_proto = Formatter._format_prototype(self, function, is_pointer, title)
+        else:
+            c_proto = ''
+
+        if 'python' in self.extension.gi_languages:
+            template = self.get_template('python_prototype.html')
+            python_proto = template.render(
+                {'function_name': title,
+                 'parameters': function.parameters,
+                 'throws': False,
+                 'comment': "python callback for the '%s' signal" % function.make_name(),
+                 'is_method': False})
+        else:
+            python_proto = ''
+
+        if 'javascript' in self.extension.gi_languages:
+            template = self.get_template('javascript_prototype.html')
+            for param in function.parameters:
+                param.extension_contents['type-link'] = self._format_linked_symbol(
+                    param)
+            js_proto = template.render(
+                {'function_name': title,
+                 'parameters': function.parameters,
+                 'throws': False,
+                 'comment': "javascript callback for the '%s' signal" % function.make_name(),
+                 'is_method': False})
+            for param in function.parameters:
+                param.extension_contents.pop('type-link', None)
+        else:
+            js_proto = ''
+
         return '%s%s%s' % (c_proto, python_proto, js_proto)
 
     def _format_plugins_symbol(self, symbol):
@@ -559,6 +574,9 @@ class GstExtension(Extension):
                     "-", " ").title(),
                 unique_name=self.project.project_name + "-gst-plugins",
                 plugins=plugins)
+
+        gi_extension = self.project.extensions.get('gi-extension')
+        self.gi_languages = [lang.language_name for lang in gi_extension.languages]
 
         super().setup()
 
@@ -1072,6 +1090,8 @@ class GstExtension(Extension):
 
     def format_page(self, page, link_resolver, output):
         link_resolver.get_link_signal.connect(search_online_links)
+        gi_extension = self.project.extensions.get('gi-extension')
+        page.meta['extra']['gi-languages'] = self.gi_languages
         super().format_page(page, link_resolver, output)
         link_resolver.get_link_signal.disconnect(
             search_online_links)
