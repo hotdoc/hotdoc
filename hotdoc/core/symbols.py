@@ -323,6 +323,19 @@ class SignalSymbol(FunctionSymbol):
         return "Signal"
 
 
+class ActionSignalSymbol(SignalSymbol):
+    """
+    Banana banana
+    """
+    __tablename__ = 'action_signals'
+
+    def __init__(self, **kwargs):
+        SignalSymbol.__init__(self, **kwargs)
+
+    def get_type_name(self):
+        return "Action Signal"
+
+
 class VFunctionSymbol(FunctionSymbol):
     """
     Banana banana

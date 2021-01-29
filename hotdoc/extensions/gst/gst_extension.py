@@ -35,7 +35,7 @@ from hotdoc.utils.loggable import info, error
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.core.extension import Extension
 from hotdoc.core.symbols import ClassSymbol, QualifiedSymbol, PropertySymbol, \
-    SignalSymbol, ReturnItemSymbol, ParameterSymbol, Symbol, InterfaceSymbol
+    SignalSymbol, ActionSignalSymbol, ReturnItemSymbol, ParameterSymbol, Symbol, InterfaceSymbol
 from hotdoc.parsers.gtk_doc import GtkDocParser, gather_links, search_online_links
 from hotdoc.extensions.c.utils import CCommentExtractor
 from hotdoc.core.formatter import Formatter
@@ -298,7 +298,6 @@ class GstPadTemplateSymbol(Symbol):
         self.presence = None
         self.caps = None
         self.object_type = None
-        self.gi_languages = []
         Symbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
@@ -346,6 +345,13 @@ class GstFormatter(Formatter):
              GIClassSymbol: self._format_class_symbol,
              GIInterfaceSymbol: self._format_interface_symbol,
              GstNamedConstantValue: self._format_name_constant_value, })
+
+        self.gi_languages = []
+
+    def _format_parameter_symbol (self, parameter):
+        if self.extension.get_attr(parameter, 'action'):
+            parameter.extension_contents['type-link'] = self._format_type_tokens (parameter, parameter.type_tokens)
+        return Formatter._format_parameter_symbol (self, parameter)
 
     def get_template(self, name):
         return GstFormatter.engine.get_template(name)
@@ -404,29 +410,43 @@ class GstFormatter(Formatter):
             c_proto = ''
 
         if 'python' in self.extension.gi_languages:
-            template = self.get_template('python_prototype.html')
-            python_proto = template.render(
-                {'function_name': title,
-                 'parameters': function.parameters,
-                 'throws': False,
-                 'comment': "python callback for the '%s' signal" % function.make_name(),
-                 'is_method': False})
+            if type (function) == ActionSignalSymbol:
+                template = self.get_template('python_action_prototype.html')
+                python_proto = template.render(
+                    {'name': title,
+                     'parameters': function.parameters,
+                     'return_value': function.return_value})
+            else:
+                template = self.get_template('python_prototype.html')
+                python_proto = template.render(
+                    {'function_name': title,
+                     'parameters': function.parameters,
+                     'throws': False,
+                     'comment': "python callback for the '%s' signal" % function.make_name(),
+                     'is_method': False})
         else:
             python_proto = ''
 
         if 'javascript' in self.extension.gi_languages:
-            template = self.get_template('javascript_prototype.html')
-            for param in function.parameters:
-                param.extension_contents['type-link'] = self._format_linked_symbol(
-                    param)
-            js_proto = template.render(
-                {'function_name': title,
-                 'parameters': function.parameters,
-                 'throws': False,
-                 'comment': "javascript callback for the '%s' signal" % function.make_name(),
-                 'is_method': False})
-            for param in function.parameters:
-                param.extension_contents.pop('type-link', None)
+            if type (function) == ActionSignalSymbol:
+                template = self.get_template('javascript_action_prototype.html')
+                js_proto = template.render(
+                    {'name': title,
+                     'parameters': function.parameters,
+                     'return_value': function.return_value})
+            else:
+                template = self.get_template('javascript_prototype.html')
+                for param in function.parameters:
+                    param.extension_contents['type-link'] = self._format_linked_symbol(
+                        param)
+                js_proto = template.render(
+                    {'function_name': title,
+                     'parameters': function.parameters,
+                     'throws': False,
+                     'comment': "javascript callback for the '%s' signal" % function.make_name(),
+                     'is_method': False})
+                for param in function.parameters:
+                    param.extension_contents.pop('type-link', None)
         else:
             js_proto = ''
 
@@ -517,6 +537,9 @@ class GstExtension(Extension):
 
     # pylint: disable=too-many-branches
     def setup(self):
+        gi_extension = self.project.extensions.get('gi-extension')
+        self.gi_languages = [lang.language_name for lang in gi_extension.languages]
+
         if not self.cache_file:
             if self.list_plugins_page:
                 self.__plugins = self.create_symbol(
@@ -574,9 +597,6 @@ class GstExtension(Extension):
                     "-", " ").title(),
                 unique_name=self.project.project_name + "-gst-plugins",
                 plugins=plugins)
-
-        gi_extension = self.project.extensions.get('gi-extension')
-        self.gi_languages = [lang.language_name for lang in gi_extension.languages]
 
         super().setup()
 
@@ -728,8 +748,9 @@ class GstExtension(Extension):
             type_tokens = type_tokens_from_type_name(arg_type_name, python_lang)
             args_type_names.append((type_tokens, arg_name))
 
-        args_type_names.append(
-            (type_tokens_from_type_name('gpointer', python_lang), "udata"))
+        if not signal.get('action'):
+            args_type_names.append(
+                (type_tokens_from_type_name('gpointer', python_lang), "udata"))
         params = []
 
         for comment_name in [unique_name] + aliases:
@@ -749,8 +770,14 @@ class GstExtension(Extension):
             tokens = type_tokens_from_type_name(return_type_name, python_lang)
             retval = [ReturnItemSymbol(type_tokens=tokens)]
 
+        if signal.get('action'):
+            typ = ActionSignalSymbol
+            for param in params:
+                self.add_attrs(param, action=True)
+        else:
+            typ = SignalSymbol
         res = self.create_symbol(
-            SignalSymbol, parameters=params, return_value=retval,
+            typ, parameters=params, return_value=retval,
             display_name=name, unique_name=unique_name,
             extra={'gst-element-name': pagename},
             aliases=aliases, parent_name=parent_name)

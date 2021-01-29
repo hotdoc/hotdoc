@@ -178,6 +178,7 @@ class Formatter(Configurable):
             ReturnItemSymbol: self._format_return_item_symbol,
             FieldSymbol: self._format_field_symbol,
             SignalSymbol: self._format_signal_symbol,
+            ActionSignalSymbol: self._format_action_signal_symbol,
             VFunctionSymbol: self._format_vfunction_symbol,
             PropertySymbol: self._format_property_symbol,
             ClassSymbol: self._format_class_symbol,
@@ -186,7 +187,7 @@ class Formatter(Configurable):
 
         self._ordering = [InterfaceSymbol, ClassSymbol, ConstructorSymbol,
                           MethodSymbol, ClassMethodSymbol, FunctionSymbol,
-                          FunctionMacroSymbol, SignalSymbol, PropertySymbol,
+                          FunctionMacroSymbol, SignalSymbol, ActionSignalSymbol, PropertySymbol,
                           StructSymbol, VFunctionSymbol, EnumSymbol,
                           ConstantSymbol, ExportedVariableSymbol, AliasSymbol,
                           CallbackSymbol]
@@ -573,6 +574,14 @@ class Formatter(Configurable):
                                 'parameters': parameters,
                                 'is_pointer': is_pointer})
 
+    def _format_action_prototype(self, return_value, function_name,
+                                   parameters):
+        template = self.get_template('action_prototype.html')
+
+        return template.render({'return_value': return_value,
+                                'name': function_name,
+                                'parameters': parameters})
+
     def __format_parameter_detail(self, name, detail, extra=None):
         extra = extra or {}
         template = self.get_template('parameter_detail.html')
@@ -747,11 +756,17 @@ class Formatter(Configurable):
             return_value = None
 
         parameters = []
-        for param in function.parameters:
-            parameters.append(self._format_linked_symbol(param))
+        if type(function) == ActionSignalSymbol:
+            for param in function.parameters:
+                parameters.append(param.argname)
+            return self._format_action_prototype(return_value,
+                                                   title, parameters)
+        else:
+            for param in function.parameters:
+                parameters.append(self._format_linked_symbol(param))
 
-        return self._format_callable_prototype(return_value,
-                                               title, parameters, is_pointer)
+            return self._format_callable_prototype(return_value,
+                                                   title, parameters, is_pointer)
 
     def _format_raw_code(self, code):
         code = html.escape(code)
@@ -812,6 +827,9 @@ class Formatter(Configurable):
     def _format_signal_symbol(self, signal):
         title = "%s_callback" % re.sub('-', '_', signal.link.title)
         return self._format_callable(signal, "signal", title)
+
+    def _format_action_signal_symbol(self, signal):
+        return self._format_callable(signal, "action signal", signal.link.title)
 
     def _format_vfunction_symbol(self, vmethod):
         return self._format_callable(vmethod, "virtual method",

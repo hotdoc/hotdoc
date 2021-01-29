@@ -186,7 +186,10 @@ class GIFormatter(Formatter):
             else:
                 parameter.extension_contents['type-link'] = self._format_linked_symbol (parameter)
         else:
-            parameter.extension_contents.pop('type-link', None)
+            if self.extension.get_attr(parameter, 'action'):
+                parameter.extension_contents['type-link'] = self._format_type_tokens (parameter, parameter.type_tokens)
+            else:
+                parameter.extension_contents.pop('type-link', None)
 
         res = Formatter._format_parameter_symbol (self, parameter)
         return res
@@ -223,21 +226,28 @@ class GIFormatter(Formatter):
             return Formatter._format_prototype (self, function,
                     is_pointer, title)
 
-        c_name = function.make_name()
-        template = self.engine.get_template(language + '_prototype.html')
-
-        if type (function) == SignalSymbol:
-            comment = "%s callback for the '%s' signal" % (language, c_name)
-        elif type (function) == VFunctionSymbol:
-            comment = "%s implementation of the '%s' virtual method" % \
-                    (language, c_name)
+        if type (function) == ActionSignalSymbol:
+            template = self.engine.get_template(language + '_action_prototype.html')
+            res = template.render ({
+                'return_value': function.return_value,
+                'name': title,
+                'parameters': params})
         else:
-            comment = "%s wrapper for '%s'" % (language, c_name)
+            c_name = function.make_name()
+            template = self.engine.get_template(language + '_prototype.html')
 
-        res = template.render ({'return_value': function.return_value,
-            'parent_name': function.parent_name, 'function_name': title, 'parameters':
-            params, 'comment': comment, 'throws': function.throws,
-            'out_params': [], 'is_method': isinstance(function, MethodSymbol)})
+            if type (function) == SignalSymbol:
+                comment = "%s callback for the '%s' signal" % (language, c_name)
+            elif type (function) == VFunctionSymbol:
+                comment = "%s implementation of the '%s' virtual method" % \
+                        (language, c_name)
+            else:
+                comment = "%s wrapper for '%s'" % (language, c_name)
+
+            res = template.render ({'return_value': function.return_value,
+                'parent_name': function.parent_name, 'function_name': title, 'parameters':
+                params, 'comment': comment, 'throws': function.throws,
+                'out_params': [], 'is_method': isinstance(function, MethodSymbol)})
 
         return res
 

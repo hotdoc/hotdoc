@@ -623,7 +623,15 @@ class GIExtension(Extension):
         self.add_attrs(udata_param, type_desc=type_desc, direction='in', is_closure=True)
         parameters.append(udata_param)
 
-        res = self.create_symbol(SignalSymbol, node,
+        if node.attrib.get('action') == '1':
+            typ = ActionSignalSymbol
+            for sym in parameters + retval:
+                if sym is not None:
+                    self.add_attrs(sym, action=True)
+        else:
+            typ = SignalSymbol
+
+        res = self.create_symbol(typ, node,
             parameters=parameters, return_value=retval,
             display_name=name, unique_name=unique_name,
             filename=self.__get_symbol_filename(klass_name, node),

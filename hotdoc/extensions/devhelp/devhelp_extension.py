@@ -27,7 +27,8 @@ from hotdoc.core.symbols import (
     FunctionSymbol, ClassSymbol, StructSymbol, EnumSymbol, PropertySymbol,
     SignalSymbol, ConstantSymbol, FunctionMacroSymbol, CallbackSymbol,
     InterfaceSymbol, AliasSymbol, VFunctionSymbol, ExportedVariableSymbol,
-    FieldSymbol, MethodSymbol, EnumMemberSymbol, ConstructorSymbol)
+    FieldSymbol, MethodSymbol, EnumMemberSymbol, ConstructorSymbol,
+    ActionSignalSymbol)
 from hotdoc.core.extension import Extension
 from hotdoc.utils.utils import recursive_overwrite
 
@@ -57,6 +58,7 @@ TYPE_MAP = {
     EnumMemberSymbol: 'member',
     PropertySymbol: 'property',
     SignalSymbol: 'signal',
+    ActionSignalSymbol: 'signal',
     ConstantSymbol: 'macro',
     FunctionMacroSymbol: 'macro',
     CallbackSymbol: 'function',
