@@ -359,7 +359,10 @@ PACKAGE_DATA = {
         'devhelp.css'],
     'hotdoc.extensions.license': [
         'data/*',
-        'html_templates/*']
+        'html_templates/*'],
+    'hotdoc.extensions.comment_on_github': [
+        'scripts/github-comment-loader.js',
+        'templates/*']
 }
 
 build_c_extension = os.environ.get('HOTDOC_BUILD_C_EXTENSION', 'auto')
