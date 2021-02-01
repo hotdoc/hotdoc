@@ -1,0 +1,13 @@
+@require(return_value, name, parameters)
+
+<pre class="javascript-prototype language-javascript">
+@if return_value:
+let ret = \
+@end
+@parameters[0].argname\
+.emit ("@name"\
+@for i, parameter in enumerate (parameters[1:]):
+, \
+@parameter.argname\
+@end
+);</pre>

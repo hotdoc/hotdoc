@@ -1,0 +1,13 @@
+@require(return_value, name, parameters)
+
+<pre class="python-prototype language-python">
+@if return_value:
+ret = \
+@end
+@parameters[0].argname\
+.emit ("@name"\
+@for i, parameter in enumerate (parameters[1:]):
+, \
+@parameter.argname\
+@end
+)</pre>

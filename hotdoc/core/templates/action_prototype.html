@@ -1,0 +1,12 @@
+@require(return_value, name, parameters)
+
+<pre class="c-prototype language-c">
+g_signal_emit_by_name (@parameters[0], "@name"\
+@for i, parameter in enumerate (parameters[1:]):
+, \
+@parameter\
+@end
+@if return_value:
+, &ret\
+@end
+);</pre>
