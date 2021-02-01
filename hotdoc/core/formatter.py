@@ -945,7 +945,7 @@ class Formatter(Configurable):
                                'constant': constant})
         return out
 
-    def _format_symbol(self, symbol):
+    def __update_children_symbols(self, symbol):
         if isinstance(symbol, Symbol):
             order_by_section = self._order_by_parent and bool(symbol.parent_name)
         else:
@@ -957,8 +957,13 @@ class Formatter(Configurable):
                     csym.parent_name = symbol.parent_name
                     csym.extension_attributes['order_by_section'] = \
                         order_by_section
-                csym.detailed_description = self._format_symbol(csym)
+                if not csym.standalone:
+                    csym.detailed_description = self._format_symbol(csym)
+                else:
+                    self.__update_children_symbols(csym)
 
+    def _format_symbol(self, symbol):
+        self.__update_children_symbols(symbol)
         symbol.formatted_doc = self.format_comment(
             symbol.comment, self.extension.app.link_resolver)
 

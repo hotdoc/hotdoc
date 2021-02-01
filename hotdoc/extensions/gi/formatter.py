@@ -282,7 +282,7 @@ class GIFormatter(Formatter):
             # Render class structure if available.
             if klass.class_struct_symbol:
                 out += '<h3>Class structure</h3>'
-                out += klass.class_struct_symbol.detailed_description
+                out += self._format_symbol(klass.class_struct_symbol)
 
         klass.raw_text = saved_raw_text
         return out

@@ -35,6 +35,7 @@ class Symbol:
     instantiating it directly.
     """
     __tablename__ = 'symbols'
+    standalone = True
 
     def __init__(self):
         self.extension_contents = {}
@@ -151,6 +152,7 @@ class QualifiedSymbol:
     """
     Banana banana
     """
+    standalone = False
 
     def __init__(self, type_tokens=None):
         self.input_tokens = type_tokens or []
@@ -236,6 +238,7 @@ class FieldSymbol(Symbol):
     Banana banana
     """
     __tablename__ = 'fields'
+    standalone = False
 
     def __init__(self, **kwargs):
         self.is_function_pointer = False
@@ -262,6 +265,7 @@ class EnumMemberSymbol(Symbol):
     Banana banana
     """
     __tablename__ = 'members'
+    standalone = False
 
 
 class FunctionSymbol(Symbol):

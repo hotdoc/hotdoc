@@ -235,6 +235,7 @@ class GstPluginSymbol(Symbol):
 
 class GstNamedConstantValue(Symbol):
     __tablename__ = 'named constants value'
+    standalone = False
     TEMPLATE = """
         @require(symbol)
         <div class="member_details" class="always-hide-toc" data-toc-skip=true data-hotdoc-id="@symbol.link.id_">
