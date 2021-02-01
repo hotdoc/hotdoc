@@ -540,3 +540,7 @@ class ProxySymbol(Symbol):
     def __init__(self, **kwargs):
         self.target = None
         Symbol.__init__(self, **kwargs)
+
+    # Do not overwrite the name of the symbol we proxy
+    def make_name(self):
+        return None
