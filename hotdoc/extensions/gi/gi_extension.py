@@ -754,13 +754,15 @@ class GIExtension(Extension):
 
         alias_link = [l for l in type_desc.type_tokens if isinstance(l, Link)]
         for lang in self.languages:
+            if lang.language_name == 'c':
+                continue
             fund_type = lang.get_fundamental(type_desc.c_name)
             if fund_type:
                 # The alias name is now considered as a FUNDAMENTAL type.
                 lang.add_fundamental (name, fund_type)
             else:
                 if alias_link:
-                    lang.add_alias_link (name, alias_link[0])
+                    lang.add_alias_type(name, aliased_type)
 
         return self.create_symbol(AliasSymbol, node,
                                          aliased_type=aliased_type,

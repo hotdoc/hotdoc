@@ -156,6 +156,7 @@ class QualifiedSymbol:
 
     def __init__(self, type_tokens=None):
         self.input_tokens = type_tokens or []
+        self.type_link = None
         self.comment = None
         self.extension_attributes = {}
         self.extension_contents = {}
@@ -195,7 +196,6 @@ class QualifiedSymbol:
         """
         Banana banana
         """
-        self.type_link = None
         self.type_tokens = []
 
         for child in self.get_children_symbols():

@@ -45,7 +45,8 @@ class Language(Configurable):
 
         This should never get called directly.
         """
-        ALIASES[self.language_name] = {}
+        if not self.language_name in ALIASES:
+            ALIASES[self.language_name] = {}
 
     def get_fundamental(self, name):
         """
@@ -83,14 +84,17 @@ class Language(Configurable):
         Get the alias link for the given name
         Extension subclasses might implement this.
         """
-        return ALIASES[self.language_name].get(name)
+        aliased_type = ALIASES[self.language_name].get(name)
+        if aliased_type:
+            return aliased_type.type_link
+        return None
 
-    def add_alias_link(self, name, link):
+    def add_alias_type(self, name, alias_type):
         """
         Add the alias Link for the given name
         Extension subclasses might implement this.
         """
-        ALIASES[self.language_name][name] = link
+        ALIASES[self.language_name][name] = alias_type
 
     @staticmethod
     def get_dependencies():
