@@ -348,8 +348,6 @@ class GIExtension(Extension):
                 continue
 
             type_desc = type_description_from_node(field)
-            if is_callback_type(type_desc.c_name):
-                continue
 
             field_name = field.attrib['name']
             name = "%s.%s" % (struct_name, field_name)
