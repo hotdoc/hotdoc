@@ -30,8 +30,13 @@ class GIClassSymbol(ClassSymbol):
         ClassSymbol.__init__(self, **kwargs)
 
     def get_children_symbols(self):
-        return [self.class_struct_symbol] + self.interfaces + self.properties + self.methods + self.signals + self.vfuncs + super().get_children_symbols()
+        res = self.interfaces + self.properties + self.methods + \
+            self.signals + self.vfuncs + super().get_children_symbols()
 
+        if self.class_struct_symbol:
+           res += [self.class_struct_symbol] + self.class_struct_symbol.get_children_symbols()
+
+        return res
 
 class GIInterfaceSymbol(InterfaceSymbol):
     def __init__(self, **kwargs):
