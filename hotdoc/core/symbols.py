@@ -104,8 +104,9 @@ class Symbol:
             if isinstance(sym, ParameterSymbol):
                 sym.comment = self.comment.params.get(sym.argname)
             elif isinstance(sym, FieldSymbol):
-                if not sym.comment or not sym.comment.description:
-                    sym.comment = self.comment.params.get(sym.member_name)
+                param_comment = self.comment.params.get(sym.member_name)
+                if param_comment and (not sym.comment or not sym.comment.description):
+                    sym.comment = param_comment
             elif isinstance(sym, EnumMemberSymbol):
                 if not sym.comment or not sym.comment.description:
                     sym.comment = self.comment.params.get(sym.unique_name)
