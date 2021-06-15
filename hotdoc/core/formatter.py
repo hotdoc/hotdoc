@@ -737,8 +737,8 @@ class Formatter(Configurable):
 
         out = template.render(
             {'page': page,
-             'scripts': scripts_basenames,
-             'stylesheets': stylesheets_basenames,
+             'scripts': sorted(scripts_basenames),
+             'stylesheets': sorted(stylesheets_basenames),
              'rel_path': rel_path,
              'attrs': page.output_attrs['html'],
              'meta': {},
