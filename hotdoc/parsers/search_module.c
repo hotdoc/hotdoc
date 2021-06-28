@@ -470,7 +470,7 @@ fill_fragment (gchar *key, GList *list, IndexContext *idx_ctx)
     g_string_append (text_string, tmp->data);
   }
 
-  text = g_string_free (text_string, FALSE); 
+  text = g_string_free (text_string, FALSE);
 
   jroot = json_node_new(JSON_NODE_OBJECT);
   jfragment = json_object_new();
@@ -640,6 +640,7 @@ fill_url (gchar *key, GList *list, IndexContext *ctx)
   gchar *filename;
   gchar *contents;
   FILE *f;
+  gboolean ret = TRUE;
 
   deduped = g_hash_table_new (g_str_hash, g_str_equal);
 
@@ -660,9 +661,15 @@ fill_url (gchar *key, GList *list, IndexContext *ctx)
   filename = g_build_filename (ctx->search_dir, key, NULL);
 
   f = fopen (filename, "w");
+  if (!f) {
+    fprintf(stderr, "Failed to open '%s' for writing\n", filename);
+    ret = FALSE;
+    goto cleanup;
+  }
   fwrite (contents, sizeof (gchar), strlen(contents), f);
   fclose(f);
 
+cleanup:
   g_free (contents);
   g_free (filename);
 
@@ -671,7 +678,7 @@ fill_url (gchar *key, GList *list, IndexContext *ctx)
 
   g_list_free_full (list, (GDestroyNotify) free_contextualized_url);
 
-  return TRUE;
+  return ret;
 }
 
 static gpointer
