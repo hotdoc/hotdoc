@@ -24,6 +24,7 @@ Implements standalone markdown files parsing.
 import io
 import re
 import os
+import pathlib
 from urllib.parse import urlparse
 from collections import namedtuple, defaultdict, OrderedDict
 
@@ -407,11 +408,11 @@ class Tree:
                 self.__dep_map[sym_name] = page
 
     # pylint: disable=no-self-use
-    def parse_page(self, source_file, extension_name):
+    def parse_page(self, source_file, include_path, extension_name):
         with io.open(source_file, 'r', encoding='utf-8') as _:
             contents = _.read()
 
-        return self.page_from_raw_text(source_file, contents, extension_name)
+        return self.page_from_raw_text(source_file, include_path, contents, extension_name)
 
     def add_unordered_subpages(self, extension, ext_index, ext_pages):
         for _, ext_page in ext_pages.items():
@@ -473,7 +474,7 @@ class Tree:
                 page = ext_pages[smart_key]
                 del ext_pages[smart_key]
             else:
-                source_file = find_file(name, self.project.include_paths)
+                (source_file, include_path) = find_file(name, self.project.include_paths)
                 if source_file is None:
                     position = sitemap.get_position(name)
                     error(
@@ -489,7 +490,7 @@ class Tree:
                     page = Page(
                         name, True, self.project.sanitized_name, 'core')
                 else:
-                    page = self.parse_page(source_file, ext_name)
+                    page = self.parse_page(source_file, include_path, ext_name)
                     page.extension_name = extension.extension_name if extension else 'core'
 
             self.__all_pages[name] = page
@@ -549,7 +550,7 @@ class Tree:
             for page in self.walk(parent=cpage):
                 yield page
 
-    def page_from_raw_text(self, source_file, contents, extension_name):
+    def page_from_raw_text(self, source_file, include_path, contents, extension_name):
         """
         Banana banana
         """
@@ -570,8 +571,7 @@ class Tree:
                          '%s: Invalid metadata: \n%s' % (source_file,
                                                          str(exception)))
 
-        output_path = os.path.dirname(os.path.relpath(
-            source_file, next(iter(self.project.include_paths))))
+        output_path = os.path.dirname(os.path.relpath(source_file, include_path))
 
         ast = cmark.hotdoc_to_ast(contents, self, source_file)
         return Page(source_file, False, self.project.sanitized_name, extension_name,

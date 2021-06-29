@@ -30,18 +30,18 @@ class TestFileIncluder(HotdocTest):
         self._core_ext.setup()
 
     def test_missing_abspath(self):
-        self.assertEqual(find_file('/nope.md', []), None)
+        self.assertEqual(find_file('/nope.md', []), (None, None))
 
     def test_abspath(self):
         path = self._create_md_file('yep.md', 'stuff')
-        self.assertEqual(find_file(path, []), path)
+        self.assertEqual(find_file(path, []), (path, None))
 
     def test_relpath(self):
         path = self._create_md_file('yep.md', 'stuff')
-        self.assertEqual(find_file('yep.md', [self._md_dir]), path)
+        self.assertEqual(find_file('yep.md', [self._md_dir]), (path, self._md_dir))
 
     def test_missing_relpath(self):
-        self.assertEqual(find_file('yep.md', [self._md_dir]), None)
+        self.assertEqual(find_file('yep.md', [self._md_dir]), (None, None))
 
     def test_resolve(self):
         _ = self._create_md_file('yep.md', 'stuff')
