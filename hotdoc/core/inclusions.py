@@ -47,15 +47,15 @@ def find_file(filename, include_paths):
     """
     if os.path.isabs(filename):
         if os.path.exists(filename):
-            return filename
-        return None
+            return (filename, None)
+        return (None, None)
 
     for include_path in include_paths:
         fpath = os.path.join(include_path, filename)
         if os.path.exists(fpath) and os.path.isfile(fpath):
-            return fpath
+            return (fpath, include_path)
 
-    return None
+    return (None, None)
 
 
 def __parse_include(include):
@@ -80,8 +80,8 @@ def __parse_include(include):
     return (include_filename, line_ranges, symbol)
 
 
-def __get_content(include_path, line_ranges, symbol):
-    for c in include_signal(include_path, line_ranges, symbol):
+def __get_content(fpath, line_ranges, symbol):
+    for c in include_signal(fpath, line_ranges, symbol):
         if c is not None:
             included_content, lang = c
             if lang != "markdown":
@@ -98,8 +98,8 @@ def resolve(uri, include_paths):
     include_filename, line_ranges, symbol = __parse_include(uri)
     if include_filename is None:
         return None
-    include_path = find_file(include_filename, include_paths)
-    if include_path is None:
+    (fpath, include_path) = find_file(include_filename, include_paths)
+    if fpath is None:
         return None
-    return __get_content(include_path.strip(),
+    return __get_content(fpath.strip(),
                          line_ranges, symbol)

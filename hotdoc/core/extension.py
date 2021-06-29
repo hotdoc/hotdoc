@@ -367,7 +367,7 @@ class Extension(Configurable):
         # Finally we make our index page
         if self.index:
             index_page = self.project.tree.parse_page(
-                self.index, self.extension_name)
+                self.index, next(iter(self.project.include_paths)), self.extension_name)
         else:
             index_page = Page('%s-index' % self.argument_prefix, True, self.project.sanitized_name,
                               self.extension_name)
