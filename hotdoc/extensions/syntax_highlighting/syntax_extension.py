@@ -53,6 +53,7 @@ class SyntaxHighlightingExtension(Extension):
         Extension.__init__(self, app, project)
         self.__asset_folders = set()
         self.activated = False
+        self.keep_markup = False
 
     def __formatting_page_cb(self, formatter, page):
         prism_theme = Formatter.theme_meta.get('prism-theme', 'prism')
@@ -71,6 +72,10 @@ class SyntaxHighlightingExtension(Extension):
                          'prism-autoloader.js'))
         page.output_attrs['html']['scripts'].add(
             os.path.join(HERE, 'prism_autoloader_path_override.js'))
+        if self.keep_markup:
+            page.output_attrs['html']['scripts'].add(
+                os.path.join(HERE, 'prism', 'plugins', 'keep-markup',
+                             'prism-keep-markup.js'))
 
         folder = os.path.join('html', 'assets', 'prism_components')
         self.__asset_folders.add(folder)
@@ -112,8 +117,15 @@ class SyntaxHighlightingExtension(Extension):
                            action="store_true",
                            help="Deactivate the syntax highlighting extension",
                            dest='disable_syntax_highlighting')
+        group.add_argument('--keep-markup-in-code-blocks',
+                           action='store_true',
+                           help='Keep HTML markup in custom <code> blocks.' +
+                                'This allows inserting hyperlinks, etc.',
+                           dest='keep_markup_in_code_blocks')
 
     def parse_config(self, config):
         super(SyntaxHighlightingExtension, self).parse_config(config)
         self.activated = \
             not bool(config.get('disable_syntax_highlighting', False))
+        self.keep_markup = \
+            bool(config.get('keep_markup_in_code_blocks', False))

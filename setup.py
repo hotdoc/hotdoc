@@ -351,6 +351,7 @@ PACKAGE_DATA = {
         'prism/components/*',
         'prism/themes/*',
         'prism/plugins/autoloader/prism-autoloader.js',
+        'prism/plugins/keep-markup/prism-keep-markup.js',
         'prism_autoloader_path_override.js'],
     'hotdoc.extensions.search': [
         '*.js',
