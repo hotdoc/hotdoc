@@ -1,4 +1,5 @@
 import os
+import re
 from collections import defaultdict
 from lxml import etree
 import networkx as nx
@@ -18,9 +19,16 @@ Names of boilerplate GObject macros we don't want to expose
 '''
 SMART_FILTERS = set()
 
+# https://stackoverflow.com/questions/1175208/elegant-python-function-to-convert-camelcase-to-snake-case
+def __camel_to_snake_upper(name):
+    name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).upper()
 
 def __generate_smart_filters(id_prefixes, sym_prefixes, node):
-    sym_prefix = node.attrib['{%s}symbol-prefix' % NS_MAP['c']]
+    try:
+        sym_prefix = node.attrib['{%s}symbol-prefix' % NS_MAP['c']]
+    except KeyError:
+        sym_prefix = __camel_to_snake_upper(node.attrib['name'])
     SMART_FILTERS.add(('%s_IS_%s' % (sym_prefixes, sym_prefix)).upper())
     SMART_FILTERS.add(('%s_TYPE_%s' % (sym_prefixes, sym_prefix)).upper())
     SMART_FILTERS.add(('%s_%s' % (sym_prefixes, sym_prefix)).upper())
@@ -155,6 +163,8 @@ def cache_nodes(gir_root, all_girs, languages):
     class_tag = core_ns('class')
     callback_tag = core_ns('callback')
     interface_tag = core_ns('interface')
+    enum_tag = core_ns('enumeration')
+    bitfield_tag = core_ns('bitfield')
     for node in gir_root.xpath('.//*[not(self::core:type) and not (self::core:array)][@c:type or @glib:type-name]',
             namespaces=NS_MAP):
         try:
@@ -169,6 +179,8 @@ def cache_nodes(gir_root, all_girs, languages):
             __update_hierarchies (ns_node.attrib.get('name'), node, gi_name)
             for language in languages:
                 language.make_translations('%s::%s' % (name, name), node)
+            __generate_smart_filters(id_prefixes, sym_prefixes, node)
+        elif node.tag in (enum_tag, bitfield_tag):
             __generate_smart_filters(id_prefixes, sym_prefixes, node)
         elif node.tag in (callback_tag,):
             ALL_CALLBACK_TYPES.add(node.attrib[c_ns('type')])
