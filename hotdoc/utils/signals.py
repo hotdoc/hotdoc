@@ -19,6 +19,7 @@ Simple signalling system
 import unittest
 import inspect
 
+from hotdoc.utils.utils import OrderedSet
 
 class Slot:
     """Banana banana"""
@@ -58,8 +59,8 @@ class Signal(object):
     """
 
     def __init__(self, optimized=False):
-        self._functions = set()
-        self._after_functions = set()
+        self._functions = OrderedSet()
+        self._after_functions = OrderedSet()
         self._optimized = optimized
 
     def __call__(self, *args, **kargs):
