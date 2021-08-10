@@ -100,7 +100,7 @@ code files and document the symbols that they contain, then keep on reading.
 When hotdoc parses markdown sources, it attributes them an "extension-name". This name allows using language-specific formatters at format-time, amongst other things that extensions can customize. Of course an extension can choose to not provide a specific formatter, in which case the default formatter will be used.
 
 > Note: this is (currently) the case for the C extension, which means
-> that you can technically skip the rest of this section if C is your use 
+> that you can technically skip the rest of this section if C is your use
 > case, as the default formatter will format symbols as C symbols.
 
 The current approach for letting hotdoc know that a page and its subpages
@@ -263,3 +263,16 @@ The two approaches listed above can be mixed, this will soon<sup>(tm)</sup> be d
 [CommonMark]: http://commonmark.org/
 
 [python extension]: https://github.com/hotdoc/hotdoc_python_extension
+
+### Supported YAML metadata
+
+The following table lists some available options that can be specified in the
+metadata YAML header.
+
+| Key | Type | Description |
+| --- | ---- | ----------- |
+| title              | `str`  | Use this title instead of the the first heading |
+| short-description  | `str`  | A short description that is used when referencing this page in `Subpages:` sections |
+| render-subpages    | `bool` | Put the `Subpages:` sections at the end of a page that has subpages (default is `true`) |
+| full-width         | `bool` | Render the page over the full width without the sidebar |
+| redirect           | `str`  | Redirect to a different page |
