@@ -29,18 +29,26 @@ import sys
 import re
 import pathlib
 import traceback
+import importlib.util
 
 from urllib.request import urlretrieve
+from pathlib import Path
 
 import pkg_resources
 from toposort import toposort_flatten
 
-from hotdoc.core.exceptions import HotdocSourceException
+from hotdoc.core.exceptions import HotdocSourceException, ConfigError
 from hotdoc.utils.setup_utils import symlink
-from hotdoc.utils.loggable import info, debug, error
+from hotdoc.utils.loggable import Logger, info, debug, error, warn
+
+import typing as T
+
+if T.TYPE_CHECKING:
+    from hotdoc.core.extension import Extension
 
 WIN32 = (sys.platform == 'win32')
 
+Logger.register_warning_code('extension-import', ConfigError)
 
 if os.name == 'nt':
     DATADIR = os.path.join(os.path.dirname(__file__), '..', 'share')
@@ -151,7 +159,7 @@ def __get_extra_extension_classes(paths):
             classes = activation_function()
         # pylint: disable=broad-except
         except Exception as exc:
-            info("Failed to load %s %s" % (entry_point.module_name, exc))
+            warn('extension-import', "Failed to load %s %s" % (entry_point.module_name, exc))
             debug(traceback.format_exc())
             continue
 
@@ -160,10 +168,30 @@ def __get_extra_extension_classes(paths):
 
     return extra_classes
 
+def __load_extra_extension_modules(paths: T.List[str]) -> T.List[T.Type['Extension']]:
+    """
+    Banana banana
+    """
+    extra_classes = []
+    for p in [Path(x) for x in paths]:
+        if not p.exists() or not p.is_file():
+            warn('extension-import', f'Extension {p} does not exist or is not a file (skipping)')
+            continue
+        try:
+            spec = importlib.util.spec_from_file_location(p.stem, p)
+            ext_mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(ext_mod)
+            extra_classes += ext_mod.get_extension_classes()
+        except Exception as exc:
+            warn('extension-import', f'Faield to import extension {p}')
+    return extra_classes
+
 
 # pylint: disable=too-many-locals
 # pylint: disable=too-many-branches
-def get_extension_classes(sort, extra_extension_paths=None):
+def get_extension_classes(sort: bool,
+                          extra_extension_paths: T.Optional[T.List[str]] = None,
+                          extra_extensions: T.Optional[T.List[str]] = None) -> T.List[T.Type['Extension']]:
     """
     Banana banana
     """
@@ -188,6 +216,10 @@ def get_extension_classes(sort, extra_extension_paths=None):
 
     if extra_extension_paths:
         for klass in __get_extra_extension_classes(extra_extension_paths):
+            all_classes[klass.extension_name] = klass
+
+    if extra_extensions:
+        for klass in __load_extra_extension_modules(extra_extensions):
             all_classes[klass.extension_name] = klass
 
     klass_list = list(all_classes.values())
