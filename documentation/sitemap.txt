@@ -19,3 +19,4 @@ index.markdown
 		git-upload.markdown
 		license-extension.markdown
 		syntax-highlighting-extension.markdown
+	custom-extensions.markdown

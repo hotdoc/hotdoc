@@ -351,6 +351,10 @@ def run(args, verbose=False):
                         default=[],
                         dest="extra_extension_path",
                         help="An extra extension path to use")
+    parser.add_argument('--extra-extension', action='append',
+                        default=[],
+                        dest='extra_extension',
+                        help='An extra extension to load and use')
     parser.add_argument('--conf-file', help='Path to the config file',
                         dest='conf_file')
     tmpargs, _args = parser.parse_known_args(args)
@@ -360,12 +364,16 @@ def run(args, verbose=False):
         json_conf = load_config_json(tmpargs.conf_file)
         tmpargs.extra_extension_path += json_conf.get('extra_extension_path',
                                                       [])
+        tmpargs.extra_extension += json_conf.get('extra_extension', [])
 
     # We only get these once, doing this now means all
     # installed extensions will show up as Configurable subclasses.
     try:
         ext_classes = get_extension_classes(
-            sort=True, extra_extension_paths=tmpargs.extra_extension_path)
+            sort=True,
+            extra_extension_paths=tmpargs.extra_extension_path,
+            extra_extensions=tmpargs.extra_extension,
+        )
     except HotdocException:
         return 1
 
