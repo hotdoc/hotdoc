@@ -1053,10 +1053,12 @@ class Formatter(Configurable):
             return 'default'
 
         if not sha:
-            with open(tarball) as file_:
-                sha = hashlib.sha256().update(file_.read()).hexdigest()
+            with open(tarball, 'rb') as file_:
+                sha = hashlib.sha256(file_.read()).hexdigest()
 
         themepath = os.path.join(cachedir, "themes", sha)
+        if os.path.exists(themepath):
+            return themepath
         try:
             os.makedirs(os.path.join(themepath))
             with tarfile.open(tarball) as file_:
