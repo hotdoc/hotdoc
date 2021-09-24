@@ -25,17 +25,18 @@ def __camel_to_snake_upper(name):
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).upper()
 
 def __generate_smart_filters(id_prefixes, sym_prefixes, node):
-    try:
-        sym_prefix = node.attrib['{%s}symbol-prefix' % NS_MAP['c']]
-    except KeyError:
-        sym_prefix = __camel_to_snake_upper(node.attrib['name'])
-    SMART_FILTERS.add(('%s_IS_%s' % (sym_prefixes, sym_prefix)).upper())
-    SMART_FILTERS.add(('%s_TYPE_%s' % (sym_prefixes, sym_prefix)).upper())
-    SMART_FILTERS.add(('%s_%s' % (sym_prefixes, sym_prefix)).upper())
-    SMART_FILTERS.add(('%s_%s_CLASS' % (sym_prefixes, sym_prefix)).upper())
-    SMART_FILTERS.add(('%s_IS_%s_CLASS' % (sym_prefixes, sym_prefix)).upper())
-    SMART_FILTERS.add(('%s_%s_GET_CLASS' % (sym_prefixes, sym_prefix)).upper())
-    SMART_FILTERS.add(('%s_%s_GET_IFACE' % (sym_prefixes, sym_prefix)).upper())
+    for ns_prefix in sym_prefixes:
+        try:
+            sym_prefix = node.attrib['{%s}symbol-prefix' % NS_MAP['c']]
+        except KeyError:
+            sym_prefix = __camel_to_snake_upper(node.attrib['name'])
+        SMART_FILTERS.add(('%s_IS_%s' % (ns_prefix, sym_prefix)).upper())
+        SMART_FILTERS.add(('%s_TYPE_%s' % (ns_prefix, sym_prefix)).upper())
+        SMART_FILTERS.add(('%s_%s' % (ns_prefix, sym_prefix)).upper())
+        SMART_FILTERS.add(('%s_%s_CLASS' % (ns_prefix, sym_prefix)).upper())
+        SMART_FILTERS.add(('%s_IS_%s_CLASS' % (ns_prefix, sym_prefix)).upper())
+        SMART_FILTERS.add(('%s_%s_GET_CLASS' % (ns_prefix, sym_prefix)).upper())
+        SMART_FILTERS.add(('%s_%s_GET_IFACE' % (ns_prefix, sym_prefix)).upper())
 
 
 __HIERARCHY_GRAPH = nx.DiGraph()
@@ -149,7 +150,7 @@ def cache_nodes(gir_root, all_girs, languages):
     '''
     ns_node = gir_root.find('./{%s}namespace' % NS_MAP['core'])
     id_prefixes = ns_node.attrib['{%s}identifier-prefixes' % NS_MAP['c']]
-    sym_prefixes = ns_node.attrib['{%s}symbol-prefixes' % NS_MAP['c']]
+    sym_prefixes = ns_node.attrib['{%s}symbol-prefixes' % NS_MAP['c']].split(',')
 
     id_key = '{%s}identifier' % NS_MAP['c']
     for node in gir_root.xpath(
@@ -165,6 +166,7 @@ def cache_nodes(gir_root, all_girs, languages):
     interface_tag = core_ns('interface')
     enum_tag = core_ns('enumeration')
     bitfield_tag = core_ns('bitfield')
+    record_tag = core_ns('record')
     for node in gir_root.xpath('.//*[not(self::core:type) and not (self::core:array)][@c:type or @glib:type-name]',
             namespaces=NS_MAP):
         try:
@@ -180,7 +182,7 @@ def cache_nodes(gir_root, all_girs, languages):
             for language in languages:
                 language.make_translations('%s::%s' % (name, name), node)
             __generate_smart_filters(id_prefixes, sym_prefixes, node)
-        elif node.tag in (enum_tag, bitfield_tag):
+        elif node.tag in (enum_tag, bitfield_tag, record_tag):
             __generate_smart_filters(id_prefixes, sym_prefixes, node)
         elif node.tag in (callback_tag,):
             ALL_CALLBACK_TYPES.add(node.attrib[c_ns('type')])
