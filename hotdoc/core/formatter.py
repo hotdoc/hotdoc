@@ -808,18 +808,10 @@ class Formatter(Configurable):
         return_value_detail = self._format_return_value_symbol(
             callable_.return_value, callable_)
 
-        tags = {}
-        if callable_.comment:
-            tags = dict(callable_.comment.tags)
-
-        tags.pop('returns', None)
-        tags.pop('topic', None)
-
         out = template.render({'prototype': prototype,
                                'symbol': callable_,
                                'return_value': return_value_detail,
                                'parameters': parameters,
-                               'tags': tags,
                                'extra': callable_.extension_contents})
 
         return out

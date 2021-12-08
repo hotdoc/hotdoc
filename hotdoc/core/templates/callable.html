@@ -1,4 +1,4 @@
-@require(prototype, symbol, return_value, parameters, tags, extra)
+@require(prototype, symbol, return_value, parameters, extra)
 @extends('base_symbol.html')
 
 @def content():
@@ -20,14 +20,4 @@
 </p>
 @end
 @end
-
-@for tag in tags.values():
-	<p>
-	<b>@tag.name</b>\
-	@if tag.description:
-		: @tag.description
-	@end
-	</p>
-@end
-\
 @end

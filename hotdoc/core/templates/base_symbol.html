@@ -25,4 +25,19 @@ else:
 @end
 @content()
 
+@if symbol.comment:
+\
+@for tag_name, tag in symbol.comment.tags.items():
+\
+@if tag_name not in ['returns', 'topic']:
+	<p>
+	<b>@tag.name</b>\
+	@if tag.description:
+		: @tag.description
+	@end
+	</p>
+@end
+@end
+@end
+
 <hr>
