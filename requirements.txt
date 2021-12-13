@@ -14,7 +14,7 @@ dbus-deviation==0.6.0
     # via hotdoc (setup.py)
 decorator==4.4.2
     # via networkx
-lxml==4.6.3
+lxml==4.6.5
     # via
     #   dbus-deviation
     #   hotdoc (setup.py)
