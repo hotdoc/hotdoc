@@ -35,6 +35,7 @@ from hotdoc.extensions.edit_on_github.edit_on_github_extension import (
     EditOnGitHubExtension)
 from hotdoc.extensions.comment_on_github.comment_on_github_extension import (
     CommentOnGithubExtension)
+from hotdoc.extensions.feedgen.feedgen_extension import FeedgenExtension
 
 if sys.version_info[1] >= 5:
     from hotdoc.extensions.dbus.dbus_extension import DBusExtension
@@ -47,7 +48,7 @@ def get_extension_classes():
     res = [SyntaxHighlightingExtension, SearchExtension, TagExtension,
            DevhelpExtension, LicenseExtension, GitUploadExtension,
            EditOnGitHubExtension, CheckMissingSinceMarkersExtension,
-           CommentOnGithubExtension]
+           CommentOnGithubExtension, FeedgenExtension]
 
     if sys.version_info[1] >= 5:
         res += [DBusExtension]
