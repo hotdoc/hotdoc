@@ -89,7 +89,7 @@ class Symbol:
         """
         Banana banana
         """
-        return self.aliases
+        return []
 
     # pylint: disable=unidiomatic-typecheck
     # pylint: disable=no-member
