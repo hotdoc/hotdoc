@@ -624,6 +624,7 @@ class Formatter(Configurable):
     def _format_enum_member_symbol(self, member):
         template = self.get_template("enum_member.html")
         return template.render({
+            'symbol': member,
             'link': member.link,
             'detail': member.formatted_doc,
             'value': str(member.enum_value)})
