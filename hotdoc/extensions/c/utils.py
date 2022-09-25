@@ -1,6 +1,6 @@
 import os
 from collections import namedtuple
-import cchardet
+import charset_normalizer
 from hotdoc.parsers.c_comment_scanner.c_comment_scanner import extract_comments
 
 from hotdoc.core.symbols import *
@@ -11,7 +11,7 @@ RawMacro = namedtuple('RawMacro', ['raw', 'filename'])
 
 
 def unicode_dammit(data):
-    encoding = cchardet.detect(data)['encoding']
+    encoding = charset_normalizer.detect(data)['encoding']
     try:
         return data.decode(encoding, errors='replace')
     except LookupError:

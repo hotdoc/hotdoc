@@ -419,7 +419,7 @@ if build_c_extension != 'disabled':
                             'hotdoc/parsers/c_comment_scanner/scanner.h'])]
         INSTALL_REQUIRES += [
             'pkgconfig',
-            'cchardet',
+            'charset-normalizer',
             'networkx>=2.5'
         ]
         PACKAGE_DATA['hotdoc.extensions.gi'] = ['html_templates/*']
@@ -458,6 +458,4 @@ setup(
             'hotdoc=hotdoc.run_hotdoc:main',
             'hotdoc_dep_printer=hotdoc.hotdoc_dep_printer:main']},
     classifiers=[
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5"])
+        "Programming Language :: Python :: 3"])
