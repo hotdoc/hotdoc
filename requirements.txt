@@ -6,6 +6,8 @@
 #
 appdirs==1.4.4
     # via hotdoc (setup.py)
+charset-normalizer==2.1.1
+    # via hotdoc (setup.py)
 contextlib2==0.6.0.post1
     # via schema
 dbus-deviation==0.6.0
@@ -17,6 +19,10 @@ lxml==4.9.1
     #   dbus-deviation
     #   feedgen
     #   hotdoc (setup.py)
+networkx==2.5
+    # via hotdoc (setup.py)
+pkgconfig==1.5.1
+    # via hotdoc (setup.py)
 python-dateutil==2.8.2
     # via feedgen
 pyyaml==5.4.1
