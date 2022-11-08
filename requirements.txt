@@ -19,7 +19,7 @@ lxml==4.9.1
     #   dbus-deviation
     #   feedgen
     #   hotdoc (setup.py)
-networkx==2.5
+networkx==2.8.8
     # via hotdoc (setup.py)
 pkgconfig==1.5.1
     # via hotdoc (setup.py)
