@@ -10,7 +10,7 @@ charset-normalizer==2.1.1
     # via hotdoc (setup.py)
 contextlib2==0.6.0.post1
     # via schema
-dbus-deviation==0.6.0
+dbus-deviation==0.6.1
     # via hotdoc (setup.py)
 feedgen==0.9.0
     # via hotdoc (setup.py)
@@ -19,7 +19,7 @@ lxml==4.9.1
     #   dbus-deviation
     #   feedgen
     #   hotdoc (setup.py)
-networkx==2.5
+networkx==2.8.8
     # via hotdoc (setup.py)
 pkgconfig==1.5.1
     # via hotdoc (setup.py)
