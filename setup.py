@@ -419,7 +419,7 @@ if build_c_extension != 'disabled':
                             'hotdoc/parsers/c_comment_scanner/scanner.h'])]
         INSTALL_REQUIRES += [
             'pkgconfig',
-            'charset-normalizer',
+            'faust-cchardet',
             'networkx>=2.5'
         ]
         PACKAGE_DATA['hotdoc.extensions.gi'] = ['html_templates/*']
