@@ -33,5 +33,5 @@ six==1.16.0
     # via python-dateutil
 toposort==1.6
     # via hotdoc (setup.py)
-wheezy.template @ git+https://github.com/MathieuDuponchelle/wheezy.template.git
+wheezy-template==3.1.0
     # via hotdoc (setup.py)

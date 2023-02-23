@@ -1125,6 +1125,8 @@ class Formatter(Configurable):
             Formatter.engine = Engine(
                 loader=FileLoader(searchpath, encoding='UTF-8'),
                 extensions=[CoreExtension(), CodeExtension()])
+            # https://github.com/akornatskyy/wheezy.template/issues/68#issuecomment-1441529466
+            Formatter.engine.compiler.source_lineno = 0
             Formatter.engine.global_vars.update({'e': html.escape})
 
             Formatter.initialized = True

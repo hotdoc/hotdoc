@@ -347,4 +347,6 @@ class GIFormatter(Formatter):
             GIFormatter.engine = Engine(
                     loader=FileLoader(searchpath, encoding='UTF-8'),
                     extensions=[CoreExtension(), CodeExtension()])
+            # https://github.com/akornatskyy/wheezy.template/issues/68#issuecomment-1441529466
+            GIFormatter.engine.compiler.source_lineno = 0
             GIFormatter.engine.global_vars.update({'e': html.escape})

@@ -367,6 +367,8 @@ class GstFormatter(Formatter):
             GstFormatter.engine = Engine(
                 loader=FileLoader(searchpath, encoding='UTF-8'),
                 extensions=[CoreExtension(), CodeExtension()])
+            # https://github.com/akornatskyy/wheezy.template/issues/68#issuecomment-1441529466
+            GstFormatter.engine.compiler.source_lineno = 0
             GstFormatter.engine.global_vars.update({'e': html.escape})
 
     def __del__(self):
