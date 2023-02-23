@@ -315,7 +315,7 @@ INSTALL_REQUIRES = [
     'lxml',
     'schema',
     'appdirs',
-    'wheezy.template',
+    'wheezy.template @ git+https://github.com/MathieuDuponchelle/wheezy.template.git#egg=wheezy.template',
     'toposort>=1.4',
     'feedgen',
 ]
