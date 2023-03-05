@@ -19,6 +19,7 @@
 # pylint: disable=missing-docstring
 
 import os
+from pathlib import Path
 
 from collections import defaultdict, namedtuple
 from lxml import etree
@@ -169,12 +170,21 @@ class DevhelpExtension(Extension):
     def __project_written_out_cb(self, project):
         self.__format(project)
 
+    def __ignore_cb(self, src, files):
+        ignored = {'dumped.trie'}
+        path = Path(src).as_posix()
+        if path.endswith('/assets'):
+            ignored.add('fonts')
+        elif path.endswith('/assets/js'):
+            ignored.add('search')
+        return ignored
+
     # pylint: disable=no-self-use
     def __formatted_cb(self, app):
         html_path = os.path.join(app.output, 'html')
         dh_html_path = os.path.join(
             app.output, 'devhelp', 'books', self.project.sanitized_name)
-        recursive_overwrite(html_path, dh_html_path)
+        recursive_overwrite(html_path, dh_html_path, self.__ignore_cb)
 
         # Remove some stuff not relevant in devhelp
         with open(os.path.join(dh_html_path, 'assets', 'css',
