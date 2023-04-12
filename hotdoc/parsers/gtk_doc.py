@@ -38,7 +38,7 @@ from hotdoc.core.exceptions import HotdocSourceException
 from hotdoc.core.links import Link
 from hotdoc.utils.configurable import Configurable
 from hotdoc.parsers import cmark
-from hotdoc.utils.loggable import Logger, warn, info
+from hotdoc.utils.loggable import Logger, warn, info, debug
 from hotdoc.utils.utils import XDG_DATA_HOME, XDG_DATA_DIRS
 
 Logger.register_warning_code('gtk-doc', HotdocSourceException)
@@ -549,6 +549,8 @@ def parse_devhelp_index(dir_):
         # No need to look for a sgml file
         return True
 
+    debug('Parsing devhelp index at %s' % path)
+
     online = dh_root.attrib.get('online')
     name = dh_root.attrib.get('name')
     author = dh_root.attrib.get('author')
@@ -556,6 +558,7 @@ def parse_devhelp_index(dir_):
 
     if not online:
         if not name:
+            info('Skipping devhelp index at %s, no online attribute and no name attribute', path)
             return False
         online = 'https://developer.gnome.org/%s/unstable/' % name
 
@@ -634,7 +637,7 @@ def gather_links():
     # XDG_DATA_DIRS is preference-ordered, we reverse so that preferred
     # links override less-preferred ones
     for datadir in reversed([XDG_DATA_HOME] + XDG_DATA_DIRS):
-        for path in (os.path.join(datadir, 'devhelp', 'books'), os.path.join(datadir, 'gtk-doc', 'html')):
+        for path in (os.path.join(datadir, 'devhelp', 'books'), os.path.join(datadir, 'gtk-doc', 'html'), os.path.join(datadir, 'doc')):
             if not os.path.exists(path):
                 info("no gtk doc to gather links from in %s" % path)
                 continue
