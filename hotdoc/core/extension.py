@@ -693,11 +693,8 @@ class Extension(Configurable):
             Extension.formatted_sitemap = self.formatter.format_navigation(
                 self.app.project)
             if Extension.formatted_sitemap:
-                escaped_sitemap = Extension.formatted_sitemap.replace(
-                    '\\', '\\\\').replace('"', '\\"').replace('\n', '')
-                js_wrapper = 'sitemap_downloaded_cb("%s");' % escaped_sitemap
                 with open(opath, 'w') as _:
-                    _.write(js_wrapper)
+                    _.write(Extension.formatted_sitemap)
 
         self.written_out_sitemaps.add(opath)
 
@@ -728,10 +725,10 @@ class Extension(Configurable):
 
         html_subpages = self.formatter.format_subpages(page, subpages)
 
-        js_dir = os.path.join(output, 'html', 'assets', 'js')
-        if not os.path.exists(js_dir):
-            os.makedirs(js_dir)
-        sm_path = os.path.join(js_dir, 'sitemap.js')
+        html_dir = os.path.join(output, 'html')
+        if not os.path.exists(html_dir):
+            os.makedirs(html_dir)
+        sm_path = os.path.join(html_dir, 'hotdoc-sitemap.html')
         self.write_out_sitemap(sm_path)
 
         self.formatter.write_out(page, html_subpages, output)
