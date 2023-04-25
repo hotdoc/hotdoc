@@ -187,7 +187,10 @@ class BuildDefaultTheme(Command):
                 spawn.spawn([gmake])
                 del os.environ['LESS_INCLUDE_PATH']
                 with open(os.path.join(THEME_DIST_DIR, 'theme.json'), 'w') as _:
-                    _.write(json.dumps({'prism-theme': 'prism-tomorrow', 'hotdoc-version': VERSION}))
+                    _.write(json.dumps({
+                        'prism-theme': 'prism-tomorrow',
+                        'prism-light-theme': 'prism',
+                        'hotdoc-version': VERSION}))
             except spawn.DistutilsExecError as e:
                 print("Error while building default theme", e)
                 sys.exit(-1)

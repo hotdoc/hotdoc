@@ -649,6 +649,8 @@ class Formatter(Configurable):
         self._current_page = page
         page.output_attrs['html']['scripts'] = OrderedSet()
         page.output_attrs['html']['stylesheets'] = OrderedSet()
+        page.output_attrs['html']['dark-stylesheets'] = OrderedSet()
+        page.output_attrs['html']['light-stylesheets'] = OrderedSet()
         page.output_attrs['html']['extra_html'] = []
         page.output_attrs['html']['edit_button'] = ''
         page.output_attrs['html']['extra_footer_html'] = []
@@ -728,18 +730,29 @@ class Formatter(Configurable):
 
         scripts.extend(page.output_attrs['html']['scripts'])
         stylesheets.extend(page.output_attrs['html']['stylesheets'])
+        dark_stylesheets = page.output_attrs['html']['dark-stylesheets']
+        light_stylesheets = page.output_attrs['html']['light-stylesheets']
+
         scripts_basenames = [os.path.basename(script)
                              for script in scripts]
         stylesheets_basenames = [os.path.basename(stylesheet)
                                  for stylesheet in stylesheets]
+        dark_stylesheets_basenames = [os.path.basename(stylesheet)
+                                 for stylesheet in dark_stylesheets]
+        light_stylesheets_basenames = [os.path.basename(stylesheet)
+                                 for stylesheet in light_stylesheets]
 
         Formatter.all_stylesheets.update(stylesheets)
+        Formatter.all_stylesheets.update(dark_stylesheets)
+        Formatter.all_stylesheets.update(light_stylesheets)
         Formatter.all_scripts.update(scripts)
 
         out = template.render(
             {'page': page,
              'scripts': scripts_basenames,
              'stylesheets': stylesheets_basenames,
+             'dark_stylesheets': dark_stylesheets_basenames,
+             'light_stylesheets': light_stylesheets_basenames,
              'rel_path': rel_path,
              'attrs': page.output_attrs['html'],
              'meta': {},

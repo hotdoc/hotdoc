@@ -56,14 +56,23 @@ class SyntaxHighlightingExtension(Extension):
         self.keep_markup = False
 
     def __formatting_page_cb(self, formatter, page):
-        prism_theme = Formatter.theme_meta.get('prism-theme', 'prism')
+        prism_theme = Formatter.theme_meta.get('prism-theme', 'prism-tomorrow')
         prism_theme_path = '%s.css' % os.path.join(HERE, 'prism', 'themes', prism_theme)
 
         if os.path.exists(prism_theme_path):
-            page.output_attrs['html']['stylesheets'].add(prism_theme_path)
+            page.output_attrs['html']['dark-stylesheets'].add(prism_theme_path)
         else:
             warn('syntax-invalid-theme', 'Prism has no theme named %s' %
                  prism_theme)
+
+        prism_light_theme = Formatter.theme_meta.get('prism-light-theme', 'prism')
+        prism_light_theme_path = '%s.css' % os.path.join(HERE, 'prism', 'themes', prism_light_theme)
+
+        if os.path.exists(prism_light_theme_path):
+            page.output_attrs['html']['light-stylesheets'].add(prism_light_theme_path)
+        else:
+            warn('syntax-invalid-theme', 'Prism has no theme named %s' %
+                 prism_light_theme)
 
         page.output_attrs['html']['scripts'].add(
             os.path.join(HERE, 'prism', 'components', 'prism-core.js'))

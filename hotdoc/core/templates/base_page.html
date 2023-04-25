@@ -1,4 +1,4 @@
-@require(page, meta, scripts, stylesheets)
+@require(page, meta, scripts, stylesheets, dark_stylesheets, light_stylesheets)
 
 <!DOCTYPE html>
 <html lang="en">
@@ -17,6 +17,14 @@
 
 @for stylesheet in stylesheets:
 <link rel="stylesheet" href="assets/css/@stylesheet" type="text/css"/>
+@end
+
+@for stylesheet in dark_stylesheets:
+<link rel="stylesheet" href="assets/css/@stylesheet" type="text/css" title="dark"/>
+@end
+
+@for stylesheet in light_stylesheets:
+<link rel="alternate stylesheet" href="assets/css/@stylesheet" type="text/css" title="light"/>
 @end
 
 </head>
