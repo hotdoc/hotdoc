@@ -188,11 +188,12 @@ class GstPluginSymbol(Symbol):
     TEMPLATE = """
         @require(symbol, unique_feature)
         @if not unique_feature:
+        @if not symbol.formatted_doc:
         <h1>@symbol.display_name</h1>
+        @end
         <i>(from @symbol.package)</i>
         @end
         <div class="base_symbol_container">
-        @symbol.formatted_doc
         @if not unique_feature:
         <table class="table table-striped table-hover">
             <tbody>
