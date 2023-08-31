@@ -320,7 +320,6 @@ INSTALL_REQUIRES = [
     'appdirs',
     'wheezy.template',
     'toposort>=1.4',
-    'feedgen',
 ]
 
 # dbus-deviation requires sphinx, which requires python 3.5
@@ -329,7 +328,8 @@ if sys.version_info[1] >= 5:
 
 EXTRAS_REQUIRE = {
     'dev': ['git-pylint-commit-hook',
-            'git-pep8-commit-hook']
+            'git-pep8-commit-hook'],
+    'feedgen': ['feedgen']
 }
 
 # Extensions
