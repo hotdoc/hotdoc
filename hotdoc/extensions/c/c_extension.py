@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, sys, linecache, pkgconfig, glob, subprocess, shutil
+import os, sys, itertools, linecache, pkgconfig, glob, subprocess, shutil
 
 from hotdoc.extensions.c.clang import cindex
 from ctypes import *
@@ -77,9 +77,11 @@ CLANG_HEADERS_WARNING = (
 def get_clang_headers():
     version = subprocess.check_output(['llvm-config', '--version']).strip().decode()
     prefix = subprocess.check_output(['llvm-config', '--prefix']).strip().decode()
-
-    for lib in ['lib', 'lib64']:
-        p = os.path.join(prefix, lib, 'clang', version, 'include')
+    versions = (version, version.split('.').pop(0))
+    for (ver, lib) in itertools.product(
+            versions,
+            ['lib', 'lib64']):
+        p = os.path.join(prefix, lib, 'clang', ver, 'include')
         if os.path.exists(p):
             return p
 
