@@ -1,8 +1,9 @@
 ### Setting up environment for contributing
 
-Required tools for making a git commit:
+Install required tools and git hooks:
 ```
-pip install git-pylint-commit-hook git-pep8-commit-hook
+pip install -r dev-requirements.txt
+pre-commit install --install-hooks
 ```
 
 ### Running tests
