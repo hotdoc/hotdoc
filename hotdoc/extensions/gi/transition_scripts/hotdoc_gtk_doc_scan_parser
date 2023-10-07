@@ -23,8 +23,9 @@ import fileinput
 import argparse
 import shutil
 
-from hotdoc.core.config import ConfigParser
+from hotdoc.core.config import Config
 from hotdoc.utils.utils import OrderedSet
+
 
 def _parse_cflags(line):
     extra_flags = set()
@@ -40,6 +41,7 @@ def _parse_cflags(line):
 
     return extra_flags, incdirs
 
+
 def _walk_source_dir(source_dir, ignored):
     sources = OrderedSet()
     for root, dirs, files in os.walk(source_dir):
@@ -53,6 +55,7 @@ def _walk_source_dir(source_dir, ignored):
 
             sources.add(os.path.join(root, fname))
     return sources
+
 
 def _parse_sources(line):
     line = line.replace("'", ' ')
@@ -71,6 +74,7 @@ def _parse_sources(line):
 
     return all_sources
 
+
 def _create_basic_index():
     shutil.rmtree('markdown_files', ignore_errors=True)
     os.mkdir('markdown_files')
@@ -78,9 +82,10 @@ def _create_basic_index():
         _.write('## Welcome to our documentation!\n\n'
                 '### [API Reference](gobject-api)\n')
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print "USAGE : %s gir_file" % sys.argv[0]
+        print("USAGE : %s gir_file" % sys.argv[0])
         sys.exit(1)
 
     extra_cflags = []
@@ -97,7 +102,7 @@ if __name__=='__main__':
             sources = _parse_sources(line)
 
     if sources is None:
-        print "Error running script, sorry it's just a funny hack"
+        print("Error running script, sorry it's just a funny hack")
         sys.exit(1)
 
     _create_basic_index()
@@ -117,5 +122,5 @@ if __name__=='__main__':
             'sitemap': 'sitemap.txt',
             'c_include_directories': list(incdirs)}
 
-    cp = ConfigParser(command_line_args=conf)
+    cp = Config(command_line_args=conf)
     cp.dump('hotdoc.json')
