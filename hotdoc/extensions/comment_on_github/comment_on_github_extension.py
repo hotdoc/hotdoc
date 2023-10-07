@@ -10,6 +10,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 
 Page.meta_schema[Optional('github-issue-id')] = And(int)
 
+
 class CommentOnGithubExtension(Extension):
     extension_name = PNAME
     argument_prefix = PNAME
@@ -49,7 +50,8 @@ class CommentOnGithubExtension(Extension):
 
         template = Formatter.engine.get_template('github_comments.html')
 
-        formatted = template.render({'issue_id': str(issue_id), 'repo': self.__repo})
+        formatted = template.render(
+            {'issue_id': str(issue_id), 'repo': self.__repo})
 
         page.output_attrs['html']['extra_html'].append(formatted)
         page.output_attrs['html']['scripts'].add(

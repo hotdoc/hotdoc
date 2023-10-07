@@ -57,14 +57,14 @@ class CLanguage(Language):
             TRANSLATED[unique_name] = node.attrib.get('name')
 
     def get_translation(self, unique_name):
-        return TRANSLATED.get (unique_name)
+        return TRANSLATED.get(unique_name)
 
 
 FUNDAMENTALS[CLanguage.language_name] = {
-        "GParam": Link("https://developer.gnome.org/gobject/stable/gobject-GParamSpec.html#GParamSpec",
-            'GParamSpec', 'GParamSpec'),
-        "GInterface": Link("https://developer.gnome.org/gobject/stable/gobject-Type-Information.html#GInterfaceInfo",
-            'GInterface', 'GInterface')
+    "GParam": Link("https://developer.gnome.org/gobject/stable/gobject-GParamSpec.html#GParamSpec",
+                   'GParamSpec', 'GParamSpec'),
+    "GInterface": Link("https://developer.gnome.org/gobject/stable/gobject-Type-Information.html#GInterfaceInfo",
+                       'GInterface', 'GInterface')
 }
 
 

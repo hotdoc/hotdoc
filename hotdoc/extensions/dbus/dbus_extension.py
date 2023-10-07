@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- c/ding: utf-8 -*-
 #
 # Copyright © 2015,2016 Mathieu Duponchelle <mathieu.duponchelle@opencreed.com>
 # Copyright © 2015,2016 Collabora Ltd
@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, glob
+import os
+import glob
 
 from dbusapi.interfaceparser import InterfaceParser
 
@@ -38,25 +39,25 @@ class DBusScanner(object):
             self.__current_filename = filename
             ip = InterfaceParser(filename)
             for name, interface in ip.parse().items():
-                self.__create_class_symbol (interface)
+                self.__create_class_symbol(interface)
                 for mname, method in interface.methods.items():
-                    self.__create_function_symbol (method)
+                    self.__create_function_symbol(method)
                 for pname, prop in interface.properties.items():
-                    self.__create_property_symbol (prop)
+                    self.__create_property_symbol(prop)
                 for sname, signal in interface.signals.items():
-                    self.__create_signal_symbol (signal)
+                    self.__create_signal_symbol(signal)
 
-    def __create_parameters (self, nodes, omit_direction=False):
+    def __create_parameters(self, nodes, omit_direction=False):
         parameters = []
 
         for param in nodes:
             type_tokens = []
             if not omit_direction:
-                type_tokens.append (param.direction.upper() + ' ')
+                type_tokens.append(param.direction.upper() + ' ')
 
-            type_tokens.append (str(param.type))
-            parameters.append (ParameterSymbol (argname=param.name,
-                type_tokens=type_tokens))
+            type_tokens.append(str(param.type))
+            parameters.append(ParameterSymbol(argname=param.name,
+                                              type_tokens=type_tokens))
 
         return parameters
 
@@ -70,22 +71,22 @@ class DBusScanner(object):
         stripped_lines = []
         column_offset = 0
         line_offset = 0
-        for l in lines:
-            nl = l.strip()
+        for line in lines:
+            nl = line.strip()
             if not nl and not stripped_lines:
                 line_offset += 1
                 continue
             if not column_offset and nl:
-                column_offset = len(l) - len(nl)
+                column_offset = len(line) - len(nl)
             stripped_lines.append(nl)
 
         if hasattr(node, 'comment_lineno'):
             lineno = node.comment_lineno + line_offset
 
         comment = u'\n'.join(stripped_lines)
-        comment = self.__raw_comment_parser.parse_comment (comment,
-                self.__current_filename, lineno,
-                -1, stripped=True)
+        comment = self.__raw_comment_parser.parse_comment(comment,
+                                                          self.__current_filename, lineno,
+                                                          -1, stripped=True)
 
         if comment:
             comment.col_offset = column_offset + 1
@@ -97,36 +98,36 @@ class DBusScanner(object):
 
         return comment
 
-    def __create_function_symbol (self, node):
+    def __create_function_symbol(self, node):
         unique_name = '%s.%s' % (self.__current_class_name, node.name)
         comment = self.__comment_from_node(node, unique_name)
         if comment:
             self.__ext.add_comment(comment)
-        parameters = self.__create_parameters (node.arguments)
+        parameters = self.__create_parameters(node.arguments)
 
         self.__ext.create_symbol(FunctionSymbol,
-                parameters=parameters,
-                display_name=node.name,
-                filename=self.__current_filename,
-                unique_name=unique_name)
+                                 parameters=parameters,
+                                 display_name=node.name,
+                                 filename=self.__current_filename,
+                                 unique_name=unique_name)
 
-    def __create_class_symbol (self, node):
+    def __create_class_symbol(self, node):
         self.__current_class_name = node.name
         comment = self.__comment_from_node(node, node.name)
         if comment:
             self.__ext.add_comment(comment)
         self.__ext.create_symbol(ClassSymbol,
-                display_name=node.name,
-                filename=self.__current_filename)
+                                 display_name=node.name,
+                                 filename=self.__current_filename)
 
-    def __create_property_symbol (self, node):
+    def __create_property_symbol(self, node):
         unique_name = '%s.%s' % (self.__current_class_name, node.name)
         comment = self.__comment_from_node(node, unique_name)
         if comment:
             self.__ext.add_comment(comment)
 
         type_tokens = [str(node.type)]
-        type_ = QualifiedSymbol (type_tokens=type_tokens)
+        type_ = QualifiedSymbol(type_tokens=type_tokens)
 
         flags = ''
         if node.access == node.ACCESS_READ:
@@ -137,30 +138,31 @@ class DBusScanner(object):
             flags = 'Read / Write'
 
         sym = self.__ext.create_symbol(PropertySymbol,
-                prop_type=type_,
-                display_name=node.name,
-                unique_name=unique_name,
-                filename=self.__current_filename)
+                                       prop_type=type_,
+                                       display_name=node.name,
+                                       unique_name=unique_name,
+                                       filename=self.__current_filename)
 
         if sym and flags:
             sym.extension_contents['Flags'] = flags
 
-    def __create_signal_symbol (self, node):
+    def __create_signal_symbol(self, node):
         unique_name = '%s.%s' % (self.__current_class_name, node.name)
         comment = self.__comment_from_node(node, unique_name)
         if comment:
             self.__ext.add_comment(comment)
 
-        parameters = self.__create_parameters (node.arguments,
-                omit_direction=True)
+        parameters = self.__create_parameters(node.arguments,
+                                              omit_direction=True)
 
         self.__ext.create_symbol(SignalSymbol,
-                parameters=parameters,
-                display_name=node.name, unique_name=unique_name,
-                filename=self.__current_filename)
+                                 parameters=parameters,
+                                 display_name=node.name, unique_name=unique_name,
+                                 filename=self.__current_filename)
 
-DESCRIPTION=\
-"""
+
+DESCRIPTION =\
+    """
 Parse DBus XML files and extract symbols and comments.
 """
 
@@ -172,28 +174,29 @@ class DBusExtension(Extension):
     def __init__(self, app, project):
         Extension.__init__(self, app, project)
 
-    def setup (self):
+    def setup(self):
         super(DBusExtension, self).setup()
 
         if not self.sources:
             return
 
-        self.scanner = DBusScanner (self.app, self.project, self, self.sources)
+        self.scanner = DBusScanner(self.app, self.project, self, self.sources)
 
     def create_symbol(self, *args, **kwargs):
         kwargs['language'] = 'dbus'
         return super(DBusExtension, self).create_symbol(*args,
-            **kwargs)
+                                                        **kwargs)
 
     def _get_smart_index_title(self):
         return 'D-Bus API Reference'
 
     @staticmethod
-    def add_arguments (parser):
+    def add_arguments(parser):
         group = parser.add_argument_group('DBus extension',
-                DESCRIPTION)
+                                          DESCRIPTION)
         DBusExtension.add_index_argument(group)
         DBusExtension.add_sources_argument(group)
+
 
 def get_extension_classes():
     return [DBusExtension]

@@ -55,8 +55,11 @@ if os.name == 'nt':
 else:
     DATADIR = "/usr/share"
 
-XDG_DATA_DIRS = os.getenv('XDG_DATA_DIRS','/usr/local/share/:/usr/share/').split(':')
-XDG_DATA_HOME = os.getenv('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
+XDG_DATA_DIRS = os.getenv(
+    'XDG_DATA_DIRS', '/usr/local/share/:/usr/share/').split(':')
+XDG_DATA_HOME = os.getenv(
+    'XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
+
 
 def splitall(path):
     """
@@ -159,7 +162,8 @@ def __get_extra_extension_classes(paths):
             classes = activation_function()
         # pylint: disable=broad-except
         except Exception as exc:
-            warn('extension-import', "Failed to load %s %s" % (entry_point.module_name, exc))
+            warn('extension-import', "Failed to load %s %s" %
+                 (entry_point.module_name, exc))
             debug(traceback.format_exc())
             continue
 
@@ -168,6 +172,7 @@ def __get_extra_extension_classes(paths):
 
     return extra_classes
 
+
 def __load_extra_extension_modules(paths: T.List[str]) -> T.List[T.Type['Extension']]:
     """
     Banana banana
@@ -175,7 +180,8 @@ def __load_extra_extension_modules(paths: T.List[str]) -> T.List[T.Type['Extensi
     extra_classes = []
     for p in [Path(x) for x in paths]:
         if not p.exists() or not p.is_file():
-            warn('extension-import', f'Extension {p} does not exist or is not a file (skipping)')
+            warn('extension-import',
+                 f'Extension {p} does not exist or is not a file (skipping)')
             continue
         try:
             spec = importlib.util.spec_from_file_location(p.stem, p)
@@ -423,6 +429,7 @@ class DefaultOrderedDict(OrderedDict):
     """
     # Source: http://stackoverflow.com/a/6190500/562769
     # pylint: disable=keyword-arg-before-vararg
+
     def __init__(self, default_factory=None, *a, **kw):
         if (default_factory is not None and
                 not isinstance(default_factory, Callable)):

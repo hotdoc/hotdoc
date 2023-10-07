@@ -575,7 +575,7 @@ class Formatter(Configurable):
                                 'is_pointer': is_pointer})
 
     def _format_action_prototype(self, return_value, function_name,
-                                   parameters):
+                                 parameters):
         template = self.get_template('action_prototype.html')
 
         return template.render({'return_value': return_value,
@@ -687,7 +687,7 @@ class Formatter(Configurable):
     def _format_page(self, page):
         redirect = page.meta.get("redirect")
         if redirect:
-            return ('<meta http-equiv="refresh" content="0; url=%s"/>'  % redirect, True)
+            return ('<meta http-equiv="refresh" content="0; url=%s"/>' % redirect, True)
 
         symbols_details = []
         by_sections = []
@@ -738,9 +738,9 @@ class Formatter(Configurable):
         stylesheets_basenames = [os.path.basename(stylesheet)
                                  for stylesheet in stylesheets]
         dark_stylesheets_basenames = [os.path.basename(stylesheet)
-                                 for stylesheet in dark_stylesheets]
+                                      for stylesheet in dark_stylesheets]
         light_stylesheets_basenames = [os.path.basename(stylesheet)
-                                 for stylesheet in light_stylesheets]
+                                       for stylesheet in light_stylesheets]
 
         Formatter.all_stylesheets.update(stylesheets)
         Formatter.all_stylesheets.update(dark_stylesheets)
@@ -774,7 +774,7 @@ class Formatter(Configurable):
             for param in function.parameters:
                 parameters.append(param.argname)
             return self._format_action_prototype(return_value,
-                                                   title, parameters)
+                                                 title, parameters)
         else:
             for param in function.parameters:
                 parameters.append(self._format_linked_symbol(param))
@@ -953,7 +953,8 @@ class Formatter(Configurable):
 
     def __update_children_symbols(self, symbol):
         if isinstance(symbol, Symbol):
-            order_by_section = self._order_by_parent and bool(symbol.parent_name)
+            order_by_section = self._order_by_parent and bool(
+                symbol.parent_name)
         else:
             order_by_section = False
         symbol.extension_attributes['order_by_section'] = order_by_section
@@ -1069,24 +1070,24 @@ class Formatter(Configurable):
             os.makedirs(os.path.join(themepath))
             with tarfile.open(tarball) as file_:
                 def is_within_directory(directory, target):
-                    
+
                     abs_directory = os.path.abspath(directory)
                     abs_target = os.path.abspath(target)
-                
+
                     prefix = os.path.commonprefix([abs_directory, abs_target])
-                    
+
                     return prefix == abs_directory
-                
+
                 def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
-                
+
                     for member in tar.getmembers():
                         member_path = os.path.join(path, member.name)
                         if not is_within_directory(path, member_path):
-                            raise Exception("Attempted Path Traversal in Tar File")
-                
-                    tar.extractall(path, members, numeric_owner=numeric_owner) 
-                    
-                
+                            raise Exception(
+                                "Attempted Path Traversal in Tar File")
+
+                    tar.extractall(path, members, numeric_owner=numeric_owner)
+
                 safe_extract(file_, themepath)
         except tarfile.ReadError:
             warn('download-theme-error',

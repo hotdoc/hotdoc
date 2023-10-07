@@ -145,7 +145,8 @@ class TestTree(unittest.TestCase):
             fname = kwargs.get('filename')
             if fname is not None:
                 if fname not in all_src_files:
-                    conf['test_sources'].append(self.__create_src_file(fname, []))
+                    conf['test_sources'].append(
+                        self.__create_src_file(fname, []))
                     all_src_files.add(fname)
                 kwargs['filename'] = os.path.join(self.__src_dir, fname)
 
@@ -218,7 +219,8 @@ class TestTree(unittest.TestCase):
             fname = kwargs.get('filename')
             if fname is not None:
                 if fname not in all_src_files:
-                    conf['test_sources'].append(self.__create_src_file(fname, []))
+                    conf['test_sources'].append(
+                        self.__create_src_file(fname, []))
                     all_src_files.add(fname)
                 kwargs['filename'] = os.path.join(self.__src_dir, fname)
 
@@ -305,7 +307,8 @@ class TestTree(unittest.TestCase):
         self.assertIn(subfolder_page_path, pages)
 
         subfolder_page = pages[subfolder_page_path]
-        self.assertEqual(subfolder_page.link.ref, os.path.join('subfolder', 'page.html'))
+        self.assertEqual(subfolder_page.link.ref,
+                         os.path.join('subfolder', 'page.html'))
 
     def test_generated_page_output_path(self):
         sitemap = (u'index.markdown\n'
@@ -374,7 +377,7 @@ class TestTree(unittest.TestCase):
 
         with self.assertRaises(InvalidOutputException):
             self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
-                    output=self.__output_dir)
+                                output=self.__output_dir)
 
     def test_symbol_listed_twice(self):
         sitemap = (u'index.markdown\n'
@@ -410,7 +413,7 @@ class TestTree(unittest.TestCase):
 
         with self.assertRaises(SymbolListedTwiceException):
             self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
-                    output=self.__output_dir)
+                                output=self.__output_dir)
 
     def test_private_symbol_listed(self):
         sitemap = (u'index.markdown\n'
@@ -446,7 +449,7 @@ class TestTree(unittest.TestCase):
 
         with self.assertRaises(SymbolListedTwiceException):
             self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
-                    output=self.__output_dir)
+                                output=self.__output_dir)
 
     def test_relocated_symbol_marked_private(self):
         sitemap = (u'index.markdown\n'
@@ -482,7 +485,7 @@ class TestTree(unittest.TestCase):
 
         with self.assertRaises(SymbolListedTwiceException):
             self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
-                    output=self.__output_dir)
+                                output=self.__output_dir)
 
     def test_symbol_marked_private_twice(self):
         sitemap = (u'index.markdown\n'
@@ -518,7 +521,7 @@ class TestTree(unittest.TestCase):
 
         with self.assertRaises(SymbolListedTwiceException):
             self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
-                    output=self.__output_dir)
+                                output=self.__output_dir)
 
     def test_sitemap_page_not_found(self):
         sitemap = (u'index.markdown\n'
@@ -962,7 +965,7 @@ class TestTree(unittest.TestCase):
 
         with self.assertRaises(InvalidRelocatedSourceException):
             self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
-                    output=self.__output_dir)
+                                output=self.__output_dir)
 
     def test_source_relocated_twice(self):
         sitemap = (u'index.markdown\n'
@@ -998,4 +1001,4 @@ class TestTree(unittest.TestCase):
 
         with self.assertRaises(InvalidRelocatedSourceException):
             self.__make_project(sitemap, index_path, symbols=symbols, comments=comments,
-                    output=self.__output_dir)
+                                output=self.__output_dir)

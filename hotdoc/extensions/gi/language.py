@@ -29,6 +29,8 @@ ALIASES = {}
 
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=too-many-public-methods
+
+
 class Language(Configurable):
     """
     All languages should inherit from this base class
@@ -45,7 +47,7 @@ class Language(Configurable):
 
         This should never get called directly.
         """
-        if not self.language_name in ALIASES:
+        if self.language_name not in ALIASES:
             ALIASES[self.language_name] = {}
 
     def get_fundamental(self, name):

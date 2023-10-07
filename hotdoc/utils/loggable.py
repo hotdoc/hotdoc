@@ -138,6 +138,7 @@ class TerminalController(object):
         cap = curses.tigetstr(cap_name) or b''
         return re.sub(r'\$<\d+>[/*]?', '', cap.decode()).encode()
 
+
 TERMC = TerminalController()
 
 (DEBUG,

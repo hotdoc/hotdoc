@@ -93,10 +93,10 @@ class CheckMissingSinceMarkersExtension(Extension):
                 lineno = sym.lineno
 
             warn('missing-since-marker',
-                    message="Missing since marker for %s" % sym.unique_name,
-                    filename=filename,
-                    lineno=lineno,
-                    )
+                 message="Missing since marker for %s" % sym.unique_name,
+                 filename=filename,
+                 lineno=lineno,
+                 )
 
 
 def get_extension_classes():

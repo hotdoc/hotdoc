@@ -53,11 +53,14 @@ CMARK_INCLUDE_DIRS = [CMARK_SRCDIR, CMARK_BUILT_SRCDIR]
 
 require_clean_submodules(SOURCE_DIR, ['cmark'])
 
+
 def src(filename):
     return os.path.join(SOURCE_DIR, filename)
 
 # pylint: disable=invalid-name
 # pylint: disable=missing-docstring
+
+
 @contextlib.contextmanager
 def cd(path):
     CWD = os.getcwd()
@@ -76,6 +79,7 @@ class CMarkExtension(Extension):
     before building itself.
     """
     # pylint: disable=no-self-use
+
     def __run_cmake(self):
         if spawn.find_executable('cmake') is None:
             print("cmake  is required")
@@ -99,6 +103,7 @@ class CMarkExtension(Extension):
     # pylint: disable=missing-docstring
     def build_custom(self):
         self.__run_cmake()
+
 
 CMARK_SOURCES = [os.path.join('hotdoc', 'parsers', f) for f in
                  ('cmark_module.c',
@@ -132,9 +137,10 @@ except Exception as e:
     print("libxml-2.0, glib-2.0 and json-glib-1.0 are required: %s" % str(e))
     sys.exit(1)
 
-print (search_flags)
+print(search_flags)
 
-SEARCH_MODULE = Extension('hotdoc.parsers.search', sources=SEARCH_SOURCES, **search_flags)
+SEARCH_MODULE = Extension('hotdoc.parsers.search',
+                          sources=SEARCH_SOURCES, **search_flags)
 
 # The default theme
 
@@ -181,7 +187,8 @@ class BuildDefaultTheme(Command):
         with cd(THEME_SRC_DIR):
             try:
                 spawn.spawn(['npm', 'install'])
-                spawn.spawn(['./node_modules/bower/bin/bower', 'install', '--allow-root'])
+                spawn.spawn(['./node_modules/bower/bin/bower',
+                            'install', '--allow-root'])
                 os.environ['LESS_INCLUDE_PATH'] = os.path.join(
                     SOURCE_DIR, 'hotdoc', 'less')
                 spawn.spawn([gmake])
@@ -372,61 +379,64 @@ PACKAGE_DATA = {
 
 build_c_extension = os.environ.get('HOTDOC_BUILD_C_EXTENSION', 'auto')
 
+
 class FlexExtension (Extension):
     def __init__(self, flex_sources, *args, **kwargs):
         Extension.__init__(self, *args, **kwargs)
         self.__flex_sources = [src(s) for s in flex_sources]
 
     def __build_flex(self):
-        src_dir = os.path.dirname (self.__flex_sources[0])
-        built_scanner_path = src(os.path.join (src_dir, 'scanner.c'))
+        src_dir = os.path.dirname(self.__flex_sources[0])
+        built_scanner_path = src(os.path.join(src_dir, 'scanner.c'))
 
         self.sources.append(built_scanner_path)
         if newer_group(self.__flex_sources, built_scanner_path):
             cmd = ['flex', '-o', built_scanner_path]
             for s in self.__flex_sources:
-                cmd.append (s)
+                cmd.append(s)
             spawn.spawn(cmd, verbose=1)
 
-    def build_custom (self):
+    def build_custom(self):
         if self.__flex_sources:
             self.__build_flex()
 
 
 if build_c_extension not in ('enabled', 'disabled', 'auto'):
-    print ('HOTDOC_BUILD_C_EXTENSION environment variable must be one of [enabled, disabled, auto]')
+    print(
+        'HOTDOC_BUILD_C_EXTENSION environment variable must be one of [enabled, disabled, auto]')
     sys.exit(1)
+
 
 def check_c_extension():
     if spawn.find_executable('flex') is None:
-        print ('Flex not installed on your system')
+        print('Flex not installed on your system')
         return False
 
     return True
 
+
 if build_c_extension != 'disabled':
     if not check_c_extension():
         if build_c_extension == 'enabled':
-            print ('Requirements for C extension not met')
+            print('Requirements for C extension not met')
             sys.exit(1)
-        print ('Not enabling C extension')
+        print('Not enabling C extension')
     else:
-        print ('Enabling C extension')
+        print('Enabling C extension')
         ext_modules += [FlexExtension(
-                            ['hotdoc/parsers/c_comment_scanner/scanner.l'],
-                            'hotdoc.parsers.c_comment_scanner.c_comment_scanner',
-                            sources =
-                            ['hotdoc/parsers/c_comment_scanner/scannermodule.c'],
-                            depends =
-                            ['hotdoc/parsers/c_comment_scanner/scanner.l',
-                            'hotdoc/parsers/c_comment_scanner/scanner.h'])]
+            ['hotdoc/parsers/c_comment_scanner/scanner.l'],
+            'hotdoc.parsers.c_comment_scanner.c_comment_scanner',
+            sources=['hotdoc/parsers/c_comment_scanner/scannermodule.c'],
+            depends=['hotdoc/parsers/c_comment_scanner/scanner.l',
+                     'hotdoc/parsers/c_comment_scanner/scanner.h'])]
         INSTALL_REQUIRES += [
             'pkgconfig',
             'faust-cchardet',
             'networkx>=2.5'
         ]
         PACKAGE_DATA['hotdoc.extensions.gi'] = ['html_templates/*']
-        PACKAGE_DATA['hotdoc.extensions.gi.transition_scripts'] = ['translate_sections.sh']
+        PACKAGE_DATA['hotdoc.extensions.gi.transition_scripts'] = [
+            'translate_sections.sh']
 
 
 setup(

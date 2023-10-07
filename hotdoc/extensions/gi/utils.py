@@ -48,7 +48,7 @@ def get_gi_name_components(node):
     return components
 
 
-def get_gi_name (node):
+def get_gi_name(node):
     components = get_gi_name_components(node)
     return '.'.join(components)
 
@@ -70,10 +70,10 @@ def get_structure_name(node):
 
 def get_symbol_names(node):
     if node.tag in (core_ns('class')):
-        _ = get_klass_name (node)
+        _ = get_klass_name(node)
         return _, _, _
     elif node.tag in (core_ns('interface')):
-        _ = get_klass_name (node)
+        _ = get_klass_name(node)
         return _, _, _
     elif node.tag == core_ns('function'):
         _ = get_function_name(node)
@@ -84,7 +84,7 @@ def get_symbol_names(node):
         if glib_ns('is-gtype-struct-for') in parent.attrib:
             ns = parent.getparent()
             parent = ns.xpath(
-                    './*[@name="%s"]' % parent.attrib[glib_ns('is-gtype-struct-for')])[0]
+                './*[@name="%s"]' % parent.attrib[glib_ns('is-gtype-struct-for')])[0]
         parent_name = get_klass_name(parent)
         return unique_name, unique_name, parent_name
     elif node.tag == core_ns('virtual-method'):
@@ -96,7 +96,7 @@ def get_symbol_names(node):
         parent_name = get_structure_name(klass_structure_node)
         name = node.attrib['name']
         unique_name = '%s::%s' % (parent_name, name)
-        return unique_name, name, get_klass_name (klass_node)
+        return unique_name, name, get_klass_name(klass_node)
     elif node.tag == core_ns('field'):
         structure_node = node.getparent()
         parent_name = get_structure_name(structure_node)
@@ -126,10 +126,10 @@ def get_symbol_names(node):
     return None, None, None
 
 
-def unnest_type (node):
+def unnest_type(node):
     array_nesting = 0
 
-    varargs = node.find(core_ns ('varargs'))
+    varargs = node.find(core_ns('varargs'))
     if varargs is not None:
         return '...', 'valist', 0
 
@@ -181,6 +181,7 @@ def insert_language(ref, language, project):
     p = pathlib.Path(ref)
     return str(pathlib.Path(p.parts[0], language, *p.parts[1:]))
 
+
 def get_field_c_name_components(node, components):
     parent = node.getparent()
     if parent.tag != core_ns('namespace'):
@@ -192,6 +193,8 @@ def get_field_c_name_components(node, components):
 
 # pylint: disable=too-many-locals
 # pylint: disable=too-many-branches
+
+
 def get_language_classes():
     """
     Banana banana

@@ -74,18 +74,19 @@ class SearchExtension(Extension):
             self.__connect_to_subprojects(self.project, toplevel=True)
             SearchExtension.__connected_all_projects = True
 
-        self.__all_paths.append (path)
+        self.__all_paths.append(path)
 
     def __build_index(self, app):  # pylint: disable=unused-argument
         html_dir = os.path.join(self.app.output, 'html')
         search_dir = os.path.join(html_dir, 'assets', 'js', 'search')
         fragments_dir = os.path.join(search_dir, 'hotdoc_fragments')
 
-        all_rel_paths = [os.path.relpath(p, html_dir) for p in self.__all_paths]
+        all_rel_paths = [os.path.relpath(p, html_dir)
+                         for p in self.__all_paths]
 
         search.create_index(all_rel_paths, multiprocessing.cpu_count() + 1, search_dir,
-                fragments_dir, html_dir, self.app.project.get_private_folder(),
-                os.path.join(HERE, 'stopwords.txt'))
+                            fragments_dir, html_dir, self.app.project.get_private_folder(),
+                            os.path.join(HERE, 'stopwords.txt'))
 
         subdirs = next(os.walk(html_dir))[1]
         subdirs.append(html_dir)

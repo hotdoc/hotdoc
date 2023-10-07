@@ -267,7 +267,7 @@ def create_default_layout(config):
             get_cat(cat_path)
             _.write("\nIt's dangerous to go alone, take this\n")
             _.write('\n![](assets/cat.gif)')
-        except:  # pylint: disable=bare-except
+        except Exception:
             pass
 
 

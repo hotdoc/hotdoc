@@ -21,6 +21,7 @@ import inspect
 
 from hotdoc.utils.utils import OrderedSet
 
+
 class Slot:
     """Banana banana"""
     # pylint: disable=too-few-public-methods

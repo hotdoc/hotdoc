@@ -20,9 +20,12 @@ Names of boilerplate GObject macros we don't want to expose
 SMART_FILTERS = set()
 
 # https://stackoverflow.com/questions/1175208/elegant-python-function-to-convert-camelcase-to-snake-case
+
+
 def __camel_to_snake_upper(name):
     name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).upper()
+
 
 def __generate_smart_filters(id_prefixes, sym_prefixes, node):
     for ns_prefix in sym_prefixes:
@@ -35,8 +38,10 @@ def __generate_smart_filters(id_prefixes, sym_prefixes, node):
         SMART_FILTERS.add(('%s_%s' % (ns_prefix, sym_prefix)).upper())
         SMART_FILTERS.add(('%s_%s_CLASS' % (ns_prefix, sym_prefix)).upper())
         SMART_FILTERS.add(('%s_IS_%s_CLASS' % (ns_prefix, sym_prefix)).upper())
-        SMART_FILTERS.add(('%s_%s_GET_CLASS' % (ns_prefix, sym_prefix)).upper())
-        SMART_FILTERS.add(('%s_%s_GET_IFACE' % (ns_prefix, sym_prefix)).upper())
+        SMART_FILTERS.add(('%s_%s_GET_CLASS' %
+                          (ns_prefix, sym_prefix)).upper())
+        SMART_FILTERS.add(('%s_%s_GET_IFACE' %
+                          (ns_prefix, sym_prefix)).upper())
 
 
 __HIERARCHY_GRAPH = nx.DiGraph()
@@ -90,6 +95,7 @@ def get_field_c_name(node):
     get_field_c_name_components(node, components)
     return '.'.join(components)
 
+
 def __update_hierarchies(cur_ns, node, gi_name):
     parent_name = node.attrib.get('parent')
     if not parent_name:
@@ -109,8 +115,8 @@ def __get_parent_link_recurse(gi_name, res):
         __get_parent_link_recurse(list(parents)[0], res)
     ctype_name = ALL_GI_TYPES[gi_name]
     qs = QualifiedSymbol(type_tokens=[Link(None, ctype_name, ctype_name)])
-    qs.add_extension_attribute ('gi-extension', 'type_desc',
-            SymbolTypeDesc([], gi_name, ctype_name, 0))
+    qs.add_extension_attribute('gi-extension', 'type_desc',
+                               SymbolTypeDesc([], gi_name, ctype_name, 0))
     res.append(qs)
 
 
@@ -137,8 +143,8 @@ def get_klass_children(gi_name):
     for gi_name in children:
         ctype_name = ALL_GI_TYPES[gi_name]
         qs = QualifiedSymbol(type_tokens=[Link(None, ctype_name, ctype_name)])
-        qs.add_extension_attribute ('gi-extension', 'type_desc',
-                SymbolTypeDesc([], gi_name, ctype_name, 0))
+        qs.add_extension_attribute('gi-extension', 'type_desc',
+                                   SymbolTypeDesc([], gi_name, ctype_name, 0))
         res[ctype_name] = qs
     return res
 
@@ -150,14 +156,15 @@ def cache_nodes(gir_root, all_girs, languages):
     '''
     ns_node = gir_root.find('./{%s}namespace' % NS_MAP['core'])
     id_prefixes = ns_node.attrib['{%s}identifier-prefixes' % NS_MAP['c']]
-    sym_prefixes = ns_node.attrib['{%s}symbol-prefixes' % NS_MAP['c']].split(',')
+    sym_prefixes = ns_node.attrib['{%s}symbol-prefixes' %
+                                  NS_MAP['c']].split(',')
 
     id_key = '{%s}identifier' % NS_MAP['c']
     for node in gir_root.xpath(
             './/*[@c:identifier]',
             namespaces=NS_MAP):
         for language in languages:
-            language.make_translations (node.attrib[id_key], node)
+            language.make_translations(node.attrib[id_key], node)
 
     id_type = c_ns('type')
     glib_type = glib_ns('type-name')
@@ -168,17 +175,17 @@ def cache_nodes(gir_root, all_girs, languages):
     bitfield_tag = core_ns('bitfield')
     record_tag = core_ns('record')
     for node in gir_root.xpath('.//*[not(self::core:type) and not (self::core:array)][@c:type or @glib:type-name]',
-            namespaces=NS_MAP):
+                               namespaces=NS_MAP):
         try:
             name = node.attrib[id_type]
         except KeyError:
             name = node.attrib[glib_type]
         for language in languages:
-            language.make_translations (name, node)
+            language.make_translations(name, node)
         gi_name = '.'.join(get_gi_name_components(node))
         ALL_GI_TYPES[gi_name] = get_klass_name(node)
         if node.tag in (class_tag, interface_tag):
-            __update_hierarchies (ns_node.attrib.get('name'), node, gi_name)
+            __update_hierarchies(ns_node.attrib.get('name'), node, gi_name)
             for language in languages:
                 language.make_translations('%s::%s' % (name, name), node)
             __generate_smart_filters(id_prefixes, sym_prefixes, node)
@@ -198,7 +205,7 @@ def cache_nodes(gir_root, all_girs, languages):
         name = '%s:%s' % (get_klass_name(node.getparent()),
                           node.attrib['name'])
         for language in languages:
-            language.make_translations (name, node)
+            language.make_translations(name, node)
 
     for node in gir_root.xpath(
             './/glib:signal',
@@ -206,23 +213,24 @@ def cache_nodes(gir_root, all_girs, languages):
         name = '%s::%s' % (get_klass_name(node.getparent()),
                            node.attrib['name'])
         for language in languages:
-            language.make_translations (name, node)
+            language.make_translations(name, node)
 
     for node in gir_root.xpath(
             './/core:virtual-method',
             namespaces=NS_MAP):
         name = get_symbol_names(node)[0]
         for language in languages:
-            language.make_translations (name, node)
+            language.make_translations(name, node)
 
     for inc in gir_root.findall('./core:include',
-            namespaces = NS_MAP):
+                                namespaces=NS_MAP):
         inc_name = inc.attrib["name"]
         inc_version = inc.attrib["version"]
-        gir_file = __find_gir_file('%s-%s.gir' % (inc_name, inc_version), all_girs)
+        gir_file = __find_gir_file('%s-%s.gir' %
+                                   (inc_name, inc_version), all_girs)
         if not gir_file:
             warn('missing-gir-include', "Couldn't find a gir for %s-%s.gir" %
-                    (inc_name, inc_version))
+                 (inc_name, inc_version))
             continue
 
         if gir_file in __PARSED_GIRS:
@@ -233,16 +241,17 @@ def cache_nodes(gir_root, all_girs, languages):
         cache_nodes(inc_gir_root, all_girs, languages)
 
 
-def __type_tokens_from_gitype (cur_ns, ptype_name):
+def __type_tokens_from_gitype(cur_ns, ptype_name):
     qs = None
 
     if ptype_name == 'none':
         return None
 
     namespaced = '%s.%s' % (cur_ns, ptype_name)
-    ptype_name = ALL_GI_TYPES.get(namespaced) or ALL_GI_TYPES.get(ptype_name) or ptype_name
+    ptype_name = ALL_GI_TYPES.get(
+        namespaced) or ALL_GI_TYPES.get(ptype_name) or ptype_name
 
-    type_link = Link (None, ptype_name, ptype_name)
+    type_link = Link(None, ptype_name, ptype_name)
 
     tokens = [type_link]
     tokens += '*'
@@ -251,18 +260,18 @@ def __type_tokens_from_gitype (cur_ns, ptype_name):
 
 
 def __type_tokens_from_cdecl(cdecl):
-    indirection = cdecl.count ('*')
-    qualified_type = cdecl.strip ('*')
+    indirection = cdecl.count('*')
+    qualified_type = cdecl.strip('*')
     tokens = []
-    for token in qualified_type.split ():
+    for token in qualified_type.split():
         if token in ["const", "restrict", "volatile"]:
             tokens.append(token + ' ')
         else:
             link = Link(None, token, token)
-            tokens.append (link)
+            tokens.append(link)
 
     for i in range(indirection):
-        tokens.append ('*')
+        tokens.append('*')
 
     return tokens
 
@@ -275,14 +284,14 @@ def type_description_from_node(gi_node):
     '''
     Parse a typed node, returns a usable description
     '''
-    ctype_name, gi_name, array_nesting = unnest_type (gi_node)
+    ctype_name, gi_name, array_nesting = unnest_type(gi_node)
 
     cur_ns = get_namespace(gi_node)
 
     if ctype_name is not None:
-        type_tokens = __type_tokens_from_cdecl (ctype_name)
+        type_tokens = __type_tokens_from_cdecl(ctype_name)
     else:
-        type_tokens = __type_tokens_from_gitype (cur_ns, gi_name)
+        type_tokens = __type_tokens_from_gitype(cur_ns, gi_name)
 
     namespaced = '%s.%s' % (cur_ns, gi_name)
     if namespaced in ALL_GI_TYPES:

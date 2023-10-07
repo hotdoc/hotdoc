@@ -258,7 +258,8 @@ class TestGtkDocExtension(unittest.TestCase):
                                          "org.dbus.func"))
 
     def assertOutputs(self, inp, expected):
-        ast, diagnostics = cmark.gtkdoc_to_ast(inp, self.link_resolver, None, None)
+        ast, diagnostics = cmark.gtkdoc_to_ast(
+            inp, self.link_resolver, None, None)
         out = cmark.ast_to_html(ast, self.link_resolver)[0]
         self.assertEqual(out, expected)
         return ast, diagnostics
@@ -422,7 +423,8 @@ class TestGtkDocExtension(unittest.TestCase):
         inp = (u'a #wrong_link\n\n'
                'and #another_wrong_link\n'
                'and then #yet_another_wrong_link')
-        _, diagnostics = cmark.gtkdoc_to_ast(inp, self.link_resolver, None, None)
+        _, diagnostics = cmark.gtkdoc_to_ast(
+            inp, self.link_resolver, None, None)
         self.assertEqual(len(diagnostics), 3)
         diag = diagnostics[0]
         self.assertEqual(diag.lineno, 0)
