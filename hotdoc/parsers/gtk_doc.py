@@ -24,7 +24,7 @@ gtk-doc comment format.
 
 import os
 import re
-import cgi
+import html
 from collections import OrderedDict
 from itertools import zip_longest
 from lxml import etree
@@ -440,8 +440,7 @@ class GtkDocStringFormatter(Configurable):
             text = re.sub('<.*?>', '', text)
 
         if self.escape_html:
-            # pylint: disable=deprecated-method
-            text = cgi.escape(text)
+            text = html.escape(text)
 
         ast, diagnostics = cmark.gtkdoc_to_ast(
             text, link_resolver, include_resolver, comment.filename)
