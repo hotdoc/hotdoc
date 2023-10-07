@@ -289,7 +289,8 @@ class GtkDocParser:
         return res
 
     def __extract_titles_params_and_description(self, comment):
-        titleandparams_description = re.split(r'\n[\s]*\n', comment, maxsplit=1)
+        titleandparams_description = re.split(
+            r'\n[\s]*\n', comment, maxsplit=1)
         title_and_params = titleandparams_description[0]
 
         title_and_params_lines = title_and_params.split('\n')
@@ -329,7 +330,8 @@ class GtkDocParser:
                 column_offset = 0
             comment, title_offset = self.__strip_comment(comment)
 
-        title_and_params, description = self.__extract_titles_params_and_description(comment)
+        title_and_params, description = self.__extract_titles_params_and_description(
+            comment)
         try:
             block_name, parameters, annotations, is_section = \
                 self.__parse_title_and_parameters(filename, title_and_params)
@@ -359,7 +361,8 @@ class GtkDocParser:
             n_lines = len(comment.split('\n'))
             description_offset = (title_offset + n_lines -
                                   len(description.split('\n')))
-            meta['description'], tags = self.__parse_description_and_tags(description)
+            meta['description'], tags = self.__parse_description_and_tags(
+                description)
 
         actual_parameters = OrderedDict({})
         for param in parameters:
@@ -368,7 +371,8 @@ class GtkDocParser:
                 if cleaned_up_name in ['symbols', 'private-symbols', 'auto-sort', 'sources']:
                     meta.update(self.__parse_yaml_comment(param, filename))
                     if cleaned_up_name == 'sources':
-                        sources_paths = [os.path.abspath(os.path.join(os.path.dirname(filename), path)) for path in meta[cleaned_up_name]]
+                        sources_paths = [os.path.abspath(os.path.join(
+                            os.path.dirname(filename), path)) for path in meta[cleaned_up_name]]
                         meta[cleaned_up_name] = sources_paths
                 else:
                     meta[param.name] = param.description
@@ -439,7 +443,8 @@ class GtkDocStringFormatter(Configurable):
             # pylint: disable=deprecated-method
             text = cgi.escape(text)
 
-        ast, diagnostics = cmark.gtkdoc_to_ast(text, link_resolver, include_resolver, comment.filename)
+        ast, diagnostics = cmark.gtkdoc_to_ast(
+            text, link_resolver, include_resolver, comment.filename)
 
         for diag in diagnostics:
             if (comment.filename and comment.filename not in
@@ -509,7 +514,8 @@ class GtkDocStringFormatter(Configurable):
             tag = comment.tags.get(tname)
             if tag is not None and tag.description:
                 comment = comment_from_tag(tag)
-                ast = self.comment_to_ast(comment, link_resolver, include_resolver)
+                ast = self.comment_to_ast(
+                    comment, link_resolver, include_resolver)
                 tag.description = self.ast_to_html(ast, link_resolver) or ''
 
     @staticmethod
@@ -558,7 +564,8 @@ def parse_devhelp_index(dir_):
 
     if not online:
         if not name:
-            info('Skipping devhelp index at %s, no online attribute and no name attribute', path)
+            info(
+                'Skipping devhelp index at %s, no online attribute and no name attribute', path)
             return False
         online = 'https://developer.gnome.org/%s/unstable/' % name
 
@@ -616,7 +623,7 @@ def parse_sgml_index(dir_):
                 title = split_line[1].replace('-', '_')
 
                 if title.endswith(":CAPS"):
-                    title = title [:-5]
+                    title = title[:-5]
                 if remote_prefix:
                     href = '%s/%s' % (remote_prefix, filename)
                 else:

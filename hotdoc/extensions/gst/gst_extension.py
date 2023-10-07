@@ -332,10 +332,14 @@ class GstFormatter(Formatter):
         self._order_by_parent = True
         self._ordering.insert(0, GstPluginSymbol)
         self._ordering.insert(1, GstElementSymbol)
-        self._ordering.insert(self._ordering.index(ClassSymbol) + 1, GIClassSymbol)
-        self._ordering.insert(self._ordering.index(GIClassSymbol) + 1, GstPadTemplateSymbol)
-        self._ordering.insert(self._ordering.index(GstPadTemplateSymbol) + 1, GstPluginsSymbol)
-        self._ordering.insert(self._ordering.index(InterfaceSymbol) + 1, GIInterfaceSymbol)
+        self._ordering.insert(self._ordering.index(
+            ClassSymbol) + 1, GIClassSymbol)
+        self._ordering.insert(self._ordering.index(
+            GIClassSymbol) + 1, GstPadTemplateSymbol)
+        self._ordering.insert(self._ordering.index(
+            GstPadTemplateSymbol) + 1, GstPluginsSymbol)
+        self._ordering.insert(self._ordering.index(
+            InterfaceSymbol) + 1, GIInterfaceSymbol)
         self._ordering.append(GstNamedConstantsSymbols)
 
         self._symbol_formatters.update(
@@ -350,10 +354,11 @@ class GstFormatter(Formatter):
 
         self.gi_languages = []
 
-    def _format_parameter_symbol (self, parameter):
+    def _format_parameter_symbol(self, parameter):
         if self.extension.get_attr(parameter, 'action'):
-            parameter.extension_contents['type-link'] = self._format_type_tokens (parameter, parameter.type_tokens)
-        return Formatter._format_parameter_symbol (self, parameter)
+            parameter.extension_contents['type-link'] = self._format_type_tokens(
+                parameter, parameter.type_tokens)
+        return Formatter._format_parameter_symbol(self, parameter)
 
     def get_template(self, name):
         return GstFormatter.engine.get_template(name)
@@ -409,12 +414,13 @@ class GstFormatter(Formatter):
         gi_extension = self.extension.project.extensions.get('gi-extension')
 
         if 'c' in self.extension.gi_languages:
-            c_proto = Formatter._format_prototype(self, function, is_pointer, title)
+            c_proto = Formatter._format_prototype(
+                self, function, is_pointer, title)
         else:
             c_proto = ''
 
         if 'python' in self.extension.gi_languages:
-            if type (function) == ActionSignalSymbol:
+            if type(function) == ActionSignalSymbol:
                 template = self.get_template('python_action_prototype.html')
                 python_proto = template.render(
                     {'name': title,
@@ -432,8 +438,9 @@ class GstFormatter(Formatter):
             python_proto = ''
 
         if 'javascript' in self.extension.gi_languages:
-            if type (function) == ActionSignalSymbol:
-                template = self.get_template('javascript_action_prototype.html')
+            if type(function) == ActionSignalSymbol:
+                template = self.get_template(
+                    'javascript_action_prototype.html')
                 js_proto = template.render(
                     {'name': title,
                      'parameters': function.parameters,
@@ -471,7 +478,8 @@ class GstFormatter(Formatter):
 
     def _format_pad_template_symbol(self, symbol):
         template = self.engine.get_template('padtemplate.html')
-        symbol.object_type.rendered_link = self._format_linked_symbol(symbol.object_type)
+        symbol.object_type.rendered_link = self._format_linked_symbol(
+            symbol.object_type)
         return template.render({'symbol': symbol})
 
     def _format_element_symbol(self, symbol):
@@ -542,7 +550,8 @@ class GstExtension(Extension):
     # pylint: disable=too-many-branches
     def setup(self):
         gi_extension = self.project.extensions.get('gi-extension')
-        self.gi_languages = [lang.language_name for lang in gi_extension.languages]
+        self.gi_languages = [
+            lang.language_name for lang in gi_extension.languages]
 
         if not self.cache_file:
             if self.list_plugins_page:
@@ -565,7 +574,8 @@ class GstExtension(Extension):
             to_parse_sources)
         GstExtension.__parsed_cfiles.update(self.c_sources)
 
-        self.debug("Parsing plugin %s, (cache file %s)" % (self.plugin, self.cache_file))
+        self.debug("Parsing plugin %s, (cache file %s)" %
+                   (self.plugin, self.cache_file))
 
         if not self.cache:
             error('setup-issue', "No cache loaded or created for %s" % self.plugin)
@@ -637,7 +647,8 @@ class GstExtension(Extension):
             for sym in self.__on_index_symbols:
                 index.symbol_names.add(sym.unique_name)
             if self.unique_feature:
-                index.comment = self.app.database.get_comment("element-" + self.unique_feature)
+                index.comment = self.app.database.get_comment(
+                    "element-" + self.unique_feature)
             else:
                 index.comment = self.get_plugin_comment()
             return smart_pages
@@ -745,11 +756,13 @@ class GstExtension(Extension):
 
         gi_extension = self.project.extensions.get('gi-extension')
         python_lang = gi_extension.get_language('python')
-        args_type_names = [(type_tokens_from_type_name('GstElement', python_lang), 'param_0')]
+        args_type_names = [(type_tokens_from_type_name(
+            'GstElement', python_lang), 'param_0')]
         for arg in args:
             arg_name = arg["name"]
             arg_type_name = self._remember_symbol_type(arg["type"], pagename)
-            type_tokens = type_tokens_from_type_name(arg_type_name, python_lang)
+            type_tokens = type_tokens_from_type_name(
+                arg_type_name, python_lang)
             args_type_names.append((type_tokens, arg_name))
 
         if not signal.get('action'):
@@ -959,7 +972,8 @@ class GstExtension(Extension):
             name = tname.replace("%%", "%")
             unique_name = '%s!%s' % (element['hierarchy'][0], name)
             pagename = 'element-' + element['name']
-            gtype = self._remember_symbol_type(template.get("type", "GstPad"), pagename)
+            gtype = self._remember_symbol_type(
+                template.get("type", "GstPad"), pagename)
             link = Link(None, gtype, gtype, mandatory=True)
             object_type = QualifiedSymbol(type_tokens=[link])
             res.append(self.create_symbol(
@@ -1058,8 +1072,10 @@ class GstExtension(Extension):
             self.__elements[element['name']] = sym
             sym.properties.extend(self.__create_property_symbols(
                 element, element['name'], pagename))
-            sym.signals.extend(self.__create_signal_symbols(element, element['name'], pagename))
-            sym.pad_templates.extend(self.__create_pad_template_symbols(element, plugin_name))
+            sym.signals.extend(self.__create_signal_symbols(
+                element, element['name'], pagename))
+            sym.pad_templates.extend(
+                self.__create_pad_template_symbols(element, plugin_name))
 
             elements.append(sym)
 

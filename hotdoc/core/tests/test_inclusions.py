@@ -38,7 +38,8 @@ class TestFileIncluder(HotdocTest):
 
     def test_relpath(self):
         path = self._create_md_file('yep.md', 'stuff')
-        self.assertEqual(find_file('yep.md', [self._md_dir]), (path, self._md_dir))
+        self.assertEqual(
+            find_file('yep.md', [self._md_dir]), (path, self._md_dir))
 
     def test_missing_relpath(self):
         self.assertEqual(find_file('yep.md', [self._md_dir]), (None, None))

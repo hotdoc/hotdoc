@@ -57,7 +57,7 @@ def _split_repo_url(repo_url):
         try:
             args = ['git', 'ls-remote', repo_url]
             info('Checking if {} is a git repo'.format(' '.join(args)),
-                  domain='git-uploader')
+                 domain='git-uploader')
             subprocess.check_output(args, env=env, stderr=subprocess.STDOUT)
             return repo_url, sub_path
         except subprocess.CalledProcessError as e:

@@ -71,7 +71,8 @@ class Patcher(object):
         lines = []
         with open(filename, 'rb') as _:
             for l in _.readlines():
-                lines.append(unicode_dammit(l.replace(b'\xc3\xa2\xe2\x82\xac\xe2\x84\xa2', b"'")))
+                lines.append(unicode_dammit(
+                    l.replace(b'\xc3\xa2\xe2\x82\xac\xe2\x84\xa2', b"'")))
 
         res = lines[0:begin] + [new_comment + '\n'] + lines[end:]
         res = ''.join(res)
@@ -654,7 +655,7 @@ def output_title_to_md(inserted_pages, gi_index_title, node):
 
 
 def add_subpage(parent_page, page):
-    assert(isinstance(page, dict))
+    assert (isinstance(page, dict))
     if 'subpages' not in parent_page:
         parent_page['subpages'] = []
 

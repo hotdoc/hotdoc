@@ -35,7 +35,7 @@ from schema import Schema, SchemaError, Optional, And
 
 from hotdoc.utils.utils import id_from_text
 from hotdoc.core.inclusions import find_file, resolve
-from hotdoc.core.symbols import Symbol, StructSymbol, ClassSymbol,\
+from hotdoc.core.symbols import Symbol, StructSymbol, ClassSymbol, \
     InterfaceSymbol, AliasSymbol
 from hotdoc.core.links import Link
 from hotdoc.core.exceptions import HotdocSourceException, InvalidPageMetadata
@@ -474,7 +474,8 @@ class Tree:
                 page = ext_pages[smart_key]
                 del ext_pages[smart_key]
             else:
-                (source_file, include_path) = find_file(name, self.project.include_paths)
+                (source_file, include_path) = find_file(
+                    name, self.project.include_paths)
                 if source_file is None:
                     position = sitemap.get_position(name)
                     error(
@@ -571,7 +572,8 @@ class Tree:
                          '%s: Invalid metadata: \n%s' % (source_file,
                                                          str(exception)))
 
-        output_path = os.path.dirname(os.path.relpath(source_file, include_path))
+        output_path = os.path.dirname(
+            os.path.relpath(source_file, include_path))
 
         ast = cmark.hotdoc_to_ast(contents, self, source_file)
         return Page(source_file, False, self.project.sanitized_name, extension_name,
@@ -603,7 +605,8 @@ class Tree:
 
         if page.ast is None and not page.generated:
             with io.open(page.source_file, 'r', encoding='utf-8') as _:
-                page.ast = cmark.hotdoc_to_ast(_.read(), self, page.source_file)
+                page.ast = cmark.hotdoc_to_ast(
+                    _.read(), self, page.source_file)
 
         page.resolve_symbols(self, database, link_resolver)
         self.__update_dep_map(page, page.symbols)

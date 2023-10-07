@@ -126,8 +126,8 @@ class Database:
         for alias in aliases:
             alias_symbols.append(
                 self.create_symbol(ProxySymbol,
-                unique_name=alias,
-                target=unique_name))
+                                   unique_name=alias,
+                                   target=unique_name))
 
         symbol = type_()
         debug('Created symbol with unique name %s' % unique_name,
@@ -156,7 +156,8 @@ class Database:
             sym.unique_name = unique_name
             del self.__symbols[target]
             self.__symbols[unique_name] = sym
-            debug('Renamed symbol with unique name %s to %s' % (target, unique_name))
+            debug('Renamed symbol with unique name %s to %s' %
+                  (target, unique_name))
         return sym
 
     @staticmethod
@@ -186,7 +187,8 @@ class Database:
             f.write(json.dumps(resolved_comments, default=serialize, indent=2))
 
         with open(os.path.join(self.__private_folder, 'symbol_index.json'), 'w', encoding='utf8') as f:
-            f.write(json.dumps(list(self.get_all_symbols().keys()), default=serialize, indent=2))
+            f.write(json.dumps(list(self.get_all_symbols().keys()),
+                    default=serialize, indent=2))
 
     def __get_aliases(self, name):
         return self.__aliased[name]

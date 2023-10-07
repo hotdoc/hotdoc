@@ -28,6 +28,7 @@ from hotdoc.extensions.gi.languages.python import (
 from hotdoc.extensions.gi.languages.c import (
     CLanguage)
 
+
 def get_language_classes():
     """
     Hotdoc's setuptools entry point

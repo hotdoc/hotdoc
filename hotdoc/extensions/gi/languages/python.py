@@ -27,6 +27,7 @@ from hotdoc.core.links import Link
 # FIXME: Avoid the use of a global dictionary
 TRANSLATED = {}
 
+
 class PythonLanguage(Language):
     language_name = 'python'
 
@@ -36,82 +37,82 @@ class PythonLanguage(Language):
     @classmethod
     def _create_fundamentals(cls):
         string_link = \
-                Link('https://docs.python.org/3/library/functions.html#func-str',
-                    'str', None)
+            Link('https://docs.python.org/3/library/functions.html#func-str',
+                 'str', None)
         boolean_link = \
-                Link('https://docs.python.org/3/library/functions.html#bool',
-                        'bool', None)
+            Link('https://docs.python.org/3/library/functions.html#bool',
+                 'bool', None)
         true_link = \
-                Link('https://docs.python.org/3/library/constants.html#True',
-                    'True', None)
+            Link('https://docs.python.org/3/library/constants.html#True',
+                 'True', None)
         false_link = \
-               Link('https://docs.python.org/3/library/constants.html#False',
-                    'False', None)
+            Link('https://docs.python.org/3/library/constants.html#False',
+                 'False', None)
         pointer_link = \
-                Link('https://docs.python.org/3/library/functions.html#object',
-                    'object', None)
+            Link('https://docs.python.org/3/library/functions.html#object',
+                 'object', None)
         integer_link = \
-                Link('https://docs.python.org/3/library/functions.html#int',
-                        'int', None)
+            Link('https://docs.python.org/3/library/functions.html#int',
+                 'int', None)
         float_link = \
-                Link('https://docs.python.org/3/library/functions.html#float',
-                        'float', None)
+            Link('https://docs.python.org/3/library/functions.html#float',
+                 'float', None)
         none_link = \
-                Link('https://docs.python.org/3/library/constants.html#None',
-                        'None', None)
+            Link('https://docs.python.org/3/library/constants.html#None',
+                 'None', None)
         list_link = \
-                Link('https://docs.python.org/3/library/functions.html#func-list',
-                     'list', None)
+            Link('https://docs.python.org/3/library/functions.html#func-list',
+                 'list', None)
         gtype_link = \
-                Link('https://developer.gnome.org/gobject/stable/'
-                        'gobject-Type-Information.html#GType',
-                        'GObject.Type', None)
+            Link('https://developer.gnome.org/gobject/stable/'
+                 'gobject-Type-Information.html#GType',
+                 'GObject.Type', None)
 
         gvariant_link = \
-                Link('https://developer.gnome.org/glib/stable/glib-GVariant.html',
-                        'GLib.Variant', None)
+            Link('https://developer.gnome.org/glib/stable/glib-GVariant.html',
+                 'GLib.Variant', None)
 
         FUNDAMENTALS[cls.language_name] = {
-                "none": none_link,
-                "gpointer": pointer_link,
-                "gconstpointer": pointer_link,
-                "gboolean": boolean_link,
-                "gint8": integer_link,
-                "guint8": integer_link,
-                "gint16": integer_link,
-                "guint16": integer_link,
-                "gint32": integer_link,
-                "guint32": integer_link,
-                "gchar": integer_link,
-                "guchar": integer_link,
-                "gshort": integer_link,
-                "gushort": integer_link,
-                "gint": integer_link,
-                "guint": integer_link,
-                "gfloat": float_link,
-                "gdouble": float_link,
-                "GLib.List": list_link,
-                "utf8": string_link,
-                "gunichar": string_link,
-                "filename": string_link,
-                "gchararray": string_link,
-                "GType": gtype_link,
-                "GVariant": gvariant_link,
-                "gsize": integer_link,
-                "gssize": integer_link,
-                "goffset": integer_link,
-                "gintptr": integer_link,
-                "guintptr": integer_link,
-                "glong": integer_link,
-                "gulong": integer_link,
-                "gint64": integer_link,
-                "guint64": integer_link,
-                "long double": float_link,
-                "long long": integer_link,
-                "unsigned long long": integer_link,
-                "TRUE": true_link,
-                "FALSE": false_link,
-                "NULL": none_link,
+            "none": none_link,
+            "gpointer": pointer_link,
+            "gconstpointer": pointer_link,
+            "gboolean": boolean_link,
+            "gint8": integer_link,
+            "guint8": integer_link,
+            "gint16": integer_link,
+            "guint16": integer_link,
+            "gint32": integer_link,
+            "guint32": integer_link,
+            "gchar": integer_link,
+            "guchar": integer_link,
+            "gshort": integer_link,
+            "gushort": integer_link,
+            "gint": integer_link,
+            "guint": integer_link,
+            "gfloat": float_link,
+            "gdouble": float_link,
+            "GLib.List": list_link,
+            "utf8": string_link,
+            "gunichar": string_link,
+            "filename": string_link,
+            "gchararray": string_link,
+            "GType": gtype_link,
+            "GVariant": gvariant_link,
+            "gsize": integer_link,
+            "gssize": integer_link,
+            "goffset": integer_link,
+            "gintptr": integer_link,
+            "guintptr": integer_link,
+            "glong": integer_link,
+            "gulong": integer_link,
+            "gint64": integer_link,
+            "guint64": integer_link,
+            "long double": float_link,
+            "long long": integer_link,
+            "unsigned long long": integer_link,
+            "TRUE": true_link,
+            "FALSE": false_link,
+            "NULL": none_link,
         }
 
     def make_translations(self, unique_name, node):
@@ -150,10 +151,12 @@ class PythonLanguage(Language):
             TRANSLATED[unique_name] = node.attrib.get('name')
 
     def get_translation(self, unique_name):
-        return TRANSLATED.get (unique_name)
+        return TRANSLATED.get(unique_name)
 
 
 PythonLanguage._create_fundamentals()
+
+
 def get_language_classes():
     """Nothing important, really"""
     return [PythonLanguage]

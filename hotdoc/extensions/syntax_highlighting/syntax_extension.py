@@ -57,7 +57,8 @@ class SyntaxHighlightingExtension(Extension):
 
     def __formatting_page_cb(self, formatter, page):
         prism_theme = Formatter.theme_meta.get('prism-theme', 'prism-tomorrow')
-        prism_theme_path = '%s.css' % os.path.join(HERE, 'prism', 'themes', prism_theme)
+        prism_theme_path = '%s.css' % os.path.join(
+            HERE, 'prism', 'themes', prism_theme)
 
         if os.path.exists(prism_theme_path):
             page.output_attrs['html']['dark-stylesheets'].add(prism_theme_path)
@@ -65,11 +66,14 @@ class SyntaxHighlightingExtension(Extension):
             warn('syntax-invalid-theme', 'Prism has no theme named %s' %
                  prism_theme)
 
-        prism_light_theme = Formatter.theme_meta.get('prism-light-theme', 'prism')
-        prism_light_theme_path = '%s.css' % os.path.join(HERE, 'prism', 'themes', prism_light_theme)
+        prism_light_theme = Formatter.theme_meta.get(
+            'prism-light-theme', 'prism')
+        prism_light_theme_path = '%s.css' % os.path.join(
+            HERE, 'prism', 'themes', prism_light_theme)
 
         if os.path.exists(prism_light_theme_path):
-            page.output_attrs['html']['light-stylesheets'].add(prism_light_theme_path)
+            page.output_attrs['html']['light-stylesheets'].add(
+                prism_light_theme_path)
         else:
             warn('syntax-invalid-theme', 'Prism has no theme named %s' %
                  prism_light_theme)
@@ -99,10 +103,10 @@ class SyntaxHighlightingExtension(Extension):
     def get_assets_licensing(cls):
         if SyntaxHighlightingExtension.needs_licensing:
             return {
-                    'prism': {
-                        'url': 'https://prismjs.com/',
-                        'license': 'MIT'
-                    }
+                'prism': {
+                    'url': 'https://prismjs.com/',
+                    'license': 'MIT'
+                }
             }
         return {}
 

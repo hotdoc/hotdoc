@@ -30,6 +30,7 @@ HERE = os.path.dirname(__file__)
 with open(os.path.join(HERE, '..', 'VERSION.txt'), 'r') as _:
     VERSION = _.read().strip()
 
+
 def _check_submodule_status(root, submodules):
     """check submodule status
     Has three return values:
@@ -77,6 +78,7 @@ def _update_submodules(repo_dir):
     subprocess.check_call("git submodule init", cwd=repo_dir, shell=True)
     subprocess.check_call(
         "git submodule update --recursive", cwd=repo_dir, shell=True)
+
 
 UNCLEAN_SUBMODULES_MSG =\
     """
@@ -132,10 +134,12 @@ def symlink(source, link_name):
         if csl(link_name, source, flags) == 0:
             raise ctypes.WinError()
 
+
 def pkgconfig(*packages, **kw):
     """
-    Query pkg-config for library compile and linking options. Return configuration in distutils
-    Extension format.
+    Query pkg-config for library compile and linking options.
+
+    Returns configuration in distutils Extension format.
 
     Usage:
 
@@ -161,7 +165,8 @@ def pkgconfig(*packages, **kw):
 
      Set PKG_CONFIG_PATH environment variable for nonstandard library locations.
 
-    based on work of Micah Dowty (http://code.activestate.com/recipes/502261-python-distutils-pkg-config/)
+    based on work of Micah Dowty
+    (http://code.activestate.com/recipes/502261-python-distutils-pkg-config/)
     """
     config = kw.setdefault('config', {})
     optional_args = kw.setdefault('optional', '')
@@ -175,6 +180,7 @@ def pkgconfig(*packages, **kw):
                 }
     for package in packages:
         for distutils_key, (pkg_option, n) in flag_map.items():
-            items = subprocess.check_output(['pkg-config', optional_args, pkg_option, package]).decode('utf8').split()
+            items = subprocess.check_output(
+                ['pkg-config', optional_args, pkg_option, package]).decode('utf8').split()
             config.setdefault(distutils_key, []).extend([i[n:] for i in items])
     return config

@@ -24,6 +24,7 @@ import sys
 
 from hotdoc.core.config import Config
 
+
 def main():
     if len(sys.argv) != 2:
         print("USAGE: %s path/to/conf/file" % sys.argv[0])

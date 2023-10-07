@@ -19,13 +19,12 @@
 """
 Banana banana
 """
+from hotdoc.utils.signals import Signal
 import urllib.parse
 from hotdoc.utils.loggable import Logger, warn
 from hotdoc.core.exceptions import MissingLinkException
 Logger.register_warning_code('mandatory-link-not-found', MissingLinkException,
                              domain='links')
-
-from hotdoc.utils.signals import Signal
 
 
 def dict_to_html_attrs(dict_):

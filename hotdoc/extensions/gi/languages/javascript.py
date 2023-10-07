@@ -27,6 +27,7 @@ from hotdoc.core.links import Link
 # FIXME: Avoid the use of a global dictionary
 TRANSLATED = {}
 
+
 class JavascriptLanguage(Language):
     language_name = 'javascript'
 
@@ -36,69 +37,69 @@ class JavascriptLanguage(Language):
     @classmethod
     def _create_fundamentals(cls):
         string_link = \
-                Link('https://developer.mozilla.org/en-US/docs/Web/'
-                        'JavaScript/Reference/Global_Objects/String',
-                        'String', None)
+            Link('https://developer.mozilla.org/en-US/docs/Web/'
+                 'JavaScript/Reference/Global_Objects/String',
+                 'String', None)
         boolean_link = \
-                Link('https://developer.mozilla.org/en-US/docs/Web/'
-                        'JavaScript/Reference/Global_Objects/Boolean',
-                        'Boolean', None)
+            Link('https://developer.mozilla.org/en-US/docs/Web/'
+                 'JavaScript/Reference/Global_Objects/Boolean',
+                 'Boolean', None)
         pointer_link = \
-                Link('https://developer.mozilla.org/en-US/docs/Web/'
-                        'JavaScript/Reference/Global_Objects/Object', 'Object',
-                        None)
+            Link('https://developer.mozilla.org/en-US/docs/Web/'
+                 'JavaScript/Reference/Global_Objects/Object', 'Object',
+                 None)
         true_link = \
-                Link('https://developer.mozilla.org/en-US/docs/Web/'
-                        'JavaScript/Reference/Global_Objects/Boolean',
-                        'true', None)
+            Link('https://developer.mozilla.org/en-US/docs/Web/'
+                 'JavaScript/Reference/Global_Objects/Boolean',
+                 'true', None)
         false_link = \
-                Link('https://developer.mozilla.org/en-US/docs/Web/'
-                        'JavaScript/Reference/Global_Objects/Boolean',
-                        'false', None)
+            Link('https://developer.mozilla.org/en-US/docs/Web/'
+                 'JavaScript/Reference/Global_Objects/Boolean',
+                 'false', None)
         number_link = \
-                Link('https://developer.mozilla.org/en-US/docs/Glossary/Number',
-                        'Number', None)
+            Link('https://developer.mozilla.org/en-US/docs/Glossary/Number',
+                 'Number', None)
         null_link = \
-                Link('https://developer.mozilla.org/en-US/docs/Web/'
-                        'JavaScript/Reference/Global_Objects/null',
-                        'null', None)
+            Link('https://developer.mozilla.org/en-US/docs/Web/'
+                 'JavaScript/Reference/Global_Objects/null',
+                 'null', None)
         gtype_link = \
-                Link('https://developer.gnome.org/gobject/stable/'
-                        'gobject-Type-Information.html#GType',
-                        'GObject.Type', None)
+            Link('https://developer.gnome.org/gobject/stable/'
+                 'gobject-Type-Information.html#GType',
+                 'GObject.Type', None)
 
         FUNDAMENTALS[cls.language_name] = {
-                'gchararray': string_link,
-                'gunichar': string_link,
-                'utf8': string_link,
-                'gchar': string_link,
-                'guchar': number_link,
-                'gint8': number_link,
-                'guint8': number_link,
-                'gint16': number_link,
-                'guint16': number_link,
-                'gint32': number_link,
-                'guint32': number_link,
-                'gint64': number_link,
-                'guint64': number_link,
-                'gshort': number_link,
-                'gint': number_link,
-                'guint': number_link,
-                'glong': number_link,
-                'gulong': number_link,
-                'gsize': number_link,
-                'gssize': number_link,
-                'gintptr': number_link,
-                'guintptr': number_link,
-                'gfloat': number_link,
-                'gdouble': number_link,
-                'gboolean': number_link,
-                'TRUE': true_link,
-                'FALSE': false_link,
-                'gpointer': pointer_link,
-                'GType': gtype_link,
-                'NULL': null_link,
-                }
+            'gchararray': string_link,
+            'gunichar': string_link,
+            'utf8': string_link,
+            'gchar': string_link,
+            'guchar': number_link,
+            'gint8': number_link,
+            'guint8': number_link,
+            'gint16': number_link,
+            'guint16': number_link,
+            'gint32': number_link,
+            'guint32': number_link,
+            'gint64': number_link,
+            'guint64': number_link,
+            'gshort': number_link,
+            'gint': number_link,
+            'guint': number_link,
+            'glong': number_link,
+            'gulong': number_link,
+            'gsize': number_link,
+            'gssize': number_link,
+            'gintptr': number_link,
+            'guintptr': number_link,
+            'gfloat': number_link,
+            'gdouble': number_link,
+            'gboolean': number_link,
+            'TRUE': true_link,
+            'FALSE': false_link,
+            'gpointer': pointer_link,
+            'GType': gtype_link,
+            'NULL': null_link,
+        }
 
     def make_translations(self, unique_name, node):
         if node.attrib.get('introspectable') == '0':
@@ -136,9 +137,12 @@ class JavascriptLanguage(Language):
             TRANSLATED[unique_name] = node.attrib.get('name')
 
     def get_translation(self, unique_name):
-        return TRANSLATED.get (unique_name)
+        return TRANSLATED.get(unique_name)
+
 
 JavascriptLanguage._create_fundamentals()
+
+
 def get_language_classes():
     """Nothing important, really"""
     return [JavascriptLanguage]

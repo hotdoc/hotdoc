@@ -139,7 +139,8 @@ class TagExtension(Extension):
     def setup(self):
         super(TagExtension, self).setup()
         for ext in self.project.extensions.values():
-            ext.formatter.formatting_symbol_signal.connect(self.__formatting_symbol)
+            ext.formatter.formatting_symbol_signal.connect(
+                self.__formatting_symbol)
 
     def __formatting_symbol(self, _, symbol):
         if isinstance(symbol, QualifiedSymbol):

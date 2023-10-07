@@ -48,7 +48,7 @@ This extension helps licensing your hotdoc project
 """
 
 ASSETS_DOC_TEMPLATE =\
-"""# Licensing
+    """# Licensing
 
 This documentation uses various external assets, licensed as follows:
 """
@@ -255,11 +255,13 @@ class LicenseExtension(Extension):
                 license = info['license']
                 if license in ALL_LICENSES:
                     license = ALL_LICENSES[license]
-                    LicenseExtension.installed_assets.add(license.plain_text_path)
+                    LicenseExtension.installed_assets.add(
+                        license.plain_text_path)
                     licensing_text += ['is licensed under the [{} ({})]({}) license.'.format(
                         license.full_name, license.short_name, license.url)]
                 else:
-                    licensing_text += ['is licensed under the {} license'.format(license)]
+                    licensing_text += [
+                        'is licensed under the {} license'.format(license)]
 
                 assets_licenses += [' '.join(licensing_text)]
 
