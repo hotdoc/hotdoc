@@ -86,9 +86,10 @@ def get_clang_headers():
         # Clang 5.0+ can tell us directly
         resource_dir = subprocess.check_output(
             ['clang', '--print-resource-dir']).strip().decode()
-        include_dir = os.path.join(resource_dir, 'include')
-        if os.path.exists(include_dir):
-            return include_dir
+        if len(resource_dir) > 0:
+            include_dir = os.path.join(resource_dir, 'include')
+            if os.path.exists(include_dir):
+                return include_dir
     except subprocess.CalledProcessError:
         pass
     version = subprocess.check_output(
