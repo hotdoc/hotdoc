@@ -82,6 +82,15 @@ CLANG_HEADERS_WARNING = (
 
 
 def get_clang_headers():
+    try:
+        # Clang 5.0+ can tell us directly
+        resource_dir = subprocess.check_output(
+            ['clang', '--print-resource-dir']).strip().decode()
+        include_dir = os.path.join(resource_dir, 'include')
+        if os.path.exists(include_dir):
+            return include_dir
+    except subprocess.CalledProcessError:
+        pass
     version = subprocess.check_output(
         ['llvm-config', '--version']).strip().decode()
     prefix = subprocess.check_output(
