@@ -4,18 +4,10 @@ import cchardet
 from hotdoc.parsers.c_comment_scanner.c_comment_scanner import extract_comments
 
 from hotdoc.core.symbols import *
-from hotdoc.utils.loggable import debug
+from hotdoc.utils.loggable import debug, error
 
 
 RawMacro = namedtuple('RawMacro', ['raw', 'filename'])
-
-
-def unicode_dammit(data):
-    encoding = cchardet.detect(data)['encoding']
-    try:
-        return data.decode(encoding, errors='replace')
-    except LookupError:
-        return data.decode('utf8', errors='replace')
 
 
 class CCommentExtractor:
@@ -28,14 +20,13 @@ class CCommentExtractor:
 
     def parse_comments(self, filenames):
         for filename in filenames:
-            with open(filename, 'rb') as f:
+            with open(filename, 'r', encoding='utf-8') as f:
                 debug('Getting comments in %s' % filename)
                 lines = []
                 header = filename.endswith('.h')
                 skip_next_symbol = header
                 # FIXME Use the lexer for that!
                 for l in f.readlines():
-                    l = unicode_dammit(l)
                     lines.append(l)
                     if skip_next_symbol and l.startswith("#pragma once"):
                         skip_next_symbol = False

@@ -47,7 +47,6 @@ from hotdoc.core.database import Database
 from hotdoc.core.links import Link
 from hotdoc.parsers.gtk_doc import GtkDocStringFormatter
 from hotdoc.extensions.gi.gi_extension import GIExtension
-from hotdoc.extensions.c.utils import unicode_dammit
 from hotdoc.utils.loggable import warn, info, debug, Logger
 
 from hotdoc.utils.utils import all_subclasses, get_extension_classes
@@ -68,11 +67,15 @@ class Patcher(object):
         if "Miscellaneous.default_page" in filename:
             return
 
+        fix_quotes = str.maketrans({
+            "\u2019": "'",
+            "\u201c": '"',
+            "\u201d": '"',
+        })
         lines = []
-        with open(filename, 'rb') as _:
+        with open(filename, 'r', encoding='utf8') as _:
             for l in _.readlines():
-                lines.append(unicode_dammit(
-                    l.replace(b'\xc3\xa2\xe2\x82\xac\xe2\x84\xa2', b"'")))
+                lines.append(l.translate(fix_quotes))
 
         res = lines[0:begin] + [new_comment + '\n'] + lines[end:]
         res = ''.join(res)
