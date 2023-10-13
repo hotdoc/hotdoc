@@ -73,7 +73,7 @@ DEFAULT_HELP = \
 DESTROY_HELP = \
 "The parameter is a 'destroy_data' for callbacks."
 
-# VERY DIFFERENT FROM THE PREVIOUS ONE BEWARE :P
+# VERY DIFFERENT FROM 'DEFAULT_HELP' BEWARE :P
 OPTIONAL_HELP = \
 "NULL may be passed instead of a pointer to a location"
 
