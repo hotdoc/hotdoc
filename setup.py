@@ -203,40 +203,12 @@ class BuildDefaultTheme(Command):
                 sys.exit(-1)
 
 
-class LinkPreCommitHook(Command):
-    """
-    This will create links to the pre-commit hook.
-    Only called in develop mode.
-    """
-    user_options = []
-    description = "Create links for the style checking pre-commit hooks"
-
-    # pylint: disable=missing-docstring
-    def initialize_options(self):
-        pass
-
-    # pylint: disable=missing-docstring
-    def finalize_options(self):
-        pass
-
-    # pylint: disable=missing-docstring
-    # pylint: disable=no-self-use
-    def run(self):
-        try:
-            symlink(os.path.join(SOURCE_DIR, 'pre-commit'),
-                    os.path.join(SOURCE_DIR, '.git', 'hooks', 'pre-commit'))
-        except OSError as error:
-            if error.errno != errno.EEXIST:
-                raise
-
-
 # pylint: disable=missing-docstring
 # pylint: disable=too-few-public-methods
 class CustomDevelop(develop):
 
     def run(self):
         self.run_command('build_default_theme')
-        self.run_command('link_pre_commit_hook')
         return develop.run(self)
 
 
@@ -457,7 +429,6 @@ setup(
               'bdist_egg': CustomBDistEgg,
               'develop': CustomDevelop,
               'test': DiscoverTest,
-              'link_pre_commit_hook': LinkPreCommitHook,
               'build_default_theme': BuildDefaultTheme},
     package_data=PACKAGE_DATA,
     install_requires=INSTALL_REQUIRES,
