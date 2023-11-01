@@ -80,7 +80,15 @@ class CheckMissingSinceMarkersExtension(Extension):
                 continue
 
             if not self.__check_has_since(sym):
-                missing_since_syms.add(sym)
+                # It is OK for a symbol to not have a Since tag when its
+                # documentation is not exposed (for instance if it has
+                # been marked as private)
+                #
+                # We only run this check here because a private symbol
+                # should still get its Since tag inherited to potential
+                # children
+                if self.project.get_page_for_symbol(name) is not None:
+                    missing_since_syms.add(sym)
             else:
                 self.__add_children_with_since(inherited_sinces, sym)
 
