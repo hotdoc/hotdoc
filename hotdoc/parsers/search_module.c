@@ -31,6 +31,8 @@ typedef struct
 {
   gchar *language;
   gchar *id;
+  GList *sections;
+  gchar *page;
 } TokenContext;
 
 typedef struct
@@ -134,6 +136,35 @@ strv_contains (const gchar * const *strv,
   return FALSE;
 }
 
+static const gchar * section_tags[] = {
+  "h6", "h5", "h4", "h3", "h2", "h1", NULL
+};
+
+static void
+get_context_section (xmlNodePtr elem, TokenContext * ctx)
+{
+  xmlChar *content;
+  xmlNodePtr prev;
+  int i, j;
+
+  i = 0;
+  ctx->sections = NULL;
+  while (elem && section_tags[i]) {
+    for (j = i; section_tags[j]; j++) {
+      if (!g_strcmp0(section_tags[j], elem->name)) {
+        content = xmlNodeGetContent (elem);
+        ctx->sections = g_list_prepend (ctx->sections, g_strdup (content));
+        xmlFree (content);
+        i = j + 1;
+        break;
+      }
+    }
+
+    prev = xmlPreviousElementSibling (elem);
+    elem = prev ? prev : elem->parent;
+  }
+}
+
 static void
 get_context (xmlNodePtr elem, TokenContext * ctx)
 {
@@ -155,7 +186,9 @@ get_context (xmlNodePtr elem, TokenContext * ctx)
 
   ctx->id = (gchar *) xmlGetProp (elem, (xmlChar *) "id");
 
-  if (!ctx->id) {
+  if (ctx->id) {
+    get_context_section(elem, ctx);
+  } else {
     xmlNodePtr prev_sibling = xmlPreviousElementSibling (elem);
 
     if (prev_sibling) {
@@ -172,6 +205,8 @@ free_token_context (TokenContext *ctx)
 {
   g_free (ctx->id);
   g_free (ctx->language);
+  g_list_free_full (ctx->sections, g_free);
+  g_free (ctx->page);
   g_free (ctx);
 }
 
@@ -263,7 +298,7 @@ append_fragment (GHashTable *fragments, const gchar *key, const gchar *value)
 }
 
 static void
-parse_content (IndexContext *idx_ctx, const gchar *filename, xmlDocPtr doc, xmlNodePtr section, xmlXPathContextPtr xpathCtx,
+parse_content (IndexContext *idx_ctx, const gchar *filename, xmlChar *title, xmlDocPtr doc, xmlNodePtr section, xmlXPathContextPtr xpathCtx,
     xmlChar * selector)
 {
   xmlXPathObjectPtr xpathObj = NULL;
@@ -289,6 +324,7 @@ parse_content (IndexContext *idx_ctx, const gchar *filename, xmlDocPtr doc, xmlN
 
     ctx->language = g_strdup ("default");
     get_context (xpathObj->nodesetval->nodeTab[i], ctx);
+    ctx->page = title ? g_strdup(title) : NULL;
 
     content = xmlNodeGetContent (xpathObj->nodesetval->nodeTab[i]);
 
@@ -322,11 +358,29 @@ done:
     xmlXPathFreeObject (xpathObj);
 }
 
+static xmlChar *
+get_doc_title (xmlDocPtr doc)
+{
+  xmlNodePtr elem;
+
+  elem = xmlDocGetRootElement(doc); // html
+  elem = xmlFirstElementChild(elem); // head
+  elem = xmlFirstElementChild(elem); // base
+
+  while ((elem = xmlNextElementSibling(elem))) {
+    if (!g_strcmp0("title", elem->name))
+      return xmlNodeGetContent(elem);
+  }
+
+  return NULL;
+}
+
 static void
 parse_sections (IndexContext *idx_ctx, const gchar *filename, xmlDocPtr doc, xmlNodePtr root)
 {
   xmlXPathContextPtr xpathCtx = NULL;
   xmlXPathObjectPtr xpathObj = NULL;
+  xmlChar *title;
   gint i;
 
   xpathCtx = xmlXPathNewContext (doc);
@@ -340,13 +394,18 @@ parse_sections (IndexContext *idx_ctx, const gchar *filename, xmlDocPtr doc, xml
     goto done;
   }
 
+
+  title = get_doc_title(doc);
+
   for (i = 0; i < xpathObj->nodesetval->nodeNr; i++) {
-    parse_content (idx_ctx, filename, doc, xpathObj->nodesetval->nodeTab[i], xpathCtx, (xmlChar *)
+    parse_content (idx_ctx, filename, title, doc, xpathObj->nodesetval->nodeTab[i], xpathCtx, (xmlChar *)
         ".//*[self::h1 or self::h2 or self::h3 or self::h4 or self::h5 or self::h6]");
-    parse_content (idx_ctx, filename, doc, xpathObj->nodesetval->nodeTab[i], xpathCtx, (xmlChar *) ".//*[self::p]");
-    parse_content (idx_ctx, filename, doc, xpathObj->nodesetval->nodeTab[i], xpathCtx, (xmlChar *) ".//*[self::ul]");
-    parse_content (idx_ctx, filename, doc, xpathObj->nodesetval->nodeTab[i], xpathCtx, (xmlChar *) ".//*[self::table]");
+    parse_content (idx_ctx, filename, title, doc, xpathObj->nodesetval->nodeTab[i], xpathCtx, (xmlChar *) ".//*[self::p]");
+    parse_content (idx_ctx, filename, title, doc, xpathObj->nodesetval->nodeTab[i], xpathCtx, (xmlChar *) ".//*[self::ul]");
+    parse_content (idx_ctx, filename, title, doc, xpathObj->nodesetval->nodeTab[i], xpathCtx, (xmlChar *) ".//*[self::table]");
   }
+
+  xmlFree(title);
 
 done:
   if (xpathObj)
@@ -563,6 +622,7 @@ show_url (ContextualizedURL *ctx_url, JsonArray *jurls)
   JsonObject *jurl;
   JsonObject *jcontext;
   JsonArray *jlangs;
+  JsonArray *jsections;
 
   if (!ctx_url->url)
       return;
@@ -572,6 +632,12 @@ show_url (ContextualizedURL *ctx_url, JsonArray *jurls)
   json_array_add_object_element (jurls, jurl);
 
   json_object_set_string_member (jurl, "node_type", ctx_url->node_type);
+
+  json_object_set_string_member (jurl, "page", ctx_url->ctx->page);
+
+  jsections = json_array_new();
+  json_object_set_array_member (jurl, "sections", jsections);
+  g_list_foreach (ctx_url->ctx->sections, (GFunc) show_language, jsections);
 
   jcontext = json_object_new();
   json_object_set_object_member (jurl, "context", jcontext);
