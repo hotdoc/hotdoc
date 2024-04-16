@@ -2,7 +2,7 @@ import os
 from collections import namedtuple
 import pathlib
 
-import pkg_resources
+from backports.entry_points_selectable import entry_points
 
 from hotdoc.core.links import Link
 
@@ -200,16 +200,17 @@ def get_language_classes():
     Banana banana
     """
     all_classes = {}
-    deps_map = {}
 
-    for entry_point in pkg_resources.iter_entry_points(
-            group='hotdoc.extensions.gi.languages', name='get_language_classes'):
+    for entry_point in entry_points(
+            group='hotdoc.extensions.gi.languages',
+            name='get_language_classes'):
         try:
+            ep_name = entry_point.name
             activation_function = entry_point.load()
             classes = activation_function()
         # pylint: disable=broad-except
         except Exception as exc:
-            info("Failed to load %s" % entry_point.module_name, exc)
+            info("Failed to load %s" % entry_point, exc)
             debug(traceback.format_exc())
             continue
 
