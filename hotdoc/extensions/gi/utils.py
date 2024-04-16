@@ -1,10 +1,12 @@
 import os
 from collections import namedtuple
 import pathlib
+import traceback
 
 from backports.entry_points_selectable import entry_points
 
 from hotdoc.core.links import Link
+from hotdoc.utils.loggable import info, debug
 
 
 NS_MAP = {'core': 'http://www.gtk.org/introspection/core/1.0',
