@@ -34,7 +34,8 @@ import importlib.util
 from urllib.request import urlretrieve
 from pathlib import Path
 
-import pkg_resources
+from backports.entry_points_selectable import entry_points
+
 from toposort import toposort_flatten
 
 from hotdoc.core.exceptions import HotdocSourceException, ConfigError
@@ -148,22 +149,23 @@ def __get_extra_extension_classes(paths):
     Banana banana
     """
     extra_classes = []
-    wset = pkg_resources.WorkingSet([])
-    distributions, _ = wset.find_plugins(pkg_resources.Environment(paths))
 
-    for dist in distributions:
-        sys.path.append(dist.location)
-        wset.add(dist)
+    sys_paths = set(sys.path)
+    extra_paths = set([Path(x) for x in paths])
+    sys.path.extend(list(extra_paths - sys_paths))
+    del sys_paths
+    del extra_paths
 
-    for entry_point in wset.iter_entry_points(group='hotdoc.extensions',
-                                              name='get_extension_classes'):
+    for entry_point in entry_points(group='hotdoc.extensions',
+                                    name='get_extension_classes'):
         try:
+            ep_name = entry_point.name
             activation_function = entry_point.load()
             classes = activation_function()
         # pylint: disable=broad-except
         except Exception as exc:
             warn('extension-import', "Failed to load %s %s" %
-                 (entry_point.module_name, exc))
+                 (entry_point, exc))
             debug(traceback.format_exc())
             continue
 
@@ -204,16 +206,17 @@ def get_extension_classes(sort: bool,
     all_classes = {}
     deps_map = {}
 
-    for entry_point in pkg_resources.iter_entry_points(
+    for entry_point in entry_points(
             group='hotdoc.extensions', name='get_extension_classes'):
-        if entry_point.module_name == 'hotdoc_c_extension.extensions':
-            continue
         try:
+            if entry_point.module == 'hotdoc_c_extension.extensions':
+                continue
+            ep_name = entry_point.name
             activation_function = entry_point.load()
             classes = activation_function()
         # pylint: disable=broad-except
         except Exception as exc:
-            info("Failed to load %s" % entry_point.module_name, exc)
+            info("Failed to load %s" % entry_point, exc)
             debug(traceback.format_exc())
             continue
 
