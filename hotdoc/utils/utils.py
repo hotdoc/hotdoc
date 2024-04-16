@@ -165,7 +165,7 @@ def __get_extra_extension_classes(paths):
         # pylint: disable=broad-except
         except Exception as exc:
             warn('extension-import', "Failed to load %s %s" %
-                 (entry_point, exc))
+                 (str(entry_point), exc))
             debug(traceback.format_exc())
             continue
 
@@ -216,7 +216,7 @@ def get_extension_classes(sort: bool,
             classes = activation_function()
         # pylint: disable=broad-except
         except Exception as exc:
-            info("Failed to load %s" % entry_point, exc)
+            info("Failed to load %s" % str(entry_point), exc)
             debug(traceback.format_exc())
             continue
 

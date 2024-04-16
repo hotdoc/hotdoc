@@ -212,7 +212,7 @@ def get_language_classes():
             classes = activation_function()
         # pylint: disable=broad-except
         except Exception as exc:
-            info("Failed to load %s" % entry_point, exc)
+            info("Failed to load %s" % str(entry_point), exc)
             debug(traceback.format_exc())
             continue
 
