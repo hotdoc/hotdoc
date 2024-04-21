@@ -28,6 +28,7 @@ import math
 import sys
 import re
 import pathlib
+import itertools
 import traceback
 import importlib.util
 
@@ -172,27 +173,24 @@ def __get_extra_extension_classes(paths):
     """
     extra_classes = []
 
-    sys_paths = set(sys.path)
-    extra_paths = set([Path(x) for x in paths])
-    sys.path.extend(list(extra_paths - sys_paths))
-    del sys_paths
-    del extra_paths
+    path_dists = {
+        path: meta.distributions(path=[path])
+        for path in paths
+    }
 
-    for entry_point in entry_points(group='hotdoc.extensions',
-                                    name='get_extension_classes'):
-        try:
-            ep_name = entry_point.name
-            activation_function = entry_point.load()
-            classes = activation_function()
-        # pylint: disable=broad-except
-        except Exception as exc:
-            warn('extension-import', "Failed to load %s %s" %
-                 (str(entry_point), exc))
-            debug(traceback.format_exc())
-            continue
+    for path, dists in path_dists.items():
+        entry_points = [
+            dist.entry_points.select(
+                group='hotdoc.extensions',
+                name='get_extension_classes')
+            for dist in dists
+        ]
+        if entry_points:
+            sys.path.append(path)
 
-        for klass in classes:
-            extra_classes.append(klass)
+        for entry_point in itertools.chain(*entry_points):
+            classes = __load_entry_point(entry_point, False)
+            extra_classes.extend(classes)
 
     return extra_classes
 
