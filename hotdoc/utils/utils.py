@@ -35,6 +35,10 @@ from urllib.request import urlretrieve
 from pathlib import Path
 
 from backports.entry_points_selectable import entry_points
+try:
+    import importlib.metadata as meta
+except ImportError:
+    import importlib_metadata as meta
 
 from toposort import toposort_flatten
 
