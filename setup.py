@@ -299,6 +299,7 @@ INSTALL_REQUIRES = [
     'appdirs',
     'wheezy.template',
     'toposort>=1.4',
+    'importlib_metadata; python_version<"3.10"',
     'backports.entry_points_selectable',
 ]
 
