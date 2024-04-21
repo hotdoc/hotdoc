@@ -148,6 +148,24 @@ def get_mtime(filename):
         return -1
 
 
+def __load_entry_point(
+        entry_point: meta.EntryPoint, is_installed: bool = False
+        ) -> T.List[T.Type['Extension']]:
+    try:
+        ep_name = entry_point.name
+        activation_function = entry_point.load()
+        classes = activation_function()
+    # pylint: disable=broad-except
+    except Exception as exc:
+        if is_installed:
+            info(f"Failed to load {entry_point}", exc)
+        else:
+            warn('extension-import', f"Failed to load {entry_point} {exc}")
+        debug(traceback.format_exc())
+        return []
+    return classes
+
+
 def __get_extra_extension_classes(paths):
     """
     Banana banana
@@ -212,17 +230,9 @@ def get_extension_classes(sort: bool,
 
     for entry_point in entry_points(
             group='hotdoc.extensions', name='get_extension_classes'):
-        try:
-            if entry_point.module == 'hotdoc_c_extension.extensions':
-                continue
-            ep_name = entry_point.name
-            activation_function = entry_point.load()
-            classes = activation_function()
-        # pylint: disable=broad-except
-        except Exception as exc:
-            info("Failed to load %s" % str(entry_point), exc)
-            debug(traceback.format_exc())
+        if getattr(entry_point, 'module', '') == 'hotdoc_c_extension.extensions':
             continue
+        classes = __load_entry_point(entry_point, True)
 
         for klass in classes:
             all_classes[klass.extension_name] = klass
