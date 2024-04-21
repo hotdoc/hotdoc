@@ -168,7 +168,7 @@ def __load_entry_point(
 
 def __get_extra_extension_classes(paths):
     """
-    Banana banana
+    Identify and load extension packages from external paths.
     """
     extra_classes = []
 
@@ -199,7 +199,7 @@ def __get_extra_extension_classes(paths):
 
 def __load_extra_extension_modules(paths: T.List[str]) -> T.List[T.Type['Extension']]:
     """
-    Banana banana
+    Load individual extension modules from specified file paths.
     """
     extra_classes = []
     for p in [Path(x) for x in paths]:
