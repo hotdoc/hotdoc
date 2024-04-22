@@ -211,7 +211,7 @@ def __load_extra_extension_modules(paths: T.List[str]) -> T.List[T.Type['Extensi
             spec.loader.exec_module(ext_mod)
             extra_classes += ext_mod.get_extension_classes()
         except Exception as exc:
-            warn('extension-import', f'Faield to import extension {p}')
+            warn('extension-import', f'Failed to import extension {p}')
     return extra_classes
 
 
