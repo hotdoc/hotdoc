@@ -350,7 +350,11 @@ class GIExtension(Extension):
             if field.attrib.get('private', False):
                 continue
 
-            if children[0].tag == core_ns('callback'):
+            is_callback = False
+            for c in children:
+                if c.tag == core_ns('callback'):
+                    is_callback = True
+            if is_callback:
                 continue
 
             type_desc = type_description_from_node(field)
