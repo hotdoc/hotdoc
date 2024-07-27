@@ -633,6 +633,9 @@ def parse_devhelp_index(dir_):
                         name = '%s::%s' % (split[0], split[1].lstrip('-'))
                     else:
                         name = '%s:%s' % (split[0], split[1].lstrip('-'))
+            # gi-doc
+            elif name.startswith('The ') and name.endswith(f' {type_}'):
+                name = name[len('The '):-len(f' {type_}')]
         elif type_ in ['vfunc']:
             if '#' in link and (language.lower() == 'c' or author == 'hotdoc'):
                 anchor = link.split('#', 1)[1]
