@@ -61,12 +61,11 @@ class CLanguage(Language):
 
 
 FUNDAMENTALS[CLanguage.language_name] = {
-    "GParam": Link("https://developer.gnome.org/gobject/stable/gobject-GParamSpec.html#GParamSpec",
+    "GParam": Link("https://docs.gtk.org/gobject/class.ParamSpec.html",
                    'GParamSpec', 'GParamSpec'),
-    "GInterface": Link("https://developer.gnome.org/gobject/stable/gobject-Type-Information.html#GInterfaceInfo",
-                       'GInterface', 'GInterface')
+    "GInterface": Link("https://docs.gtk.org/gobject/struct.InterfaceInfo.html",
+                       'GInterface', 'GInterface'),
 }
-
 
 def get_language_classes():
     """Nothing important, really"""
