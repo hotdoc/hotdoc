@@ -699,6 +699,37 @@ def gather_links():
                         except IOError:
                             pass
 
+    # Newer GLib docs do not advertise links for those types
+    for typename in ['gpointer', 'gconstpointer', 'gboolean', 'gint8', 'guint8', 'gint16', 'guint16', 'gint32', 'guint32', 'gchar', 'guchar', 'gshort', 'gushort', 'gint', 'guint', 'gfloat', 'gdouble', 'gsize', 'gssize', 'goffset', 'gintptr', 'guintptr', 'glong', 'gulong', 'gint64', 'guint64',]:
+        if not typename in GTKDOC_HREFS:
+            GTKDOC_HREFS[typename] = f"https://docs.gtk.org/glib/types.html#{typename}"
+
+    for numerical_type in 'INT', 'SHORT', 'LONG', 'INT8', 'INT16', 'INT32', 'INT64', 'SSIZE', 'OFFSET', 'FLOAT', 'DOUBLE':
+        GTKDOC_HREFS[f'G_MIN{numerical_type}'] = f'https://web.mit.edu/barnowl/share/gtk-doc/html/glib/glib-Limits-of-Basic-Types.html#G-MIN{numerical_type}:CAPS'
+        GTKDOC_HREFS[f'G_MAX{numerical_type}'] = f'https://web.mit.edu/barnowl/share/gtk-doc/html/glib/glib-Limits-of-Basic-Types.html#G-MAX{numerical_type}:CAPS'
+
+    for numerical_type in 'UINT', 'USHORT', 'ULONG', 'UINT8', 'UINT16', 'UINT32', 'UINT64', 'SIZE':
+        GTKDOC_HREFS[f'G_MAX{numerical_type}'] = f'https://web.mit.edu/barnowl/share/gtk-doc/html/glib/glib-Limits-of-Basic-Types.html#G-MAX{numerical_type}:CAPS'
+
+    for gtype in ['INVALID', 'NONE', 'INTERFACE', 'CHAR', 'UCHAR', 'BOOLEAN', 'INT', 'UINT', 'LONG', 'ULONG', 'INT64', 'UINT64', 'ENUM', 'FLAGS', 'FLOAT', 'DOUBLE', 'STRING', 'POINTER', 'BOXED', 'PARAM', 'OBJECT', 'GTYPE']:
+        GTKDOC_HREFS[f'G_TYPE_{gtype}'] = f'https://web.mit.edu/barnowl/share/gtk-doc/html/gobject/gobject-Type-Information.html#G-TYPE-{gtype}:CAPS'
+
+    GTKDOC_HREFS['gchararray'] = 'https://web.mit.edu/barnowl/share/gtk-doc/html/gobject/gobject-Standard-Parameter-and-Value-Types.html#gchararray'
+    GTKDOC_HREFS['GAsyncReadyCallback'] = 'https://docs.gtk.org/gio/callback.AsyncReadyCallback.html'
+    GTKDOC_HREFS['g_auto'] = 'https://docs.gtk.org/glib/auto-cleanup.html#variable-declaration'
+    GTKDOC_HREFS['g_autoptr'] = 'https://docs.gtk.org/glib/auto-cleanup.html#variable-declaration'
+    GTKDOC_HREFS['GCompareDataFunc'] = 'https://docs.gtk.org/glib/callback.CompareDataFunc.html'
+    GTKDOC_HREFS['GCompareFunc'] = 'https://docs.gtk.org/glib/callback.CompareFunc.html'
+    GTKDOC_HREFS['GFunc'] = 'https://docs.gtk.org/glib/callback.Func.html'
+    GTKDOC_HREFS['GSourceFunc'] = 'https://docs.gtk.org/glib/callback.SourceFunc.html'
+    GTKDOC_HREFS['GSocketSourceFunc'] = 'https://docs.gtk.org/gio/callback.SocketSourceFunc.html'
+    GTKDOC_HREFS['GDestroyNotify'] = 'https://docs.gtk.org/glib/callback.DestroyNotify.html'
+    GTKDOC_HREFS['G_GNUC_NO_INSTRUMENT'] = 'https://web.mit.edu/barnowl/share/gtk-doc/html/glib/glib-Miscellaneous-Macros.html#G-GNUC-NO-INSTRUMENT:CAPS'
+
+    for define in ['TRUE', 'FALSE', 'NULL']:
+        if not define in GTKDOC_HREFS:
+            GTKDOC_HREFS[define] = f'https://web.mit.edu/barnowl/share/gtk-doc/html/glib/glib-Standard-Macros.html#{define}:CAPS'
+
 
 def search_online_links(resolver, name):
     href = GTKDOC_HREFS.get(name)
