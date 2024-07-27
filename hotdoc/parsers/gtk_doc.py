@@ -543,6 +543,41 @@ class GtkDocStringFormatter(Configurable):
         self.gdbus_codegen_sources = config.get_paths('gdbus_codegen_sources')
 
 
+GIDOC_ONLINE_OVERRIDES = {
+    'Gtk': 'https://docs.gtk.org/gtk4/',
+    'Gio': 'https://docs.gtk.org/gio/',
+    'GLib': 'https://docs.gtk.org/glib/',
+    'GObject': 'https://docs.gtk.org/gobject/',
+    'GIRepository': 'https://docs.gtk.org/girepository/',
+    'Soup': 'https://libsoup.org/libsoup-3.0/index.html',
+    'p11-kit': 'https://p11-glue.github.io/p11-glue/p11-kit/manual/',
+    'gi': 'https://gi.readthedocs.io/en/latest/',
+    'libxslt': 'http://xmlsoft.org/xslt/html/',
+    'dbus-glib': 'https://dbus.freedesktop.org/doc/dbus-glib/',
+    'harfbuzz': 'https://harfbuzz.github.io/',
+    'cairo': 'https://www.cairographics.org/manual/',
+    'libxml2': 'http://xmlsoft.org/html/',
+    'Adw': 'https://gnome.pages.gitlab.gnome.org/libadwaita/doc/main/',
+    'PangoOT': 'https://docs.gtk.org/PangoOT/',
+    'PangoFC': 'https://docs.gtk.org/PangoFC/',
+    'PangoFT2': 'https://docs.gtk.org/PangoFT2/',
+    'GdkWayland': 'https://docs.gtk.org/gdk4-wayland/',
+    'Gsk': 'https://docs.gtk.org/gsk4/',
+    'GdkX11': 'https://docs.gtk.org/gdk3-x11/',
+    'GdkPixbuf': 'https://docs.gtk.org/gdk-pixbuf/',
+    'PangoXft': 'https://docs.gtk.org/PangoXft/',
+    'GioUnix': 'https://docs.gtk.org/gio-unix/',
+    'Gdk': 'https://docs.gtk.org/gdk4/',
+    'Atk': 'https://docs.gtk.org/atk/',
+    'PangoCairo': 'https://docs.gtk.org/PangoCairo/',
+    'Atspi': 'https://docs.gtk.org/atspi2/',
+    'GLibUnix': 'https://docs.gtk.org/glib-unix/',
+    'Pango': 'https://docs.gtk.org/Pango/',
+    'GModule': 'https://docs.gtk.org/gmodule/',
+    'GdkPixdata': 'https://lazka.github.io/pgi-docs/GdkPixdata-2.0/'
+}
+
+
 def parse_devhelp_index(dir_):
     path = os.path.join(dir_, os.path.basename(dir_) + '.devhelp2')
     if not os.path.exists(path):
@@ -566,7 +601,11 @@ def parse_devhelp_index(dir_):
             info(
                 'Skipping devhelp index at %s, no online attribute and no name attribute', path)
             return False
-        online = 'https://developer.gnome.org/%s/unstable/' % name
+        if name in GIDOC_ONLINE_OVERRIDES:
+            online = GIDOC_ONLINE_OVERRIDES[name]
+        else:
+            online = 'https://developer.gnome.org/%s/unstable/' % name
+
 
     keywords = dh_root.findall('.//{http://www.devhelp.net/book}keyword')
     for kw in keywords:
