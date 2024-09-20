@@ -543,9 +543,9 @@ class ClangScanner(object):
         decl = t.get_declaration()
         if ast_node_is_function_pointer(t):
             return self.__create_callback_symbol(node)
-        elif not decl.spelling and decl.kind == cindex.CursorKind.STRUCT_DECL:  # typedef struct {} foo;
+        elif (not decl.spelling or node.spelling == decl.spelling) and decl.kind == cindex.CursorKind.STRUCT_DECL:  # typedef struct {} foo;
             return self.__create_struct_symbol(decl, spelling=node.spelling)
-        elif not decl.spelling and decl.kind == cindex.CursorKind.ENUM_DECL:  # typedef enum {} bar;
+        elif (not decl.spelling or node.spelling == decl.spelling) and decl.kind == cindex.CursorKind.ENUM_DECL:  # typedef enum {} bar;
             return self.__create_enum_symbol(decl, spelling=node.spelling)
         else:
             return self.__create_alias_symbol(node)
