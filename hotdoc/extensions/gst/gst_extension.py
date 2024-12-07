@@ -864,7 +864,7 @@ class GstExtension(Extension):
             type_ = QualifiedSymbol(type_tokens=tokens)
 
             default = prop.get('default')
-            if obj['hierarchy'][0] != parent_uniquename:
+            if obj['hierarchy'][0] != obj.get('name', parent_uniquename):
                 aliases = ['%s:%s' % (obj['hierarchy'][0], name)]
             else:
                 aliases = []
