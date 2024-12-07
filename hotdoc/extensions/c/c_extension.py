@@ -44,7 +44,11 @@ from hotdoc.utils.loggable import (info as core_info, warn, Logger,
                                    debug as core_debug)
 
 
-if shutil.which('llvm-config') is None:
+LLVM_CONFIG = os.environ.get("LLVM_CONFIG")
+if LLVM_CONFIG is None:
+    LLVM_CONFIG = shutil.which('llvm-config')
+
+if LLVM_CONFIG is None:
     raise ImportError()
 
 
@@ -93,9 +97,9 @@ def get_clang_headers():
     except subprocess.CalledProcessError:
         pass
     version = subprocess.check_output(
-        ['llvm-config', '--version']).strip().decode()
+        [LLVM_CONFIG, '--version']).strip().decode()
     prefix = subprocess.check_output(
-        ['llvm-config', '--prefix']).strip().decode()
+        [LLVM_CONFIG, '--prefix']).strip().decode()
     versions = (version, version.split('.').pop(0))
     for (ver, lib) in itertools.product(
             versions,
@@ -111,7 +115,7 @@ CLANG_HEADERS = get_clang_headers()
 
 
 def get_clang_libdir():
-    return subprocess.check_output(['llvm-config', '--libdir']).strip().decode()
+    return subprocess.check_output([LLVM_CONFIG, '--libdir']).strip().decode()
 
 
 class ClangScanner(object):
