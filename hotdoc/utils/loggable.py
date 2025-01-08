@@ -193,6 +193,8 @@ class Logger(Configurable):
     journal = []
     fatal_warnings = False
     raise_on_fatal_warnings = False
+    disable_warnings = False
+    enabled_warnings = set()
     _ignored_codes = set()
     _ignored_domains = set()
     _last_checkpoint = 0
@@ -241,6 +243,8 @@ class Logger(Configurable):
         Will raise if `Logger.fatal_warnings` is set to True and
         `Logger.raise_on_fatal_warnings` as well.
         """
+        if Logger.disable_warnings and code not in Logger.enabled_warnings:
+            return
 
         if code in Logger._ignored_codes:
             return
@@ -333,6 +337,12 @@ class Logger(Configurable):
                            help="Turn on verbosity, -vv for debug")
         group.add_argument("--fatal-warnings", action="store_true",
                            dest="fatal_warnings", help="Make warnings fatal")
+        group.add_argument("--disable-warnings", action="store_true",
+                           dest="disable_warnings", help="Ignore all warnings except explicitly enabled")
+        group.add_argument("--enabled-warnings", action="append",
+                           default=[],
+                           dest="enabled_warnings",
+                           help="Explicitly enabled warnings, only useful with --disable_warnings")
 
     @staticmethod
     def set_verbosity(verbosity):
@@ -347,6 +357,8 @@ class Logger(Configurable):
             config.get('verbose') or 0))
 
         Logger.fatal_warnings = bool(config.get("fatal_warnings"))
+        Logger.disable_warnings = bool(config.get("disable_warnings"))
+        Logger.enabled_warnings = set(config.get("enabled_warnings"))
 
 
 def info(message, domain='core'):
