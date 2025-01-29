@@ -994,7 +994,7 @@ class GstExtension(Extension):
         possible_comment_names = [pagename, feature['name']]
         if feature_type == 'element':
             possible_comment_names.append(feature['hierarchy'][0])
-        elif feature_type == 'tracer':
+        elif feature_type == 'tracer' and "hierarchy" in feature:
             possible_comment_names.append(feature['hierarchy'][0])
 
         comment = None
@@ -1035,9 +1035,10 @@ class GstExtension(Extension):
         for ename, tracer in plugin.get('tracers', {}).items():
             tracer['name'] = ename
             self.__extract_feature_comment("tracer", tracer)
-            tracer['name'] = "tracer-" + ename
-            sym = self.__create_classed_type(ename, tracer)
-            other_types.append(sym)
+            if tracer.get('hierarchy'):
+                tracer['name'] = "tracer-" + ename
+                sym = self.__create_classed_type(ename, tracer)
+                other_types.append(sym)
 
         for provider_name, provider in plugin.get('device-providers', {}).items():
             provider['name'] = provider_name
