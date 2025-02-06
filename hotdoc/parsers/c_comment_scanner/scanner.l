@@ -34,8 +34,8 @@
 extern int yylex (PyObject *comments);
 #define YY_DECL int yylex (PyObject *comments)
 static int yywrap (void);
-static int parse_comment ();
-static int parse_define ();
+static int parse_comment (PyObject *);
+static int parse_define (PyObject *);
 %}
 
 %option nounput
