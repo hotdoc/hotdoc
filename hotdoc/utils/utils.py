@@ -35,7 +35,11 @@ import importlib.util
 from urllib.request import urlretrieve
 from pathlib import Path
 
-from backports.entry_points_selectable import entry_points
+if sys.version_info >= (3, 10):
+    from importlib.metadata import entry_points
+else:
+    from backports.entry_points_selectable import entry_points
+
 try:
     import importlib.metadata as meta
 except ImportError:
