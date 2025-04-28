@@ -1,9 +1,13 @@
 import os
 from collections import namedtuple
 import pathlib
+import sys
 import traceback
 
-from backports.entry_points_selectable import entry_points
+if sys.version_info >= (3, 10):
+    from importlib.metadata import entry_points
+else:
+    from backports.entry_points_selectable import entry_points
 
 from hotdoc.core.links import Link
 from hotdoc.utils.loggable import info, debug

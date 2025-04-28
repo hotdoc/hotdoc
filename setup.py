@@ -256,7 +256,7 @@ INSTALL_REQUIRES = [
     'wheezy.template',
     'toposort>=1.4',
     'importlib_metadata; python_version<"3.10"',
-    'backports.entry_points_selectable',
+    'backports.entry_points_selectable; python_version<"3.10"',
 ]
 
 # dbus-deviation requires sphinx, which requires python 3.5
