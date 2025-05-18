@@ -724,6 +724,8 @@ def gather_links():
     GTKDOC_HREFS['GSourceFunc'] = 'https://docs.gtk.org/glib/callback.SourceFunc.html'
     GTKDOC_HREFS['GSocketSourceFunc'] = 'https://docs.gtk.org/gio/callback.SocketSourceFunc.html'
     GTKDOC_HREFS['GDestroyNotify'] = 'https://docs.gtk.org/glib/callback.DestroyNotify.html'
+    GTKDOC_HREFS['GUnixSocketAddressType'] = 'https://gnome.pages.gitlab.gnome.org/libsoup/gio/GUnixSocketAddress.html'
+    GTKDOC_HREFS['GUnixCredentialsMessage'] = 'https://gnome.pages.gitlab.gnome.org/libsoup/gio/GUnixCredentialsMessage.html'
     GTKDOC_HREFS['G_GNUC_NO_INSTRUMENT'] = 'https://web.mit.edu/barnowl/share/gtk-doc/html/glib/glib-Miscellaneous-Macros.html#G-GNUC-NO-INSTRUMENT:CAPS'
 
     for define in ['TRUE', 'FALSE', 'NULL']:
