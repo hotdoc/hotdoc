@@ -35,10 +35,10 @@ from hotdoc.extensions.edit_on_github.edit_on_github_extension import (
     EditOnGitHubExtension)
 from hotdoc.extensions.comment_on_github.comment_on_github_extension import (
     CommentOnGithubExtension)
+from hotdoc.utils.loggable import debug
 
 if sys.version_info[1] >= 5:
     from hotdoc.extensions.dbus.dbus_extension import DBusExtension
-
 
 def get_extension_classes():
     """
@@ -55,25 +55,26 @@ def get_extension_classes():
     try:
         from hotdoc.extensions.c.c_extension import CExtension
         res += [CExtension]
-    except ImportError:
+    except Exception as e:
+        debug(f'C extension not available: {e}')
         pass
 
     try:
         from hotdoc.extensions.feedgen.feedgen_extension import FeedgenExtension
         res += [FeedgenExtension]
-    except ImportError:
-        pass
+    except Exception as e:
+        debug(f'Feedgen extension not available: {e}')
 
     try:
         from hotdoc.extensions.gi.gi_extension import GIExtension
         res += [GIExtension]
-    except ImportError:
-        pass
+    except Exception as e:
+        debug(f'GI extension not available: {e}')
 
     try:
         from hotdoc.extensions.gst.gst_extension import GstExtension
         res += [GstExtension]
-    except ImportError:
-        pass
+    except Exception as e:
+        debug(f'Gst extension not available: {e}')
 
     return res

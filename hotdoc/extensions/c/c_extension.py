@@ -43,13 +43,12 @@ from hotdoc.extensions.c.utils import CCommentExtractor
 from hotdoc.utils.loggable import (info as core_info, warn, Logger,
                                    debug as core_debug)
 
-
 LLVM_CONFIG = os.environ.get("LLVM_CONFIG")
 if LLVM_CONFIG is None:
     LLVM_CONFIG = shutil.which('llvm-config')
 
 if LLVM_CONFIG is None:
-    raise ImportError()
+    raise ImportError('no llvm-config found')
 
 
 def ast_node_is_function_pointer(ast_node):
