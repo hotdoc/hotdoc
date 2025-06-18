@@ -29,7 +29,7 @@ import urllib.parse
 import shutil
 import subprocess
 import io
-import cgi
+import html
 
 from copy import deepcopy
 
@@ -825,7 +825,7 @@ def parse_section_file(sections_path, section_comments):
 
 def translate(docstring):
     formatter = GtkDocStringFormatter()
-    docstring = cgi.escape(docstring)
+    docstring = html.escape(docstring, quote=False)
     return formatter.translate(docstring, None, 'markdown')
 
 
@@ -840,9 +840,9 @@ def write_symbols(monitor, section):
         metadict['symbols'] = []
         if section.comment:
             if section.comment.title:
-                metadict['title'] = cgi.escape(section.comment.title)
+                metadict['title'] = html.escape(section.comment.title, quote=False)
             elif section.title:
-                metadict['title'] = cgi.escape(section.title)
+                metadict['title'] = html.escape(section.title, quote=False)
             if section.comment.short_description:
                 short = translate(section.comment.short_description)
                 metadict['short-description'] = short.replace('\n', '')
@@ -1060,10 +1060,10 @@ if __name__ == '__main__':
                         with io.open(full_path, 'w', encoding='utf-8') as f:
                             if section_comment.title:
                                 f.write("### %s\n\n" %
-                                        cgi.escape(section_comment.title))
+                                        html.escape(section_comment.title, quote=False))
                             elif section.title:
                                 f.write("### %s\n\n" %
-                                        cgi.escape(section.title))
+                                        html.escape(section.title, quote=False))
                             if section_comment.short_description:
                                 f.write('%s\n\n' %
                                         translate(section_comment.short_description))
