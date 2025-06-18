@@ -86,12 +86,19 @@ class DevhelpExtension(Extension):
         self.__ext_languages = defaultdict(set)
         self.__online = None
 
+    def __map_type_to_category(sym_type):
+        if sym_type in TYPE_MAP:
+            return TYPE_MAP[sym_type]
+
+        parent_categories = [TYPE_MAP[cl] for cl in sym_type.__mro__ if cl in TYPE_MAP]
+        return parent_categories.get(0)
+
     def __writing_page_cb(self, formatter, page, path, lxml_tree):
         html_path = os.path.join(self.app.output, 'html')
         relpath = os.path.relpath(path, html_path)
 
         DevhelpExtension.__resolved_symbols_map[relpath] = [
-            FormattedSymbol(TYPE_MAP.get(type(sym)),
+            FormattedSymbol(__map_type_to_category(type(sym)),
                             sym.link.ref, sym.link.title)
             for sym in page.symbols]
 
