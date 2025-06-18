@@ -50,10 +50,6 @@ from hotdoc.extensions.gi.node_cache import (
     get_klass_children, cache_nodes, type_description_from_node,
     is_introspectable, is_callback_type)
 from hotdoc.extensions.gi.symbols import GIClassSymbol, GIInterfaceSymbol, GIStructSymbol
-from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
-
-TYPE_MAP.update({GIClassSymbol: 'class',
-                GIInterfaceSymbol: 'interface', GIStructSymbol: 'struct'})
 
 
 DESCRIPTION =\
