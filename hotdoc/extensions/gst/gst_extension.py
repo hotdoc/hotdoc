@@ -1150,5 +1150,5 @@ class GstExtension(Extension):
             search_online_links)
 
 
-TYPE_MAP.update({GstElementSymbol: 'class', GstNamedConstantsSymbols: 'enum'})
+TYPE_MAP.update({GstNamedConstantsSymbols: 'enum'})
 _inject_fundamentals()
