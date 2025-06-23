@@ -6,7 +6,6 @@ chardet==5.2.0
 colorama==0.4.6
 dbus-deviation==0.6.1
 distlib==0.3.9
-faust-cchardet==2.1.19
 filelock==3.18.0
 -e git+ssh://git@github.com/hotdoc/hotdoc.git@e3c2a0923b87f676b517e695a936a3ca9d79377e#egg=hotdoc
 iniconfig==2.1.0
