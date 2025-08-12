@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.10', '3.11']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
 
     steps:
     - uses: actions/checkout@v5
@@ -31,7 +31,7 @@ jobs:
       run: sudo apt install -y libxml2-dev libglib2.0-dev libjson-glib-dev
     - name: Build
       run: |
-        python -m pip install --upgrade pip meson-python ninja wheel
+        python -m pip install --upgrade pip meson-python ninja wheel setuptools
         pip install --no-build-isolation --editable . -Cbuild-dir=build-dir
     - name: Test
       run: TEST_BASE_THEME_DIR=$(pwd)/build-dir/subprojects/hotdoc_bootstrap_theme/src python3 -m unittest
