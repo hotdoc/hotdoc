@@ -43,7 +43,6 @@ from hotdoc.core.comment import Comment
 from hotdoc.extensions.gi.gi_extension import WritableFlag, ReadableFlag, \
     ConstructFlag, ConstructOnlyFlag
 from hotdoc.extensions.gi.symbols import GIClassSymbol, GIInterfaceSymbol
-from hotdoc.extensions.devhelp.devhelp_extension import TYPE_MAP
 
 
 DESCRIPTION =\
@@ -1139,6 +1138,4 @@ class GstExtension(Extension):
         link_resolver.get_link_signal.disconnect(
             search_online_links)
 
-
-TYPE_MAP.update({GstNamedConstantsSymbols: 'enum'})
 _inject_fundamentals()
