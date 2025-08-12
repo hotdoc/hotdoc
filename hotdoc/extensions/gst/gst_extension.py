@@ -234,9 +234,8 @@ class GstPluginSymbol(Symbol):
         return ""
 
 
-class GstNamedConstantValue(Symbol):
+class GstNamedConstantValue(EnumMemberSymbol):
     __tablename__ = 'named constants value'
-    standalone = False
     TEMPLATE = """
         @require(symbol)
         <div class="member_details" class="always-hide-toc" data-toc-skip=true data-hotdoc-id="@symbol.link.id_">
@@ -245,20 +244,11 @@ class GstNamedConstantValue(Symbol):
     """
 
 
-class GstNamedConstantsSymbols(Symbol):
+class GstNamedConstantsSymbols(EnumSymbol):
     __tablename__ = 'named constants'
 
     def __init__(self, **kwargs):
-        self.members = {}
-        self.raw_text = ''
-        self.anonymous = False
-        Symbol.__init__(self, **kwargs)
-
-    def get_children_symbols(self):
-        return self.members + super().get_children_symbols()
-
-    def get_extra_links(self):
-        return [m.link for m in self.members]
+        EnumSymbol.__init__(self, **kwargs)
 
     def get_type_name(self):
         return "Name constant"
