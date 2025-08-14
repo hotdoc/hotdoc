@@ -1,0 +1,43 @@
+From 384172cf7620db864a80821600fc40d09f366596 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Corentin=20No=C3=ABl?= <corentin.noel@collabora.com>
+Date: Thu, 14 Aug 2025 19:16:26 +0200
+Subject: [PATCH] Allow the extension to be statically built
+
+---
+ extensions/CMakeLists.txt | 16 ++++++++++++++--
+ 1 file changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/extensions/CMakeLists.txt b/extensions/CMakeLists.txt
+index e62d155..956adb5 100644
+--- a/extensions/CMakeLists.txt
++++ b/extensions/CMakeLists.txt
+@@ -1,5 +1,6 @@
+ cmake_minimum_required(VERSION 2.8)
+ set(LIBRARY "cmarkextensions")
++set(STATICLIBRARY "cmarkextensions_static")
+ set(LIBRARY_SOURCES
+     core-extensions.c
+     ext_scanners.c
+@@ -25,6 +26,17 @@ include_directories(. ${CMAKE_CURRENT_BINARY_DIR})
+ set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS_RELEASE} -pg")
+ set(CMAKE_LINKER_PROFILE "${CMAKE_LINKER_FLAGS_RELEASE} -pg")
+ 
+-add_library(${LIBRARY} SHARED ${LIBRARY_SOURCES})
+ 
+-target_link_libraries(cmarkextensions libcmark)
++if (CMARK_SHARED)
++  add_library(${LIBRARY} SHARED ${LIBRARY_SOURCES})
++
++  target_link_libraries(${LIBRARY} libcmark)
++endif()
++
++if (CMARK_STATIC)
++  add_library(${STATICLIBRARY} STATIC ${LIBRARY_SOURCES})
++  set_target_properties(${STATICLIBRARY} PROPERTIES
++    COMPILE_FLAGS -DCMARK_STATIC_DEFINE
++    POSITION_INDEPENDENT_CODE ON)
++  target_link_libraries(${STATICLIBRARY} libcmark)
++endif()
+-- 
+2.43.0
+
