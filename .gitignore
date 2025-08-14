@@ -10,3 +10,5 @@ dist
 hotdoc.egg-info/
 *.eggs
 .ycm_extra_conf.py
+subprojects/cmark
+subprojects/hotdoc_bootstrap_theme

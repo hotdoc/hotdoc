@@ -31,8 +31,7 @@ jobs:
       run: sudo apt install -y libxml2-dev libglib2.0-dev libjson-glib-dev
     - name: Build
       run: |
-        python -m pip install --upgrade pip
-        pip install wheel
-        pip install --editable .
+        python -m pip install --upgrade pip meson-python ninja wheel
+        pip install --no-build-isolation --editable . -Cbuild-dir=build-dir
     - name: Test
-      run: python3 -m unittest
+      run: TEST_BASE_THEME_DIR=$(pwd)/build-dir/subprojects/hotdoc_bootstrap_theme/src python3 -m unittest
