@@ -1112,10 +1112,14 @@ class Formatter(Configurable):
                     html_theme = self.__download_theme(uri)
 
             if html_theme == 'default':
-                default_theme = os.path.join(HERE, os.pardir,
-                                             'hotdoc_bootstrap_theme', 'dist')
+                if os.environ['TEST_BASE_THEME_DIR']:
+                    html_theme = os.environ['TEST_BASE_THEME_DIR']
+                else:
+                    default_theme = os.path.join(HERE, os.pardir,
+                                                 'hotdoc_bootstrap_theme', 'dist')
 
-                html_theme = os.path.abspath(default_theme)
+                    html_theme = os.path.abspath(default_theme)
+
                 debug("Using default theme")
 
             theme_meta_path = os.path.join(html_theme, 'theme.json')
