@@ -1,0 +1,5 @@
+[wrap-git]
+directory=cmark
+url=https://github.com/MathieuDuponchelle/cmark.git
+revision=master
+depth = 1
