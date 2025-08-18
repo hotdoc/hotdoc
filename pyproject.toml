@@ -1,0 +1,37 @@
+[build-system]
+requires = [
+    "meson >= 1.0.0",
+    "meson-python >= 0.14.0",
+]
+build-backend = "mesonpy"
+
+[project]
+name = "hotdoc"
+version = "0.17.4"
+description = "A documentation tool micro-framework"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "LGPL-2.1-or-later"
+authors = [
+  {name = "Mathieu Duponchelle", email = "mathieu.duponchelle@opencreed.com"},
+]
+dependencies = [
+  "appdirs>=1.4.4",
+  "dbus-deviation>=0.6.1",
+  "lxml>=5.4.0",
+  "networkx>=3.4",
+  "PyYAML>=6.0.2",
+  "schema>=0.7.7",
+  "toposort>=1.10",
+  "wheezy.template>=3.2.3",
+]
+
+[project.scripts]
+hotdoc = "hotdoc.run_hotdoc:main"
+hotdoc_dep_printer = "hotdoc.hotdoc_dep_printer:main"
+
+[project.entry-points."hotdoc.extensions"]
+get_extension_classes = "hotdoc.extensions:get_extension_classes"
+
+[project.entry-points."hotdoc.extensions.gi.languages"]
+get_language_classes = "hotdoc.extensions.gi.languages:get_language_classes"

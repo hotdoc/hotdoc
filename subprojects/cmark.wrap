@@ -1,0 +1,7 @@
+[wrap-git]
+directory=cmark
+url=https://github.com/MathieuDuponchelle/cmark.git
+revision=master
+depth = 1
+
+diff_files = 0001-Allow-the-extension-to-be-statically-built.patch
