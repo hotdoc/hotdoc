@@ -28,7 +28,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
     - name: Install Apt Dependencies
-      run: sudo apt install -y libxml2-dev libglib2.0-dev libjson-glib-dev
+      run: sudo apt update && sudo apt install -y libxml2-dev libglib2.0-dev libjson-glib-dev
     - name: Build
       run: |
         python -m pip install --upgrade pip meson-python ninja wheel setuptools
