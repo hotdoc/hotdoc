@@ -35,7 +35,8 @@ from hotdoc.utils.loggable import info, error
 from hotdoc.utils.utils import OrderedSet
 from hotdoc.core.extension import Extension
 from hotdoc.core.symbols import ClassSymbol, QualifiedSymbol, PropertySymbol, \
-    SignalSymbol, ActionSignalSymbol, ReturnItemSymbol, ParameterSymbol, Symbol, InterfaceSymbol
+    SignalSymbol, ActionSignalSymbol, ReturnItemSymbol, ParameterSymbol, Symbol, \
+    InterfaceSymbol, EnumMemberSymbol, EnumSymbol
 from hotdoc.parsers.gtk_doc import GtkDocParser, gather_links, search_online_links
 from hotdoc.extensions.c.utils import CCommentExtractor
 from hotdoc.core.formatter import Formatter
