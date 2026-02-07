@@ -37,3 +37,16 @@ get_extension_classes = "hotdoc.extensions:get_extension_classes"
 
 [project.entry-points."hotdoc.extensions.gi.languages"]
 get_language_classes = "hotdoc.extensions.gi.languages:get_language_classes"
+
+[tool.cibuildwheel]
+build = "cp310-* cp311-* cp312-* cp313-*"
+skip = "*-manylinux_i686 *-musllinux*"
+
+[tool.cibuildwheel.linux]
+manylinux-x86_64-image = "manylinux_2_28"
+before-all = "{project}/.github/workflows/wheels-before-all-linux.sh"
+
+[tool.cibuildwheel.macos]
+archs = ["native"]
+before-all = "{project}/.github/workflows/wheels-before-all-macos.sh"
+environment = { MACOSX_DEPLOYMENT_TARGET = "15.0" }
