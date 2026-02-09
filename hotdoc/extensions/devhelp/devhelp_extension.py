@@ -91,14 +91,14 @@ class DevhelpExtension(Extension):
             return TYPE_MAP[sym_type]
 
         parent_categories = [TYPE_MAP[cl] for cl in sym_type.__mro__ if cl in TYPE_MAP]
-        return parent_categories.get(0)
+        return parent_categories[0] if len(parent_categories) > 0 else None
 
     def __writing_page_cb(self, formatter, page, path, lxml_tree):
         html_path = os.path.join(self.app.output, 'html')
         relpath = os.path.relpath(path, html_path)
 
         DevhelpExtension.__resolved_symbols_map[relpath] = [
-            FormattedSymbol(__map_type_to_category(type(sym)),
+            FormattedSymbol(DevhelpExtension.__map_type_to_category(type(sym)),
                             sym.link.ref, sym.link.title)
             for sym in page.symbols]
 
