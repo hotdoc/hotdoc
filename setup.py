@@ -43,8 +43,10 @@ from hotdoc.utils.setup_utils import (
 
 SOURCE_DIR = os.path.abspath(os.path.dirname(__file__))
 CMARK_DIR = os.path.join(SOURCE_DIR, 'cmark')
-CMARK_SRCDIR = os.path.join(CMARK_DIR, 'src')
-CMARK_EXTDIR = os.path.join(CMARK_DIR, 'extensions')
+REL_CMARK_DIR = os.path.relpath(CMARK_DIR, SOURCE_DIR)
+CMARK_SRCDIR = os.path.join(REL_CMARK_DIR, 'src')
+CMARK_EXTDIR = os.path.join(REL_CMARK_DIR, 'extensions')
+
 CMARK_BUILD_DIR = os.path.join(SOURCE_DIR, 'build_cmark')
 CMARK_BUILT_SRCDIR = os.path.join(CMARK_BUILD_DIR, 'src')
 CMARK_INCLUDE_DIRS = [CMARK_SRCDIR, CMARK_BUILT_SRCDIR]
