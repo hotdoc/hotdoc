@@ -1112,7 +1112,7 @@ class Formatter(Configurable):
                     html_theme = self.__download_theme(uri)
 
             if html_theme == 'default':
-                if os.environ['TEST_BASE_THEME_DIR']:
+                if 'TEST_BASE_THEME_DIR' in os.environ:
                     html_theme = os.environ['TEST_BASE_THEME_DIR']
                 else:
                     default_theme = os.path.join(HERE, os.pardir,
