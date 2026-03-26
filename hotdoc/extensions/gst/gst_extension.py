@@ -356,8 +356,7 @@ class GstFormatter(Formatter):
     def parse_toplevel_config(self, config):
         super().parse_toplevel_config(config)
         if GstFormatter.engine is None:
-            gi_extension_path = gi.__path__[0]
-
+            gi_extension_path = os.path.dirname(gi.__file__)
             searchpath = [os.path.join(gi_extension_path, "html_templates"),
                           self.__tmpdir.name] + Formatter.engine.loader.searchpath
             GstFormatter.engine = Engine(
