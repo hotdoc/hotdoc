@@ -35,3 +35,16 @@ get_extension_classes = "hotdoc.extensions:get_extension_classes"
 
 [project.entry-points."hotdoc.extensions.gi.languages"]
 get_language_classes = "hotdoc.extensions.gi.languages:get_language_classes"
+
+[tool.cibuildwheel]
+build = "cp310-* cp311-* cp312-* cp313-*"
+skip = "*-manylinux_i686 *-musllinux*"
+
+[tool.cibuildwheel.linux]
+manylinux-x86_64-image = "manylinux_2_28"
+before-all = "dnf install -y 'dnf-command(config-manager)' && dnf config-manager --set-enabled powertools && dnf install -y glib2-devel libxml2-devel json-glib-devel cmake flex && dnf module install -y nodejs:18"
+
+[tool.cibuildwheel.macos]
+archs = ["native"]
+before-all = "brew install glib libxml2 json-glib cmake && ln -sf $(brew --prefix libxml2)/lib/pkgconfig/*.pc $(brew --prefix)/lib/pkgconfig/"
+environment = { MACOSX_DEPLOYMENT_TARGET = "15.0" }
