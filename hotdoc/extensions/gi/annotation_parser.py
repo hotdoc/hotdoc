@@ -61,6 +61,9 @@ SCOPE_CALL_HELP = \
 SCOPE_NOTIFIED_HELP =\
     "The callback is valid until the GDestroyNotify argument is called"
 
+SCOPE_FOREVER_HELP =\
+    "The callback is valid until the process terminates"
+
 NULLABLE_HELP = \
     "NULL may be passed to the value"
 
@@ -168,6 +171,8 @@ class GIAnnotationParser(object):
             return GIAnnotation("scope call", SCOPE_CALL_HELP)
         elif value[0] == 'notified':
             return GIAnnotation("scope notified", SCOPE_NOTIFIED_HELP)
+        elif value[0] == 'forever':
+            return GIAnnotation("scope forever", SCOPE_FOREVER_HELP)
         return None
 
     def __make_closure_annotation(self, annotation, value):
