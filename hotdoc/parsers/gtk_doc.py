@@ -621,7 +621,7 @@ def parse_devhelp_index(dir_):
                 name = split[1]
             else:
                 name = split[0]
-        elif type_ in ['signal', 'property']:
+        elif type_ in ['signal', 'property', 'field', 'member']:
             # Heuristic to determine that the naming follows the gtk-doc "logic"
             if '#' in link and (language.lower() == 'c' or author == 'hotdoc'):
                 anchor = link.split('#', 1)[1]
@@ -631,8 +631,10 @@ def parse_devhelp_index(dir_):
                     split = anchor.split('-', 1)
                     if type_ == 'signal':
                         name = '%s::%s' % (split[0], split[1].lstrip('-'))
-                    else:
+                    elif type_ == 'property':
                         name = '%s:%s' % (split[0], split[1].lstrip('-'))
+                    elif type_ == 'field':
+                        name = '%s.%s' % (split[0], split[1].lstrip('-'))
             # gi-doc
             elif name.startswith('The ') and name.endswith(f' {type_}'):
                 name = name[len('The '):-len(f' {type_}')]
