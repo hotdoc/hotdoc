@@ -7,7 +7,7 @@ build-backend = "mesonpy"
 
 [project]
 name = "hotdoc"
-version = "0.17.4"
+version = "0.18.0"
 description = "A documentation tool micro-framework"
 readme = "README.md"
 requires-python = ">=3.10"
