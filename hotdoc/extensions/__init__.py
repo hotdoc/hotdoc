@@ -24,7 +24,7 @@ import sys
 
 from hotdoc.extensions.syntax_highlighting.syntax_extension import (
     SyntaxHighlightingExtension)
-from hotdoc.extensions.search.search_extension import SearchExtension
+from hotdoc.extensions.pagefind.pagefind_extension import PagefindExtension
 from hotdoc.extensions.tags.tag_extension import TagExtension
 from hotdoc.extensions.devhelp.devhelp_extension import DevhelpExtension
 from hotdoc.extensions.license.license_extension import LicenseExtension
@@ -44,7 +44,7 @@ def get_extension_classes():
     """
     Hotdoc's setuptools entry point
     """
-    res = [SyntaxHighlightingExtension, SearchExtension, TagExtension,
+    res = [SyntaxHighlightingExtension, PagefindExtension, TagExtension,
            DevhelpExtension, LicenseExtension, GitUploadExtension,
            EditOnGitHubExtension, CheckMissingSinceMarkersExtension,
            CommentOnGithubExtension]

@@ -21,6 +21,7 @@ dependencies = [
   "feedgen>=1.0.0",
   "lxml>=5.4.0",
   "networkx>=3.4",
+  "pagefind[extended]>=1.0.0",
   "pkgconfig>=1.6.0",
   "PyYAML>=6.0.2",
   "schema>=0.7.7",

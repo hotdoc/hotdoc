@@ -1,7 +1,8 @@
 @require(symbol, languages)
 
 @for lang, lang_doc in languages.items():
-<div class="gi-symbol gi-symbol-@lang">
+@(_boundary_id = 'gi-lang-%s-%s' % (lang, symbol.unique_name))\
+<div class="gi-symbol gi-symbol-@lang" id="@_boundary_id" data-gi-language="@lang">
 @if lang_doc:
 @lang_doc
 @end
