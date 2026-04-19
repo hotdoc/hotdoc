@@ -126,22 +126,6 @@ CMARK_MODULE = CMarkExtension('hotdoc.parsers.cmark',
                               define_macros=[
                                   ('LIBDIR', '"%s"' % CMARK_BUILD_DIR)])
 
-# We build our search index in C for performance reasons
-
-SEARCH_SOURCES = [os.path.join('hotdoc', 'parsers', 'search_module.c'),
-                  os.path.join('hotdoc', 'parsers', 'trie.c')]
-
-try:
-    search_flags = pkgconfig('libxml-2.0', 'glib-2.0', 'json-glib-1.0')
-except Exception as e:
-    print("libxml-2.0, glib-2.0 and json-glib-1.0 are required: %s" % str(e))
-    sys.exit(1)
-
-print(search_flags)
-
-SEARCH_MODULE = Extension('hotdoc.parsers.search',
-                          sources=SEARCH_SOURCES, **search_flags)
-
 # The default theme
 
 THEME_SRC_DIR = os.path.join(SOURCE_DIR, 'hotdoc', 'hotdoc_bootstrap_theme')
@@ -257,6 +241,7 @@ INSTALL_REQUIRES = [
     'appdirs',
     'wheezy.template',
     'toposort>=1.4',
+    'pagefind',
     'importlib_metadata; python_version<"3.10"',
     'backports.entry_points_selectable; python_version<"3.10"',
 ]
@@ -277,13 +262,12 @@ SYN_EXT_DIR = os.path.join(SOURCE_DIR, 'hotdoc', 'extensions',
                            'syntax_highlighting')
 require_clean_submodules(SYN_EXT_DIR, ['prism'])
 
-ext_modules = [CMARK_MODULE, SEARCH_MODULE]
+ext_modules = [CMARK_MODULE]
 
 PACKAGE_DATA = {
     'hotdoc.core': ['templates/*', 'assets/*'],
     'hotdoc': [os.path.join(THEME_REL_DIR, 'templates', '*'),
                os.path.join(THEME_REL_DIR, 'js', '*'),
-               os.path.join(THEME_REL_DIR, 'js', 'search', '*'),
                os.path.join(THEME_REL_DIR, 'css', '*'),
                os.path.join(THEME_REL_DIR, 'images', '*'),
                os.path.join(THEME_REL_DIR, 'fonts', '*'),
@@ -296,9 +280,6 @@ PACKAGE_DATA = {
         'prism/plugins/autoloader/prism-autoloader.js',
         'prism/plugins/keep-markup/prism-keep-markup.js',
         'prism_autoloader_path_override.js'],
-    'hotdoc.extensions.search': [
-        '*.js',
-        'stopwords.txt'],
     'hotdoc.extensions.devhelp': [
         'devhelp.css'],
     'hotdoc.extensions.license': [

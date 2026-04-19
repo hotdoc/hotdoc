@@ -178,12 +178,13 @@ class DevhelpExtension(Extension):
         self.__format(project)
 
     def __ignore_cb(self, src, files):
-        ignored = {'dumped.trie'}
+        ignored = set()
         path = Path(src).as_posix()
         if path.endswith('/assets'):
             ignored.add('fonts')
-        elif path.endswith('/assets/js'):
-            ignored.add('search')
+        # Pagefind's bundle is web-only; devhelp renders HTML without JS.
+        if path.endswith('/html'):
+            ignored.add('pagefind')
         return ignored
 
     # pylint: disable=no-self-use
