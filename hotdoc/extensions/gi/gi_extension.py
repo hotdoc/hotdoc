@@ -358,6 +358,10 @@ class GIExtension(Extension):
             field_name = field.attrib['name']
             name = "%s.%s" % (struct_name, field_name)
 
+            aliases = []
+            if in_union and parent_name and struct_name != parent_name:
+                aliases.append("%s.%s" % (parent_name, field_name))
+
             qtype = QualifiedSymbol(type_tokens=type_desc.type_tokens)
             self.add_attrs(qtype, type_desc=type_desc)
 
@@ -365,7 +369,8 @@ class GIExtension(Extension):
                 FieldSymbol,
                 member_name=field_name, qtype=qtype,
                 filename=filename, display_name=name,
-                unique_name=name, parent_name=parent_name)
+                unique_name=name, parent_name=parent_name,
+                aliases=aliases)
 
             if member:
                 self.add_attrs(member, type_desc=type_desc, in_union=in_union)
